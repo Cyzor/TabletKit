@@ -256,7 +256,7 @@ public func decodeBLEPenReport(
     return BLEPenResult(point: point, serial: serial, toolCode: toolCode, isMouse: isMouse)
 }
 
-// MARK: - WacomDecoder protocol
+// MARK: - TabletReportDecoder protocol
 
 public enum WirelessStatus {
     case active
@@ -386,12 +386,6 @@ public protocol TabletReportDecoder {
         deviceFamily: String
     ) -> [DecodeResult]
 }
-
-/// Source-compatible alias for the pre-TabletKit name.  All existing decoders
-/// inside this repo continue to compile against `WacomDecoder`; new code should
-/// prefer `TabletReportDecoder`.  Will be removed once the published package
-/// has shipped at least one minor release.
-public typealias WacomDecoder = TabletReportDecoder
 
 // MARK: - BLE HOGP Pad Report Decoder
 

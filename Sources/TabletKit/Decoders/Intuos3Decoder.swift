@@ -24,7 +24,7 @@ import Foundation
 ///
 /// Everything else (USB pen coordinates, pressure, tilt, tool-change packets,
 /// wireless status, mouse subtypes) is identical to IntuosV1Decoder.
-public struct Intuos3Decoder: WacomDecoder {
+public struct Intuos3Decoder: TabletReportDecoder {
 
     public init() {}
 

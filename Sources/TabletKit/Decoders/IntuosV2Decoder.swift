@@ -25,7 +25,7 @@ import Foundation
 ///      TODO (finger touch): DTH-271, DTH-135, DTH-1320 (parser=.intuosV2 family)
 ///      touch format is unconfirmed for these devices — do not assume 0x21 / same layout
 ///      without a live capture.
-public struct IntuosV2Decoder: WacomDecoder {
+public struct IntuosV2Decoder: TabletReportDecoder {
 
     public init() {}
 

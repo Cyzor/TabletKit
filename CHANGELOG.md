@@ -5,6 +5,12 @@ The MockTab app tracks its own version in `MockTab/Info.plist` and maintains sep
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
+## [Unreleased]
+
+### Removed
+
+- `typealias WacomDecoder = TabletReportDecoder` — the source-compatibility alias kept in 0.1.0 is gone. All conforming decoders and any `any WacomDecoder` annotations now use `TabletReportDecoder` directly.
+
 ## [0.1.0] — 2026-05-28
 
 Introduces the first public API. Extracted from the MockTab app so the decoder layer can stand alone.

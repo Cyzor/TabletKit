@@ -23,7 +23,7 @@ import Foundation
 /// table.
 ///
 /// Experimental: not yet validated on hardware.
-public struct IntuosV3Decoder: WacomDecoder {
+public struct IntuosV3Decoder: TabletReportDecoder {
 
     public init() {}
 

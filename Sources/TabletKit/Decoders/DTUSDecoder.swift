@@ -21,7 +21,7 @@ import Foundation
 /// the status byte each frame.
 ///
 /// Experimental: not yet validated on hardware.
-public struct DTUSDecoder: WacomDecoder {
+public struct DTUSDecoder: TabletReportDecoder {
 
     public init() {}
 

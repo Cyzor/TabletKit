@@ -19,7 +19,7 @@ import Foundation
 ///
 /// On BLE connections the device uses 13-bit pressure (max 8191); the decoder
 /// overrides `spec.maxPressure` to 8191 for BLE reports only.
-public struct IntuosV1Decoder: WacomDecoder {
+public struct IntuosV1Decoder: TabletReportDecoder {
 
     public init() {}
 

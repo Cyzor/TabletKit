@@ -23,7 +23,7 @@ import Foundation
 /// pad report.
 ///
 /// Experimental: not yet validated on hardware.
-public struct DTUDecoder: WacomDecoder {
+public struct DTUDecoder: TabletReportDecoder {
 
     public init() {}
 

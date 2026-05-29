@@ -42,7 +42,7 @@ import Foundation
 /// When Report 0x01 fires (tip physically down) but the concurrent 0x02 pressure
 /// reads zero (Grip Pen hardware limitation on some Cintiqs), `tipPressureOverride`
 /// injects a minimum contact pressure so apps register a click.
-public struct CintiqV1Decoder: WacomDecoder {
+public struct CintiqV1Decoder: TabletReportDecoder {
 
     public init() {}
 
