@@ -1,0 +1,1322 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.xctest/Contents/MacOS/TabletKitPackageTests",
+      "packagePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit",
+      "productName" : "TabletKitPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.TabletKit-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/sources",
+      "importPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/CursorSmoother.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/BambooDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/CintiqV1Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUSDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/GraphireDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/Intuos3Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV1Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder+BT.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV3Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/ModifierMath.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletDevice.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletPoint.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceProfile.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomDeviceRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomToolSpec.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "TabletKit",
+      "moduleOutputPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKit.swiftmodule",
+      "objects" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CursorSmoother.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/BambooDecoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CintiqV1Decoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUDecoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUSDecoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/GraphireDecoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/Intuos3Decoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV1Decoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder+BT.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV3Decoder.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/ModifierMath.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletDevice.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletPoint.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceProfile.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceRegistry.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomDeviceRegistry.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomToolSpec.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx13.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/include/TabletKit-Swift.h",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mocktab_kit"
+      ],
+      "outputFileMapPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CursorSmoother.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/BambooDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CintiqV1Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUSDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/GraphireDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/Intuos3Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV1Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder+BT.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV3Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/ModifierMath.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletDevice.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletPoint.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceProfile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomDeviceRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomToolSpec.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKit.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/CursorSmoother.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/BambooDecoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/CintiqV1Decoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUDecoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUSDecoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/GraphireDecoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/Intuos3Decoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV1Decoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder+BT.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV3Decoder.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/ModifierMath.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletDevice.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletPoint.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceProfile.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceRegistry.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomDeviceRegistry.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomToolSpec.swift"
+      ],
+      "tempsPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.TabletKitPackageTests-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/sources",
+      "importPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKitTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "TabletKitPackageTests",
+      "moduleOutputPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKitPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx13.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/include/TabletKitPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mocktab_kit"
+      ],
+      "outputFileMapPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKitPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.TabletKitTests-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/sources",
+      "importPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/BambooDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParser.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParserTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CintiqV1DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CursorSmootherTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUSDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/GraphireDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/Intuos3DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1ExtendedTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTTouchDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2TouchDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2USBDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV3DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/ModifierMathTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/VendorDeviceRegistryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WacomDeviceRegistryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WirelessReportTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKit.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "TabletKitTests",
+      "moduleOutputPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKitTests.swiftmodule",
+      "objects" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/BambooDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParser.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParserTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CintiqV1DecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CursorSmootherTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUSDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/GraphireDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/Intuos3DecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1DecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1ExtendedTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTTouchDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2TouchDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2USBDecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV3DecoderTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/ModifierMathTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/VendorDeviceRegistryTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WacomDeviceRegistryTests.swift.o",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WirelessReportTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mocktab_kit"
+      ],
+      "outputFileMapPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/BambooDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParser.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParserTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CintiqV1DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CursorSmootherTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUSDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/GraphireDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/Intuos3DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1ExtendedTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTTouchDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2TouchDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2USBDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV3DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/ModifierMathTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/VendorDeviceRegistryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WacomDeviceRegistryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WirelessReportTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules/TabletKitTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/BambooDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParser.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParserTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CintiqV1DecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CursorSmootherTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUSDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/GraphireDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/Intuos3DecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1DecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1ExtendedTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTTouchDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2TouchDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2USBDecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV3DecoderTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/ModifierMathTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/VendorDeviceRegistryTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WacomDeviceRegistryTests.swift",
+        "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WirelessReportTests.swift"
+      ],
+      "tempsPath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "TabletKit" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "TabletKit",
+      "-package-name",
+      "mocktab_kit",
+      "-c",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/CursorSmoother.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/BambooDecoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/CintiqV1Decoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUDecoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUSDecoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/GraphireDecoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/Intuos3Decoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV1Decoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder+BT.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV3Decoder.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/ModifierMath.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletDevice.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletPoint.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceProfile.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceRegistry.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomDeviceRegistry.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomToolSpec.swift",
+      "-I",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx13.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/include/TabletKit-Swift.h",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mocktab_kit",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "TabletKitPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "TabletKitPackageTests",
+      "-package-name",
+      "mocktab_kit",
+      "-c",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx13.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/include/TabletKitPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mocktab_kit",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "TabletKitTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "TabletKitTests",
+      "-package-name",
+      "mocktab_kit",
+      "-c",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/BambooDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParser.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParserTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CintiqV1DecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CursorSmootherTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUSDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/GraphireDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/Intuos3DecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1DecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1ExtendedTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTTouchDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2TouchDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2USBDecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV3DecoderTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/ModifierMathTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/VendorDeviceRegistryTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WacomDeviceRegistryTests.swift",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WirelessReportTests.swift",
+      "-I",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mocktab_kit",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "TabletKit" : [
+
+    ],
+    "TabletKitPackageTests" : [
+      "TabletKitTests",
+      "TabletKit"
+    ],
+    "TabletKitTests" : [
+      "TabletKit"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/CursorSmoother.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/BambooDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/CintiqV1Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/DTUSDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/GraphireDecoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/Intuos3Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV1Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder+BT.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV2Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/Decoders/IntuosV3Decoder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/ModifierMath.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletDevice.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/TabletPoint.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceProfile.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/VendorDeviceRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomDeviceRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Sources/TabletKit/WacomToolSpec.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/sources"
+    },
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/sources"
+    },
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/BambooDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CintiqV1Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/CursorSmoother.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/DTUSDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/GraphireDecoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/Intuos3Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV1Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder+BT.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV2Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/IntuosV3Decoder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/ModifierMath.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletDevice.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/TabletPoint.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceProfile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/VendorDeviceRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomDeviceRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKit.build/WacomToolSpec.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/BambooDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParser.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CaptureLogParserTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CintiqV1DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/CursorSmootherTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/DTUSDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/GraphireDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/Intuos3DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV1ExtendedTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2BTTouchDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2TouchDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV2USBDecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/IntuosV3DecoderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/ModifierMathTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/VendorDeviceRegistryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WacomDeviceRegistryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/WirelessReportTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/BambooDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParser.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CaptureLogParserTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CintiqV1DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/CursorSmootherTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/DTUSDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/GraphireDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/Intuos3DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV1ExtendedTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2BTTouchDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2TouchDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV2USBDecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/IntuosV3DecoderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/ModifierMathTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/VendorDeviceRegistryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WacomDeviceRegistryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/Tests/TabletKitTests/WirelessReportTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitTests.build/sources"
+    },
+    "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

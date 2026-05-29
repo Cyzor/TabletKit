@@ -1,0 +1,3 @@
+module TabletKitPackageTests {
+    header "/Users/dvorak/Documents/Develop/MockTabApp/mocktab-kit/.build/arm64-apple-macosx/debug/TabletKitPackageTests.build/include/TabletKitPackageTests-Swift.h"
+}
