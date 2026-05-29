@@ -1,7 +1,18 @@
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
 
 # Swift Package Manager
 .build/
 .swiftpm/
 Package.resolved
+
+# AI session files
+CLAUDE.md
+Notes/Scratch/
