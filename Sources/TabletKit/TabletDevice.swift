@@ -37,6 +37,30 @@ public struct DigitizerSpec {
     /// Maximum simultaneous touch contacts the device reports (1 for single-touch
     /// Cintiqs like DTH-2400/DTH-2200; 10 for multi-touch DTH-271/DTH-135/DTH-1320).
     public var maxTouchContacts: Int = 0
+
+    public init(
+        maxX: Int,
+        maxY: Int,
+        maxPressure: Int,
+        buttonCount: Int = 0,
+        hasTilt: Bool = false,
+        hasDualRings: Bool = false,
+        isPenDisplay: Bool = false,
+        ringSlotCount: Int = 4,
+        hasFingerTouch: Bool = false,
+        maxTouchContacts: Int = 0
+    ) {
+        self.maxX = maxX
+        self.maxY = maxY
+        self.maxPressure = maxPressure
+        self.buttonCount = buttonCount
+        self.hasTilt = hasTilt
+        self.hasDualRings = hasDualRings
+        self.isPenDisplay = isPenDisplay
+        self.ringSlotCount = ringSlotCount
+        self.hasFingerTouch = hasFingerTouch
+        self.maxTouchContacts = maxTouchContacts
+    }
 }
 
 public protocol TabletDevice: AnyObject {
@@ -48,7 +72,7 @@ public protocol TabletDevice: AnyObject {
     func setRingLED(index: Int)
 }
 
-extension TabletDevice {
+public extension TabletDevice {
     public func setRingLED(index: Int) {}
 }
 
@@ -380,7 +404,7 @@ public typealias WacomDecoder = TabletReportDecoder
 /// [2] bit 7 = ring active; bits 0–6 = ring position (0–71)
 /// [3] bits 0–1 = ring mode
 /// [4–8] Reserved
-func decodeBLEPadReport(
+public func decodeBLEPadReport(
     report: UnsafePointer<UInt8>,
     length: CFIndex
 ) -> AuxButtons? {
@@ -400,7 +424,7 @@ func decodeBLEPadReport(
 
 /// Emit a toolCompatibility warning if the tool code is not fully supported on the device.
 /// Updates `state.toolIsSupported` and appends `.toolCompatibility(msg)` to results if needed.
-func emitToolCompatibility(
+public func emitToolCompatibility(
     toolCode: UInt16,
     deviceFamily: String,
     state: inout DecoderState,
@@ -422,7 +446,7 @@ func emitToolCompatibility(
 
 /// Decode wireless status for V1/Intuos3 dongles (ACK-4040 / basic protocol).
 /// Protocol: report[1] bit 0 = connection state (1 = active, 0 = lost).
-func decodeWirelessReport(report: UnsafePointer<UInt8>, length: CFIndex) -> [DecodeResult] {
+public func decodeWirelessReport(report: UnsafePointer<UInt8>, length: CFIndex) -> [DecodeResult] {
     guard length >= 2 else { return [] }
     if (report[1] & 0x01) != 0 { return [.wireless(.active)] }
     return [.wireless(.lost)]

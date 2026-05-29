@@ -7,7 +7,7 @@ import Foundation
 // MARK: - Tool Type
 
 /// Categories of tools Wacom devices can report.
-enum WacomToolType: String, Codable, CaseIterable {
+public enum WacomToolType: String, Codable, CaseIterable {
     case stylus = "Stylus"
     case eraser = "Eraser"
     case mouse = "Mouse"
@@ -21,66 +21,92 @@ enum WacomToolType: String, Codable, CaseIterable {
 
 /// Complete specification for a Wacom tool type.
 /// Derived from OpenTabletDriver conventions and Linux input-wacom driver.
-struct WacomToolSpec: Codable, Identifiable, Equatable {
+public struct WacomToolSpec: Codable, Identifiable, Equatable {
     /// The 16-bit Wacom tool code (e.g., 0x0802 for Grip Pen).
-    let toolCode: UInt16
+    public let toolCode: UInt16
 
     /// Human-readable name (e.g., "Grip Pen", "Pro Pen 2").
-    let name: String
+    public let name: String
 
     /// Category of tool.
-    let toolType: WacomToolType
+    public let toolType: WacomToolType
 
     /// Number of side buttons on the pen body.
-    let buttonCount: Int
+    public let buttonCount: Int
 
     /// Maximum pressure levels (nil = device-dependent).
-    let maxPressure: Int?
+    public let maxPressure: Int?
 
     /// True if this tool reports tilt data.
-    let hasTilt: Bool
+    public let hasTilt: Bool
 
     /// True if this tool supports rotation (twist) data.
-    let hasRotation: Bool
+    public let hasRotation: Bool
 
     /// True if this tool has a scroll wheel (mice only).
-    let hasWheel: Bool
+    public let hasWheel: Bool
 
     /// True if this tool has an eraser counterpart.
-    let hasEraserVariant: Bool
+    public let hasEraserVariant: Bool
 
     /// Tool code for the eraser variant (if different from toolCode).
-    let eraserToolCode: UInt16?
+    public let eraserToolCode: UInt16?
 
     /// Device families this tool is commonly shipped with.
     /// Empty means universal.
-    let supportedFamilies: [String]
+    public let supportedFamilies: [String]
+
+    public init(
+        toolCode: UInt16,
+        name: String,
+        toolType: WacomToolType,
+        buttonCount: Int,
+        maxPressure: Int?,
+        hasTilt: Bool,
+        hasRotation: Bool,
+        hasWheel: Bool,
+        hasEraserVariant: Bool,
+        eraserToolCode: UInt16?,
+        supportedFamilies: [String]
+    ) {
+        self.toolCode = toolCode
+        self.name = name
+        self.toolType = toolType
+        self.buttonCount = buttonCount
+        self.maxPressure = maxPressure
+        self.hasTilt = hasTilt
+        self.hasRotation = hasRotation
+        self.hasWheel = hasWheel
+        self.hasEraserVariant = hasEraserVariant
+        self.eraserToolCode = eraserToolCode
+        self.supportedFamilies = supportedFamilies
+    }
 
     /// Unique identifier (hex string matching toolCode).
-    var id: String { String(format: "0x%04X", toolCode) }
+    public var id: String { String(format: "0x%04X", toolCode) }
 
     /// Returns the tool code with eraser bit set (bit 3 of low byte).
-    var eraserCode: UInt16 { toolCode | 0x0008 }
+    public var eraserCode: UInt16 { toolCode | 0x0008 }
 
     /// Returns true if this is an eraser tool.
-    var isEraser: Bool { toolType == .eraser }
+    public var isEraser: Bool { toolType == .eraser }
 
     /// Returns true if this is a mouse/cursor tool.
-    var isMouse: Bool { toolType == .mouse }
+    public var isMouse: Bool { toolType == .mouse }
 
     /// Returns the base tool code without eraser bit.
-    var baseCode: UInt16 { toolCode & ~UInt16(0x0008) }
+    public var baseCode: UInt16 { toolCode & ~UInt16(0x0008) }
 
     /// Returns true if this tool is compatible with the given device family.
     /// Empty supportedFamilies means universal compatibility.
-    func isSupported(onFamily family: String) -> Bool {
+    public func isSupported(onFamily family: String) -> Bool {
         if supportedFamilies.isEmpty { return true }
         return supportedFamilies.contains(family)
     }
 
     /// Returns the tool's capabilities adjusted for the given device family.
     /// If the tool is unsupported, returns a fallback with limited features.
-    func capabilities(forFamily family: String) -> ToolCapabilities {
+    public func capabilities(forFamily family: String) -> ToolCapabilities {
         let supported = isSupported(onFamily: family)
         return ToolCapabilities(
             isSupported: supported,
@@ -97,29 +123,29 @@ struct WacomToolSpec: Codable, Identifiable, Equatable {
 /// Capabilities of a tool on a specific device family.
 /// Returned by WacomToolSpec.capabilities(forFamily:) to indicate which
 /// features are available when a tool is used with an incompatible tablet.
-struct ToolCapabilities {
+public struct ToolCapabilities {
     /// True if this tool is officially supported on this device family.
-    let isSupported: Bool
+    public let isSupported: Bool
     /// True if pressure data is available.
-    let hasPressure: Bool
+    public let hasPressure: Bool
     /// True if tilt data is available.
-    let hasTilt: Bool
+    public let hasTilt: Bool
     /// True if rotation data is available (Art Pen).
-    let hasRotation: Bool
+    public let hasRotation: Bool
     /// True if the scroll wheel is available.
-    let hasWheel: Bool
+    public let hasWheel: Bool
     /// Maximum pressure value (0 if pressure unsupported).
-    let maxPressure: Int
+    public let maxPressure: Int
 }
 
 // MARK: - Tool Catalog
 
 /// Registry of all known Wacom tool specifications.
 /// Keys are tool codes (UInt16).
-enum WacomToolCatalog {
+public enum WacomToolCatalog {
 
     /// All known tool specifications, keyed by tool code.
-    static let allTools: [UInt16: WacomToolSpec] = {
+    public static let allTools: [UInt16: WacomToolSpec] = {
         var catalog: [UInt16: WacomToolSpec] = [:]
 
         // MARK: - Intuos Pro / Intuos5 Series (0x08xx family)
@@ -896,13 +922,13 @@ enum WacomToolCatalog {
 
     /// Look up a tool specification by tool code.
     /// Returns nil if the tool code is unknown.
-    static func spec(forToolCode toolCode: UInt16) -> WacomToolSpec? {
+    public static func spec(forToolCode toolCode: UInt16) -> WacomToolSpec? {
         return allTools[toolCode]
     }
 
     /// Look up a tool specification by tool code, handling eraser bit.
     /// If the tool code has the eraser bit set (0x0008), looks up the eraser variant.
-    static func spec(forToolCodeRaw toolCode: UInt16) -> WacomToolSpec? {
+    public static func spec(forToolCodeRaw toolCode: UInt16) -> WacomToolSpec? {
         // First try exact match
         if let spec = allTools[toolCode] {
             return spec
@@ -913,7 +939,7 @@ enum WacomToolCatalog {
 
     /// Returns the human-readable name for a tool code.
     /// Falls back to descriptive names based on tool code patterns for unknown codes.
-    static func name(forToolCode toolCode: UInt16) -> String {
+    public static func name(forToolCode toolCode: UInt16) -> String {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.name
         }
@@ -952,7 +978,7 @@ enum WacomToolCatalog {
     }
 
     /// Returns the tool type for a tool code.
-    static func toolType(forToolCode toolCode: UInt16) -> WacomToolType {
+    public static func toolType(forToolCode toolCode: UInt16) -> WacomToolType {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.toolType
         }
@@ -967,7 +993,7 @@ enum WacomToolCatalog {
     }
 
     /// Returns true if the tool code represents a mouse/cursor.
-    static func isMouse(toolCode: UInt16) -> Bool {
+    public static func isMouse(toolCode: UInt16) -> Bool {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.isMouse
         }
@@ -975,7 +1001,7 @@ enum WacomToolCatalog {
     }
 
     /// Returns true if the tool code represents an eraser.
-    static func isEraser(toolCode: UInt16) -> Bool {
+    public static func isEraser(toolCode: UInt16) -> Bool {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.isEraser
         }
@@ -983,7 +1009,7 @@ enum WacomToolCatalog {
     }
 
     /// Returns all tool specifications for a given device family.
-    static func tools(forFamily family: String) -> [WacomToolSpec] {
+    public static func tools(forFamily family: String) -> [WacomToolSpec] {
         return allTools.values.filter { spec in
             spec.supportedFamilies.isEmpty || spec.supportedFamilies.contains(family)
         }
@@ -991,7 +1017,7 @@ enum WacomToolCatalog {
 
     /// Returns tool capabilities for a tool code on a specific device family.
     /// If the tool is unknown, returns a default unsupported capability set.
-    static func capabilities(forToolCode toolCode: UInt16, family: String) -> ToolCapabilities {
+    public static func capabilities(forToolCode toolCode: UInt16, family: String) -> ToolCapabilities {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.capabilities(forFamily: family)
         }
@@ -1007,16 +1033,16 @@ enum WacomToolCatalog {
     }
 
     /// Returns all unique tool specifications.
-    static var allUniqueTools: [WacomToolSpec] {
+    public static var allUniqueTools: [WacomToolSpec] {
         return Array(allTools.values)
     }
 }
 
 // MARK: - ToolIdentity Extension
 
-extension ToolIdentity {
+public extension ToolIdentity {
     /// Creates a ToolIdentity from a WacomToolSpec.
-    init(spec: WacomToolSpec, serial: UInt32) {
+    public init(spec: WacomToolSpec, serial: UInt32) {
         self.serial = serial
         self.toolCode = spec.toolCode
         self.isEraser = spec.isEraser
@@ -1024,12 +1050,12 @@ extension ToolIdentity {
     }
 
     /// Returns the corresponding WacomToolSpec if available.
-    var toolSpec: WacomToolSpec? {
+    public var toolSpec: WacomToolSpec? {
         return WacomToolCatalog.spec(forToolCodeRaw: toolCode)
     }
 
     /// Returns the human-readable name for this tool.
-    var displayName: String {
+    public var displayName: String {
         return WacomToolCatalog.name(forToolCode: toolCode)
     }
 }

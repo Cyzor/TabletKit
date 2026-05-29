@@ -11,7 +11,7 @@ import Foundation
 /// Used by `WacomDeviceRegistry` to route devices to the correct decoder.
 /// The individual per-device Swift classes (PTH660Device, etc.) remain as
 /// the live code path during migration; decoders are introduced in Phase 2.
-enum ReportParser: String {
+public enum ReportParser: String {
     /// Graphire / early consumer line — Report ID 0x02
     /// (kernel `WACOM_REPORT_PENABLED`), 8 bytes.
     /// Covers PenPartner, Graphire 2–4, Volito, Bamboo One (CTF-430).
@@ -110,7 +110,7 @@ public enum InitStep: Equatable {
 /// - `.experimental`: Imported from a single source (typically OTD JSON or
 ///   kernel constants) without independent confirmation. May have wrong
 ///   dimensions, missing init reports, or only partial protocol support.
-enum ConfidenceTier {
+public enum ConfidenceTier {
     case verified
     case crossReferenced
     case experimental
@@ -153,52 +153,52 @@ enum ConfidenceTier {
 /// hardware; the `⚠ recognition-only` variant additionally means the parser
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
 /// named correctly but pen decode may produce nonsense until verified.
-struct WacomDeviceSpec {
-    let productID: Int
-    let name: String
-    let parser: ReportParser
-    let maxX: Int
-    let maxY: Int
-    let maxPressure: Int
+public struct WacomDeviceSpec {
+    public let productID: Int
+    public let name: String
+    public let parser: ReportParser
+    public let maxX: Int
+    public let maxY: Int
+    public let maxPressure: Int
     /// Number of programmable express/side keys (0 if none).
-    let buttonCount: Int
+    public let buttonCount: Int
     /// True if this model has a capacitive touch ring (Intuos Pro).
-    let hasTouchRing: Bool
+    public let hasTouchRing: Bool
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
     /// Implies hasTouchRing.  The two rings are independently assignable.
-    let hasDualRings: Bool
+    public let hasDualRings: Bool
     /// True if this model has dual capacitive touch strips (Intuos3 WS).
-    let hasTouchStrips: Bool
+    public let hasTouchStrips: Bool
     /// True if this model has a capacitive touch surface for finger input in
     /// addition to the pen digitizer (Cintiq Pro 27, Movink 13, Cintiq 16
     /// touch, Cintiq 24HD/22HD Touch).  Gates the Touch settings pane and
     /// the touch-enable feature-report path.
-    let hasFingerTouch: Bool
+    public let hasFingerTouch: Bool
     /// Maximum simultaneous touch contacts the device reports.  1 for the
     /// single-touch Cintiq 24HD/22HD Touch displays; 10 for the multi-touch
     /// Cintiq Pro 27, Movink 13, and Cintiq 16 family.  Zero when
     /// `hasFingerTouch == false`.
-    let maxTouchContacts: Int
+    public let maxTouchContacts: Int
     /// Coordinate maximum for the capacitive touch sensor's X axis.
     /// Separate from `maxX` (pen digitizer); confirmed by live capture.
     /// PTH-860: 12439. PTH-660: 8960 (estimated, same 1/5 ratio as pen).
     /// Zero when `hasFingerTouch == false`.
-    let touchMaxX: Int
+    public let touchMaxX: Int
     /// Coordinate maximum for the capacitive touch sensor's Y axis.
     /// PTH-860: 8639. PTH-660: 5920 (estimated).
     /// Zero when `hasFingerTouch == false`.
-    let touchMaxY: Int
+    public let touchMaxY: Int
     /// Number of ring mode slots to expose in the UI.
     /// Defaults to 4, matching Wacom's standard 4-LED toggle ring layout.
-    let ringSlotCount: Int
+    public let ringSlotCount: Int
     /// True if the pen family includes an eraser tool type.
-    let hasEraser: Bool
+    public let hasEraser: Bool
     /// True if this device's pen reports include tilt data (Bamboo 4-bit format).
     /// Has no effect on IntuosV1/V2/Intuos3 decoders, which always decode tilt.
-    let hasTilt: Bool
+    public let hasTilt: Bool
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Pen displays may need parallax offset calibration due to thick glass layers.
-    let isPenDisplay: Bool
+    public let isPenDisplay: Bool
     /// Ordered list of steps to execute when the interface is opened (USB/dongle only;
     /// skipped for BLE).  An empty array means no init is required.  The first byte
     /// of each `.featureReport` / `.outputReport` payload is the HID report ID.
@@ -206,19 +206,19 @@ struct WacomDeviceSpec {
     /// Most devices need a single `.featureReport([0x02, 0x02])`.  Intuos3 (PTZ-xxx)
     /// devices need a two-stage sequence with a 150 ms pause between the stages:
     /// `[.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])]`.
-    let initSteps: [InitStep]
+    public let initSteps: [InitStep]
     /// True if this interface must be seized (kIOHIDOptionsTypeSeizeDevice)
     /// to prevent macOS's built-in HID mouse driver from consuming reports.
-    let seizeUSB: Bool
+    public let seizeUSB: Bool
     /// Product ID of a companion USB interface that handles LED control separately.
     /// When a Wacom device with this PID is enumerated but has no digitizer elements,
     /// TabletManager routes it to this device's WacomKnownDevice as an LED target
     /// rather than attaching a fallback driver or skipping it entirely.
     /// nil = LED control uses the main digitizer interface (single-interface devices).
-    let ledCompanionPID: Int?
+    public let ledCompanionPID: Int?
     /// How well-vetted this entry is (see `ConfidenceTier`).
     /// Defaults to `.experimental` — promote explicitly when verified.
-    let confidence: ConfidenceTier
+    public let confidence: ConfidenceTier
     /// Active-area width in millimetres.  Optional because the registry was
     /// built around device-unit coordinates (`maxX`/`maxY`); physical
     /// dimensions are backfilled incrementally as they're confirmed.
@@ -228,18 +228,18 @@ struct WacomDeviceSpec {
     /// tablet-area UI.  Matches the canonical (mm, logical-max) data shape
     /// used by Huion and Xencelabs references, easing future cross-vendor
     /// support.  Nil = unknown.
-    let activeWidthMM: Double?
+    public let activeWidthMM: Double?
     /// Active-area height in millimetres.  See `activeWidthMM`.
-    let activeHeightMM: Double?
+    public let activeHeightMM: Double?
     /// Optional substring matched against the device's `kIOHIDProductKey`
     /// string when multiple specs share a `productID`.  Used to disambiguate
     /// vendor PID collisions — Wacom has none today, but the plumbing is
     /// shared with future Huion support (Huion PIDs `0x006D`/`0x006E` each
     /// cover dozens of distinct models, discriminated only by firmware
     /// string).  Case-insensitive substring match.  Nil = match any.
-    let productStringMatch: String?
+    public let productStringMatch: String?
 
-    init(
+    public init(
         productID: Int, name: String, parser: ReportParser,
         maxX: Int, maxY: Int, maxPressure: Int,
         buttonCount: Int, hasTouchRing: Bool, hasDualRings: Bool = false,
@@ -286,14 +286,14 @@ struct WacomDeviceSpec {
     /// Returns nil unless both physical dimensions are populated.  Useful for
     /// the info pane and for cross-vendor cursor-mapping that needs a real DPI
     /// number rather than device-unit ratios.
-    var lpi: (x: Double, y: Double)? {
+    public var lpi: (x: Double, y: Double)? {
         guard let w = activeWidthMM, w > 0, let h = activeHeightMM, h > 0 else { return nil }
         return (Double(maxX) / w * 25.4, Double(maxY) / h * 25.4)
     }
 
     /// Derives the device family identifier from parser and name.
     /// Used to check tool compatibility against `WacomToolSpec.supportedFamilies`.
-    var family: String {
+    public var family: String {
         switch parser {
         case .graphire:
             return "bamboo2"
@@ -329,11 +329,11 @@ struct WacomDeviceSpec {
 
 // MARK: - Registry
 
-enum WacomDeviceRegistry {
+public enum WacomDeviceRegistry {
 
     // MARK: Known devices
 
-    static let knownDevices: [WacomDeviceSpec] = [
+    public static let knownDevices: [WacomDeviceSpec] = [
 
         // ── PenPartner / Graphire 1–4 ─────────────────────────────────────────
         // graphire parser: 8-byte Report ID 0x01, ≤511 pressure levels.
@@ -1396,7 +1396,7 @@ enum WacomDeviceRegistry {
     ///
     /// Note: PTH-460 wireless dongle PID (if it exists as a separate entry) needs hardware
     /// verification before adding, as there may be a collision with PTH-860 USB 0x0358.
-    static let canonicalPIDMap: [Int: Int] = [
+    public static let canonicalPIDMap: [Int: Int] = [
         // Intuos Pro S (PTH-460 family)
         0x035B: 0x0352,  // PTH-460 BT Classic (USB PID 0x0352 not yet in registry)
         0x035F: 0x0356,  // PTH-460 BT Classic (alternative USB variant?)
@@ -1413,7 +1413,7 @@ enum WacomDeviceRegistry {
     // MARK: Lookups
 
     /// Returns the spec for `productID`, or nil if unrecognised.
-    static func spec(for productID: Int) -> WacomDeviceSpec? {
+    public static func spec(for productID: Int) -> WacomDeviceSpec? {
         knownDevices.first { $0.productID == productID }
     }
 
@@ -1431,7 +1431,7 @@ enum WacomDeviceRegistry {
     /// `spec(for:)` for every current device.  The overload exists so the
     /// app-side lookup path is already vendor-neutral when Huion / Xencelabs
     /// support arrives.
-    static func spec(forProductID productID: Int, productString: String?) -> WacomDeviceSpec? {
+    public static func spec(forProductID productID: Int, productString: String?) -> WacomDeviceSpec? {
         let matches = knownDevices.filter { $0.productID == productID }
         guard !matches.isEmpty else { return nil }
         if let needle = productString?.lowercased() {
@@ -1447,7 +1447,7 @@ enum WacomDeviceRegistry {
 
     /// Human-readable display name for any Wacom product.
     /// Returns "Wacom 0xXXXX" for PIDs not yet in the table.
-    static func deviceName(forProductID productID: Int) -> String {
+    public static func deviceName(forProductID productID: Int) -> String {
         spec(for: productID)?.name
             ?? "Wacom 0x\(String(productID, radix: 16, uppercase: true))"
     }
@@ -1456,7 +1456,7 @@ enum WacomDeviceRegistry {
     /// All five parser families have decoders as of Phase 4 (2026-05-07).
     /// `.graphire` is wired up but routes carry `confidence: .experimental` —
     /// the decoder is kernel-canonical but not yet hardware-validated.
-    static func hasLiveDecoder(for productID: Int) -> Bool {
+    public static func hasLiveDecoder(for productID: Int) -> Bool {
         spec(for: productID) != nil
     }
 
@@ -1468,7 +1468,7 @@ enum WacomDeviceRegistry {
     /// Used at device connection to unify multi-transport tablets: USB PTH-660 (0x0357),
     /// BT PTH-660 (0x0360), and wireless PTH-660 (0x0359) all normalize to 0x0357, so they
     /// share the same `DeviceContext` and settings namespace.
-    static func canonicalProductID(for productID: Int) -> Int {
+    public static func canonicalProductID(for productID: Int) -> Int {
         canonicalPIDMap[productID] ?? productID
     }
 }

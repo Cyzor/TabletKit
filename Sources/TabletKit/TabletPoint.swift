@@ -38,6 +38,48 @@ public struct TabletPoint {
     public var penButton3: Bool = false
     public var penButton4: Bool = false
     public var penButton5: Bool = false
+
+    public init(
+        x: Int,
+        y: Int,
+        maxX: Int,
+        maxY: Int,
+        pressure: Int,
+        maxPressure: Int,
+        tiltX: Double,
+        tiltY: Double,
+        rotation: Double = 0.0,
+        penButton1: Bool,
+        penButton2: Bool,
+        eraser: Bool,
+        inProximity: Bool,
+        hoverDistance: Int,
+        mouseMiddleButton: Bool = false,
+        mouseWheelDelta: Int = 0,
+        penButton3: Bool = false,
+        penButton4: Bool = false,
+        penButton5: Bool = false
+    ) {
+        self.x = x
+        self.y = y
+        self.maxX = maxX
+        self.maxY = maxY
+        self.pressure = pressure
+        self.maxPressure = maxPressure
+        self.tiltX = tiltX
+        self.tiltY = tiltY
+        self.rotation = rotation
+        self.penButton1 = penButton1
+        self.penButton2 = penButton2
+        self.eraser = eraser
+        self.inProximity = inProximity
+        self.hoverDistance = hoverDistance
+        self.mouseMiddleButton = mouseMiddleButton
+        self.mouseWheelDelta = mouseWheelDelta
+        self.penButton3 = penButton3
+        self.penButton4 = penButton4
+        self.penButton5 = penButton5
+    }
 }
 
 /// Identity of a physical pen as reported by the tablet firmware.
@@ -52,9 +94,42 @@ public struct ToolIdentity {
     /// True for cordless mouse / cursor accessories (Intuos Mouse).
     /// On IntuosV2 devices: detected by the absence of the pen bit (0x0800) in toolCode.
     public let isMouse: Bool
+
+    public init(serial: UInt32, toolCode: UInt16, isEraser: Bool, isMouse: Bool) {
+        self.serial = serial
+        self.toolCode = toolCode
+        self.isEraser = isEraser
+        self.isMouse = isMouse
+    }
 }
 
 public struct AuxButtons {
+    public init(
+        buttons: [Bool],
+        mechanicalMask: UInt8 = 0,
+        touchRingActive: Bool = false,
+        touchRingButtonDown: Bool = false,
+        touchRingPosition: UInt8 = 0x7F,
+        touchRing2Active: Bool = false,
+        touchRing2Position: UInt8 = 0x7F,
+        touchStrip1Active: Bool = false,
+        touchStrip1Position: UInt8 = 0xFF,
+        touchStrip2Active: Bool = false,
+        touchStrip2Position: UInt8 = 0xFF
+    ) {
+        self.buttons = buttons
+        self.mechanicalMask = mechanicalMask
+        self.touchRingActive = touchRingActive
+        self.touchRingButtonDown = touchRingButtonDown
+        self.touchRingPosition = touchRingPosition
+        self.touchRing2Active = touchRing2Active
+        self.touchRing2Position = touchRing2Position
+        self.touchStrip1Active = touchStrip1Active
+        self.touchStrip1Position = touchStrip1Position
+        self.touchStrip2Active = touchStrip2Active
+        self.touchStrip2Position = touchStrip2Position
+    }
+
     public var buttons: [Bool]  // up to 8 express key buttons
     /// Bitmask of buttons that had a new mechanical press pulse this frame.
     /// Bit N corresponds to buttons[N].  Set even when the synthesized button state
