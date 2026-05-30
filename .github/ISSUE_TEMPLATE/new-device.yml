@@ -1,0 +1,70 @@
+name: New device support
+description: Propose a new entry for WacomDeviceRegistry or VendorDeviceRegistry
+title: "Device: "
+labels: ["device-support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Capture the device first.** In MockTab, hit *Info → Collect Device Data…* to produce a JSON file with the HID descriptor and a short input-report capture. A [`hid-recorder`](https://github.com/hidutils/hid-recorder) log also works — the test harness parses both formats.
+
+        If you've already written the decoder or registry entry, open a PR instead. Issues collect capture-only submissions that still need someone to do the integration work.
+
+  - type: input
+    id: model
+    attributes:
+      label: Model name / number
+      placeholder: "e.g. Huion Inspiroy H1060P"
+    validations:
+      required: true
+
+  - type: input
+    id: vendor_pid
+    attributes:
+      label: Vendor ID / Product ID
+      placeholder: "e.g. 0x256C / 0x006E"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options:
+        - USB
+        - Bluetooth
+        - USB wireless dongle
+    validations:
+      required: true
+
+  - type: textarea
+    id: capture
+    attributes:
+      label: Capture data
+      description: Paste the JSON from *Collect Device Data…* or attach a `hid-recorder` log.
+      placeholder: |
+        ```json
+        <paste capture JSON here>
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything unusual about the device — vendor quirks, unique init sequences, known existing decoders that might apply.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and registry entries; this PID is not already covered.
+          required: true
+        - label: The capture is from this specific device, not copied from another issue.
+          required: true
+        - label: I understand that reviews run on a multi-week cadence, and that forking is a first-class option.
+          required: true

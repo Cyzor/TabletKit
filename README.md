@@ -9,7 +9,7 @@ License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 ## Usage
 
 ```swift
-.package(url: "https://github.com/<you>/mocktab-kit.git", from: "0.1.0")
+.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.1.0")
 ```
 
 …then `import TabletKit` and consult the public surface described in
@@ -29,3 +29,12 @@ runs the package's 259-test suite. No Xcode project is required.
 Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will
 adopt [SemVer](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0,
 minor versions may break source compatibility.
+
+## Contributing
+
+PR review runs in batches, usually a few weeks per cycle. New device
+profiles, decoder additions, bug fixes with capture-log fixtures, and
+metadata corrections all land well here. UI and app-level issues belong
+on the [MockTab repo](https://github.com/Cyzor/tablet-driver) instead.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for scope and submission
+format. Fork freely if waiting doesn't suit — MPL-2.0 exists for that.

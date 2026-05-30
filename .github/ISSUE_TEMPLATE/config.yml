@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/Cyzor/TabletKit/discussions
+    about: API questions, decoder design discussion, "should this be a PR" questions.
+  - name: MockTab app issues
+    url: https://github.com/Cyzor/tablet-driver/issues
+    about: App bugs, UI problems, and end-user device support requests belong on the MockTab repo.

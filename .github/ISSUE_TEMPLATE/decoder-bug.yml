@@ -1,0 +1,71 @@
+name: Decoder bug
+description: Report incorrect output from an existing decoder
+title: "Decoder bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template only for decoders that *exist* but produce wrong output. For devices TabletKit doesn't recognize at all, use *New device support* instead. For MockTab app bugs (UI, mapping, permissions), file on the [MockTab repo](https://github.com/Cyzor/tablet-driver/issues).
+
+        **Include a capture log.** Issues without one aren't reproducible and get closed.
+
+  - type: input
+    id: model
+    attributes:
+      label: Device model
+      placeholder: "e.g. Intuos Pro Medium PTH-660"
+    validations:
+      required: true
+
+  - type: input
+    id: decoder
+    attributes:
+      label: Decoder
+      description: Which decoder produced the wrong output? (See `Sources/TabletKit/Decoders/`.)
+      placeholder: "e.g. IntuosV2Decoder"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: What should the decoder have produced for these reports?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      description: What did it produce instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: capture
+    attributes:
+      label: Capture log
+      description: |
+        Paste the JSON from MockTab's *Collect Device Data…* or attach a `hid-recorder` log. Trim to just the reports that reproduce the bug if you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: What were you doing with the tablet when the bug occurred?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Checklist
+      options:
+        - label: I'm reporting a decoder bug, not a MockTab app bug.
+          required: true
+        - label: The capture log demonstrates the bug.
+          required: true
