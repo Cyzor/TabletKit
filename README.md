@@ -1,9 +1,8 @@
 # TabletKit
 
-Pure-logic HID decoders, device registry, and supporting value types for
-Wacom (and vendor-neutral) drawing tablets on macOS. Extracted from the
-[MockTab](../mocktab-app) app so the decoder layer can be tested in
-isolation and consumed by other apps without GPL contamination.
+**TabletKit** is a Human Interface Device (HID) decoder layer for Wacom (and potentially other) drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, aux-button, and touch events an app can act on — without AppKit, IOKit, or event-injection plumbing.
+
+Serves as the decoder for [**MockTab**](https://mocktab.org), an open-source macOS driver for older Wacom tablets ([source](https://github.com/Cyzor/tablet-driver)).
 
 License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 
