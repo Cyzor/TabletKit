@@ -60,7 +60,7 @@ public enum ReportParser: String {
 
     /// Bamboo — Report ID 0x10, 20 bytes, BE16 coordinates.
     /// Covers Bamboo Pen & Touch, Bamboo Craft/Comic/Fun series (CTL/CTH-xxx).
-    /// Decoder not yet implemented; entries present for routing completeness.
+    /// Decoded by `BambooDecoder` (experimental — not yet hardware-validated).
     case bamboo
 
     /// Intuos3 (PTZ-xxx, 2003–2006) — same 10-byte IntuosV1 payload but with
@@ -716,8 +716,8 @@ public enum WacomDeviceRegistry {
             activeWidthMM: 311.0, activeHeightMM: 216.0),
 
         // ── Bamboo / CTL consumer line — bamboo parser ────────────────────────
-        // 20-byte Report ID 0x10. Decoder not yet implemented.
-        // Entries present for name resolution and future routing.
+        // Report ID 0x10 (10-byte pen layout, distinct from IntuosV2's 192-byte
+        // 0x10). Decoded by BambooDecoder — experimental, not hardware-validated.
         .init(
             productID: 0x00D0, name: "Bamboo Touch (CTT-460)",  // ⚠ estimated
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
