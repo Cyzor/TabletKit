@@ -730,6 +730,8 @@ public enum WacomDeviceRegistry {
         // 0x10). Decoded by BambooDecoder — experimental, not hardware-validated.
         .init(
             productID: 0x00D0, name: "Bamboo Touch (CTT-460)",  // ⚠ estimated
+            // maxPressure 0 is intentional: CTT-460 is finger-touch only, no
+            // pen. (Kernel's wacom_features_0xD0 lists the family's pen value.)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, activeWidthMM: 127, activeHeightMM: 76),
@@ -781,7 +783,8 @@ public enum WacomDeviceRegistry {
         // displays from the early 2000s. We have no PL decoder, so those
         // PIDs would not have worked even with corrected dimensions. The
         // real DTK-1300 lives at 0x0304 (an entry that already exists);
-        // there is no Cintiq 20WSX in the kernel ID table at all.
+        // the real Cintiq 20WSX is kernel wacom_features_0xC5 (see the
+        // 0x00C5 entry in the kernel-sweep section).
         // Entries removed during 2026-05-15 audit; do not re-add under
         // the wrong names.
         .init(
@@ -815,8 +818,8 @@ public enum WacomDeviceRegistry {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, activeWidthMM: 533, activeHeightMM: 330),
         .init(
-            productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (dims/buttonCount corrected from ⚠ estimated)
-            parser: .cintiqV1, maxX: 95040, maxY: 54260, maxPressure: 2047,
+            productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
+            parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 20, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
@@ -1032,8 +1035,11 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
-            productID: 0x0301, name: "Wacom CTL-671",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 1023,
+            // Kernel wacom_features_0x301 names this "Bamboo One M" (BAMBOO_PEN
+            // family) — parser switched from .intuosV1 to .bamboo to match, and
+            // dims corrected to the kernel values. Both unverified on hardware.
+            productID: 0x0301, name: "Bamboo One M (CTL-671)",  // ⚠ from kernel + OTD
+            parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
         .init(
@@ -1098,6 +1104,10 @@ public enum WacomDeviceRegistry {
         // CTC-6110WL.json (FeatureInitReport "AgI=" = [0x02, 0x02]).
         // No touch ring, no express keys, no eraser — pen-only AES devices.
         .init(
+            // PID collision: kernel wacom_features_0x100 is "ISDv4 100", a
+            // built-in tablet-PC digitizer that can never appear standalone on
+            // macOS — the modern CTC-4110WL (Wacom One S, per OTD) reuses the
+            // PID and is the only device this entry can match in practice.
             productID: 0x0100, name: "Wacom CTC-4110WL",  // ⚠ from OTD
             parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
@@ -1194,10 +1204,15 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
         .init(
-            productID: 0x009A, name: "Wireless Receiver (Intuos Pro gen1 WL)",  // ⚠ experimental
+            // Kernel wacom_features_0x9A identifies this as "ISDv4 9A", a
+            // built-in tablet-PC digitizer (TABLETPC type) — the previous
+            // "Wireless Receiver (Intuos Pro gen1 WL)" name was a guess; the
+            // real wireless receiver is the ACK-40401 at 0x0084. maxX 0 keeps
+            // this name-only (never routed to a driver).
+            productID: 0x009A, name: "Wacom ISDv4 9A (built-in digitizer)",  // ⚠ from kernel
             parser: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: false),
 
         // ── Upstream OTD sync 2026-05-15 ──────────────────────────────────────
         // Imported from OpenTabletDriver master, not yet in Linux input-wacom
@@ -1222,8 +1237,8 @@ public enum WacomDeviceRegistry {
             isPenDisplay: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
         .init(
-            productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (parser corrected from ⚠ kernel)
-            parser: .cintiqV1, maxX: 95600, maxY: 54200, maxPressure: 2047,
+            productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
+            parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 20, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 1,
             isPenDisplay: true,
@@ -1317,8 +1332,8 @@ public enum WacomDeviceRegistry {
         // once a real capture log (in-app or hid-recorder format) replays
         // cleanly through the assumed parser.
         .init(
-            productID: 0x0325, name: "Wacom Cintiq Companion 2 (DTH-W1310)",  // ⚠ recognition-only
-            parser: .cintiqV1, maxX: 61000, maxY: 35600, maxPressure: 2047,
+            productID: 0x0325, name: "Wacom Cintiq Companion 2 (DTH-W1310)",  // ⚠ recognition-only (dims from kernel wacom_features_0x325)
+            parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
@@ -1405,6 +1420,198 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
 
+        // ── Kernel sweep 2026-06-09 ───────────────────────────────────────────
+        // PIDs present in input-wacom's device table but previously absent
+        // here. Dimensions and button counts come from the corresponding
+        // wacom_features_0xXX structs. Entries with maxX 0 are deliberately
+        // name-only: their report family has no decoder (PL line) or they are
+        // non-digitizer interfaces — DeviceRouter only attaches a driver when
+        // maxX > 0, so these resolve a correct device name and nothing else.
+
+        // Decoder-family matches (full entries, ⚠ from kernel unless noted):
+        .init(
+            productID: 0x0019, name: "Bamboo1 Medium",  // ⚠ from kernel (graphire family)
+            parser: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false),
+        .init(
+            productID: 0x0047, name: "Intuos 2 (6×8, alt)",  // ⚠ from kernel — second XD-0608-U PID
+            parser: .intuosV1, maxX: 20320, maxY: 16240, maxPressure: 1023,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 203, activeHeightMM: 152),
+        .init(
+            productID: 0x0063, name: "Volito 2 (2×3)",  // ⚠ from kernel
+            parser: .graphire, maxX: 3248, maxY: 2320, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x0064, name: "PenPartner2",  // ⚠ from kernel — sibling of PenStation2 0x0061
+            parser: .graphire, maxX: 3250, maxY: 2320, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x0057, name: "Cintiq 22 (DTK-2241)",  // ⚠ from kernel (DTK type, 6 keys)
+            parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
+            buttonCount: 6, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+        .init(
+            productID: 0x0059, name: "Cintiq 22 Touch (DTH-2242)",  // ⚠ from kernel (DTK type, 6 keys)
+            parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
+            buttonCount: 6, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+        .init(
+            productID: 0x00C5, name: "Cintiq 20WSX (DTZ-2000W)",  // ⚠ from kernel (WACOM_BEE type)
+            parser: .cintiqV1, maxX: 86680, maxY: 54180, maxPressure: 1023,
+            buttonCount: 10, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+        .init(
+            productID: 0x00D5, name: "Bamboo Pen (6×8)",  // ⚠ from kernel (BAMBOO_PEN family)
+            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            // 27QHD uses the ExpressKey Remote (0x0331) instead of bezel keys.
+            productID: 0x032A, name: "Cintiq 27QHD (DTK-2700)",  // ⚠ from kernel (WACOM_27QHD type)
+            parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+        .init(
+            // Pen interface of the touch model; finger touch arrives on the
+            // separate 0x032C interface (layout unconfirmed — see name-only
+            // entry below).
+            productID: 0x032B, name: "Cintiq 27QHD Touch (DTH-2700)",  // ⚠ from kernel
+            parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+        .init(
+            // Pen interface; finger touch arrives on the separate 0x0335
+            // interface (layout unconfirmed).
+            productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // ⚠ from kernel (WACOM_13HD type)
+            parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
+            buttonCount: 9, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+
+        // Name-only: PL report family (wacom_pl_irq) has no decoder here.
+        // Kernel dims in comments for when one lands.
+        .init(
+            productID: 0x0030, name: "PL400",  // ⚠ name-only; kernel: 5408×4056×255 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0031, name: "PL500",  // ⚠ name-only; kernel: 6144×4608×255 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0032, name: "PL600",  // ⚠ name-only; kernel: 6126×4604×255 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0033, name: "PL600SX",  // ⚠ name-only; kernel: 6260×5016×255 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0034, name: "PL550",  // ⚠ name-only; kernel: 6144×4608×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0035, name: "PL800",  // ⚠ name-only; kernel: 7220×5780×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0037, name: "PL700",  // ⚠ name-only; kernel: 6758×5406×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0038, name: "PL510",  // ⚠ name-only; kernel: 6282×4762×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x0039, name: "DTU-710",  // ⚠ name-only; kernel: 34080×27660×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x00C0, name: "DTF-720",  // ⚠ name-only; kernel: 6858×5506×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x00C2, name: "DTF-720a",  // ⚠ name-only; kernel: 6858×5506×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x00C4, name: "DTF-521",  // ⚠ name-only; kernel: 6282×4762×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            productID: 0x00C7, name: "DTU-1931",  // ⚠ name-only; kernel: 37832×30305×511 (PL)
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+
+        // Name-only: companion touch interfaces of pen displays we already
+        // list. Touch layouts unconfirmed; pen lives on the paired PID.
+        .init(
+            productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ⚠ name-only
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x005E, name: "Cintiq 22HD Touch sensor (pairs 0x005B)",  // ⚠ name-only
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x032C, name: "Cintiq 27QHD Touch sensor (pairs 0x032B)",  // ⚠ name-only
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x005D, name: "Cintiq 22 Touch sensor (pairs 0x0059)",  // ⚠ name-only
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            productID: 0x0335, name: "Cintiq 13HD Touch sensor (pairs 0x0333)",  // ⚠ name-only
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+
+        // Name-only: accessories and special modes.
+        .init(
+            // 18-button pad accessory for the Cintiq 27QHD line. No digitizer;
+            // pad decode not yet supported.
+            productID: 0x0331, name: "ExpressKey Remote (EKR-100)",  // ⚠ name-only
+            parser: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 18, hasTouchRing: true, hasEraser: false,
+            seizeUSB: false),
+        .init(
+            // Firmware-update (DFU) mode. Never attach a driver to this.
+            productID: 0x0094, name: "Wacom Bootloader (DFU mode)",  // ⚠ name-only
+            parser: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false),
+
         // ── Legacy Bluetooth devices (serial-port based, out-of-scope) ─────────
         // CTE-630BT (Graphire4 Bluetooth, PID 0x0081) and XD-0608-BT (Intuos2
         // Bluetooth, PID 0x0CA) use RFCOMM/SPP (serial port over Bluetooth)
@@ -1441,6 +1648,15 @@ public enum WacomDeviceRegistry {
         // Intuos Pro L (PTH-860 family)
         0x035A: 0x0358,  // Wireless dongle
         0x0361: 0x0358,  // BT Classic
+
+        // Intuos4 WL (PTK-540WL): kernel BT_DEVICE_WACOM(0xBD) is the
+        // Bluetooth PID of the USB 0x00BC entry. Decode over BT untested.
+        0x00BD: 0x00BC,
+
+        // Intuos BT S/M (CTL-4100WL/6100WL): kernel 0x3C6/0x3C8 are the
+        // INTUOSHT3_BT Bluetooth PIDs of the USB entries.
+        0x03C6: 0x0376,
+        0x03C8: 0x0378,
     ]
 
     // MARK: Lookups
