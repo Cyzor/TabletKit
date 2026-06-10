@@ -348,11 +348,20 @@ public enum WacomDeviceRegistry {
         // ── PenPartner / Graphire 1–4 ─────────────────────────────────────────
         // graphire parser: 8-byte Report ID 0x01, ≤511 pressure levels.
         .init(
-            productID: 0x0003, name: "PenPartner",
-            // Dimensions and pressure corrected to match kernel
-            // wacom_features_0x3 (input-wacom 4.18); previous values
-            // (5040×3780×255) were estimation drift.
-            parser: .graphire, maxX: 20480, maxY: 15360, maxPressure: 511,
+            // Kernel wacom_features_0x3 identifies this PID as the "Cintiq
+            // Partner" (PTU-600), not PenPartner — the 2026-05 dimension
+            // "correction" pulled the right struct but kept the wrong name.
+            // The PTU report family has no decoder here, so this is name-only
+            // (kernel dims: 20480×15360×511). The real PenPartner is 0x0000.
+            productID: 0x0003, name: "Cintiq Partner (PTU-600)",  // ⚠ name-only
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true, seizeUSB: false),
+        .init(
+            // PENPARTNER report family (5-byte wacom_penpartner_irq) has no
+            // decoder here; name-only (kernel dims: 5040×3780×255).
+            productID: 0x0000, name: "PenPartner",  // ⚠ name-only
+            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false),
         .init(
