@@ -1412,9 +1412,15 @@ public enum WacomDeviceRegistry {
 
     // MARK: Lookups
 
+    /// PID-keyed index over `knownDevices`. `Dictionary(grouping:)` preserves
+    /// declaration order within each group, so "first match" semantics are
+    /// identical to the previous linear scans.
+    private static let specsByPID: [Int: [WacomDeviceSpec]] =
+        Dictionary(grouping: knownDevices, by: \.productID)
+
     /// Returns the spec for `productID`, or nil if unrecognised.
     public static func spec(for productID: Int) -> WacomDeviceSpec? {
-        knownDevices.first { $0.productID == productID }
+        specsByPID[productID]?.first
     }
 
     /// Returns the best-matching spec for `productID`, optionally using the
@@ -1432,7 +1438,7 @@ public enum WacomDeviceRegistry {
     /// app-side lookup path is already vendor-neutral when Huion / Xencelabs
     /// support arrives.
     public static func spec(forProductID productID: Int, productString: String?) -> WacomDeviceSpec? {
-        let matches = knownDevices.filter { $0.productID == productID }
+        let matches = specsByPID[productID] ?? []
         guard !matches.isEmpty else { return nil }
         if let needle = productString?.lowercased() {
             if let hit = matches.first(where: {
