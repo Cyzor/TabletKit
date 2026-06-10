@@ -41,4 +41,4 @@ TabletKit's protocol knowledge and device data draw from several open-source pro
 
 ## Contributing
 
-Device profiles, decoder additions, bug fixes with capture-log fixtures, and metadata corrections all fit here; UI and app-level issues belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver). See [`CONTRIBUTING.md`](CONTRIBUTING.md) for scope and submission format. Fork freely if waiting doesn't suit, which the MPL-2.0 arrangement supports.
+Device profiles, decoder additions, bug fixes with capture-log fixtures, and metadata corrections all fit here; UI and app-level issues belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver). See [`Contributing.md`](Contributing.md) for scope and submission format. Fork freely if waiting doesn't suit, which the MPL-2.0 arrangement supports.

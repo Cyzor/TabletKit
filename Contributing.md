@@ -12,7 +12,7 @@ TabletKit ships under MPL-2.0.
 - **Test fixtures** that improve coverage of existing decoders — especially edge cases like wireless drop, tool swap, and out-of-range.
 - **Dimension or metadata corrections** for existing registry entries, with a citable source (libwacom data, Wacom spec sheet, direct measurement).
 
-App-level bugs, UI issues, and installation problems belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver) — see its [`CONTRIBUTING.md`](https://github.com/Cyzor/tablet-driver/blob/main/CONTRIBUTING.md).
+App-level bugs, UI issues, and installation problems belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver) — see its [`Contributing.md`](https://github.com/Cyzor/tablet-driver/blob/main/Contributing.md).
 
 ## Data sources, in order of confidence
 

@@ -5,7 +5,52 @@ The MockTab app tracks its own version in `MockTab/Info.plist` and maintains sep
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
-## [Unreleased]
+## [0.2.0] — 2026-06-10
+
+First non-Wacom decoder, a registry sweep against the Linux input-wacom device
+table, and several product-identity corrections.
+
+### Added
+
+- `XencelabsDecoder` — experimental decoder for the Xencelabs Pen Tablet
+  Medium (0x28BD:0x5201) and Small (0x5204), ported from OpenTabletDriver's
+  parser sources. Pen (position, 8191-level pressure, tilt, eraser, three
+  barrel buttons), express keys, and relative wheels. Not yet validated on
+  hardware; requires the `[0x02, 0xB0, 0x04]` output-report init.
+- `ReportParser.xencelabs` case and the matching `"xencelabs"` family string.
+- `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` — hand-
+  maintained allowlist marking which non-Wacom profiles have a working
+  decoder, separate from the bulk-imported recognition data.
+- Registry sweep from the input-wacom kernel device table (~36 entries):
+  decoder-family matches with kernel dimensions (Bamboo1 Medium, Intuos2 6×8
+  alt PID, Volito2 2×3, PenPartner2, DTK-2241, DTH-2242, Cintiq 20WSX,
+  Bamboo Pen 6×8, Cintiq 27QHD pen/touch, Cintiq 13HD Touch) plus a
+  name-only tier (`maxX: 0`, never routed to a driver) covering the PL
+  display line, companion touch-sensor interfaces, the ExpressKey Remote,
+  and the DFU bootloader PID.
+- `canonicalPIDMap` rows for Intuos4 WL (0x00BD → 0x00BC), Intuos BT S/M
+  (0x03C6/0x03C8 → CTL-4100WL/6100WL), and PTH-460 BT (0x0393/0x03DD), with
+  a test asserting every map target has a registry entry.
+
+### Changed
+
+- Registry lookups (`spec(for:)` and the product-string overload) are now
+  dictionary-indexed by PID instead of linear scans.
+- Product-identity corrections sourced from input-wacom/libwacom/OTD:
+  - 0x0352 is the **Cintiq Pro 32 (DTH-3220)**, not "Intuos Pro S"; the real
+    PTH-460 is 0x0392/0x03DC USB and 0x0393/0x03DD BT (entries promoted to
+    cross-referenced with ring, touch, and kernel coordinates). The
+    fabricated 0x035B entry and the dangling 0x035F mapping are gone.
+  - 0x0003 is the **Cintiq Partner (PTU-600)**, not PenPartner; the real
+    PenPartner is 0x0000. Both are name-only (PTU/PENPARTNER report
+    families have no decoder).
+  - 0x009A is the **ISDv4 9A** built-in digitizer, not a wireless receiver.
+  - 0x0301 is kernel "Bamboo One M" — renamed, moved to the bamboo parser,
+    dimensions corrected.
+  - Dimension drift fixes vs kernel feature structs: Cintiq 22HD, 22HD
+    Touch, Cintiq Companion 2.
+- BLE/Bluetooth and wireless doc comments corrected where they referenced
+  the wrong PTH-460/PTH-860 PIDs.
 
 ### Removed
 
