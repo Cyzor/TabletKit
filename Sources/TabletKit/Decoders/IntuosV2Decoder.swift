@@ -6,7 +6,7 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV2 HID report format.
 ///
-/// Used by: PTH-460 (0x0356), PTH-660 (0x0357), PTH-860 (0x0358)
+/// Used by: PTH-460 (0x0392/0x03DC), PTH-660 (0x0357), PTH-860 (0x0358)
 /// and any future tablet using the 192-byte IntuosV2 report layout.
 ///
 /// Report ID routing:

@@ -663,9 +663,11 @@ public enum WacomDeviceRegistry {
         // │                                                                         │
         // │ Model  │ Size │   USB PID   │  BT Classic PID  │   BLE PID (TBD)      │
         // │────────┼──────┼─────────────┼──────────────────┼──────────────────    │
-        // │PTH-460 │  S   │   0x0352    │    0x035B (+9)   │    ? (LE IntuosPro S)│
+        // │PTH-460 │  S   │ 0x0392/03DC │  0x0393/03DD     │    ? (LE IntuosPro S)│
         // │PTH-660 │  M   │   0x0357    │    0x0360 (+9)   │    ? (LE IntuosPro M)│
         // │PTH-860 │  L   │   0x0358    │    0x0361 (+9)   │    ? (LE IntuosPro L)│
+        // │  (PTH-460 shipped later than 660/860 and does not follow the +9     │
+        // │   pattern; 0x0352 belongs to the Cintiq Pro 32.)                     │
         // │                                                                         │
         // │ Transport notes:                                                       │
         // │  • USB: standard HID, requires initSteps=[] + InputMode init           │
@@ -677,10 +679,17 @@ public enum WacomDeviceRegistry {
         // │              BLE = standard BLE pairing (limited functionality)       │
         // └────────────────────────────────────────────────────────────────────────┘
         .init(
-            productID: 0x0352, name: "Intuos Pro S (PTH-460)",  // ⚠ estimated
-            parser: .intuosV2, maxX: 31496, maxY: 19685, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            seizeUSB: true, activeWidthMM: 160, activeHeightMM: 100),
+            // Previously mislabeled "Intuos Pro S (PTH-460)" by a "+9 PID
+            // pattern" guess. libwacom wacom-cintiq-pro-32.tablet identifies
+            // 0x0352 as the Cintiq Pro 32 pen interface (PairedID 0x0356 is
+            // its separate touch interface — no registry entry; it would need
+            // its own touch decoder). The real PTH-460 lives at 0x0392/0x03DC.
+            // Dimensions: libwacom Width=686 Height=381 mm × 200 units/mm.
+            productID: 0x0352, name: "Cintiq Pro 32 (DTH-3220)",  // ⚠ recognition-only
+            parser: .intuosV2, maxX: 137200, maxY: 76200, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, activeWidthMM: 686, activeHeightMM: 381),
         .init(
             productID: 0x0357, name: "Intuos Pro M (PTH-660)",  // ✓ confirmed live
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
@@ -855,21 +864,35 @@ public enum WacomDeviceRegistry {
             seizeUSB: false,
             confidence: .verified,
             activeWidthMM: 311.0, activeHeightMM: 216.0),
+        // (0x035B "Intuos Pro S (PTH-460) BT" removed 2026-06-09: the PID was
+        // fabricated from the PTH-660/860 "+9" BT pattern. PTH-460 shipped
+        // later with PIDs 0x0392 (USB) / 0x0393 (BT); see entries below.)
         .init(
-            productID: 0x035B, name: "Intuos Pro S (PTH-460) BT",  // ⚠ BT Classic PID (USB 0x0352 + 9)
-            parser: .intuosV2, maxX: 31496, maxY: 19685, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false, activeWidthMM: 160, activeHeightMM: 100),
-        .init(
-            productID: 0x0392, name: "Wacom PTH-460",  // ⚠ from OTD
+            // Kernel features_0x393 (INTUOSP2S_BT) + OTD PTH-460.json + libwacom
+            // wacom-intuos-pro-2-s.tablet all agree on PIDs and coordinates.
+            // 6 express keys + touch ring (libwacom's 7th button is the ring
+            // center). Touch fields mirror the PTH-660 pattern: kernel reports
+            // touch_max=10 but the sibling 0x21 report carries 5 slots;
+            // touchMaxX/Y estimated as pen/5 like PTH-660 until captured.
+            productID: 0x0392, name: "Intuos Pro S (PTH-460)",  // cross-referenced: kernel + OTD + libwacom
             parser: .intuosV2, maxX: 31920, maxY: 19950, maxPressure: 8191,
-            buttonCount: 6, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 102),
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 5,
+            touchMaxX: 6384, touchMaxY: 3990,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced,
+            activeWidthMM: 159.6, activeHeightMM: 99.75),
         .init(
-            productID: 0x03DC, name: "Wacom PTH-460",  // ⚠ from OTD
+            // Hardware-revision PID variant; OTD PTH-460.json ProductID 988 and
+            // libwacom DeviceMatch usb|056a|03dc. Same device as 0x0392.
+            productID: 0x03DC, name: "Intuos Pro S (PTH-460)",  // cross-referenced: OTD + libwacom
             parser: .intuosV2, maxX: 31920, maxY: 19950, maxPressure: 8191,
-            buttonCount: 6, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 102),
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 5,
+            touchMaxX: 6384, touchMaxY: 3990,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced,
+            activeWidthMM: 159.6, activeHeightMM: 99.75),
 
         // ── Bamboo / Graphire-era CTE / CTF consumer line ─────────────────────
         // Graphire-era: intuosV1 8-byte format.
@@ -1393,13 +1416,13 @@ public enum WacomDeviceRegistry {
     ///
     /// The USB PID is canonical because it's the reference for HID feature reports and
     /// is always enumerable first. Example: PTH-660 family maps to 0x0357 (USB).
-    ///
-    /// Note: PTH-460 wireless dongle PID (if it exists as a separate entry) needs hardware
-    /// verification before adding, as there may be a collision with PTH-860 USB 0x0358.
     public static let canonicalPIDMap: [Int: Int] = [
-        // Intuos Pro S (PTH-460 family)
-        0x035B: 0x0352,  // PTH-460 BT Classic (USB PID 0x0352 not yet in registry)
-        0x035F: 0x0356,  // PTH-460 BT Classic (alternative USB variant?)
+        // Intuos Pro S (PTH-460 family) — PIDs per kernel BT_DEVICE_WACOM(0x393)
+        // and libwacom DeviceMatch (usb 0392 / bt 0393; usb 03dc / bt 03dd).
+        // The old 0x035B/0x035F entries were "+9 pattern" guesses pointing at
+        // PIDs that belong to the Cintiq Pro 32 family; removed 2026-06-09.
+        0x0393: 0x0392,  // BT Classic
+        0x03DD: 0x03DC,  // BT Classic (hardware-revision variant)
 
         // Intuos Pro M (PTH-660 family)
         0x0359: 0x0357,  // Wireless dongle

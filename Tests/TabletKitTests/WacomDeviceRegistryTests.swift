@@ -79,4 +79,16 @@ final class WacomDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0360), 0x0357)
         XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0359), 0x0357)
     }
+
+    /// Every canonical-map target must resolve to a registry entry; a dangling
+    /// target silently routes that transport variant to the fallback driver.
+    /// (Regression guard for the former 0x035F → 0x0356 mapping, whose target
+    /// never existed.)
+    func testCanonicalPIDMapTargetsExist() {
+        for (variant, canonical) in WacomDeviceRegistry.canonicalPIDMap {
+            XCTAssertNotNil(
+                WacomDeviceRegistry.spec(for: canonical),
+                "canonicalPIDMap[0x\(String(variant, radix: 16))] → 0x\(String(canonical, radix: 16)) has no registry entry")
+        }
+    }
 }
