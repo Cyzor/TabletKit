@@ -105,4 +105,23 @@ final class VendorDeviceRegistryTests: XCTestCase {
                        + "consider whether `profiles(forVendorID:productID:)` should "
                        + "still return an array.")
     }
+
+    // MARK: - Drivable allowlist
+
+    /// Only the two Xencelabs Pen Tablet PIDs are drivable today; everything
+    /// else stays recognition-only until its decoder lands.
+    func testDrivableProfileCoversExactlyTheXencelabsPenTablets() {
+        XCTAssertEqual(
+            VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5201)?
+                .productName,
+            "XenceLabs Pen Tablet Medium")
+        XCTAssertEqual(
+            VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5204)?
+                .productName,
+            "XenceLabs Pen Tablet Small")
+        // Recognition-only vendors are not drivable.
+        XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x256C, productID: 0x0064))
+        // Quick Keys remote (if present) and unknown Xencelabs PIDs are not drivable.
+        XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5202))
+    }
 }

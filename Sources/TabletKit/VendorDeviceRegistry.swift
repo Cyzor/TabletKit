@@ -42,6 +42,29 @@ public enum VendorDeviceRegistry {
         knownDevices.filter { $0.vendor == vendor }
     }
 
+    /// The profile for a non-Wacom device MockTab can actually *drive* (a
+    /// decoder exists and the init handshake is known), or nil when the device
+    /// is recognition-only.
+    ///
+    /// Deliberately a hand-maintained allowlist rather than a flag on the
+    /// generated entries: the generated registry is bulk-imported and
+    /// regenerated wholesale, and drivability is a property of our decoder
+    /// coverage, not of the imported data.
+    ///
+    /// Current coverage: Xencelabs Pen Tablet Medium (0x5201) and Small
+    /// (0x5204) via `XencelabsDecoder` (experimental — ported from
+    /// OpenTabletDriver, awaiting hardware validation).  Huion / XP-Pen PID
+    /// collisions need string-descriptor discrimination before any of their
+    /// entries can be promoted here.
+    public static func drivableProfile(
+        forVendorID vendorID: Int, productID: Int
+    ) -> VendorDeviceProfile? {
+        guard vendorID == 0x28BD, productID == 0x5201 || productID == 0x5204 else {
+            return nil
+        }
+        return profiles(forVendorID: vendorID, productID: productID).first
+    }
+
     // MARK: - Registry
 
     public static let knownDevices: [VendorDeviceProfile] = [

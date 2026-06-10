@@ -76,6 +76,14 @@ public enum ReportParser: String {
     /// ABS_Z Art Pen rotation, barrel-button debounce, dual-ring 0x0C layout,
     /// tip-switch synthetic pressure, and incompatible-tool suppression.
     case cintiqV1
+
+    /// Xencelabs Pen Tablet (VID 0x28BD) — 10-byte pen report dispatched on
+    /// byte-1 flags, XP-Pen-shaped aux report.  The only non-Wacom parser;
+    /// specs are synthesized at connect time from `VendorDeviceRegistry`
+    /// rather than stored in this registry.  Requires the
+    /// `[0x02, 0xB0, 0x04]` output-report init.  Decoded by
+    /// `XencelabsDecoder` (experimental — not yet hardware-validated).
+    case xencelabs
 }
 
 // MARK: - Init step
@@ -323,6 +331,8 @@ public struct WacomDeviceSpec {
             return "dtu"
         case .bamboo:
             return "bamboo"
+        case .xencelabs:
+            return "xencelabs"
         }
     }
 }
