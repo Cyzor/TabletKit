@@ -5,6 +5,17 @@ The MockTab app tracks its own version in `MockTab/Info.plist` and maintains sep
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
+## [Unreleased]
+
+### Added
+
+- Recognition-only registry rows for the Wacom MobileStudio Pro line:
+  13" (0x034D gen 1, 0x0398 gen 2) and 16" (0x034E gen 1, 0x0399 gen 2,
+  0x03AA alt). Dimensions derived from libwacom physical size at 5080 LPI;
+  parser guess is `.intuosV2` — the kernel drives these via descriptor-based
+  generic HID, so promotion requires a user capture. Touch lives on separate
+  paired USB devices (0x034A/0x034B/0x039A/0x039B/0x03AC) and is not claimed.
+
 ## [0.2.0] — 2026-06-10
 
 First non-Wacom decoder, a registry sweep against the Linux input-wacom device

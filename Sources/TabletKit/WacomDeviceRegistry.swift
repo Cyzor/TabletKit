@@ -1357,6 +1357,20 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 305, activeHeightMM: 178),
         .init(
+            productID: 0x034D, name: "Wacom MobileStudio Pro 13 (DTH-W1320)",  // ⚠ recognition-only; touch is a separate USB device (0x034A)
+            parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 305, activeHeightMM: 178),
+        .init(
+            productID: 0x034E, name: "Wacom MobileStudio Pro 16 (DTH-W1620)",  // ⚠ recognition-only; touch is a separate USB device (0x034B)
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 356, activeHeightMM: 203),
+        .init(
             productID: 0x0350, name: "Wacom Cintiq Pro 16 (DTH-1620)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
@@ -1378,6 +1392,27 @@ public enum WacomDeviceRegistry {
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 229, activeHeightMM: 127),
+        .init(
+            productID: 0x0398, name: "Wacom MobileStudio Pro 13 (DTH-W1321)",  // ⚠ recognition-only; touch is a separate USB device (0x039A)
+            parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 305, activeHeightMM: 178),
+        .init(
+            productID: 0x0399, name: "Wacom MobileStudio Pro 16 (DTH-W1621)",  // ⚠ recognition-only; touch is a separate USB device (0x039B)
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            productID: 0x03AA, name: "Wacom MobileStudio Pro 16 (DTH-W1620, alt)",  // ⚠ recognition-only; touch is a separate USB device (0x03AC)
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 76200, maxY: 40600, maxPressure: 8191,
