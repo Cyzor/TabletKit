@@ -1,20 +1,124 @@
 # TabletKit
 
-**TabletKit** is a Human Interface Device (HID) decoder layer for Wacom (and potentially other) drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, aux-button, and touch events an app can act on — without AppKit, IOKit, or event-injection plumbing.
+**TabletKit** is a Human Interface Device (HID) decoder layer for drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, aux-button, and touch events an app can act on — without AppKit, IOKit, or event-injection plumbing.
 
 Serves as the decoder for [**MockTab**](https://mocktab.org), an open-source macOS driver for older Wacom tablets ([source](https://github.com/Cyzor/tablet-driver)).
 
 License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 
-## Usage
+## Adding to your project
 
 ```swift
-.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.1.0")
+// Package.swift
+.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.2.0")
 ```
 
-…then `import TabletKit` and consult the public surface described in
-[`CHANGELOG.md`](CHANGELOG.md): `TabletReportDecoder`, `DecodeResult`,
-`TabletPoint`, `WacomDeviceRegistry`, `VendorDeviceRegistry`, and friends.
+Then add `"TabletKit"` to your target's dependencies and `import TabletKit`.
+
+## Usage
+
+The core loop is:
+
+1. Look up the device in the registry to get its `WacomDeviceSpec`.
+2. Build a `DigitizerSpec` from the spec's coordinate and pressure ranges.
+3. Allocate a `DecoderState` for this device instance.
+4. On each HID report callback, call `decoder.decode(...)` and act on the results.
+
+### Worked example — Wacom Intuos Pro M (PTH-660, USB)
+
+```swift
+import TabletKit
+import IOKit.hid
+
+// 1. Look up the device. PTH-660 USB product ID is 0x0357.
+guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else { fatalError("unknown PID") }
+
+// 2. Build the digitizer dimensions from the registry entry.
+var digiSpec = DigitizerSpec(
+    maxX: spec.maxX,
+    maxY: spec.maxY,
+    maxPressure: spec.maxPressure,
+    buttonCount: spec.buttonCount,
+    hasTilt: spec.hasTilt,
+    hasFingerTouch: spec.hasFingerTouch,
+    maxTouchContacts: spec.maxTouchContacts
+)
+
+// 3. Allocate per-device state (one instance per physical device).
+var state = DecoderState()
+
+// 4. Select the decoder for this parser family.
+//    spec.parser == .intuosV2 for the PTH-660.
+var decoder = IntuosV2Decoder()
+
+// Inside your IOHIDDevice report callback:
+func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
+    let results = decoder.decode(
+        report: report,
+        length: length,
+        spec: digiSpec,
+        state: &state,
+        deviceFamily: spec.family
+    )
+    for result in results {
+        switch result {
+        case .pen(let point):
+            // point.x / point.y      — raw device units (0..spec.maxX / 0..spec.maxY)
+            // point.normalizedPressure — 0.0–1.0 (use this for brush opacity, etc.)
+            // point.tiltX / tiltY    — –1.0 to +1.0 (proportional, not degrees)
+            // point.inProximity      — true while pen is hovering or touching
+            print("pen at (\(point.x), \(point.y)) pressure \(point.normalizedPressure)")
+        case .toolEnter(let identity):
+            // identity.toolCode — Wacom tool code (look up in WacomToolCatalog for a name)
+            print("tool entered: 0x\(String(format: "%04X", identity.toolCode))")
+        case .aux(let buttons):
+            // buttons.buttons          — [Bool] array, one entry per express key
+            // buttons.touchRingActive  — true while a finger is on the ring
+            // buttons.touchRingPosition — absolute position 0–71 (0x7F = no contact)
+            let held = buttons.buttons.indices.filter { buttons.buttons[$0] }
+            print("aux: keys=\(held) ring=\(buttons.touchRingActive ? buttons.touchRingPosition : 0xFF)")
+        case .touch(let contacts):
+            for contact in contacts {
+                print("touch id=\(contact.id) at (\(contact.x), \(contact.y))")
+            }
+        case .wireless(let status):
+            print("wireless: \(status)")
+        case .mouseButton(let mask):
+            print("mouse buttons: \(mask)")
+        case .battery(let percent, let charging):
+            print("battery: \(percent)%\(charging ? " charging" : "")")
+        case .wheel(let index, let delta):
+            print("wheel \(index): \(delta)")
+        case .toolCompatibility(let note):
+            print("compat: \(note)")
+        case .none:
+            break
+        }
+    }
+}
+```
+
+### Selecting a decoder
+
+The registry's `parser` field tells you which decoder to instantiate:
+
+| `ReportParser` | Decoder | Covers |
+|---|---|---|
+| `.intuosV2` | `IntuosV2Decoder` | Intuos Pro gen 2 (PTH-460/660/860) |
+| `.intuosV1` | `IntuosV1Decoder` | Intuos 1–5, Intuos4 (PTK), Intuos5 first-gen |
+| `.intuos3` | `Intuos3Decoder` | Intuos3 (PTZ-xxx) |
+| `.cintiqV1` | `CintiqV1Decoder` | Cintiq 24HD, 22HD, 13HD, older pen displays |
+| `.bamboo` | `BambooDecoder` | Bamboo Pen & Touch (CTL/CTH) — experimental |
+| `.graphire` | `GraphireDecoder` | Graphire 2–4, Volito — experimental |
+| `.dtus` | `DTUSDecoder` | DTK-1651, DTU-1031/1031X/1141 — experimental |
+| `.dtu` | `DTUDecoder` | DTU-1631, DTU-2231 — experimental |
+| `.xencelabs` | `XencelabsDecoder` | Xencelabs Medium/Small — experimental, hardware-unverified |
+
+`WacomDeviceRegistry` covers Wacom devices. `VendorDeviceRegistry` covers other vendors; use `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` to look those up.
+
+### Device init handshake
+
+Some devices require a feature report before they will stream pen data. Check `spec.initSteps` and send each `.featureReport(_:)` step via `IOHIDDeviceSetReport`. Intuos Pro and Cintiq devices need this; Bamboo and older devices generally do not.
 
 ## Tests
 
@@ -22,13 +126,11 @@ License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 swift test
 ```
 
-runs the package's 259-test suite. No Xcode project is required.
+runs the 281-test suite against fixture captures from real devices. No Xcode project required.
 
 ## Versioning
 
-Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will
-adopt [SemVer](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0,
-minor versions may break source compatibility.
+Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [SemVer](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
 ## Acknowledgments
 

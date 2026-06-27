@@ -19,5 +19,10 @@ let package = Package(
             name: "TabletKitTests",
             dependencies: ["TabletKit"]
         ),
+        .executableTarget(
+            name: "tablet-decode",
+            dependencies: ["TabletKit"],
+            path: "Samples/tablet-decode"
+        ),
     ]
 )
