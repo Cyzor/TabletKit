@@ -708,7 +708,7 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 137200, maxY: 76200, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, activeWidthMM: 686, activeHeightMM: 381),
+            seizeUSB: true, activeWidthMM: 686, activeHeightMM: 381),
         .init(
             productID: 0x0357, name: "Intuos Pro M (PTH-660)",  // ✓ confirmed live
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
@@ -1155,38 +1155,45 @@ public enum WacomDeviceRegistry {
             buttonCount: 20, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
+        // ── IntuosV2 / IntuosV3 pen displays — seizeUSB policy ───────────────
+        // IntuosV2 and IntuosV3 pen-display USB interfaces expose a
+        // mouse-compatible HID collection alongside the digitizer, identical to
+        // the cintiqV1 case: without seizure macOS processes Report 0x01
+        // (tip-switch) as a standard mouse click.  seizeUSB=true on every
+        // pen-display entry with a real decoder (maxX > 0); maxX=0 stubs stay
+        // false — seizing a device we cannot decode is strictly worse.
         .init(
             productID: 0x034F, name: "Wacom DTH-1320",  // ⚠ from OTD
             parser: .intuosV2, maxX: 59552, maxY: 33848, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 166),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 166),
         .init(
             productID: 0x0390, name: "Wacom Cintiq 16 (DTK-1660)",  // ⚠ from OTD
             parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03AE, name: "Wacom Cintiq 16 (DTK-1660)",  // ⚠ from OTD
             parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03A6, name: "Wacom DTC-133",  // ⚠ from OTD
             parser: .intuosV2, maxX: 29434, maxY: 16556, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
         .init(
             productID: 0x03C0, name: "Wacom Cintiq Pro 27 (DTH-271)",  // cross-referenced: linuxwacom + libwacom + OTD
             parser: .intuosV2, maxX: 120032, maxY: 67868, maxPressure: 8191,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 610, activeHeightMM: 330),
         .init(
@@ -1195,7 +1202,7 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
 
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
@@ -1251,7 +1258,7 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
         .init(
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
@@ -1264,7 +1271,7 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 96012, maxY: 54356, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 457, activeHeightMM: 254),
         .init(
@@ -1295,7 +1302,7 @@ public enum WacomDeviceRegistry {
             parser: .dtus, maxX: 34816, maxY: 19759, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x00FB, name: "Wacom DTU-1031",  // ⚠ from kernel
             parser: .dtus, maxX: 22096, maxY: 13960, maxPressure: 511,
@@ -1304,20 +1311,20 @@ public enum WacomDeviceRegistry {
             // dimensions: libwacom wacom-dtu-1031.tablet (Width=229, Height=127).
             // Kernel math (22096/100 × 13960/100) gives 221×140 — height is
             // wrong (digitiser maxY over-ranges past the bezel).
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 229, activeHeightMM: 127),
         .init(
             productID: 0x032F, name: "Wacom DTU-1031X",  // ⚠ from kernel
             parser: .dtus, maxX: 22672, maxY: 12928, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
         .init(
             productID: 0x0336, name: "Wacom DTU-1141",  // ⚠ from kernel
             parser: .dtus, maxX: 23672, maxY: 13403, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
 
         // ── DTU family (Linux input-wacom DTU type, wacom_dtu_irq) ────────────
         // Older entry-level pen displays. Single pen report 0x02 (LE16 X/Y,
@@ -1329,13 +1336,13 @@ public enum WacomDeviceRegistry {
             parser: .dtu, maxX: 47864, maxY: 27011, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
         .init(
             productID: 0x00F0, name: "Wacom DTU-1631",  // ⚠ from kernel
             parser: .dtu, maxX: 34623, maxY: 19553, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
 
         // ── Imported from wacom-hid-descriptors 2026-05-26 ─────────────────────
         // Recognition-only entries for devices that appear in real linuxwacom
@@ -1368,14 +1375,14 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 294, activeHeightMM: 165),
         .init(
             productID: 0x034E, name: "Wacom MobileStudio Pro 16 (DTH-W1620)",  // ⚠ recognition-only; touch is a separate USB device (0x034B)
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x0350, name: "Wacom Cintiq Pro 16 (DTH-1620)",  // ⚠ recognition-only
@@ -1383,7 +1390,7 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x0354, name: "Wacom Cintiq Pro 16 (DTH-1620, alt)",  // ⚠ recognition-only
@@ -1391,7 +1398,7 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x0379, name: "Wacom Intuos BT M (CTL-6100WL)",  // ⚠ recognition-only
@@ -1404,21 +1411,21 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 294, activeHeightMM: 165),
         .init(
             productID: 0x0399, name: "Wacom MobileStudio Pro 16 (DTH-W1621)",  // ⚠ recognition-only; touch is a separate USB device (0x039B)
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03AA, name: "Wacom MobileStudio Pro 16 (DTH-W1620, alt)",  // ⚠ recognition-only; touch is a separate USB device (0x03AC)
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // ⚠ recognition-only
@@ -1426,35 +1433,35 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 381, activeHeightMM: 203),
         .init(
             productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 330, activeHeightMM: 178),
         .init(
             productID: 0x03CF, name: "Wacom DTC121 (alt)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
         .init(
             productID: 0x03EC, name: "Wacom DTH134",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 330, activeHeightMM: 178),
         .init(
             productID: 0x03ED, name: "Wacom DTC121",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
         .init(
             productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only
@@ -1462,13 +1469,13 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
         .init(
             productID: 0x4900, name: "Wacom DTC121 (alt 2)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
 
         // ── Kernel sweep 2026-06-09 ───────────────────────────────────────────
