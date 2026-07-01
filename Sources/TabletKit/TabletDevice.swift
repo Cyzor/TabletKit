@@ -387,30 +387,40 @@ public protocol TabletReportDecoder {
     ) -> [DecodeResult]
 }
 
-// MARK: - BLE HOGP Pad Report Decoder
+// MARK: - Intuos5 pad report (Report ID 0x03)
 
-/// Decode a BLE HOGP pad report (Report ID 0x03, 9 bytes) common to
-/// Intuos Pro models when connected via BLE.
+/// Decode the Intuos5-family pad/ring report (Report ID 0x03, 10 bytes).
+/// Shared by USB, the ACK-40401 wireless dongle, and BLE — all three send
+/// the identical layout on this device family.
 ///
-/// Layout (from §4.7):
+/// Layout confirmed by two independent HID captures against a real PTH-850
+/// (Intuos5 L), one direct USB and one relayed through the ACK-40401 dongle:
+/// pressing express keys one at a time toggled exactly one bit at a time in
+/// byte[4] (mirrored in byte[5]); byte[1] stayed constant at 0x80 the whole
+/// session (not a keys field, contrary to the previous assumption); byte[3]
+/// only ever took values 0/1, consistent with the ring center button.
 /// [0] 0x03 Report ID
-/// [1] Keys 1–8 bitmask
+/// [1] Constant 0x80 — role unknown
 /// [2] bit 7 = ring active; bits 0–6 = ring position (0–71)
-/// [3] bits 0–1 = ring mode
-/// [4–8] Reserved
+/// [3] Ring center button (0 = up, 1 = down) — inferred, not isolated in capture
+/// [4] Keys 1–8 bitmask
+/// [5] Mirrors byte[4]
+/// [6–9] Reserved
 public func decodeBLEPadReport(
     report: UnsafePointer<UInt8>,
     length: CFIndex
 ) -> AuxButtons? {
-    guard length >= 3 else { return nil }
-    let keys = report[1]
+    guard length >= 5 else { return nil }
+    let keys = report[4]
     let ringByte = report[2]
     let ringActive = (ringByte & 0x80) != 0
     let ringPos = ringByte & 0x7F
+    let ringButtonDown = report[3] != 0
 
     return AuxButtons(
         buttons: (0..<8).map { (keys & (1 << $0)) != 0 },
         touchRingActive: ringActive,
+        touchRingButtonDown: ringButtonDown,
         touchRingPosition: ringActive ? ringPos : 0x7F)
 }
 

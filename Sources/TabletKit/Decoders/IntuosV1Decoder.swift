@@ -11,8 +11,11 @@ import Foundation
 ///
 /// Report ID routing:
 ///   0x01  BLE HOGP pen report (23 bytes)  — Intuos Pro over Bluetooth LE
-///   0x03  BLE HOGP pad report (9 bytes)
-///   0x11  Auxiliary (express key) report
+///   0x03  Pad report (10 bytes): ring + express keys — sent over USB and the
+///         ACK-40401 wireless dongle alike (confirmed by capture on PTH-850);
+///         not just BLE despite the historical "HOGP" framing.
+///   0x11  Auxiliary (express key) report — some other IntuosV1-family models
+///         may use this instead; not observed on PTH-850.
 ///   0x02  USB pen report (10 bytes, Report ID 0x02 variant)
 ///   0x10  USB pen report (10 bytes, Report ID 0x10 variant)
 ///   0x80  Wireless status report (ACK-40401 RF dongle)
@@ -38,7 +41,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                 report: report, length: length, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         }
-        if id == 0x03 && length >= 3 {
+        if id == 0x03 && length >= 5 {
             guard let aux = decodeBLEPadReport(report: report, length: length) else { return [] }
             return [.aux(aux)]
         }
