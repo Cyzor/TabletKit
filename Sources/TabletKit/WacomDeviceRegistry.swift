@@ -1190,16 +1190,16 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x03C0, name: "Wacom Cintiq Pro 27 (DTH-271)",  // cross-referenced: linuxwacom + libwacom + OTD
             parser: .intuosV2, maxX: 120032, maxY: 67868, maxPressure: 8191,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 610, activeHeightMM: 330),
         .init(
-            productID: 0x03F0, name: "Wacom Movink 13 (DTH-135)",  // ⚠ from OTD
+            productID: 0x03F0, name: "Wacom Movink 13 (DTH-135)",  // ⚠ from OTD; buttonCount 3 per libwacom
             parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            buttonCount: 3, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
@@ -1254,7 +1254,7 @@ public enum WacomDeviceRegistry {
         // not worth a dedicated parser for hardware that's effectively gone.
         // See Notes/Scratch/Upstream-Sync-2026-05-15.md for the analysis.
         .init(
-            productID: 0x03CE, name: "Wacom DTC-121",  // ⚠ from OTD
+            productID: 0x03CE, name: "Wacom One Pen Display 12 (DTC-121)",  // ⚠ from OTD; name per libwacom
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
@@ -1275,20 +1275,32 @@ public enum WacomDeviceRegistry {
             confidence: .crossReferenced,
             activeWidthMM: 457, activeHeightMM: 254),
         .init(
-            productID: 0x03F5, name: "Wacom PTK-470",  // ⚠ from OTD (IntuosV3)
+            productID: 0x03F5, name: "Intuos Pro S gen 3 (PTK-470)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 37400, maxY: 21000, maxPressure: 8191,
             buttonCount: 5, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 178, activeHeightMM: 102),
         .init(
-            productID: 0x03F7, name: "Wacom PTK-670",  // ⚠ from OTD (IntuosV3)
+            productID: 0x03F7, name: "Intuos Pro M gen 3 (PTK-670)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 52600, maxY: 29600, maxPressure: 8191,
             buttonCount: 10, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 254, activeHeightMM: 152),
         .init(
-            productID: 0x03F9, name: "Wacom PTK-870",  // ⚠ from OTD (IntuosV3)
+            productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
             buttonCount: 10, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-cintiq-16-3), logical extents copied from same-size DTK-1660
+            parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            productID: 0x040F, name: "Wacom One 14 (DTC-141)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-one-14), logical extents estimated at the One 13's ~105.5 units/mm
+            parser: .intuosV2, maxX: 32180, maxY: 18779, maxPressure: 4095,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 178),
 
         // ── DTUS family (Linux input-wacom DTUS / DTUSX) ──────────────────────
         // Small entry-level pen displays sharing wacom_dtus_irq.  Dimensions
@@ -1428,17 +1440,18 @@ public enum WacomDeviceRegistry {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
-            productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // ⚠ recognition-only
+            productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // ⚠ recognition-only; buttonCount 8 per libwacom
             parser: .intuosV2, maxX: 76200, maxY: 40600, maxPressure: 8191,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 381, activeHeightMM: 203),
         .init(
-            productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",  // ⚠ recognition-only
+            productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",  // ⚠ recognition-only; touch per libwacom
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 330, activeHeightMM: 178),
@@ -1450,9 +1463,10 @@ public enum WacomDeviceRegistry {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
         .init(
-            productID: 0x03EC, name: "Wacom DTH134",  // ⚠ recognition-only
+            productID: 0x03EC, name: "Wacom DTH134",  // ⚠ recognition-only; touch per libwacom
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 330, activeHeightMM: 178),
@@ -1464,9 +1478,9 @@ public enum WacomDeviceRegistry {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
         .init(
-            productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only
+            productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only; buttonCount 3 per libwacom
             parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            buttonCount: 3, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
@@ -1698,6 +1712,10 @@ public enum WacomDeviceRegistry {
         // PIDs that belong to the Cintiq Pro 32 family; removed 2026-06-09.
         0x0393: 0x0392,  // BT Classic
         0x03DD: 0x03DC,  // BT Classic (hardware-revision variant)
+        0x03F6: 0x03F5,  // Intuos Pro S gen 3 Bluetooth (libwacom DeviceMatch)
+        0x03F8: 0x03F7,  // Intuos Pro M gen 3 Bluetooth (libwacom DeviceMatch)
+        0x03FA: 0x03F9,  // Intuos Pro L gen 3 Bluetooth (libwacom DeviceMatch)
+        0x0401: 0x03F9,  // Intuos Pro L gen 3 USB hardware-revision variant (libwacom DeviceMatch)
 
         // Intuos Pro M (PTH-660 family)
         0x0359: 0x0357,  // Wireless dongle
