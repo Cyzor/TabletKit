@@ -51,13 +51,18 @@ public struct VendorDeviceProfile: Equatable {
     /// disambiguate same-PID products.  Stored as a string — interpreting it
     /// is the caller's job, since the matching strategy is vendor-specific.
     public let productStringRegex: String?
+    /// True for display-integrated tablets (pen displays).  Drives
+    /// screen-mapping behavior the same way `WacomDeviceSpec.isPenDisplay`
+    /// does; defaults false since most imported rows are opaque tablets.
+    public let isPenDisplay: Bool
 
     public init(
         vendor: String, vendorID: Int, productID: Int, productName: String,
         activeWidthMM: Double? = nil, activeHeightMM: Double? = nil,
         maxX: Int? = nil, maxY: Int? = nil, maxPressure: Int? = nil,
         penButtonCount: Int? = nil, auxButtonCount: Int? = nil,
-        otdParser: String? = nil, productStringRegex: String? = nil
+        otdParser: String? = nil, productStringRegex: String? = nil,
+        isPenDisplay: Bool = false
     ) {
         self.vendor = vendor
         self.vendorID = vendorID
@@ -72,6 +77,7 @@ public struct VendorDeviceProfile: Equatable {
         self.auxButtonCount = auxButtonCount
         self.otdParser = otdParser
         self.productStringRegex = productStringRegex
+        self.isPenDisplay = isPenDisplay
     }
 
     /// Lines per inch derived from `maxX`/`activeWidthMM`.  Returns nil unless

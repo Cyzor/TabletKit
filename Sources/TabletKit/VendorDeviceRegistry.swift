@@ -52,14 +52,16 @@ public enum VendorDeviceRegistry {
     /// coverage, not of the imported data.
     ///
     /// Current coverage: Xencelabs Pen Tablet Medium (0x5201) and Small
-    /// (0x5204) via `XencelabsDecoder` (experimental — ported from
-    /// OpenTabletDriver, awaiting hardware validation).  Huion / XP-Pen PID
-    /// collisions need string-descriptor discrimination before any of their
-    /// entries can be promoted here.
+    /// (0x5204), and Pen Display (0x520D), via `XencelabsDecoder`
+    /// (experimental — ported from OpenTabletDriver, awaiting hardware
+    /// validation).  Huion / XP-Pen PID collisions need string-descriptor
+    /// discrimination before any of their entries can be promoted here.
     public static func drivableProfile(
         forVendorID vendorID: Int, productID: Int
     ) -> VendorDeviceProfile? {
-        guard vendorID == 0x28BD, productID == 0x5201 || productID == 0x5204 else {
+        guard vendorID == 0x28BD,
+            productID == 0x5201 || productID == 0x5204 || productID == 0x520D
+        else {
             return nil
         }
         return profiles(forVendorID: vendorID, productID: productID).first
@@ -1610,5 +1612,23 @@ public enum VendorDeviceRegistry {
             otdParser: "XenceLabsReportParser",
             productStringRegex: nil),
         // END GENERATED
+
+        // Hand-added, not from the OTD import: confirmed 2026-07-01 from a live
+        // HID report descriptor (Report ID 7, usage page 0x0D) off a real
+        // Xencelabs Pen Display. Logical maxX/maxY/maxPressure and the active
+        // area are read straight off the device's own descriptor, not guessed.
+        // Button counts are unconfirmed — this unit's frame buttons live on a
+        // separate 32-byte vendor-page report (ID 2) we haven't decoded yet.
+        VendorDeviceProfile(
+            vendor: "Xencelabs",
+            vendorID: 0x28BD, productID: 0x520D,
+            productName: "Xencelabs Pen Display",
+            activeWidthMM: 261.62, activeHeightMM: 148,
+            maxX: 22352, maxY: 13970,
+            maxPressure: 8191,
+            penButtonCount: nil, auxButtonCount: nil,
+            otdParser: "XenceLabsReportParser",
+            productStringRegex: nil,
+            isPenDisplay: true),
     ]
 }
