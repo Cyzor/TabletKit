@@ -281,6 +281,10 @@ public struct DecoderState {
     public var prevInProximity: Bool = false
     public var isEraser: Bool = false
     public var toolIsMouse: Bool = false
+    /// Active finger contacts for the BPT3 touch container (IntuosV1 path,
+    /// CTH-690). Keyed by slot ID; containers carry only changed contacts,
+    /// so the full active set lives here between reports.
+    public var bpt3TouchSlots: [Int: TouchContact] = [:]
     /// BT 0x80 container pad state — emit aux only on change.
     public var lastBTPadKeys: UInt8 = 0
     public var lastBTPadRing: UInt8 = 0x7F

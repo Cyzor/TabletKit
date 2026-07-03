@@ -1014,9 +1014,17 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
-            productID: 0x033E, name: "Wacom CTH-690",  // ⚠ from OTD
+            productID: 0x033E, name: "Wacom CTH-690",  // ✓ format confirmed via user discovery capture 2026-07-03
             parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            // Capture confirmed classic Intuos pen packets on report 0x10
+            // (tool-change 0xC2, exit 0x80, pen 0xE0/0xE1) and the 64-byte
+            // BPT3 container on 0x02 carrying 16-finger touch (12-bit coords)
+            // plus the four express keys. Coordinate/pressure maxima are from
+            // the kernel (wacom_features_0x33E); capture ranges consistent.
+            // LP-190K pen has no eraser end.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
 
