@@ -5,18 +5,19 @@
 // Layout confirmed 2026-07-02 from 10k+ live report-2 frames captured off a
 // real Xencelabs Pen Display (both pens, driver present and absent): tag
 // bitfield at byte 1 (bit0 tip, bits1–3 barrel buttons, bit4 aux/puck,
-// bit6 eraser, bit7 driver-initialized, 0xC0 out of range), X/Y/pressure as
-// u16 LE at bytes 2/4/6, signed-byte tilt at 8/9. The hex fixtures below are
-// verbatim frames from those captures. Report ID 7 (the bit-packed digitizer
-// collection an earlier decoder revision targeted) never carries live data
-// and must be ignored.
+// bit6 eraser, bit7 driver-initialized, 0xC0 out of range), X/Y as 24-bit LE
+// (low words at bytes 2/4, high bytes at 10/11 — the Pen Display's X range
+// of 0–105000 needs the third byte), pressure u16 LE at 6, signed-byte tilt
+// at 8/9. The hex fixtures below are verbatim frames from those captures.
+// Report ID 7 (the bit-packed digitizer collection an earlier decoder
+// revision targeted) never carries live data and must be ignored.
 import XCTest
 @testable import TabletKit
 
 final class XencelabsDecoderTests: XCTestCase {
 
     private let display = DigitizerSpec(
-        maxX: 65535, maxY: 65535, maxPressure: 8191,
+        maxX: 105000, maxY: 59000, maxPressure: 8191,
         buttonCount: 3, hasTilt: true)
 
     private func decode(
@@ -32,17 +33,19 @@ final class XencelabsDecoderTests: XCTestCase {
 
     /// Builds a 32-byte Report ID 2 frame in the confirmed layout.
     private func makePen(
-        tag: UInt8, x: UInt16 = 0, y: UInt16 = 0, pressure: UInt16 = 0,
+        tag: UInt8, x: UInt32 = 0, y: UInt32 = 0, pressure: UInt16 = 0,
         tiltX: Int8 = 0, tiltY: Int8 = 0
     ) -> [UInt8] {
         var bytes = [UInt8](repeating: 0, count: 32)
         bytes[0] = 0x02
         bytes[1] = tag
-        bytes[2] = UInt8(x & 0xFF); bytes[3] = UInt8(x >> 8)
-        bytes[4] = UInt8(y & 0xFF); bytes[5] = UInt8(y >> 8)
+        bytes[2] = UInt8(x & 0xFF); bytes[3] = UInt8((x >> 8) & 0xFF)
+        bytes[4] = UInt8(y & 0xFF); bytes[5] = UInt8((y >> 8) & 0xFF)
         bytes[6] = UInt8(pressure & 0xFF); bytes[7] = UInt8(pressure >> 8)
         bytes[8] = UInt8(bitPattern: tiltX)
         bytes[9] = UInt8(bitPattern: tiltY)
+        bytes[10] = UInt8((x >> 16) & 0xFF)
+        bytes[11] = UInt8((y >> 16) & 0xFF)
         return bytes
     }
 
@@ -163,65 +166,42 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertEqual(p.tiltY, -0.5, accuracy: 0.001)
     }
 
-    /// Right-edge overflow captured live 2026-07-02: a slow drag off the
-    /// physical right edge climbs steadily to x=65469, then the very next
-    /// sample reads x=13 — a raw mod-65536 wraparound in the wire field,
-    /// not a real jump back to the left edge. Left uncorrected this snapped
-    /// the cursor across the whole screen ("Pac-Man" wraparound).
-    func testRightEdgeWireWraparoundClampsToMax() {
+    /// Verbatim adjacent frames from a live mid-screen right sweep
+    /// (xencelabs-middle-to-right-edge.txt): the low X word wraps 65516→23
+    /// while byte 10 flips 0→1. Reading only 16 bits made X wrap mod 65536
+    /// in the middle of the screen ("Pac-Man" cursor); with the high byte
+    /// the coordinates are continuous.
+    func testXHighByteDecodesContinuouslyAcrossLowWordWrap() {
         var state = DecoderState()
-        _ = decode(makePen(tag: 0x20, x: 65469, y: 24833), state: &state)
-        let results = decode(makePen(tag: 0x20, x: 13, y: 24824), state: &state)
-        guard let p = penPoint(results) else { return XCTFail("no pen result") }
-        XCTAssertEqual(p.x, 65535)
+        let before = penPoint(decode(
+            frame("02 20 ec ff de 6a 00 00 1c 11 00 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
+            state: &state))
+        let after = penPoint(decode(
+            frame("02 20 17 00 de 6a 00 00 1c 11 01 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
+            state: &state))
+        XCTAssertEqual(before?.x, 65516)
+        XCTAssertEqual(after?.x, 65536 + 23)
+        XCTAssertEqual(after?.y, 0x6ade)
     }
 
-    /// Captured live 2026-07-02 (xencelabs-middle-to-right-edge.txt): held off
-    /// the physical edge after a wrap, the raw wire value keeps free-running
-    /// upward for hundreds of samples (still climbing ~50/sample) rather than
-    /// saturating, eventually crossing back over the halfway threshold a
-    /// one-shot clamp would use to decide "this looks real again" — while the
-    /// pen is still off the drawable surface the whole time. The edge latch
-    /// must hold through that entire climb and only release on proximity
-    /// loss/re-entry, not once the creeping value looks plausible again.
-    func testEdgeLatchHoldsThroughSustainedWireCreepAfterWrap() {
+    /// The right-edge maximum observed live is a round firmware clamp at
+    /// exactly 105000 (byte 10 = 1, low word = 105000 - 65536 = 39464).
+    func testFullRangeXDecodesToFirmwareCeiling() {
         var state = DecoderState()
-        _ = decode(makePen(tag: 0x20, x: 65516, y: 27358), state: &state)
-        // The wrap itself.
-        var results = decode(makePen(tag: 0x20, x: 23, y: 27358), state: &state)
-        XCTAssertEqual(penPoint(results)?.x, 65535)
-        // Simulate the creep climbing for hundreds of samples, well past
-        // where a one-shot delta clamp would have released (maxX/2).
-        var creepingX: UInt16 = 23
-        for _ in 0..<900 {
-            creepingX = creepingX &+ 50
-            results = decode(makePen(tag: 0x20, x: creepingX, y: 27358), state: &state)
-        }
-        XCTAssertEqual(penPoint(results)?.x, 65535, "latch must hold despite the raw value creeping back above maxX/2")
-        // A genuine proximity loss + re-entry releases the latch.
-        _ = decode(makePen(tag: 0xC0), state: &state)
-        results = decode(makePen(tag: 0x20, x: 39464, y: 26991), state: &state)
-        XCTAssertEqual(penPoint(results)?.x, 39464)
+        let results = decode(makePen(tag: 0x20, x: 105000, y: 59000), state: &state)
+        guard let p = penPoint(results) else { return XCTFail("no pen result") }
+        XCTAssertEqual(p.x, 105000)
+        XCTAssertEqual(p.y, 59000)
     }
 
-    /// Same wraparound, mirrored at the left/top edge (synthetic — the sensor
-    /// wrapping the other direction hasn't been captured live, but the guard
-    /// is symmetric by construction).
-    func testLeftEdgeWireWraparoundClampsToZero() {
+    /// Values past the spec maxima (never observed live — firmware clamps
+    /// first) must not escape the spec'd range.
+    func testCoordinatesClampToSpecMaxima() {
         var state = DecoderState()
-        _ = decode(makePen(tag: 0x20, x: 60, y: 100), state: &state)
-        let results = decode(makePen(tag: 0x20, x: 65500, y: 100), state: &state)
+        let results = decode(makePen(tag: 0x20, x: 120000, y: 70000), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
-        XCTAssertEqual(p.x, 0)
-    }
-
-    /// A large jump right after entering proximity must not be clamped —
-    /// there's no valid "previous" position to compare against yet.
-    func testWraparoundGuardDoesNotFireOnProximityEnter() {
-        var state = DecoderState()
-        let results = decode(makePen(tag: 0x20, x: 65000, y: 100), state: &state)
-        guard let p = penPoint(results) else { return XCTFail("no pen result") }
-        XCTAssertEqual(p.x, 65000)
+        XCTAssertEqual(p.x, 105000)
+        XCTAssertEqual(p.y, 59000)
     }
 
     func testProximityExitEmitsExitPointAtLastPosition() {

@@ -322,17 +322,6 @@ public struct DecoderState {
     /// Last raw battery byte seen (INTUOSP2_BT 361-byte path). 0xFF = not yet received.
     /// Used to suppress redundant .battery emissions on every pen report.
     public var lastBatteryByte: UInt8 = 0xFF
-    /// Xencelabs only: once the raw X/Y wire field wraps past the sensor's
-    /// true edge, latch to the edge value (spec.maxX/0 or spec.maxY/0)
-    /// instead of trusting further raw samples. Confirmed live: held off the
-    /// physical edge, the wrapped coordinate keeps free-running upward for
-    /// hundreds of samples rather than saturating, so a single-shot clamp on
-    /// just the wrap sample isn't enough — it eventually free-runs back
-    /// across the "is this a real jump" threshold and lets a stale,
-    /// still-off-screen position through. Cleared on proximity loss/re-entry.
-    public var xEdgeLatch: Int? = nil
-    public var yEdgeLatch: Int? = nil
-
     public init() {}
 }
 

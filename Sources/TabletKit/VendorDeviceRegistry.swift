@@ -1626,32 +1626,24 @@ public enum VendorDeviceRegistry {
             productStringRegex: nil),
         // END GENERATED
 
-        // Hand-added, not from the OTD import. maxX/maxY confirmed 2026-07-02
+        // Hand-added, not from the OTD import. maxX/maxY confirmed 2026-07-03
         // from real physical corner sweeps captured directly off the raw HID
-        // stream (tools/hid_input_capture.c), independent of this app's own
-        // decoder — two separate attempts, both landing on the same figures:
-        // TL (0, 0), TR (~38900, ~0), BR (~39100, ~59000), BL (~0, ~58800).
-        // An intermediate pass wrongly set this to 65535×59050 after an edge
-        // glide that was deliberately instructed to push past the visible
-        // glass edge "into the bezel" — the sensor's physical detection area
-        // extends past the visible image (confirmed live: it kept emitting
-        // valid in-range reports, not the out-of-range tag, the whole way
-        // out to where the wire field wraps at 65536), so that glide measured
-        // the wire's *encoding* ceiling, not the *visible* boundary. The wire
-        // ceiling isn't meaningless — XencelabsDecoder still has to defend
-        // against it wrapping raw coordinates when someone does push into
-        // that overscan margin — but it's the wrong number for screen
-        // mapping. Two earlier-still values were also wrong: 65535×65535
-        // (squared the wire ceiling onto both axes) and 22352×13970 (the
-        // report-7 digitizer descriptor, confirmed generic/unreliable — never
-        // carries live data, see XencelabsDecoder's header comment). X/Y axis
-        // assignment itself is correct (no swap): the two axes just have very
-        // different units-per-mm on this sensor, which is fine since screen
-        // mapping normalizes each axis independently against its own max.
-        // maxPressure per spec (8192 levels); observed ceiling ~6.4k under
-        // hard hand pressure. penButtonCount covers the 3-button pen;
-        // auxButtonCount is the QuickKeys puck's 8 keys plus its two extra
-        // one-hot bits (dial click / mode key).
+        // stream (tools/hid_input_capture.c): both axes clamp at round
+        // firmware ceilings of exactly 105000 × 59000, isotropic ~200
+        // units/mm, consistent with the published 5080 lpi over the
+        // 527.04 × 296.46 mm active area (527.04 × 200 = 105408). X exceeds
+        // 16 bits, so it's carried as 24-bit LE in the report — see
+        // XencelabsDecoder. Four earlier values were wrong, in order:
+        // 65535×65535 and 22352×13970 (report-7 digitizer descriptor —
+        // generic/unreliable, never carries live data), 65535×59050 (an edge
+        // glide that measured the low 16-bit word's wrap, mistaken for a
+        // sensor overscan ceiling), and 39150×59050 (corner sweeps decoded
+        // with only 16 bits of X — 105000 mod 65536 ≈ 39464 — which made the
+        // sensor look anisotropic; it isn't). maxPressure per spec (8192
+        // levels); observed ceiling ~6.4k under hard hand pressure.
+        // penButtonCount covers the 3-button pen; auxButtonCount is the
+        // QuickKeys puck's 8 keys plus its two extra one-hot bits (dial
+        // click / mode key).
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
@@ -1660,7 +1652,7 @@ public enum VendorDeviceRegistry {
             // drawing area 527.04 x 296.46 mm, 16:9. Doesn't feed the
             // coordinate mapping (maxX/maxY do, see above) — cosmetic only.
             activeWidthMM: 527.04, activeHeightMM: 296.46,
-            maxX: 39150, maxY: 59050,
+            maxX: 105000, maxY: 59000,
             maxPressure: 8191,
             penButtonCount: 3, auxButtonCount: 10,
             otdParser: "XenceLabsReportParser",

@@ -20,19 +20,15 @@ import Foundation
 /// is Hanvon Ugee OEM and shares Ugee's actual VID). Byte offsets after the
 /// report ID byte:
 ///   [1]    tag bitfield (see below)
-///   [2–3]  X, u16 LE — raw; real visible-area range confirmed ~0–39150 from
-///          two independent physical corner sweeps, NOT the wire field's
-///          16-bit capacity and NOT the report-7 descriptor's logical max
-///          (both wrong — see VendorDeviceRegistry's Pen Display entry for
-///          the full story). The sensor's physical detection area does
-///          extend past the visible glass edge though — confirmed live, it
-///          keeps emitting valid in-range reports out to where the wire
-///          field itself wraps at 65536 — hence the edge-wrap latch below.
-///   [4–5]  Y, u16 LE — same; confirmed ~0–59050. The two axes have
-///          different units-per-mm on this sensor (Y's raw range is larger
-///          despite being the shorter physical dimension), which is fine —
-///          screen mapping normalizes each axis independently against its
-///          own max
+///   [2–3]  X low u16 LE; byte [10] is X's high byte (24-bit LE total).
+///          The Pen Display's X range is 0–105000 (~200 units/mm, matching
+///          the spec'd 5080 lpi), which doesn't fit in 16 bits — byte 10
+///          flips 0→1 exactly where the low word wraps, confirmed from live
+///          mid-screen sweeps. An earlier revision read only the low word,
+///          which made X wrap mod 65536 mid-screen ("Pac-Man" cursor) and
+///          made corner sweeps report a bogus ~39150 max.
+///   [4–5]  Y low u16 LE; byte [11] is Y's high byte (always 0 in practice —
+///          Y's range is 0–59000, within 16 bits — read for symmetry)
 ///   [6–7]  pressure, u16 LE (spec'd 8192 levels; observed max ~6.4k)
 ///   [8]    tilt X, signed byte
 ///   [9]    tilt Y, signed byte
@@ -46,7 +42,7 @@ import Foundation
 ///   bit 6 = eraser end in range
 ///   bit 7 = device has been driver-initialized (0xA0 vs 0x20 hover);
 ///           orthogonal to everything else, ignored here
-/// The two pens are not distinguishable in the report (bytes 10+ carry the
+/// The two pens are not distinguishable in the report (bytes 12+ carry the
 /// same constant on both), so tool identity only tracks pen vs eraser.
 ///
 /// Aux (bit-4) frames: 10 one-hot button bits — byte 2 bits 0–7 are the 8
@@ -103,8 +99,6 @@ public struct XencelabsDecoder: TabletReportDecoder {
         if tag == Self.tagOutOfRange {
             guard state.prevInProximity else { return [] }
             state.prevInProximity = false
-            state.xEdgeLatch = nil
-            state.yEdgeLatch = nil
             let exitEraser = state.isEraser
             state.isEraser = false
             return [
@@ -135,59 +129,19 @@ public struct XencelabsDecoder: TabletReportDecoder {
                 .toolEnter(
                     ToolIdentity(
                         serial: 0,
-                        toolCode: isEraser ? 0x080A : 0x0802,
+                        toolCode: isEraser ? 0xE80A : 0xE802,
                         isEraser: isEraser,
                         isMouse: false)))
         }
 
-        var x = Int(report[2]) | Int(report[3]) << 8
-        var y = Int(report[4]) | Int(report[5]) << 8
+        // Coordinates are 24-bit LE: low word at [2–3]/[4–5], high byte at
+        // [10]/[11]. X genuinely needs the third byte (range 0–105000);
+        // firmware clamps both axes at their active-area maxima, so no
+        // wraparound handling is needed. Clamp to spec anyway in case a
+        // different firmware overshoots slightly.
+        let x = min(Int(report[2]) | Int(report[3]) << 8 | Int(report[10]) << 16, spec.maxX)
+        let y = min(Int(report[4]) | Int(report[5]) << 8 | Int(report[11]) << 16, spec.maxY)
         let pressure = Int(report[6]) | Int(report[7]) << 8
-        // Both axes are raw 16-bit wire fields that genuinely overflow past
-        // the sensor's active area: confirmed live via a slow drag off the
-        // right edge, where X climbed steadily (~70–90/sample) to 65469,
-        // then the very next sample read 13 — a clean mod-65536 wrap
-        // (65469 + ~80 = 65549; 65549 - 65536 = 13). Left uncorrected, this
-        // snaps the cursor to the opposite edge ("Pac-Man" wraparound) right
-        // when the pen pushes past the true drawable boundary. A same-sample
-        // jump of more than half the axis's range, while still continuously
-        // in proximity, can only be this wraparound (no human motion covers
-        // that distance between two ~100Hz+ reports).
-        //
-        // A single-shot clamp on just the wrap sample isn't enough: confirmed
-        // live that holding the pen off-edge afterward keeps the wrapped
-        // value free-running upward (still climbing ~50/sample, apparently
-        // extrapolated rather than saturated) for hundreds of samples, until
-        // it organically crosses back over the halfway threshold and would
-        // otherwise be accepted again as if it were a real position — while
-        // the pen is still physically off the drawable surface. So once a
-        // wrap fires, latch to the edge and hold it there regardless of
-        // further raw drift, releasing only on proximity loss/re-entry
-        // (state.xEdgeLatch/yEdgeLatch, cleared in the out-of-range branch
-        // above and on fresh proximity entry below).
-        if wasInProximity {
-            if let latched = state.xEdgeLatch {
-                x = latched
-            } else if prevX - x > spec.maxX / 2 {
-                x = spec.maxX
-                state.xEdgeLatch = spec.maxX
-            } else if x - prevX > spec.maxX / 2 {
-                x = 0
-                state.xEdgeLatch = 0
-            }
-            if let latched = state.yEdgeLatch {
-                y = latched
-            } else if prevY - y > spec.maxY / 2 {
-                y = spec.maxY
-                state.yEdgeLatch = spec.maxY
-            } else if y - prevY > spec.maxY / 2 {
-                y = 0
-                state.yEdgeLatch = 0
-            }
-        } else {
-            state.xEdgeLatch = nil
-            state.yEdgeLatch = nil
-        }
         state.lastX = x
         state.lastY = y
 
