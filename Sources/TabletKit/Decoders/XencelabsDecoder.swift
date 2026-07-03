@@ -114,14 +114,13 @@ public struct XencelabsDecoder: TabletReportDecoder {
         }
 
         let isEraser = tag & Self.eraserBit != 0
-        let wasInProximity = state.prevInProximity
-        let prevX = state.lastX
-        let prevY = state.lastY
 
         var results: [DecodeResult] = []
-        // toolEnter on rising edge or pen/eraser flip.  No serials on this
-        // hardware; synthetic tool codes follow the GraphireDecoder convention
-        // (0x080A eraser / 0x0802 pen) so per-tool settings keep working.
+        // toolEnter on rising edge or pen/eraser flip.  No serials or tool
+        // IDs on this hardware (the 3 Button Pen and Thin Pen emit identical
+        // reports), so both map to the shared synthetic Xencelabs codes in
+        // WacomToolCatalog (0xE802 pen / 0xE80A eraser, following the Wacom
+        // eraser-bit convention) for naming and per-tool settings.
         if !state.prevInProximity || isEraser != state.isEraser {
             state.prevInProximity = true
             state.isEraser = isEraser

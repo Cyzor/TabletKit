@@ -900,6 +900,44 @@ public enum WacomToolCatalog {
 
         // MARK: - Intuos3/4 Specialty Pens
 
+        // MARK: - Xencelabs Pens (synthetic codes — no wire tool IDs)
+
+        // Xencelabs ships two pens with the Pen Display 24 and Pen Tablets:
+        // the 3 Button Pen v2 (XMCPH35) and the Thin Pen v2 (XMCPH36, two
+        // barrel buttons). The wire protocol carries no tool identifier —
+        // both pens emit byte-identical reports apart from which barrel-button
+        // bits ever fire (confirmed from separate per-pen captures) — so one
+        // shared spec covers both, sized for the larger pen's 3 buttons.
+        // 0xE8xx is outside Wacom's code space; the eraser code keeps the
+        // Wacom eraser-bit convention (base | 0x0008).
+        catalog[0xE802] = WacomToolSpec(
+            toolCode: 0xE802,
+            name: "Xencelabs Pen",
+            toolType: .stylus,
+            buttonCount: 3,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0xE80A,
+            supportedFamilies: ["xencelabs"]
+        )
+
+        catalog[0xE80A] = WacomToolSpec(
+            toolCode: 0xE80A,
+            name: "Xencelabs Pen (Eraser)",
+            toolType: .eraser,
+            buttonCount: 3,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: ["xencelabs"]
+        )
+
         // Inking Pen (Intuos3 ZP-130 — ink cartridge, no eraser end, pressure only)
         catalog[0x0801] = WacomToolSpec(
             toolCode: 0x0801,
