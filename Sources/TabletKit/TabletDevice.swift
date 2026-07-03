@@ -70,10 +70,18 @@ public protocol TabletDevice: AnyObject {
     /// Update the physical ring LED to reflect the active mode slot (0-based).
     /// No-op on devices that don't support LED control.
     func setRingLED(index: Int)
+    /// Show the active ring/dial mode's name on the device's display
+    /// (Xencelabs Quick Keys OLED mode line). No-op on devices without one.
+    func setRingModeLabel(_ label: String)
+    /// Show per-key labels on the device's display (Xencelabs Quick Keys
+    /// OLED; labels[0] = key 1). No-op on devices without one.
+    func setAuxKeyLabels(_ labels: [String])
 }
 
 public extension TabletDevice {
     public func setRingLED(index: Int) {}
+    public func setRingModeLabel(_ label: String) {}
+    public func setAuxKeyLabels(_ labels: [String]) {}
 }
 
 // Convenience: read an integer property from an IOHIDDevice.
@@ -314,6 +322,16 @@ public struct DecoderState {
     /// Last raw battery byte seen (INTUOSP2_BT 361-byte path). 0xFF = not yet received.
     /// Used to suppress redundant .battery emissions on every pen report.
     public var lastBatteryByte: UInt8 = 0xFF
+    /// Xencelabs only: once the raw X/Y wire field wraps past the sensor's
+    /// true edge, latch to the edge value (spec.maxX/0 or spec.maxY/0)
+    /// instead of trusting further raw samples. Confirmed live: held off the
+    /// physical edge, the wrapped coordinate keeps free-running upward for
+    /// hundreds of samples rather than saturating, so a single-shot clamp on
+    /// just the wrap sample isn't enough — it eventually free-runs back
+    /// across the "is this a real jump" threshold and lets a stale,
+    /// still-off-screen position through. Cleared on proximity loss/re-entry.
+    public var xEdgeLatch: Int? = nil
+    public var yEdgeLatch: Int? = nil
 
     public init() {}
 }
