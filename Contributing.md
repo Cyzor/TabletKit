@@ -24,6 +24,8 @@ Decoder work is only as good as the data behind it. Three tiers, strongest first
 
 Tier 1 or 2 evidence should accompany `.verified` and `.crossReferenced` entries. Tier 3 alone supports `.experimental`.
 
+See [`Extending-Support.md`](Extending-Support.md) for a walkthrough of what a capture actually contains and how to turn one into a registry entry and decoder. The steps below assume that context.
+
 ## How to submit a decoder or device entry
 
 1. **Capture the device.** In MockTab, visit the *Info* pane and press the *Collect Device Data…* button. The result is a JSON file with the Human Interface Device (HID) descriptors, USB strings, and a short input report capture. A [`hid-recorder`](https://github.com/hidutils/hid-recorder) log may also help, as the test harness parses both formats.
