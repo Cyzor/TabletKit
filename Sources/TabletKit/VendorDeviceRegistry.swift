@@ -1642,8 +1642,11 @@ public enum VendorDeviceRegistry {
         // sensor look anisotropic; it isn't). maxPressure per spec (8192
         // levels); observed ceiling ~6.4k under hard hand pressure.
         // penButtonCount covers the 3-button pen; auxButtonCount is the
-        // QuickKeys puck's 8 keys plus its two extra one-hot bits (dial
-        // click / mode key).
+        // QuickKeys puck's 8 express keys plus its bottom mode button (9).
+        // The dial's own center click is reported separately via
+        // AuxButtons.touchRingButtonDown, reusing the Wacom touch-ring center
+        // click slot rather than a 10th indexed button — see
+        // XencelabsDecoder.decodeAux.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
@@ -1654,7 +1657,7 @@ public enum VendorDeviceRegistry {
             activeWidthMM: 527.04, activeHeightMM: 296.46,
             maxX: 105000, maxY: 59000,
             maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: 10,
+            penButtonCount: 3, auxButtonCount: 9,
             otdParser: "XenceLabsReportParser",
             productStringRegex: nil,
             isPenDisplay: true),
@@ -1670,7 +1673,21 @@ public enum VendorDeviceRegistry {
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5202,
             productName: "Xencelabs Quick Keys",
-            penButtonCount: nil, auxButtonCount: 10,
+            penButtonCount: nil, auxButtonCount: 9,
+            otdParser: nil,
+            productStringRegex: nil),
+
+        // Confirmed 2026-07-04 via native Xencelabs driver's own diagnostic
+        // panel (PID_5203, "Xencelabs Dongle"). Name-only: not on the
+        // drivable allowlist, so it's just recognized/logged, not attached.
+        // Relaying a paired puck's traffic wirelessly through it is a
+        // separate, larger effort — direct-USB support should be solid
+        // first (see project_xencelabs_handoff_2026_07_02.md).
+        VendorDeviceProfile(
+            vendor: "Xencelabs",
+            vendorID: 0x28BD, productID: 0x5203,
+            productName: "Xencelabs Dongle",
+            penButtonCount: nil, auxButtonCount: nil,
             otdParser: nil,
             productStringRegex: nil),
     ]

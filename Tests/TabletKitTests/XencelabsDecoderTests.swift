@@ -226,17 +226,26 @@ final class XencelabsDecoderTests: XCTestCase {
         var press = makePen(tag: 0xF0)
         press[2] = 0x10 // button 5
         guard let a = auxButtons(decode(press, state: &state)) else { return XCTFail("no aux result") }
-        XCTAssertEqual(a.buttons.count, 10)
+        XCTAssertEqual(a.buttons.count, 9)
         XCTAssertTrue(a.buttons[4])
         XCTAssertEqual(a.buttons.filter { $0 }.count, 1)
+        XCTAssertFalse(a.touchRingButtonDown)
 
-        var press9 = makePen(tag: 0xF0)
-        press9[3] = 0x01 // button 9
-        XCTAssertEqual(auxButtons(decode(press9, state: &state))?.buttons[8], true)
+        var pressMode = makePen(tag: 0xF0)
+        pressMode[3] = 0x01 // bottom mode button
+        XCTAssertEqual(auxButtons(decode(pressMode, state: &state))?.buttons[8], true)
+
+        // Dial center click reports via touchRingButtonDown, not the array.
+        var pressDialCenter = makePen(tag: 0xF0)
+        pressDialCenter[3] = 0x02
+        let dialCenter = auxButtons(decode(pressDialCenter, state: &state))
+        XCTAssertEqual(dialCenter?.touchRingButtonDown, true)
+        XCTAssertEqual(dialCenter?.buttons.contains(true), false)
 
         // All-zero frame = release.
         let release = auxButtons(decode(makePen(tag: 0xF0), state: &state))
         XCTAssertEqual(release?.buttons.contains(true), false)
+        XCTAssertEqual(release?.touchRingButtonDown, false)
     }
 
     /// Dial rotation: byte 7 = 1 or 2, one event per click.

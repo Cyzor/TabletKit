@@ -123,7 +123,7 @@ final class VendorDeviceRegistryTests: XCTestCase {
         let puck = VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5202)
         XCTAssertEqual(puck?.productName, "Xencelabs Quick Keys")
         XCTAssertNil(puck?.maxX)
-        XCTAssertEqual(puck?.auxButtonCount, 10)
+        XCTAssertEqual(puck?.auxButtonCount, 9)
         // Recognition-only vendors are not drivable.
         XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x256C, productID: 0x0064))
         // Unknown Xencelabs PIDs are not drivable.

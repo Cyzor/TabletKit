@@ -45,13 +45,18 @@ import Foundation
 /// The two pens are not distinguishable in the report (bytes 12+ carry the
 /// same constant on both), so tool identity only tracks pen vs eraser.
 ///
-/// Aux (bit-4) frames: 10 one-hot button bits — byte 2 bits 0–7 are the 8
-/// express keys (left column top→bottom = bits 3→0, right column top→bottom
-/// = bits 7→4), byte 3 bit 0 = bottom rectangular mode button, bit 1 = dial
-/// center click (both confirmed on hardware); all-zero = release. Byte 7
-/// carries dial
-/// rotation as per-click events: 1 = one direction, 2 = the other
-/// (physical CW/CCW mapping unconfirmed — flip `dialDelta` if inverted).
+/// Aux (bit-4) frames: byte 2 bits 0–7 are the 8 express keys (left column
+/// top→bottom = bits 3→0, right column top→bottom = bits 7→4), reported as
+/// `AuxButtons.buttons[0...7]`; byte 3 bit 0 is the bottom rectangular mode
+/// button, reported as `buttons[8]` — bind it to the "Ring: Cycle" action to
+/// advance the dial mode, same as a Wacom touch-ring mode key. Byte 3 bit 1
+/// is the dial's own center click, reported via the shared
+/// `touchRingButtonDown`/`touchRingButtonBinding` field instead of the
+/// indexed array, mirroring how Wacom's ring center click is a dedicated
+/// slot rather than a numbered express key. All-zero = release. Byte 7
+/// carries dial rotation as per-click events: 1 = one direction, 2 = the
+/// other (physical CW/CCW mapping unconfirmed — flip `dialDelta` if
+/// inverted).
 ///
 /// Requires a tablet-mode init first: output report `[0x02, 0xB0, 0x04]`
 /// (`InitStep.outputReport`), zero-padded to MaxOutputReportSize; without
@@ -165,16 +170,18 @@ public struct XencelabsDecoder: TabletReportDecoder {
         return results
     }
 
-    /// QuickKeys puck frame: 10 one-hot button bits at bytes 2–3, dial
-    /// rotation event at byte 7 (1 / 2 = the two directions).
+    /// QuickKeys puck frame: 8 express-key bits + mode button at bytes 2–3,
+    /// dial center click reported separately via `touchRingButtonDown`
+    /// (reused from the touch-ring model — see the type's header comment),
+    /// dial rotation event at byte 7 (1 / 2 = the two directions).
     private static func decodeAux(_ report: UnsafePointer<UInt8>) -> [DecodeResult] {
         var results: [DecodeResult] = []
 
-        var buttons = [Bool](repeating: false, count: 10)
+        var buttons = [Bool](repeating: false, count: 9)
         for i in 0..<8 { buttons[i] = report[2] & (1 << UInt8(i)) != 0 }
         buttons[8] = report[3] & 0x01 != 0
-        buttons[9] = report[3] & 0x02 != 0
-        results.append(.aux(AuxButtons(buttons: buttons)))
+        let dialCenterDown = report[3] & 0x02 != 0
+        results.append(.aux(AuxButtons(buttons: buttons, touchRingButtonDown: dialCenterDown)))
 
         // Dial clicks arrive as discrete events, not a counter. Direction
         // assignment (1 = clockwise) is a guess pending physical confirmation.
