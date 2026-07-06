@@ -217,6 +217,21 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertTrue(decode(makePen(tag: 0xC0), state: &state).isEmpty)
     }
 
+    /// Verbatim vendor feature-report echoes captured off a Pen Display's own
+    /// init handshake (2026-07-05): 0xb4/0xb5 opcodes happen to have bit 4 set,
+    /// which used to make decodeAux() misread them as a QuickKeys aux frame
+    /// and latch a phantom express-key/mode-button press — with no puck even
+    /// connected. Must decode to nothing.
+    func testConfigEchoFramesAreNotMisreadAsAux() {
+        var state = DecoderState()
+        let echo1 = frame("02 b5 00 10 06 01 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        XCTAssertTrue(decode(echo1, state: &state).isEmpty)
+        let echo2 = frame("02 b5 00 05 09 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        XCTAssertTrue(decode(echo2, state: &state).isEmpty)
+        let echo3 = frame("02 b4 01 01 00 00 aa 2b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        XCTAssertTrue(decode(echo3, state: &state).isEmpty)
+    }
+
     // MARK: - QuickKeys puck (aux frames)
 
     /// Verbatim captured one-hot button frames: byte 2 bits 0–7 are puck

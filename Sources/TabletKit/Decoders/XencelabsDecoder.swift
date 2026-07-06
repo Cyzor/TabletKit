@@ -95,6 +95,18 @@ public struct XencelabsDecoder: TabletReportDecoder {
 
         let tag = report[1]
 
+        // Vendor feature-report acknowledgements (config/init handshake echoes,
+        // opcodes 0xB0/0xB4/0xB5/0xB8) are read back on this same Report ID 2
+        // tunnel and were being misread as live pen/aux data — confirmed
+        // 2026-07-05 on a Pen Display: its own "02 b4 ..."/"02 b5 ..." handshake
+        // replies happened to have bit 4 (the aux-frame bit) set, so decodeAux()
+        // ran on config bytes and latched a phantom express-key/mode-button
+        // press — which stuck a mapped modifier permanently, with no puck even
+        // connected. Every known real tag value has top nibble 0x2_, 0xA_, or
+        // 0xC_; the whole opcode-echo family shares top nibble 0xB0, which
+        // never occurs in real tag data, so gate on that instead.
+        guard tag & 0xF0 != 0xB0 else { return [] }
+
         // ── QuickKeys puck (aux frames) ───────────────────────────────────────
         if tag != Self.tagOutOfRange && tag & Self.auxBit != 0 {
             return Self.decodeAux(report)
