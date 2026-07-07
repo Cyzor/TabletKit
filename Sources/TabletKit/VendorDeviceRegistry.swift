@@ -62,10 +62,17 @@ public enum VendorDeviceRegistry {
     /// coverage, not of the imported data.
     ///
     /// Current coverage: Xencelabs Pen Tablet Medium (0x5201) and Small
-    /// (0x5204), Pen Display (0x520D), and Quick Keys (0x5202, aux-only), via
+    /// (0x5204), Pen Display (0x520D), Quick Keys (0x5202, aux-only), and the
+    /// Quick Keys wireless USB Dongle (0x5203, aux-only), via
     /// `XencelabsDecoder` (report-2 layout confirmed on real Pen Display and
     /// Quick Keys hardware 2026-07-02; the Pen Tablets are assumed to share
     /// it — same OEM firmware family — pending their own hardware pass).
+    /// The dongle was confirmed 2026-07-06 to relay an already-paired puck's
+    /// input reports completely transparently — identical report-2 0xF0 aux
+    /// frames, byte-for-byte, as talking to the puck directly over USB — so
+    /// it reuses `XencelabsDecoder` unchanged rather than needing its own
+    /// decode path. MockTab only drives an already-paired dongle; pairing a
+    /// dongle to a puck stays the native Xencelabs driver's job.
     /// Huion / XP-Pen PID collisions need string-descriptor
     /// discrimination before any of their entries can be promoted here.
     public static func drivableProfile(
@@ -73,7 +80,7 @@ public enum VendorDeviceRegistry {
     ) -> VendorDeviceProfile? {
         guard vendorID == 0x28BD,
             productID == 0x5201 || productID == 0x5202 || productID == 0x5204
-                || productID == 0x520D
+                || productID == 0x520D || productID == 0x5203
         else {
             return nil
         }
@@ -1678,16 +1685,17 @@ public enum VendorDeviceRegistry {
             productStringRegex: nil),
 
         // Confirmed 2026-07-04 via native Xencelabs driver's own diagnostic
-        // panel (PID_5203, "Xencelabs Dongle"). Name-only: not on the
-        // drivable allowlist, so it's just recognized/logged, not attached.
-        // Relaying a paired puck's traffic wirelessly through it is a
-        // separate, larger effort — direct-USB support should be solid
-        // first (see project_xencelabs_handoff_2026_07_02.md).
+        // panel (PID_5203, "Xencelabs Dongle"), and confirmed 2026-07-06 via
+        // a raw HID input-report capture (tools/hid_input_capture.c) taken
+        // while an already-paired puck operated through it: the dongle
+        // relays the puck's report-2 aux frames byte-for-byte identically to
+        // a direct-USB connection, so it's aux-only (like the puck itself)
+        // and reuses XencelabsDecoder unchanged — no new decode path needed.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5203,
             productName: "Xencelabs Dongle",
-            penButtonCount: nil, auxButtonCount: nil,
+            penButtonCount: nil, auxButtonCount: 9,
             otdParser: nil,
             productStringRegex: nil),
     ]

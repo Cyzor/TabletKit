@@ -124,9 +124,14 @@ final class VendorDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(puck?.productName, "Xencelabs Quick Keys")
         XCTAssertNil(puck?.maxX)
         XCTAssertEqual(puck?.auxButtonCount, 9)
+        // Wireless dongle relays an already-paired puck's reports
+        // transparently (confirmed 2026-07-06), so it's drivable the same
+        // way as the puck itself: aux-only, no pen digitizer.
+        let dongle = VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5203)
+        XCTAssertEqual(dongle?.productName, "Xencelabs Dongle")
+        XCTAssertNil(dongle?.maxX)
+        XCTAssertEqual(dongle?.auxButtonCount, 9)
         // Recognition-only vendors are not drivable.
         XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x256C, productID: 0x0064))
-        // Unknown Xencelabs PIDs are not drivable.
-        XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5203))
     }
 }

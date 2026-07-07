@@ -73,6 +73,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
     static let barrel1Bit: UInt8 = 0x04
     static let barrel2Bit: UInt8 = 0x08
     static let auxBit: UInt8 = 0x10
+    static let tagAux: UInt8 = 0xF0
     static let eraserBit: UInt8 = 0x40
 
     /// Tilt bytes are assumed to be degrees (±60°, the spec'd max for this pen
@@ -108,9 +109,23 @@ public struct XencelabsDecoder: TabletReportDecoder {
         guard tag & 0xF0 != 0xB0 else { return [] }
 
         // ── QuickKeys puck (aux frames) ───────────────────────────────────────
-        if tag != Self.tagOutOfRange && tag & Self.auxBit != 0 {
+        // Real aux data always arrives with tag == 0xF0 exactly (confirmed
+        // from thousands of button/dial frames, both direct-USB and through
+        // the wireless dongle). The wireless dongle also emits a couple of
+        // one-off status/announcement frames around connect time — tags
+        // 0xF8 and 0xF2, confirmed 2026-07-06 — that happen to share bit 4
+        // (the aux-frame bit) with real data but aren't button presses; one
+        // such 0xF8 frame decoded as a phantom express-key + mode-button
+        // press with no matching release, sticking a mapped modifier down
+        // exactly like the earlier 0xB4/0xB5 config-echo bug. Requiring an
+        // exact match instead of just testing the aux bit excludes those.
+        if tag == Self.tagAux {
             return Self.decodeAux(report)
         }
+        // Any other tag with the aux bit set isn't a pen frame either — it's
+        // one of those dongle status frames — so don't let it fall through
+        // to the pen-decode path below and synthesize a bogus toolEnter.
+        guard tag & Self.auxBit == 0 else { return [] }
 
         // ── Out of range ──────────────────────────────────────────────────────
         if tag == Self.tagOutOfRange {

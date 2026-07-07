@@ -232,6 +232,20 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertTrue(decode(echo3, state: &state).isEmpty)
     }
 
+    /// Verbatim frames captured off the wireless dongle's own connect-time
+    /// status/announcement traffic (2026-07-06): tags 0xF8 and 0xF2 share
+    /// bit 4 (the aux-frame bit) with real button data (tag 0xF0) but aren't
+    /// button presses. 0xF8 used to decode as a phantom express-key + mode
+    /// button press with no matching release, sticking a mapped modifier
+    /// down. Must decode to nothing.
+    func testDongleStatusFramesAreNotMisreadAsAux() {
+        var state = DecoderState()
+        let status1 = frame("02 f8 02 01 20 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        XCTAssertTrue(decode(status1, state: &state).isEmpty)
+        let status2 = frame("02 f2 01 63 00 00 00 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        XCTAssertTrue(decode(status2, state: &state).isEmpty)
+    }
+
     // MARK: - QuickKeys puck (aux frames)
 
     /// Verbatim captured one-hot button frames: byte 2 bits 0–7 are puck
