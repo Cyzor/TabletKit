@@ -55,6 +55,16 @@ public struct VendorDeviceProfile: Equatable {
     /// screen-mapping behavior the same way `WacomDeviceSpec.isPenDisplay`
     /// does; defaults false since most imported rows are opaque tablets.
     public let isPenDisplay: Bool
+    /// Product IDs of standalone aux-only peripherals (e.g. an EKR-style
+    /// remote/puck) that pair with this device and should be folded into
+    /// its settings UI instead of getting a window of their own, when both
+    /// are connected at once. Resolved against *currently connected*
+    /// devices at runtime (see `VendorDeviceRegistry.connectedCompanion`) —
+    /// this list is just a static hint, not a live pairing record, mirroring
+    /// libwacom's `libwacom_get_paired_device()` match-string approach.
+    /// Empty for devices with no companion (including the companion
+    /// peripherals themselves, to avoid claiming each other).
+    public let companions: [Int]
 
     public init(
         vendor: String, vendorID: Int, productID: Int, productName: String,
@@ -62,7 +72,7 @@ public struct VendorDeviceProfile: Equatable {
         maxX: Int? = nil, maxY: Int? = nil, maxPressure: Int? = nil,
         penButtonCount: Int? = nil, auxButtonCount: Int? = nil,
         otdParser: String? = nil, productStringRegex: String? = nil,
-        isPenDisplay: Bool = false
+        isPenDisplay: Bool = false, companions: [Int] = []
     ) {
         self.vendor = vendor
         self.vendorID = vendorID
@@ -78,6 +88,7 @@ public struct VendorDeviceProfile: Equatable {
         self.otdParser = otdParser
         self.productStringRegex = productStringRegex
         self.isPenDisplay = isPenDisplay
+        self.companions = companions
     }
 
     /// Lines per inch derived from `maxX`/`activeWidthMM`.  Returns nil unless

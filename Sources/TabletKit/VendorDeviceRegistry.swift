@@ -87,6 +87,45 @@ public enum VendorDeviceRegistry {
         return profiles(forVendorID: vendorID, productID: productID).first
     }
 
+    /// If `productID` has a companion peripheral (per its profile's
+    /// `companions` list) that's also present in `connectedProductIDs`,
+    /// returns that companion's PID. Runtime-resolved rather than a static
+    /// ownership record: a puck/dongle only gets folded into its tablet's
+    /// settings UI while both are actually connected, so unplugging the
+    /// tablet (or using the puck standalone with no paired tablet) leaves
+    /// the puck free to show its own window again. Returns the first
+    /// matching companion; this hardware family never has more than one.
+    public static func connectedCompanion(
+        forProductID productID: Int, connectedProductIDs: [Int]
+    ) -> Int? {
+        guard let companions = profile(forProductID: productID)?.companions,
+            !companions.isEmpty
+        else { return nil }
+        return connectedProductIDs.first { companions.contains($0) }
+    }
+
+    /// True if `productID` is itself claimed as a companion by some other
+    /// currently-connected device — i.e. it should be folded into that
+    /// device's settings UI rather than getting a window of its own.
+    public static func isConnectedCompanion(
+        productID: Int, connectedProductIDs: [Int]
+    ) -> Bool {
+        connectedCompanionOwner(forProductID: productID, connectedProductIDs: connectedProductIDs) != nil
+    }
+
+    /// The PID of the currently-connected device that claims `productID` as
+    /// a companion, or nil if `productID` isn't a claimed companion right
+    /// now. Lets call sites (menu builders, window-open routing) redirect a
+    /// companion PID to its owner instead of just suppressing it.
+    public static func connectedCompanionOwner(
+        forProductID productID: Int, connectedProductIDs: [Int]
+    ) -> Int? {
+        connectedProductIDs.first { ownerPID in
+            guard ownerPID != productID else { return false }
+            return profile(forProductID: ownerPID)?.companions.contains(productID) == true
+        }
+    }
+
     // MARK: - Registry
 
     public static let knownDevices: [VendorDeviceProfile] = [
@@ -1611,6 +1650,10 @@ public enum VendorDeviceRegistry {
             penButtonCount: 2, auxButtonCount: nil,
             otdParser: "XP_PenGen2ReportParser",
             productStringRegex: nil),
+        // auxButtonCount is nil (not 3, an earlier OTD-import artifact from
+        // before the Quick Keys puck was modeled as its own companion
+        // device): the tablet itself has no onboard express keys or ring —
+        // those belong to the puck/dongle companion, see `companions` below.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5201,
@@ -1618,9 +1661,10 @@ public enum VendorDeviceRegistry {
             activeWidthMM: 261.62, activeHeightMM: 148,
             maxX: 52324, maxY: 29600,
             maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: 3,
+            penButtonCount: 3, auxButtonCount: nil,
             otdParser: "XenceLabsReportParser",
-            productStringRegex: nil),
+            productStringRegex: nil,
+            companions: [0x5202, 0x5203]),
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5204,
@@ -1628,9 +1672,10 @@ public enum VendorDeviceRegistry {
             activeWidthMM: 178, activeHeightMM: 101,
             maxX: 35600, maxY: 20200,
             maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: 3,
+            penButtonCount: 3, auxButtonCount: nil,
             otdParser: "XenceLabsReportParser",
-            productStringRegex: nil),
+            productStringRegex: nil,
+            companions: [0x5202, 0x5203]),
         // END GENERATED
 
         // Hand-added, not from the OTD import. maxX/maxY confirmed 2026-07-03
@@ -1648,12 +1693,14 @@ public enum VendorDeviceRegistry {
         // with only 16 bits of X — 105000 mod 65536 ≈ 39464 — which made the
         // sensor look anisotropic; it isn't). maxPressure per spec (8192
         // levels); observed ceiling ~6.4k under hard hand pressure.
-        // penButtonCount covers the 3-button pen; auxButtonCount is the
-        // QuickKeys puck's 8 express keys plus its bottom mode button (9).
-        // The dial's own center click is reported separately via
-        // AuxButtons.touchRingButtonDown, reusing the Wacom touch-ring center
-        // click slot rather than a 10th indexed button — see
-        // XencelabsDecoder.decodeAux.
+        // penButtonCount covers the 3-button pen. auxButtonCount is nil —
+        // the QuickKeys puck's 8 express keys + bottom mode button (9) are
+        // the puck/dongle companion's own capability, not the display's (see
+        // `companions` below); this entry previously carried 9 here too, from
+        // before the puck was split into its own device. The display does
+        // have 3 onboard capacitive touch buttons of its own, but those
+        // aren't decoded/exposed yet — deliberately left off pending that
+        // work rather than folded into this count.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
@@ -1664,10 +1711,11 @@ public enum VendorDeviceRegistry {
             activeWidthMM: 527.04, activeHeightMM: 296.46,
             maxX: 105000, maxY: 59000,
             maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: 9,
+            penButtonCount: 3, auxButtonCount: nil,
             otdParser: "XenceLabsReportParser",
             productStringRegex: nil,
-            isPenDisplay: true),
+            isPenDisplay: true,
+            companions: [0x5202, 0x5203]),
 
         // Hand-added, confirmed 2026-07-02 over direct USB on real hardware.
         // Aux-only device (8 express keys, bottom mode button, clickable dial):
