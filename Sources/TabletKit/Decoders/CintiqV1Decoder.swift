@@ -285,6 +285,10 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     //   byte[2] — right touch ring: same encoding (dual-ring models only)
     //   byte[3] — capacitive OSD touch buttons, group A  (bit4 = one of: i/keyboard/wrench)
     //   byte[4] — capacitive OSD touch buttons, group B  (bit0, bit6 = the other two)
+    //     Note: a 2026-07-09 capture on the same DTK-2400 instead showed bit1
+    //     and bit5 varying in byte[4]. Not re-verified against this comment;
+    //     all 8 bits are OR'd into capBBits regardless, so button state is
+    //     captured correctly either way — only the bit numbering above may be stale.
     //   byte[5] — 0x00 (padding)
     //   byte[6] — left  side buttons: bits 0–2 = ring-mode select 0/1/2; bits 3–7 = express keys 1–5
     //   byte[7] — 0x00 (padding)
