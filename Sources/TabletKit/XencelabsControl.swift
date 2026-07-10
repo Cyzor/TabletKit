@@ -48,6 +48,24 @@ public enum XencelabsControl {
         (0x1C, 0x7D, 0x06),  // green
     ]
 
+    /// Screen orientation write: `02 B1 <steps+1> 00 ... <addr>`.
+    ///
+    /// Rotates the Quick Keys OLED text in 90° steps (0 = upright,
+    /// 1 = 90°, 2 = 180°, 3 = 270° — the wire byte is steps + 1). The
+    /// vendor agent builds this frame in `SetRemoteDirection` and replays
+    /// the saved orientation during its reconnect init, which is what
+    /// earlier captures showed as a fixed `b1 01` ("upright") write.
+    /// Confirmed on hardware 2026-07-10: varying the byte visibly rotates
+    /// the display.
+    public static func orientationPayload(
+        rotationSteps: Int, address: [UInt8] = []
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB1, UInt8((rotationSteps & 0x03) + 1),
+                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
     /// Dial LED color write: `02 B4 01 01 00 00 R G B 00 <addr>`.
     /// Brightness is pre-scaled into the RGB values by the host (the vendor
     /// driver sends e.g. red at 0x52/0xA4/0xF7 peak for Dim/Medium/Hell).

@@ -20,6 +20,25 @@ final class XencelabsControlTests: XCTestCase {
         s.split(separator: " ").map { UInt8($0, radix: 16)! }
     }
 
+    // MARK: - Screen orientation
+
+    func testUprightOrientationMatchesCapturedFrame() {
+        // Captured (formerly misread as "reset labels"): 02 b1 01 00 ... <addr>
+        XCTAssertEqual(
+            XencelabsControl.orientationPayload(rotationSteps: 0, address: addr),
+            hex("02 b1 01 00 00 00 00 00 00 00 aa 67 82 b9 35 f4"))
+    }
+
+    func testOrientationMapsStepsToWireBytesOneThroughFour() {
+        // Hardware-confirmed 2026-07-10: bytes 1–4 rotate the OLED text in
+        // 90° increments.
+        for steps in 0..<4 {
+            XCTAssertEqual(
+                XencelabsControl.orientationPayload(rotationSteps: steps)[2],
+                UInt8(steps + 1))
+        }
+    }
+
     // MARK: - Dial LED color
 
     func testDialColorMatchesCapturedOrangeFrame() {
