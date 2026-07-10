@@ -117,6 +117,57 @@ final class ModifierMathTests: XCTestCase {
         XCTAssertEqual(result & CGEventFlags.maskCommand.rawValue, 0)
     }
 
+    // MARK: - Device-dependent bits
+
+    func testManagedMaskIncludesDeviceBits() {
+        // The left-hand device bits ride along with every synthetic modifier,
+        // so release math must own them too.
+        XCTAssertEqual(
+            ModifierMath.managedMask & ModifierMath.deviceBitsMask,
+            ModifierMath.deviceBitsMask)
+    }
+
+    func testLeftDeviceBitsMapping() {
+        XCTAssertEqual(
+            ModifierMath.leftDeviceBits(for: CGEventFlags.maskCommand.rawValue),
+            ModifierMath.deviceLeftCommand)
+        XCTAssertEqual(
+            ModifierMath.leftDeviceBits(for: CGEventFlags.maskShift.rawValue),
+            ModifierMath.deviceLeftShift)
+        XCTAssertEqual(
+            ModifierMath.leftDeviceBits(for: CGEventFlags.maskAlternate.rawValue),
+            ModifierMath.deviceLeftOption)
+        XCTAssertEqual(
+            ModifierMath.leftDeviceBits(for: CGEventFlags.maskControl.rawValue),
+            ModifierMath.deviceLeftControl)
+        XCTAssertEqual(ModifierMath.leftDeviceBits(for: 0), 0)
+    }
+
+    func testCurrentEventFlagsAddsDeviceBitForSyntheticCommand() {
+        // A synthetic ⌘ must look like a real left-⌘ event: 0x100000 | 0x8.
+        let result = ModifierMath.currentEventFlags(
+            systemFlags: 0, tapPhysicalManaged: 0,
+            syntheticFlags: CGEventFlags.maskCommand.rawValue)
+        XCTAssertEqual(
+            result & ModifierMath.deviceLeftCommand, ModifierMath.deviceLeftCommand)
+    }
+
+    func testReleaseEventFlagsClearsDeviceBitWithItsModifier() {
+        // System still shows the released ⌘'s device bit (latched from our own
+        // earlier down event); the release must clear it, not preserve it.
+        let system = CGEventFlags.maskCommand.rawValue | ModifierMath.deviceLeftCommand
+        let result = ModifierMath.releaseEventFlags(systemFlags: system, remainingSyntheticFlags: 0)
+        XCTAssertEqual(result & ModifierMath.deviceLeftCommand, 0)
+        XCTAssertEqual(result & CGEventFlags.maskCommand.rawValue, 0)
+    }
+
+    func testReleaseEventFlagsKeepsDeviceBitOfRemainingModifier() {
+        let remaining = CGEventFlags.maskAlternate.rawValue
+        let result = ModifierMath.releaseEventFlags(systemFlags: 0, remainingSyntheticFlags: remaining)
+        XCTAssertEqual(
+            result & ModifierMath.deviceLeftOption, ModifierMath.deviceLeftOption)
+    }
+
     // MARK: - shouldUpdatePhysicalCache
 
     func testShouldUpdateCacheTrueForHIDSystem() {
