@@ -76,12 +76,17 @@ public protocol TabletDevice: AnyObject {
     /// Show per-key labels on the device's display (Xencelabs Quick Keys
     /// OLED; labels[0] = key 1). No-op on devices without one.
     func setAuxKeyLabels(_ labels: [String])
+    /// Per-mode-slot custom colors for devices whose ring/dial LED is RGB
+    /// (Xencelabs Quick Keys). `nil` entries mean the device's factory
+    /// per-mode palette. No-op on devices without an RGB LED.
+    func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?])
 }
 
 public extension TabletDevice {
     public func setRingLED(index: Int) {}
     public func setRingModeLabel(_ label: String) {}
     public func setAuxKeyLabels(_ labels: [String]) {}
+    public func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?]) {}
 }
 
 // Convenience: read an integer property from an IOHIDDevice.
