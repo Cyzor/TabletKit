@@ -417,9 +417,11 @@ public enum WacomDeviceRegistry {
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 152),
         .init(
-            productID: 0x0017, name: "Bamboo Fun (MTE-450)",  // ⚠ estimated
+            // Kernel WACOM_MO "BambooFun 4x5"; libwacom CTE-450 (NumRings=1).
+            // Was misattributed as MTE-450 here — that model is PID 0x0065.
+            productID: 0x0017, name: "Bamboo Fun small (CTE-450)",  // ⚠ from kernel/libwacom/OTD
             parser: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
 
@@ -455,9 +457,15 @@ public enum WacomDeviceRegistry {
             seizeUSB: false,
             activeWidthMM: 127, activeHeightMM: 102),
         .init(
-            productID: 0x0065, name: "Bamboo One (CTF-430)",  // ⚠ estimated
+            // Kernel WACOM_MO "Wacom Bamboo"; libwacom MTE-450 (NumRings=1,
+            // 4 buttons). Was misattributed as CTF-430 here — that model is
+            // PID 0x0069. WACOM_MO family (0x17/0x18/0x65) ring format per
+            // OTD BambooAuxReport: byte 8, bit 7 = finger present, bits 0–6 =
+            // absolute position 0–71. Ring decode still needs a hardware
+            // capture; only the spec facts are recorded here.
+            productID: 0x0065, name: "Bamboo (MTE-450)",  // ⚠ from kernel/libwacom/OTD
             parser: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
 
@@ -936,9 +944,10 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 127),
         .init(
-            productID: 0x0018, name: "Wacom CTE-650",  // ⚠ from OTD
+            // Kernel WACOM_MO "BambooFun 6x8"; libwacom CTE-650 (NumRings=1).
+            productID: 0x0018, name: "Bamboo Fun medium (CTE-650)",  // ⚠ from kernel/libwacom/OTD
             parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 511,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
