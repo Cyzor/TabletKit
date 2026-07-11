@@ -112,7 +112,7 @@ The registry's `parser` field tells you which decoder to instantiate:
 | `.graphire` | `GraphireDecoder` | Graphire 2–4, Volito — experimental |
 | `.dtus` | `DTUSDecoder` | DTK-1651, DTU-1031/1031X/1141 — experimental |
 | `.dtu` | `DTUDecoder` | DTU-1631, DTU-2231 — experimental |
-| `.xencelabs` | `XencelabsDecoder` | Xencelabs Medium/Small — experimental, hardware-unverified |
+| `.xencelabs` | `XencelabsDecoder` | Xencelabs Pen Display 24 and Quick Keys puck confirmed on hardware (wired and wireless dongle); Pen Tablet Medium/Small share the protocol but are hardware-unverified |
 
 `WacomDeviceRegistry` covers Wacom devices. `VendorDeviceRegistry` covers other vendors; use `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` to look those up.
 
@@ -126,7 +126,7 @@ Some devices require a feature report before they will stream pen data. Check `s
 swift test
 ```
 
-runs the 281-test suite against fixture captures from real devices. No Xcode project required.
+runs the 322-test suite against fixture captures from real devices. No Xcode project required.
 
 ## Versioning
 
