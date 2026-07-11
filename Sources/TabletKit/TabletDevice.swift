@@ -80,6 +80,12 @@ public protocol TabletDevice: AnyObject {
     /// (Xencelabs Quick Keys). `nil` entries mean the device's factory
     /// per-mode palette. No-op on devices without an RGB LED.
     func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?])
+    /// True when the device's built-in screen has host-controllable
+    /// backlight brightness (Xencelabs pen displays).
+    var hasDisplayBrightnessControl: Bool { get }
+    /// Set the built-in screen's backlight brightness (0–100). No-op on
+    /// devices without host-controllable brightness.
+    func setDisplayBrightness(_ percent: Int)
 }
 
 public extension TabletDevice {
@@ -87,6 +93,8 @@ public extension TabletDevice {
     public func setRingModeLabel(_ label: String) {}
     public func setAuxKeyLabels(_ labels: [String]) {}
     public func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?]) {}
+    public var hasDisplayBrightnessControl: Bool { false }
+    public func setDisplayBrightness(_ percent: Int) {}
 }
 
 // Convenience: read an integer property from an IOHIDDevice.

@@ -77,6 +77,23 @@ public enum XencelabsControl {
         return p
     }
 
+    /// Pen Display panel brightness write: `02 B5 01 03 00 00 <0–100> 00`.
+    ///
+    /// Decoded 2026-07-10 from the vendor agent's disassembly
+    /// (`CTablet::SetColorCommand`): the 0xB5 frame family carries the
+    /// panel's on-device display controls (color presets, gains, gamma,
+    /// brightness, contrast). Subcommand byte 3 = brightness and 4 =
+    /// contrast is inferred from call order in the preset-apply path and
+    /// has not yet been confirmed on hardware.
+    public static func displayBrightnessPayload(
+        _ percent: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB5, 0x01, 0x03, 0x00, 0x00,
+                          min(percent, 100), 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
     /// Dial sensitivity write: `02 B4 04 01 01 <n> ... <addr>`.
     /// Observed n = 1...5; the vendor default is 3.
     public static func dialSensitivityPayload(
