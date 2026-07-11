@@ -126,6 +126,19 @@ public enum VendorDeviceRegistry {
         }
     }
 
+    /// Canonical product ID for multi-transport accessories, mirroring
+    /// `WacomDeviceRegistry.canonicalProductID(for:)`: the Xencelabs Quick
+    /// Keys wireless dongle (0x5203) is the wired puck (0x5202) reached over
+    /// a different transport, so both fold into one identity — one settings
+    /// namespace, one window, one device row. Unmapped PIDs return
+    /// unchanged. Only PIDs unique to a single vendor across the catalog may
+    /// be mapped here, since callers don't always know the vendor. The
+    /// driver layer must keep the raw PID: relay handling (relink handshake,
+    /// address-suffixed writes) is transport-specific.
+    public static func canonicalProductID(for productID: Int) -> Int {
+        productID == 0x5203 ? 0x5202 : productID
+    }
+
     // MARK: - Registry
 
     public static let knownDevices: [VendorDeviceProfile] = [
