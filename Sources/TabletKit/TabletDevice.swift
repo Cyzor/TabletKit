@@ -86,6 +86,16 @@ public protocol TabletDevice: AnyObject {
     /// Set the built-in screen's backlight brightness (0–100). No-op on
     /// devices without host-controllable brightness.
     func setDisplayBrightness(_ percent: Int)
+    /// Set the built-in screen's contrast (0–100). No-op on devices without
+    /// host-controllable panel contrast.
+    func setDisplayContrast(_ percent: Int)
+    /// Set the built-in screen's gamma, passed as gamma × 10 (e.g. 22 = 2.2).
+    /// No-op on devices without host-controllable gamma.
+    func setDisplayGamma(_ gammaTimesTen: Int)
+    /// Select a built-in color-space preset (Adobe RGB, sRGB, REC 709,
+    /// DCI-P3, REC 2020, Pantone, Custom) by row index. No-op on devices
+    /// without host-controllable color-mode presets.
+    func setColorMode(_ index: Int)
 }
 
 public extension TabletDevice {
@@ -95,6 +105,9 @@ public extension TabletDevice {
     public func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?]) {}
     public var hasDisplayBrightnessControl: Bool { false }
     public func setDisplayBrightness(_ percent: Int) {}
+    public func setDisplayContrast(_ percent: Int) {}
+    public func setColorMode(_ index: Int) {}
+    public func setDisplayGamma(_ gammaTimesTen: Int) {}
 }
 
 // Convenience: read an integer property from an IOHIDDevice.

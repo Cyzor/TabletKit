@@ -77,19 +77,95 @@ public enum XencelabsControl {
         return p
     }
 
-    /// Pen Display panel brightness write: `02 B5 01 03 00 00 <0–100> 00`.
+    /// The 0xB5 frame family carries the pen display's on-device panel
+    /// controls. Each frame is `02 B5 01 <sub> <p3> <p4> <value> <p6>`; the
+    /// subcommand byte selects which control. Decoded 2026-07-10/11 from the
+    /// vendor agent's disassembly (`CTablet::SetColorCommand`, driven by
+    /// `MainWindow::RgbAppliedBtnFunction`), which issues these as a batch on
+    /// its Apply button: color mode, then RGB gains, gamma, brightness,
+    /// contrast, then a commit.
     ///
-    /// Decoded 2026-07-10 from the vendor agent's disassembly
-    /// (`CTablet::SetColorCommand`): the 0xB5 frame family carries the
-    /// panel's on-device display controls (color presets, gains, gamma,
-    /// brightness, contrast). Subcommand byte 3 = brightness and 4 =
-    /// contrast is inferred from call order in the preset-apply path and
-    /// has not yet been confirmed on hardware.
+    /// Subcommand 3 (brightness) is user-confirmed on hardware; the others share
+    /// the identical frame shape and are decoded but not yet hardware-verified.
+    public enum DisplayControl: UInt8 {
+        /// Color-mode / picture-preset select. Value is the row index in the
+        /// panel's device-specific mode list. The frame is
+        /// `02 B5 01 01 01 00 <index> 00` (note `p3 = 01`, unlike the scalars).
+        case colorMode = 0x01
+        /// Display gamma. Value is gamma × 10 (e.g. 2.2 → 22), matching the
+        /// `fmul #10; fcvtzs` the agent applies before sending.
+        case gamma = 0x02
+        /// Backlight brightness, 0–100.
+        case brightness = 0x03
+        /// Panel contrast, 0–100.
+        case contrast = 0x04
+    }
+
+    /// Build a scalar 0xB5 display-control write:
+    /// `02 B5 01 <sub> 00 00 <value> 00`. Covers brightness, contrast, and
+    /// gamma (all single-value controls). The color-mode selector has a
+    /// different `p3` and uses `colorModePayload` instead.
+    private static func displayControlPayload(
+        _ control: DisplayControl, value: UInt8, address: [UInt8]
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB5, 0x01, control.rawValue, 0x00, 0x00,
+                          value, 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
+    /// Pen Display panel brightness write: `02 B5 01 03 00 00 <0–100> 00`.
+    /// Subcommand 3, user-confirmed on hardware 2026-07-10.
     public static func displayBrightnessPayload(
         _ percent: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
-        var p: [UInt8] = [0x02, 0xB5, 0x01, 0x03, 0x00, 0x00,
-                          min(percent, 100), 0x00, 0x00, 0x00]
+        displayControlPayload(.brightness, value: min(percent, 100), address: address)
+    }
+
+    /// Pen Display panel contrast write: `02 B5 01 04 00 00 <0–100> 00`.
+    /// Same frame shape as brightness; decoded, not yet hardware-verified.
+    public static func displayContrastPayload(
+        _ percent: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        displayControlPayload(.contrast, value: min(percent, 100), address: address)
+    }
+
+    /// Pen Display gamma write: `02 B5 01 02 00 00 <gamma×10> 00`.
+    /// Pass gamma pre-scaled by 10 (e.g. 2.2 → 22). Decoded, not yet
+    /// hardware-verified.
+    public static func displayGammaPayload(
+        _ gammaTimesTen: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        displayControlPayload(.gamma, value: gammaTimesTen, address: address)
+    }
+
+    /// Pen Display color-mode / picture-preset write:
+    /// `02 B5 01 01 01 00 <index> 00`.
+    ///
+    /// The index is a row in the panel's *device-specific* color-mode list
+    /// (sRGB, Adobe RGB, DCI-P3, REC709, ACES, Pantone, color temperatures,
+    /// Custom — order and membership vary by Pen Display model). Provided for
+    /// completeness alongside the scalar controls; no UI drives it yet because
+    /// the per-model ordering has not been confirmed on hardware. When wiring a
+    /// picker, verify the on-screen order for the target model first.
+    ///
+    /// The vendor batch ends each Apply with a commit frame
+    /// (`02 B5 00 F0 00 00 00 00`). Scalar writes take effect live without it
+    /// (brightness is proven to), but if a mode change doesn't stick on
+    /// hardware, send that commit after this frame.
+    public static func colorModePayload(
+        _ index: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB5, 0x01, 0x01, 0x01, 0x00, index, 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
+    /// Apply-batch commit frame: `02 B5 00 F0 00 00 00 00`. The vendor sends
+    /// this after a preset switch; presumed to tell firmware to reset
+    /// gamma/contrast/etc. to the newly-selected preset's own stored values.
+    public static func displayCommitPayload(address: [UInt8] = []) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB5, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         p += paddedAddress(address)
         return p
     }

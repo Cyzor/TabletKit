@@ -127,4 +127,58 @@ final class XencelabsControlTests: XCTestCase {
         // Frames all pad to the full 32-byte report.
         XCTAssertTrue(frames.allSatisfy { $0.count == 32 })
     }
+
+    // MARK: - 0xB5 display controls
+
+    // Subcommand byte 3 = brightness, confirmed on hardware; value in byte 6.
+    func testBrightnessMatchesSubcommandThreeFrame() {
+        XCTAssertEqual(
+            XencelabsControl.displayBrightnessPayload(72),
+            hex("02 b5 01 03 00 00 48 00 00 00 00 00 00 00 00 00"))
+    }
+
+    func testBrightnessClampsAboveHundred() {
+        // Byte 6 caps at 100 (0x64) regardless of the input.
+        XCTAssertEqual(XencelabsControl.displayBrightnessPayload(250)[6], 100)
+    }
+
+    // Contrast shares the brightness frame shape; only subcommand byte differs (4).
+    func testContrastMatchesSubcommandFourFrame() {
+        XCTAssertEqual(
+            XencelabsControl.displayContrastPayload(50),
+            hex("02 b5 01 04 00 00 32 00 00 00 00 00 00 00 00 00"))
+    }
+
+    func testContrastClampsAboveHundred() {
+        XCTAssertEqual(XencelabsControl.displayContrastPayload(200)[6], 100)
+    }
+
+    // Gamma is subcommand 2; the caller passes gamma × 10 (2.2 → 22 = 0x16).
+    func testGammaMatchesSubcommandTwoFrame() {
+        XCTAssertEqual(
+            XencelabsControl.displayGammaPayload(22),
+            hex("02 b5 01 02 00 00 16 00 00 00 00 00 00 00 00 00"))
+    }
+
+    // Color mode uses p3 = 01 (unlike the scalars) with the row index in byte 6.
+    func testColorModeUsesPresetFrameShape() {
+        XCTAssertEqual(
+            XencelabsControl.colorModePayload(3),
+            hex("02 b5 01 01 01 00 03 00 00 00 00 00 00 00 00 00"))
+    }
+
+    // The commit frame follows a preset switch to reset gamma/contrast/etc.
+    // to that preset's own stored values (sub 0x00, value 0xF0).
+    func testDisplayCommitMatchesApplyBatchFrame() {
+        XCTAssertEqual(
+            XencelabsControl.displayCommitPayload(),
+            hex("02 b5 00 f0 00 00 00 00 00 00 00 00 00 00 00 00"))
+    }
+
+    // The addressed form threads the paired address through bytes 10–15.
+    func testDisplayControlCarriesAddress() {
+        XCTAssertEqual(
+            XencelabsControl.displayContrastPayload(50, address: addr),
+            hex("02 b5 01 04 00 00 32 00 00 00 aa 67 82 b9 35 f4"))
+    }
 }
