@@ -6,6 +6,8 @@ Serves as the decoder for [**MockTab**](https://mocktab.org), an open-source mac
 
 License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 
+TabletKit is an independent, community-built project. It is not affiliated with, endorsed by, or sponsored by Wacom Co., Ltd. or any other device vendor. Product names are used only to describe hardware compatibility.
+
 ## Adding to your project
 
 ```swift
