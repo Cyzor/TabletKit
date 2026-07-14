@@ -43,6 +43,10 @@ public struct VendorDeviceProfile: Equatable {
     public let penButtonCount: Int?
     /// Number of frame / express buttons, when published.
     public let auxButtonCount: Int?
+    /// Number of onboard bezel buttons built into the device itself (e.g. the
+    /// Xencelabs Pen Display's 3 capacitive touch buttons), distinct from
+    /// `auxButtonCount`'s companion-peripheral express keys. Nil/0 if none.
+    public let bezelButtonCount: Int?
     /// OTD's report-parser class name (e.g. "UCLogicTiltReportParser").
     /// Records OTD's parser hint verbatim — useful when picking a decoder
     /// family later without re-deriving from raw bytes.
@@ -71,6 +75,7 @@ public struct VendorDeviceProfile: Equatable {
         activeWidthMM: Double? = nil, activeHeightMM: Double? = nil,
         maxX: Int? = nil, maxY: Int? = nil, maxPressure: Int? = nil,
         penButtonCount: Int? = nil, auxButtonCount: Int? = nil,
+        bezelButtonCount: Int? = nil,
         otdParser: String? = nil, productStringRegex: String? = nil,
         isPenDisplay: Bool = false, companions: [Int] = []
     ) {
@@ -85,6 +90,7 @@ public struct VendorDeviceProfile: Equatable {
         self.maxPressure = maxPressure
         self.penButtonCount = penButtonCount
         self.auxButtonCount = auxButtonCount
+        self.bezelButtonCount = bezelButtonCount
         self.otdParser = otdParser
         self.productStringRegex = productStringRegex
         self.isPenDisplay = isPenDisplay

@@ -179,6 +179,10 @@ public struct LiveButtonState: Equatable {
     /// `TabletSettings.expressKeyBindings`); per-device, only the first
     /// `spec.buttonCount` entries are physically meaningful.
     public var expressKeys: [Bool] = Array(repeating: false, count: 16)
+    /// Live state of a device's own onboard bezel buttons (e.g. the Cintiq
+    /// DTK-2400's capacitive OSD buttons), kept separate from `expressKeys`
+    /// since some devices already use all 16 of those slots.
+    public var bezelButtons: [Bool] = Array(repeating: false, count: 3)
     /// True while a finger is actively touching the touch ring.
     public var touchRingActive: Bool = false
     /// True while the touch ring center button is physically pressed.
@@ -198,6 +202,7 @@ public struct LiveButtonState: Equatable {
         button4Down: Bool = false,
         button5Down: Bool = false,
         expressKeys: [Bool] = Array(repeating: false, count: 16),
+        bezelButtons: [Bool] = Array(repeating: false, count: 3),
         touchRingActive: Bool = false,
         touchRingButtonDown: Bool = false,
         touchRing2Active: Bool = false,
@@ -212,6 +217,7 @@ public struct LiveButtonState: Equatable {
         self.button4Down = button4Down
         self.button5Down = button5Down
         self.expressKeys = expressKeys
+        self.bezelButtons = bezelButtons
         self.touchRingActive = touchRingActive
         self.touchRingButtonDown = touchRingButtonDown
         self.touchRing2Active = touchRing2Active

@@ -283,12 +283,15 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // Confirmed layout (live USB capture, Wacom driver 6.3.46-2, DTK-2400 / Cintiq 24HD):
     //   byte[1] — left  touch ring: bit7=active, [6:0]=position 0–71
     //   byte[2] — right touch ring: same encoding (dual-ring models only)
-    //   byte[3] — capacitive OSD touch buttons, group A  (bit4 = one of: i/keyboard/wrench)
-    //   byte[4] — capacitive OSD touch buttons, group B  (bit0, bit6 = the other two)
-    //     Note: a 2026-07-09 capture on the same DTK-2400 instead showed bit1
-    //     and bit5 varying in byte[4]. Not re-verified against this comment;
-    //     all 8 bits are OR'd into capBBits regardless, so button state is
-    //     captured correctly either way — only the bit numbering above may be stale.
+    //   byte[3] — capacitive OSD touch buttons, group A — bit4 = left button
+    //   byte[4] — capacitive OSD touch buttons, group B — bit6 = middle button, bit0 = right button
+    //     Confirmed 2026-07-14 by a live capture that isolated clean single-tap
+    //     events for all three buttons at these exact bits, then a swipe across
+    //     the strip that walked a single active bit down through capA bits 4-0
+    //     and capB bits 7-0 in sequence. The OSD area is a continuous capacitive
+    //     slider under three printed icons — a discrete tap just lands on its
+    //     icon's fixed bit — so the other bits in capA/capB are transient
+    //     way-points during a swipe, not independent buttons, and are ignored.
     //   byte[5] — 0x00 (padding)
     //   byte[6] — left  side buttons: bits 0–2 = ring-mode select 0/1/2; bits 3–7 = express keys 1–5
     //   byte[7] — 0x00 (padding)
@@ -298,8 +301,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // buttons[] layout (AuxButtons):
     //   [0..7]   = byte[6] left side (ring-mode 0/1/2, express keys 1–5)
     //   [8..15]  = byte[8] right side (ring-mode 0/1/2, express keys 1–5)
-    //   [16..23] = byte[3] capacitive OSD group A
-    //   [24..31] = byte[4] capacitive OSD group B
+    //   [16..18] = capacitive OSD buttons, left/middle/right (fixed bits, see above)
 
     private func decodeExpressKeys(
         report: UnsafePointer<UInt8>,
@@ -327,10 +329,13 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
         let leftBits:  [Bool] = (0..<8).map { bit in (leftByte  & (1 << bit)) != 0 }
         let rightBits: [Bool] = (0..<8).map { bit in (rightByte & (1 << bit)) != 0 }
-        let capABits:  [Bool] = (0..<8).map { bit in (capA      & (1 << bit)) != 0 }
-        let capBBits:  [Bool] = (0..<8).map { bit in (capB      & (1 << bit)) != 0 }
-        // [0..7] left side  [8..15] right side  [16..23] OSD group A  [24..31] OSD group B
-        let buttons = leftBits + rightBits + capABits + capBBits
+        let osdBits: [Bool] = [
+            (capA & 0x10) != 0,  // left OSD button
+            (capB & 0x40) != 0,  // middle OSD button
+            (capB & 0x01) != 0,  // right OSD button
+        ]
+        // [0..7] left side  [8..15] right side  [16..18] OSD buttons (left/middle/right)
+        let buttons = leftBits + rightBits + osdBits
 
         return [
             .aux(

@@ -358,6 +358,45 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertEqual(aux.buttons[8 + 1], true, "Right express key bit 1 should be in slot 8+1")
     }
 
+    func testExpressKeyReportDecodesOSDButtons() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 9)
+        bytes[0] = 0x0C
+        bytes[3] = 0x10  // capA bit4 — left OSD button
+        bytes[4] = 0x40  // capB bit6 — middle OSD button
+
+        let results = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux.buttons[16], true, "left OSD button")
+        XCTAssertEqual(aux.buttons[17], true, "middle OSD button")
+        XCTAssertEqual(aux.buttons[18], false, "right OSD button")
+
+        bytes[3] = 0
+        bytes[4] = 0x01  // capB bit0 — right OSD button
+        let results2 = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux2)? = results2.first else {
+            return XCTFail("Expected .aux, got \(results2)")
+        }
+        XCTAssertEqual(aux2.buttons[16], false)
+        XCTAssertEqual(aux2.buttons[17], false)
+        XCTAssertEqual(aux2.buttons[18], true, "right OSD button")
+
+        // Other capA/capB bits (transient way-points during a swipe) must not
+        // be misread as button presses — see decoder header comment.
+        bytes[3] = 0b0000_0111  // capA bits 0-2, never a real tap
+        bytes[4] = 0
+        let results3 = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux3)? = results3.first else {
+            return XCTFail("Expected .aux, got \(results3)")
+        }
+        XCTAssertEqual(aux3.buttons[16], false)
+        XCTAssertEqual(aux3.buttons[17], false)
+        XCTAssertEqual(aux3.buttons[18], false)
+    }
+
     func testExpressKeyReportShortLengthRejected() {
         var decoder = CintiqV1Decoder()
         var state = DecoderState()

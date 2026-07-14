@@ -1710,10 +1710,13 @@ public enum VendorDeviceRegistry {
         // the QuickKeys puck's 8 express keys + bottom mode button (9) are
         // the puck/dongle companion's own capability, not the display's (see
         // `companions` below); this entry previously carried 9 here too, from
-        // before the puck was split into its own device. The display does
-        // have 3 onboard capacitive touch buttons of its own, but those
-        // aren't decoded/exposed yet — deliberately left off pending that
-        // work rather than folded into this count.
+        // before the puck was split into its own device. The display also
+        // has 3 onboard capacitive touch buttons of its own (bezelButtonCount)
+        // — confirmed 2026-07-14 via live capture: they ride the exact same
+        // aux frame format as the puck's express keys (report 2, tag 0xF0,
+        // bits 0-2 one-hot on a clean tap), remapped to the bezel-button
+        // slots in WacomKnownDevice since this device has no puck of its own
+        // to disambiguate them from.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
@@ -1724,7 +1727,7 @@ public enum VendorDeviceRegistry {
             activeWidthMM: 527.04, activeHeightMM: 296.46,
             maxX: 105000, maxY: 59000,
             maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: nil,
+            penButtonCount: 3, auxButtonCount: nil, bezelButtonCount: 3,
             otdParser: "XenceLabsReportParser",
             productStringRegex: nil,
             isPenDisplay: true,

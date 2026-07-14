@@ -170,6 +170,9 @@ public struct WacomDeviceSpec {
     public let maxPressure: Int
     /// Number of programmable express/side keys (0 if none).
     public let buttonCount: Int
+    /// Number of onboard capacitive bezel buttons (e.g. the Cintiq DTK-2400's
+    /// OSD keys), distinct from `buttonCount`'s express keys. 0 if none.
+    public let bezelButtonCount: Int
     /// True if this model has a capacitive touch ring (Intuos Pro).
     public let hasTouchRing: Bool
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
@@ -250,7 +253,7 @@ public struct WacomDeviceSpec {
     public init(
         productID: Int, name: String, parser: ReportParser,
         maxX: Int, maxY: Int, maxPressure: Int,
-        buttonCount: Int, hasTouchRing: Bool, hasDualRings: Bool = false,
+        buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
         hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool = false,
         hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
         touchMaxX: Int = 0, touchMaxY: Int = 0,
@@ -270,6 +273,7 @@ public struct WacomDeviceSpec {
         self.maxY = maxY
         self.maxPressure = maxPressure
         self.buttonCount = buttonCount
+        self.bezelButtonCount = bezelButtonCount
         self.hasTouchRing = hasTouchRing
         self.hasDualRings = hasDualRings
         self.hasTouchStrips = hasTouchStrips
@@ -829,7 +833,7 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x00F4, name: "Cintiq 24HD (DTK-2400)",  // ✓ confirmed live
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true,
+            buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056,
             confidence: .verified,
