@@ -232,18 +232,34 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertTrue(decode(echo3, state: &state).isEmpty)
     }
 
-    /// Verbatim frames captured off the wireless dongle's own connect-time
-    /// status/announcement traffic (2026-07-06): tags 0xF8 and 0xF2 share
-    /// bit 4 (the aux-frame bit) with real button data (tag 0xF0) but aren't
-    /// button presses. 0xF8 used to decode as a phantom express-key + mode
-    /// button press with no matching release, sticking a mapped modifier
-    /// down. Must decode to nothing.
-    func testDongleStatusFramesAreNotMisreadAsAux() {
+    /// Verbatim frame captured off the wireless dongle's own connect-time
+    /// status/announcement traffic (2026-07-06): tag 0xF8 shares bit 4 (the
+    /// aux-frame bit) with real button data (tag 0xF0) but isn't a button
+    /// press. Used to decode as a phantom express-key + mode button press
+    /// with no matching release, sticking a mapped modifier down. Must
+    /// decode to nothing.
+    func testDongleStatusFrameIsNotMisreadAsAux() {
         var state = DecoderState()
         let status1 = frame("02 f8 02 01 20 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
         XCTAssertTrue(decode(status1, state: &state).isEmpty)
-        let status2 = frame("02 f2 01 63 00 00 00 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
-        XCTAssertTrue(decode(status2, state: &state).isEmpty)
+    }
+
+    /// The frame previously filed alongside the dongle status frame above
+    /// (tag 0xF2, byte[2] == 0x01, byte[3] == 0x63 == 99) isn't a status/
+    /// announcement frame at all — it's the solicited battery GET reply
+    /// (confirmed 2026-07-14 via a live capture against a wireless puck,
+    /// where byte[3] == 0x5a == 90% matched the reported charge level).
+    /// Must decode to `.battery(percent: 99, charging: false)`.
+    func testBatteryReplyDecodesPercent() {
+        var state = DecoderState()
+        let reply = frame("02 f2 01 63 00 00 00 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
+        let results = decode(reply, state: &state)
+        XCTAssertEqual(results.count, 1)
+        guard case .battery(let percent, let charging) = results.first else {
+            return XCTFail("expected .battery result")
+        }
+        XCTAssertEqual(percent, 99)
+        XCTAssertFalse(charging)
     }
 
     // MARK: - QuickKeys puck (aux frames)

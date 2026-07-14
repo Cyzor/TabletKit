@@ -74,6 +74,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
     static let barrel2Bit: UInt8 = 0x08
     static let auxBit: UInt8 = 0x10
     static let tagAux: UInt8 = 0xF0
+    static let tagBattery: UInt8 = 0xF2
     static let eraserBit: UInt8 = 0x40
 
     /// Tilt bytes are assumed to be degrees (±60°, the spec'd max for this pen
@@ -121,6 +122,17 @@ public struct XencelabsDecoder: TabletReportDecoder {
         // exact match instead of just testing the aux bit excludes those.
         if tag == Self.tagAux {
             return Self.decodeAux(report)
+        }
+        // Battery GET reply (solicited — see WacomKnownDevice's periodic
+        // poll): tag 0xF2, byte[2] == 0x01 as a constant marker, byte[3] =
+        // raw 0–100 percentage. Confirmed 2026-07-14 from a live capture
+        // (`02 f2 01 5a ...` == 90%) against a wireless puck. No charging
+        // bit observed — this puck has no wired-charging state to report,
+        // so charging is always false here. Single-sample confirmation;
+        // revisit byte[2]'s role if a reply is ever seen with a different
+        // value there.
+        if tag == Self.tagBattery, length >= 4, report[2] == 0x01 {
+            return [.battery(percent: Int(report[3]), charging: false)]
         }
         // Any other tag with the aux bit set isn't a pen frame either — it's
         // one of those dongle status frames — so don't let it fall through
