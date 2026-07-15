@@ -66,6 +66,22 @@ public enum XencelabsControl {
         return p
     }
 
+    /// Xencelabs' factory 8-color swatch palette for RGB backlights, in the
+    /// vendor UI's swatch order (white, magenta, blue, cyan, green, yellow,
+    /// orange, red). Values are LED-calibrated RGB at full brightness as
+    /// captured from the vendor driver setting the pen display's bezel LED
+    /// (2026-07-15) — note "white" is warm-compensated, not 0xFFFFFF.
+    public static let ledPalette: [(r: UInt8, g: UInt8, b: UInt8)] = [
+        (0xFF, 0x78, 0x5A),  // white
+        (0xFF, 0x00, 0x42),  // magenta
+        (0x00, 0x00, 0xFE),  // blue
+        (0x00, 0xFF, 0xC8),  // cyan
+        (0x3C, 0xFF, 0x00),  // green
+        (0xFF, 0x55, 0x00),  // yellow
+        (0xFD, 0x14, 0x00),  // orange
+        (0xF7, 0x00, 0x00),  // red
+    ]
+
     /// Dial LED color write: `02 B4 01 01 00 00 R G B 00 <addr>`.
     /// Brightness is pre-scaled into the RGB values by the host (the vendor
     /// driver sends e.g. red at 0x52/0xA4/0xF7 peak for Dim/Medium/Hell).
