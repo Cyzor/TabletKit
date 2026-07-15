@@ -69,6 +69,9 @@ public enum XencelabsControl {
     /// Dial LED color write: `02 B4 01 01 00 00 R G B 00 <addr>`.
     /// Brightness is pre-scaled into the RGB values by the host (the vendor
     /// driver sends e.g. red at 0x52/0xA4/0xF7 peak for Dim/Medium/Hell).
+    /// The pen display's bezel-button backlight LED answers to the exact
+    /// same frame (captured from the vendor driver 2026-07-15), so this
+    /// builder serves both devices.
     public static func dialColorPayload(
         r: UInt8, g: UInt8, b: UInt8, address: [UInt8] = []
     ) -> [UInt8] {

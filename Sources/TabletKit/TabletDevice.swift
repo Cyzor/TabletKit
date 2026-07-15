@@ -96,6 +96,11 @@ public protocol TabletDevice: AnyObject {
     /// DCI-P3, REC 2020, Pantone, Custom) by row index. No-op on devices
     /// without host-controllable color-mode presets.
     func setColorMode(_ index: Int)
+    /// Set the shared backlight LED behind the device's onboard bezel
+    /// buttons (Xencelabs pen displays). Brightness is premultiplied into
+    /// the RGB by the caller — the LED has no brightness register. No-op on
+    /// devices without a controllable bezel LED.
+    func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8)
 }
 
 public extension TabletDevice {
@@ -108,6 +113,7 @@ public extension TabletDevice {
     public func setDisplayContrast(_ percent: Int) {}
     public func setColorMode(_ index: Int) {}
     public func setDisplayGamma(_ gammaTimesTen: Int) {}
+    public func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8) {}
 }
 
 // Convenience: read an integer property from an IOHIDDevice.
