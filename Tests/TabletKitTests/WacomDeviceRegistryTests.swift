@@ -77,7 +77,12 @@ final class WacomDeviceRegistryTests: XCTestCase {
 
     func testCanonicalPIDCollapsesBTToUSBForPTH660() {
         XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0360), 0x0357)
-        XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0359), 0x0357)
+        // 0x0359 is NOT a PTH-660 transport variant: it previously appeared
+        // here as an unsourced "wireless dongle" guess, unlike every other
+        // canonicalPIDMap entry, which cites a kernel macro or libwacom
+        // DeviceMatch. Removed 2026-07-17 in favor of libwacom's own,
+        // specifically-sourced identification of 0x0359 as the DTU-1141B.
+        XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0359), 0x0359)
     }
 
     /// Every canonical-map target must resolve to a registry entry; a dangling

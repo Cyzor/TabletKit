@@ -625,6 +625,16 @@ public enum WacomDeviceRegistry {
             parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 127),
+        .init(
+            // BT Classic PID for the same PTK-540WL: libwacom
+            // wacom-intuos4-6x9-wl.tablet lists DeviceMatch
+            // usb|056a|00bc;bluetooth|056a|00bd — same device, second transport.
+            // Coordinates/dims mirror the USB entry above; seizeUSB=false as
+            // with other BT Classic entries in this registry.
+            productID: 0x00BD, name: "Intuos4 WL (PTK-540WL) BT",  // ⚠ from libwacom
+            parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            seizeUSB: false, activeWidthMM: 203, activeHeightMM: 127),
 
         // ── Intuos5 / Intuos Pro 1st-gen (PTH-x50/x51, 2012–2013) ──────────────
         // IntuosV1 10-byte format, 2047-level pressure (vs Intuos Pro 2nd-gen's 8191).
@@ -790,6 +800,23 @@ public enum WacomDeviceRegistry {
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 2, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, activeWidthMM: 217, activeHeightMM: 137),
+        .init(
+            // libwacom wacom-bamboo-4fg-s-t.tablet: "second generation BambooPT",
+            // no stylus, 2FG touch (4FG gesture). maxPressure 0 is intentional —
+            // touch-only, same convention as the CTT-460 entry (0x00D0) above.
+            productID: 0x00D9, name: "Bamboo Touch (CTT-460A)",  // ⚠ from libwacom
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, activeWidthMM: 127, activeHeightMM: 76),
+        .init(
+            // libwacom wacom-bamboo-16fg-s-t.tablet: "third generation BambooPT",
+            // header comment says "no stylus; 16FG touch" despite Stylus=true in
+            // the [Device] section — treated as touch-only (maxPressure 0) per
+            // the descriptive comment, matching CTT-460 (0x00D9) above.
+            productID: 0x00DC, name: "Bamboo Touch (CTT-470)",  // ⚠ from libwacom
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 102),
 
         // ── Cintiq pen-display line — cintiqV1 parser ────────────────────────
         // seizeUSB policy for cintiqV1 pen displays:
@@ -1225,6 +1252,147 @@ public enum WacomDeviceRegistry {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
 
+        // ── Cintiq Pro / DTK / DTH current-gen pen displays — groundwork only ──
+        // groundwork only: Wacom's own macOS driver currently supports every
+        // model in this block. Kept here (⚠ .experimental, not prioritized)
+        // so a future decoder pass has known dimensions/PIDs if/when Wacom
+        // drops support, the same rationale as the existing Cintiq Pro 32
+        // (0x0352) entry above. Parser assigned by similarity to that sibling
+        // (.intuosV2, isPenDisplay, seizeUSB, single [0x02,0x02] init) — none
+        // of these are hardware-verified. Dimensions are libwacom Width/Height
+        // (mm) × 200 units/mm, the same round factor the 0x0352 entry uses;
+        // actual native resolution may differ per model.
+        .init(
+            // libwacom wacom-cintiq-pro-16-2.tablet: Width=356 Height=203mm,
+            // Touch=true, Buttons Left=A;B;C;D Right=E;F;G;H (8 express keys).
+            productID: 0x03B2, name: "Cintiq Pro 16 (DTH/DTK-1662)",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 8, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // libwacom wacom-cintiq-pro-24-p.tablet: Width=508 Height=305mm,
+            // Touch=false, no [Buttons] section (pen-only variant, no keys).
+            productID: 0x037C, name: "Cintiq Pro 24 (DTK-2420, pen only)",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 508, activeHeightMM: 305),
+        .init(
+            // libwacom wacom-cintiq-pro-24-pt.tablet: same panel as 0x037C
+            // (Width=508 Height=305mm) but Touch=true (DTH-2420, touch variant).
+            productID: 0x0351, name: "Cintiq Pro 24 (DTH-2420, touch)",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 508, activeHeightMM: 305),
+        .init(
+            // libwacom wacom-cintiq-22.tablet: Width=483 Height=254mm,
+            // Touch=false, no [Buttons] section (pen-only, non-Pro Cintiq 22).
+            productID: 0x0391, name: "Cintiq 22 (DTK-2200)",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 96600, maxY: 50800, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 254),
+        .init(
+            // libwacom wacom-dtk-1660e.tablet: Width=356 Height=203mm, no touch,
+            // no buttons. First-revision PID; 0x03B0 below is a hardware-revision
+            // sibling with identical dimensions (same pattern as Cintiq 16's
+            // 0x0390/0x03AE pair already in this registry).
+            productID: 0x0396, name: "DTK-1660E",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // libwacom wacom-dtk-1660e-2.tablet: hardware-revision sibling of
+            // 0x0396, identical dimensions.
+            productID: 0x03B0, name: "DTK-1660E",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // libwacom wacom-dtk-168e.tablet: Width=356 Height=203mm, no touch,
+            // no buttons.
+            productID: 0x03EE, name: "DTK-168E",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // libwacom wacom-dtk-246e.tablet: Width=533 Height=305mm, no touch,
+            // no buttons.
+            productID: 0x03EF, name: "DTK-246E",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 106600, maxY: 61000, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 533, activeHeightMM: 305),
+        .init(
+            // libwacom wacom-dth-1152.tablet: Width=229 Height=127mm, Touch=true,
+            // no [Buttons] section, header note "Stylus does not have an
+            // eraser". PID 0x035A previously misattributed in canonicalPIDMap
+            // as an unsourced PTH-860 wireless-dongle guess — removed above
+            // 2026-07-17 in favor of this libwacom-sourced identity.
+            productID: 0x035A, name: "DTH-1152",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 45800, maxY: 25400, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
+        .init(
+            // libwacom wacom-dth-2452.tablet: Width=508 Height=305mm, Touch=true,
+            // Buttons Right=A;B;C;D (4 express keys).
+            productID: 0x037D, name: "DTH-2452",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
+            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 508, activeHeightMM: 305),
+        .init(
+            // libwacom wacom-dth-246e.tablet: Width=533 Height=305mm, Touch=true,
+            // no [Buttons] section.
+            productID: 0x03FF, name: "DTH-246E",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 106600, maxY: 61000, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 10,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 533, activeHeightMM: 305),
+        .init(
+            // libwacom wacom-dtu-1141b.tablet: Width=229 Height=127mm,
+            // Touch=false, Buttons Top=A;B;C;D (4 express keys). PID 0x0359
+            // previously misattributed in canonicalPIDMap as an unsourced
+            // PTH-660 wireless-dongle guess — removed above 2026-07-17 in
+            // favor of this libwacom-sourced identity.
+            productID: 0x0359, name: "DTU-1141B",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 45800, maxY: 25400, maxPressure: 8191,
+            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 229, activeHeightMM: 127),
+        .init(
+            // libwacom wacom-one.tablet: DeviceMatch usb|056a|03a6;usb|056a|03bd,
+            // Width=279 Height=152mm — same physical panel already registered
+            // as 0x03A6 "Wacom DTC-133" above (identical dims). 0x03BD is a
+            // second PID for the same hardware sold under the "Wacom One"
+            // branding; added as its own entry rather than folded into the
+            // 0x03A6 spec since productID is this table's primary key.
+            productID: 0x03BD, name: "Wacom One (DTC-133)",  // ⚠ groundwork only
+            parser: .intuosV2, maxX: 29434, maxY: 16556, maxPressure: 4095,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
+
+        // ── Cintiq Companion / Companion 2 / Companion Hybrid — NOT added ──────
+        // Considered for this pass but these are standalone Windows tablet-PCs
+        // (libwacom Class=Cintiq, IntegratedIn=Display;System for 0x030A/0x0325;
+        // IntegratedIn=Display for the Hybrid at 0x0307) — the digitizer is
+        // built into a self-contained Windows computer, not a USB peripheral a
+        // Mac could ever attach to and drive. Skipped as out of scope, same
+        // reasoning as the ISDV4 tablet-PC entries excluded elsewhere in this
+        // registry.
+
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
         // the paired tablet.  WacomFallbackDevice auto-detects the report family.
@@ -1376,6 +1544,33 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // DTI-520: old fiber-optic interactive pen display (~2001), the
+            // oldest Wacom pen display in this registry. libwacom
+            // wacom-dti-520.tablet: Width=356 Height=305mm, 10 usable buttons
+            // (Top=F;G;H;I;J, Bottom=B;A;D;E;C — libwacom notes an 11th button
+            // exists but the two Ctrl keys share one scancode), and "does not
+            // appear to support erasers on styli". No confirmed protocol
+            // family for this era predates the .dtu/.dtus decoders were built
+            // against — .dtu picked as the closest-generation sibling (single
+            // 0x02 pen report, no pad report modeled by that decoder either).
+            // maxX reused from DTU-1631 (0x00F0) which shares the 356mm width;
+            // maxY scaled by the same per-mm ratio for the taller 305mm panel.
+            // Wholly unverified: parser assignment is a guess, not a match.
+            productID: 0x003A, name: "DTI-520",  // ⚠ recognition-only, parser unverified
+            parser: .dtu, maxX: 34623, maxY: 29354, maxPressure: 511,
+            buttonCount: 10, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 305),
+
+        // ── Tablet-PC ISDV4 PIDs 0x0090/0x0093 — deliberately NOT added ────────
+        // Considered for this pass (early Tablet-PC ISDV4 PIDs) but both
+        // libwacom entries carry IntegratedIn=Display;System:
+        //   wacom-isdv4-90.tablet (ASUS R1E/R1F)      — laptop-integrated digitizer
+        //   wacom-isdv4-93.tablet (HP Pavilion TX2000/TX2500) — same
+        // Both are built into the laptop's own screen/system, not standalone
+        // peripherals a Mac could ever enumerate — skipped per the same policy
+        // that excludes other ISDV4 entries from this registry.
 
         // ── Imported from wacom-hid-descriptors 2026-05-26 ─────────────────────
         // Recognition-only entries for devices that appear in real linuxwacom
@@ -1739,12 +1934,23 @@ public enum WacomDeviceRegistry {
         0x0401: 0x03F9,  // Intuos Pro L gen 3 USB hardware-revision variant (libwacom DeviceMatch)
 
         // Intuos Pro M (PTH-660 family)
-        0x0359: 0x0357,  // Wireless dongle
         0x0360: 0x0357,  // BT Classic
 
         // Intuos Pro L (PTH-860 family)
-        0x035A: 0x0358,  // Wireless dongle
         0x0361: 0x0358,  // BT Classic
+
+        // NOTE: 0x0359/0x035A previously appeared here as unsourced
+        // "Wireless dongle" mappings for PTH-660/860 — no kernel macro or
+        // libwacom DeviceMatch backed them, unlike every other row in this
+        // map, and the only wireless-dongle transport this project has ever
+        // verified is the older ACK-40401 RF dongle (PID 0x0084, Intuos5
+        // PTH-850), a different mechanism entirely; PTH-660/860 wireless is
+        // Bluetooth Classic (0x0360/0x0361 above), not a dongle. Removed
+        // 2026-07-17 — same "+9 pattern"-guess shape as the 0x035B/0x035F
+        // entries already found wrong and removed 2026-06-09. libwacom
+        // independently and specifically assigns 0x0359/0x035A to DTU-1141B
+        // and DTH-1152 (see their registry entries above), which is now
+        // treated as authoritative for those two PIDs.
 
         // Intuos4 WL (PTK-540WL): kernel BT_DEVICE_WACOM(0xBD) is the
         // Bluetooth PID of the USB 0x00BC entry. Decode over BT untested.
