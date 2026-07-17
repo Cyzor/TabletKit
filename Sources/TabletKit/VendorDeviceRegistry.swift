@@ -62,11 +62,13 @@ public enum VendorDeviceRegistry {
     /// coverage, not of the imported data.
     ///
     /// Current coverage: Xencelabs Pen Tablet Medium (0x5201) and Small
-    /// (0x5204), Pen Display (0x520D), Quick Keys (0x5202, aux-only), and the
-    /// Quick Keys wireless USB Dongle (0x5203, aux-only), via
-    /// `XencelabsDecoder` (report-2 layout confirmed on real Pen Display and
-    /// Quick Keys hardware 2026-07-02; the Pen Tablets are assumed to share
-    /// it — same OEM firmware family — pending their own hardware pass).
+    /// (0x5204), Pen Display 24 (0x520D), Pen Display 16 (0x520B), Quick Keys
+    /// (0x5202, aux-only), and the Quick Keys wireless USB Dongle (0x5203,
+    /// aux-only), via `XencelabsDecoder` (report-2 layout confirmed on real
+    /// Pen Display 24 and Quick Keys hardware 2026-07-02; the Pen Tablets and
+    /// the Pen Display 16 are assumed to share it — same OEM firmware family
+    /// — pending their own hardware pass; see the 0x520B entry below for the
+    /// Pen Display 16's still-unconfirmed logical coordinate maxima).
     /// The dongle was confirmed 2026-07-06 to relay an already-paired puck's
     /// input reports completely transparently — identical report-2 0xF0 aux
     /// frames, byte-for-byte, as talking to the puck directly over USB — so
@@ -80,7 +82,7 @@ public enum VendorDeviceRegistry {
     ) -> VendorDeviceProfile? {
         guard vendorID == 0x28BD,
             productID == 0x5201 || productID == 0x5202 || productID == 0x5204
-                || productID == 0x520D || productID == 0x5203
+                || productID == 0x520D || productID == 0x520B || productID == 0x5203
         else {
             return nil
         }
@@ -1726,6 +1728,32 @@ public enum VendorDeviceRegistry {
             // coordinate mapping (maxX/maxY do, see above) — cosmetic only.
             activeWidthMM: 527.04, activeHeightMM: 296.46,
             maxX: 105000, maxY: 59000,
+            maxPressure: 8191,
+            penButtonCount: 3, auxButtonCount: nil, bezelButtonCount: 3,
+            otdParser: "XenceLabsReportParser",
+            productStringRegex: nil,
+            isPenDisplay: true,
+            companions: [0x5202, 0x5203]),
+
+        // Hand-added 2026-07-17, sourced from the pinned libwacom snapshot
+        // (`upstream/libwacom/data/xencelabs-pen-display-16.tablet`, model
+        // LPH1612U-A) — PID and physical dimensions are libwacom-confirmed;
+        // no MockTab hardware capture yet, unlike the 24 above. maxX/maxY
+        // are NOT from a capture: they're extrapolated from the 24's
+        // confirmed density (105000/527.04mm ≈ 199.32 units/mm, isotropic)
+        // applied to this model's 344x194mm active area. Treat as a strong
+        // estimate, not fact, until a real Pen Display 16 capture confirms
+        // or corrects them — same OEM firmware family as the 24 makes the
+        // report-2 protocol itself the safer assumption than the coordinate
+        // maxima. bezelButtonCount/companions mirrored from the 24 pending
+        // its own confirmation (same onboard capacitive-button hardware is
+        // plausible, not verified).
+        VendorDeviceProfile(
+            vendor: "Xencelabs",
+            vendorID: 0x28BD, productID: 0x520B,
+            productName: "Xencelabs Pen Display 16",
+            activeWidthMM: 344, activeHeightMM: 194,
+            maxX: 68577, maxY: 38669,
             maxPressure: 8191,
             penButtonCount: 3, auxButtonCount: nil, bezelButtonCount: 3,
             otdParser: "XenceLabsReportParser",

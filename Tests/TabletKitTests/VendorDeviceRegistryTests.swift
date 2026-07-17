@@ -134,4 +134,19 @@ final class VendorDeviceRegistryTests: XCTestCase {
         // Recognition-only vendors are not drivable.
         XCTAssertNil(VendorDeviceRegistry.drivableProfile(forVendorID: 0x256C, productID: 0x0064))
     }
+
+    /// Pen Display 16 (0x520B), added 2026-07-17 from the pinned libwacom
+    /// snapshot. Coordinate maxima are an extrapolation from the 24's
+    /// confirmed density, not a capture — this test only pins the values we
+    /// actually wrote, so a future real capture correcting them will fail
+    /// this assertion loudly rather than silently.
+    func testPenDisplay16IsDrivableWithEstimatedCoordinates() {
+        let profile = VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x520B)
+        XCTAssertEqual(profile?.productName, "Xencelabs Pen Display 16")
+        XCTAssertEqual(profile?.maxX, 68577)
+        XCTAssertEqual(profile?.maxY, 38669)
+        XCTAssertEqual(profile?.activeWidthMM, 344)
+        XCTAssertEqual(profile?.activeHeightMM, 194)
+        XCTAssertTrue(profile?.isPenDisplay == true)
+    }
 }
