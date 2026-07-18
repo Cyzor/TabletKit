@@ -45,9 +45,20 @@ import Foundation
 /// The two pens are not distinguishable in the report (bytes 12+ carry the
 /// same constant on both), so tool identity only tracks pen vs eraser.
 ///
-/// Aux (bit-4) frames: byte 2 bits 0–7 are the 8 express keys (left column
-/// top→bottom = bits 3→0, right column top→bottom = bits 7→4), reported as
-/// `AuxButtons.buttons[0...7]`; byte 3 bit 0 is the bottom rectangular mode
+/// Aux (bit-4) frames: byte 2 bits 0–7 are the 8 express keys, reported as
+/// `AuxButtons.buttons[0...7]`.
+///
+/// Key numbering follows Xencelabs' own scheme, anchored on the dial: hold the
+/// puck in landscape with the dial at the right, then keys 1–4 are the top row
+/// left→right and keys 5–8 the bottom row left→right (matches the vendor
+/// settings UI, and the `KeyIndex` values in its logs — KeyIndex 0 = key 1).
+/// This decoder maps key N to bit N-1, i.e. top row = bits 0–3 and bottom row
+/// = bits 4–7. **Hardware-confirmed 2026-07-18** with isolated single-key
+/// presses: key 1 alone → byte 2 == `0x01`, key 8 alone → `0x80`. (Sweep
+/// captures cannot establish this — `08 04 02 01 80 40 20 10` fits a sweep in
+/// either direction, so only isolated named presses settle it.)
+///
+/// Byte 3 bit 0 is the bottom rectangular mode
 /// button, reported as `buttons[8]` — bind it to the "Ring: Cycle" action to
 /// advance the dial mode, same as a Wacom touch-ring mode key. Byte 3 bit 1
 /// is the dial's own center click, reported via the shared
@@ -92,7 +103,12 @@ public struct XencelabsDecoder: TabletReportDecoder {
         state: inout DecoderState,
         deviceFamily: String
     ) -> [DecodeResult] {
-        // All fields through tilt Y fit in 10 bytes; the device pads to 32.
+        // Frame length varies across the family — there is no single padded
+        // size (confirmed 2026-07-18 against live HID descriptors): the wired
+        // Quick Keys declares 9 payload bytes on this tunnel (10 including the
+        // report ID, i.e. no padding at all), while the wireless dongle and the
+        // Pen Display both declare 31 (32 total). All pen fields through tilt Y
+        // fit inside 10 bytes, so gate on that floor rather than a fixed size.
         guard length >= 10, report[0] == Self.penReportID else { return [] }
 
         let tag = report[1]

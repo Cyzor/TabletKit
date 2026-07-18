@@ -59,9 +59,11 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         if id == 0x02 && length == 64 && spec.hasFingerTouch {
             return decodeBPT3Container(report: report, spec: spec, state: &state)
         }
-        // USB pen reports are exactly 10 bytes. PTH-850/Intuos5 exposes Interface 1 as
-        // vendor-specific (Report ID 0x02, 63-byte touch payload) — reject longer reports
-        // to prevent touch data from being decoded as garbage pen coordinates/pressure.
+        // USB pen reports are exactly 10 bytes. PTH-850 (no touch, no Bluetooth — uses
+        // an RF dongle) exposes Interface 1 as vendor-specific (Report ID 0x02, ~32-byte
+        // payload, confirmed by capture 2026-07-17): content unidentified, plausibly tied
+        // to the wireless dongle mechanism, not touch. Reject longer reports so this
+        // payload is never decoded as garbage pen coordinates/pressure.
         guard (id == 0x02 || id == 0x10) && length == 10 else { return [] }
         return decodeUSBPen(
             report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
