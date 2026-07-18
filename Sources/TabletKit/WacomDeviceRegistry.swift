@@ -2023,9 +2023,9 @@ public enum WacomDeviceRegistry {
     /// If `productID` is a Bluetooth or wireless dongle variant, returns the equivalent USB PID.
     /// If `productID` is already canonical (USB) or unmapped, returns it unchanged.
     ///
-    /// Used at device connection to unify multi-transport tablets: USB PTH-660 (0x0357),
-    /// BT PTH-660 (0x0360), and wireless PTH-660 (0x0359) all normalize to 0x0357, so they
-    /// share the same `DeviceContext` and settings namespace.
+    /// Used at device connection to unify multi-transport tablets: USB PTH-660 (0x0357) and
+    /// BT PTH-660 (0x0360) both normalize to 0x0357, so they share the same `DeviceContext`
+    /// and settings namespace.
     public static func canonicalProductID(for productID: Int) -> Int {
         canonicalPIDMap[productID] ?? productID
     }
