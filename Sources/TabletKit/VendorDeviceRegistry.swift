@@ -3,9 +3,12 @@
 // Vendor-neutral recognition registry for non-Wacom tablets.
 //
 // Bulk-imported from OpenTabletDriver's per-vendor JSON configs via
-// `tools/import_vendor_configs.py`.  No decoder dispatch attached — these
-// entries exist so the app can name a device it doesn't yet support and
-// route the user to log-capture instead of an opaque "unknown device" error.
+// `tools/import_vendor_configs.py`.  The generated entries carry no decoder
+// dispatch — they exist so the app can name a device it doesn't yet support
+// and route the user to log-capture instead of an opaque "unknown device"
+// error.  Devices MockTab can actually drive are marked separately by the
+// hand-maintained `drivableProfile(forVendorID:productID:)` below (Xencelabs
+// only, at present); the rest of this registry remains recognition-only.
 //
 // To refresh from a newer OTD snapshot:
 //

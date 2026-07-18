@@ -9,8 +9,9 @@ import Foundation
 /// Which HID report decoder handles this device family.
 ///
 /// Used by `WacomDeviceRegistry` to route devices to the correct decoder.
-/// The individual per-device Swift classes (PTH660Device, etc.) remain as
-/// the live code path during migration; decoders are introduced in Phase 2.
+/// The decoders in `Decoders/` are the live decode path; per-device app-side
+/// glue (`WacomKnownDevice`) still handles device-specific setup such as init
+/// steps, LED writes, and OLED labels, but no longer parses reports.
 public enum ReportParser: String {
     /// Graphire / early consumer line — Report ID 0x02
     /// (kernel `WACOM_REPORT_PENABLED`), 8 bytes.

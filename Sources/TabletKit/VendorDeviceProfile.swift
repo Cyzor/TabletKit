@@ -9,8 +9,12 @@
 // log" instead of "Unrecognized device, VID 0x256C, PID 0x006D."
 //
 // Data is bulk-imported from OpenTabletDriver's per-vendor JSON configs (see
-// `tools/import_vendor_configs.py`).  No decoder dispatch is wired up — that
-// is G1 work and depends on hardware.
+// `tools/import_vendor_configs.py`).  The imported entries carry no decoder
+// dispatch: they exist to *name* a device, nothing more.  A small hand-kept
+// allowlist on top of them marks the few models MockTab can actually drive —
+// see `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)`, which
+// today covers only the Xencelabs line.  Everything else stays
+// recognition-only until a decoder and a known init handshake exist for it.
 //
 // Same-PID-many-products is the norm for Huion (PIDs 0x006D / 0x006E each
 // cover dozens of products, discriminated only by USB string descriptor #201

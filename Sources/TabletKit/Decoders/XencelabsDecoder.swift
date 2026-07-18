@@ -6,15 +6,17 @@ import Foundation
 
 /// Decoder for the Xencelabs Pen Tablet / Pen Display HID report format.
 ///
-/// Used by: Pen Tablet Medium (VID 0x28BD, PID 0x5201), Pen Tablet Small
-/// (PID 0x5204), and Pen Display (PID 0x520D). Live pen data rides
-/// **Report ID 2** (32 bytes, vendor usage page 0xFF0A) — confirmed from
-/// 10k+ frames captured off a real Pen Display 2026-07-02, with both driver
-/// present and absent, both pens (slim 2-button and 3-button), hover,
-/// pressure, taps, barrel buttons, eraser, and QuickKeys puck use. The
-/// device also declares a standard bit-packed digitizer collection on
-/// Report ID 7, but it never carries live data in any observed state; an
-/// earlier revision of this decoder targeted it and was wrong.
+/// Used by the Xencelabs line (VID 0x28BD): Pen Tablet Medium (0x5201) and
+/// Small (0x5204), Pen Display 24 (0x520D) and 16 (0x520B), and the Quick
+/// Keys puck (0x5202) and its wireless dongle (0x5203), which carry aux
+/// frames only. `VendorDeviceRegistry.drivableProfile` is the authoritative
+/// list. Live pen data rides **Report ID 2** (vendor usage page 0xFF0A) —
+/// confirmed from 10k+ frames captured off a real Pen Display 2026-07-02,
+/// with both driver present and absent, both pens (slim 2-button and
+/// 3-button), hover, pressure, taps, barrel buttons, eraser, and QuickKeys
+/// puck use. The device also declares a standard bit-packed digitizer
+/// collection on Report ID 7, but it never carries live data in any observed
+/// state; an earlier revision of this decoder targeted it and was wrong.
 ///
 /// The layout matches the Ugee/XP-Pen OTD parser family (Xencelabs hardware
 /// is Hanvon Ugee OEM and shares Ugee's actual VID). Byte offsets after the

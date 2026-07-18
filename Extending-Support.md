@@ -130,5 +130,3 @@ A capture and a registry edit only fix devices that already match a protocol fam
 - Provide a decoder when no existing entry in `Decoders/` matches your report format.
 
 If the tablet still does not work after these steps, your capture and notes still help. Open an issue with both; they provide the tier-3 evidence described in `Contributing.md` and often give someone with kernel-source access enough detail to complete the work.
-
-Would you like an even more compressed version that fits into a release note or contribution checklist?

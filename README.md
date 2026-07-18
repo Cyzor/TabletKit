@@ -1,8 +1,8 @@
 # TabletKit
 
-**TabletKit** is a Human Interface Device (HID) decoder layer for drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, aux-button, and touch events an app can act on — without AppKit, IOKit, or event-injection plumbing.
+**TabletKit** is a Human Interface Device (HID) decoder layer for drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, button, and touch events  an app can act on.  It contains no AppKit, IOKit, or event-injection plumbing.
 
-Serves as the decoder for [**MockTab**](https://mocktab.org), an open-source macOS driver for older Wacom tablets ([source](https://github.com/Cyzor/tablet-driver)).
+TabletKit serves as the decoder for [**MockTab**](https://mocktab.org), an open-source macOS driver, mainly for older Wacom tablets ([source](https://github.com/Cyzor/tablet-driver)).
 
 License: **MPL-2.0** — see [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt).
 
@@ -145,4 +145,4 @@ TabletKit's protocol knowledge and device data draw from several open-source pro
 
 ## Contributing
 
-Device profiles, decoder additions, bug fixes with capture-log fixtures, and metadata corrections all fit here; UI and app-level issues belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver). See [`Contributing.md`](Contributing.md) for scope and submission format. Fork freely if waiting doesn't suit, which the MPL-2.0 arrangement supports.
+Device profiles, decoder additions, bug fixes with capture-log fixtures, and metadata corrections all fit here; UI and app-level issues belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver). See [`Contributing.md`](Contributing.md) for scope and submission format. Forking is also an option, which the MPL-2.0 arrangement supports.

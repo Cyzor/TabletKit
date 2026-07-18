@@ -4,8 +4,9 @@
 
 import Foundation
 
-/// Payload builders for the Xencelabs host→device control protocol
-/// (Quick Keys OLED text, dial LED color, dial sensitivity).
+/// Payload builders for the Xencelabs host→device control protocol — Quick
+/// Keys OLED text, LED color, dial sensitivity, and the pen displays' image
+/// controls (brightness, contrast, gamma, color mode).
 ///
 /// Decoded 2026-07-02 from dtrace captures of Xencelabs' own driver
 /// (`XencelabsDriver`) during pairing, dial-mode cycling, and a structured
@@ -17,14 +18,14 @@ import Foundation
 /// interpreted host-side from input events. These writes only affect what
 /// the hardware displays: OLED text fields and the dial's LED ring.
 ///
-/// Bytes 10–15 of each payload carry a 6-byte device address. Xencelabs'
-/// driver fills in the target peripheral's address (needed to route through
-/// the wireless dongle, which serves up to two paired devices). Over direct
-/// USB the addressed form was captured working, but zeros are used here
-/// until the dongle-relay path is implemented — direct-USB firmware accepts
-/// the frames either way per the captures (address echoes appear in both
-/// addressed and unaddressed traffic). If a dongle path lands later, thread
-/// the paired address through `address`.
+/// Bytes 10–15 of each payload carry a 6-byte device address, passed as
+/// `address` on every builder. It selects the target peripheral when routing
+/// through the wireless dongle, which serves up to two paired devices; the
+/// dongle-relay path has been live since 2026-07-07 and callers thread the
+/// paired address through (`WacomKnownDevice` passes `xencelabsDongleIdentity`).
+/// Over direct USB the address is optional — it defaults to empty, and the
+/// captures show direct-USB firmware accepting the frames either way (address
+/// echoes appear in both addressed and unaddressed traffic).
 public enum XencelabsControl {
 
     /// OLED text field selectors (payload byte 2 of an 0xB1 write).

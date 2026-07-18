@@ -20,7 +20,13 @@ import Foundation
 /// Scope (out):
 ///   • Graphire 1 (RS-232 serial) — pre-USB, irrelevant
 ///   • Graphire BT (CTE-630BT, RFCOMM/SPP) — not HID, separate transport stack
-///   • WACOM_MO Manga series — distinct pad layout, deferred
+///
+/// Unclear: the WACOM_MO (Bamboo Fun / Manga) pad layout. This decoder was
+/// written without it in scope, but the registry routes at least one WACOM_MO
+/// row here — 0x0017 (CTE-450, `hasTouchRing: true`) — and that entry is
+/// `.crossReferenced`, not hardware-confirmed. Whether the pen path is
+/// correct and only the pad/ring differs, or the whole row is misrouted, has
+/// not been checked. Treat WACOM_MO pad and ring behavior as unverified here.
 ///
 /// **Report layout — Report ID 0x02 (kernel `WACOM_REPORT_PENABLED`), 8 bytes:**
 /// ```
