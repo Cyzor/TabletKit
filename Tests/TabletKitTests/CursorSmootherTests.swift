@@ -13,7 +13,7 @@ final class CursorSmootherTests: XCTestCase {
 
     func testFirstReportAdoptsRawPointVerbatim() {
         var s = CursorSmoother()
-        s.smoothingAlpha = 0.3
+        s.smoothingStrength = 0.3
         let out = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 50), enteringProximity: true)
         XCTAssertEqual(out.x, 100, accuracy: 1e-9)
         XCTAssertEqual(out.y, 50, accuracy: 1e-9)
@@ -22,7 +22,7 @@ final class CursorSmootherTests: XCTestCase {
 
     func testEnteringProximityResetsToRawEvenWithExistingSmoothedPoint() {
         var s = CursorSmoother()
-        s.smoothingAlpha = 0.3
+        s.smoothingStrength = 0.3
         _ = s.applySmoothing(rawPoint: CGPoint(x: 0, y: 0), enteringProximity: true)
         _ = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 100), enteringProximity: false)
         // Now re-enter proximity at a new spot: should snap, not slide.
@@ -30,25 +30,87 @@ final class CursorSmootherTests: XCTestCase {
         XCTAssertEqual(out, CGPoint(x: 500, y: 500))
     }
 
-    func testEMAConvergesAtConfiguredAlpha() {
+    /// The invariant that makes this filter safe to ship as a drop-in:
+    /// strength=0 must be bit-for-bit identical to raw input, since it's
+    /// the default and existing users must see zero behavior change.
+    func testStrengthZeroIsExactPassthrough() {
         var s = CursorSmoother()
-        s.smoothingAlpha = 0.5
+        s.smoothingStrength = 0.0
         _ = s.applySmoothing(rawPoint: CGPoint(x: 0, y: 0), enteringProximity: true)
-        // Step to (100, 0); each tick should halve remaining distance.
-        let p1 = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 0), enteringProximity: false)
-        XCTAssertEqual(p1.x, 50, accuracy: 1e-9)
-        let p2 = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 0), enteringProximity: false)
-        XCTAssertEqual(p2.x, 75, accuracy: 1e-9)
-        let p3 = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 0), enteringProximity: false)
-        XCTAssertEqual(p3.x, 87.5, accuracy: 1e-9)
+        let points: [CGPoint] = [
+            CGPoint(x: 5, y: -3), CGPoint(x: 5.2, y: -3.1), CGPoint(x: 40, y: 12),
+            CGPoint(x: 40, y: 12), CGPoint(x: -100, y: 500),
+        ]
+        for p in points {
+            let out = s.applySmoothing(rawPoint: p, enteringProximity: false)
+            XCTAssertEqual(out, p)
+        }
     }
 
-    func testAlphaOneIsPassThrough() {
+    func testConvergesTowardStationaryTargetAfterApproach() {
         var s = CursorSmoother()
-        s.smoothingAlpha = 1.0
+        s.smoothingStrength = 1.0
         _ = s.applySmoothing(rawPoint: CGPoint(x: 0, y: 0), enteringProximity: true)
-        let out = s.applySmoothing(rawPoint: CGPoint(x: 42, y: -17), enteringProximity: false)
-        XCTAssertEqual(out, CGPoint(x: 42, y: -17))
+        // Approach gradually (small per-sample steps, like a real stroke),
+        // then hold the target and confirm the filter settles onto it.
+        var last = CGPoint.zero
+        for i in 1...20 {
+            last = s.applySmoothing(
+                rawPoint: CGPoint(x: CGFloat(i) * 5, y: 0), enteringProximity: false)
+        }
+        var errors: [CGFloat] = []
+        for _ in 0..<200 {
+            last = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 0), enteringProximity: false)
+            errors.append((100 - last.x).magnitude)
+        }
+        XCTAssertLessThan(errors.last!, 0.01)
+        // Error should shrink monotonically once the target stops moving.
+        for i in 1..<errors.count {
+            XCTAssertLessThanOrEqual(errors[i], errors[i - 1] + 1e-9)
+        }
+    }
+
+    /// The whole point of switching off a flat EMA: a fast, large motion
+    /// should be tracked with far less lag than the old fixed-alpha filter
+    /// would have produced at the same Strength. (The old EMA at max
+    /// strength used alpha=0.15, reaching only 50/75/87.5 of a (0,0)->(100,0)
+    /// step over three repeated calls at the same target.)
+    func testFastMotionIsTrackedWithLessLagThanFlatEMA() {
+        var s = CursorSmoother()
+        s.smoothingStrength = 1.0
+        _ = s.applySmoothing(rawPoint: CGPoint(x: 0, y: 0), enteringProximity: true)
+        // A single large, fast jump — the derivative estimate reads this as
+        // high speed, so the filter should open up and track closely.
+        let p1 = s.applySmoothing(rawPoint: CGPoint(x: 100, y: 0), enteringProximity: false)
+        XCTAssertGreaterThan(p1.x, 90)  // old flat EMA would have landed at 50.
+    }
+
+    /// The core adaptive property: the same jitter amplitude riding on a
+    /// slow drift should be damped more than the same jitter riding on a
+    /// fast drift, since the filter's cutoff — and therefore how much
+    /// high-frequency jitter passes through — scales with estimated speed.
+    func testSlowJitterIsDampenedMoreThanFastJitter() {
+        func residualAmplitude(driftPerSample: CGFloat) -> CGFloat {
+            var s = CursorSmoother()
+            s.smoothingStrength = 1.0
+            _ = s.applySmoothing(rawPoint: .zero, enteringProximity: true)
+            var trend: CGFloat = 0
+            var maxResidual: CGFloat = 0
+            for i in 0..<200 {
+                trend += driftPerSample
+                let jitter: CGFloat = (i % 2 == 0) ? 1.0 : -1.0
+                let out = s.applySmoothing(
+                    rawPoint: CGPoint(x: trend + jitter, y: 0), enteringProximity: false)
+                if i > 100 {  // skip warm-up
+                    maxResidual = max(maxResidual, (out.x - trend).magnitude)
+                }
+            }
+            return maxResidual
+        }
+
+        let slowResidual = residualAmplitude(driftPerSample: 0.1)
+        let fastResidual = residualAmplitude(driftPerSample: 8.0)
+        XCTAssertLessThan(slowResidual, fastResidual)
     }
 
     // MARK: - Jitter window
@@ -136,10 +198,11 @@ final class CursorSmootherTests: XCTestCase {
 
     // MARK: - Proximity-exit reset
 
-    func testResetOnProximityExitClearsEverythingExceptAlpha() {
+    func testResetOnProximityExitClearsEverythingExceptStrength() {
         var s = CursorSmoother()
-        s.smoothingAlpha = 0.42
+        s.smoothingStrength = 0.42
         _ = s.applySmoothing(rawPoint: CGPoint(x: 50, y: 50), enteringProximity: true)
+        _ = s.applySmoothing(rawPoint: CGPoint(x: 60, y: 55), enteringProximity: false)
         for i in 0...20 {
             s.observeHoverRaw(CGPoint(x: CGFloat(i) * 7, y: 0))
         }
@@ -153,7 +216,13 @@ final class CursorSmootherTests: XCTestCase {
         XCTAssertFalse(s.hasSmoothedPoint)
         XCTAssertEqual(s.jitterLevel, 0)
         XCTAssertEqual(s.recentVelocity, 0)
-        // Alpha is intentionally preserved; re-set on next proximity entry.
-        XCTAssertEqual(s.smoothingAlpha, 0.42)
+        // Strength is intentionally preserved; it's a per-tool setting, not
+        // per-stroke state — re-applied fresh on the next proximity entry.
+        XCTAssertEqual(s.smoothingStrength, 0.42)
+        // The derivative filter must also reset: the first post-reset sample
+        // should snap (enteringProximity), not compute speed against the
+        // pre-reset history.
+        let out = s.applySmoothing(rawPoint: CGPoint(x: 900, y: 900), enteringProximity: true)
+        XCTAssertEqual(out, CGPoint(x: 900, y: 900))
     }
 }

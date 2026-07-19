@@ -27,13 +27,48 @@ public struct CursorSmoother {
     private var lastRawPoint: CGPoint = .zero
     private var hasLastRawPoint = false
 
-    // MARK: - EMA smoothing
+    // MARK: - One-Euro smoothing
+    //
+    // Adaptive low-pass filter (Casiez, Godin & Pucheu, "1€ Filter", CHI 2012):
+    // the cutoff frequency rises with estimated speed, so jitter is damped
+    // heavily when the pen is nearly still and the filter gets out of the way
+    // during fast strokes. The flat EMA this replaced applied the same lag
+    // regardless of speed, which is fine at rest but causes corner-cutting
+    // and stroke-end overshoot on fast motion.
+    //
+    // Time is measured in samples (Te = 1), not wall-clock seconds — reports
+    // don't carry a reliable per-sample timestamp on this path (see
+    // InputInjector.currentReportTimestampNs), and devices report at a
+    // steady enough rate for a fixed-Te filter to behave predictably. If
+    // cross-device feel testing shows `smoothingStrength` landing
+    // differently on devices with very different report rates, switch this
+    // to real elapsed time.
 
     public private(set) var smoothedPoint: CGPoint = .zero
     public private(set) var hasSmoothedPoint = false
-    /// Cached EMA alpha, recomputed at proximity entry from per-tool strength.
-    /// 1.0 == raw (no smoothing); math collapses to smoothedPoint = rawPoint.
-    public var smoothingAlpha: Double = 1.0
+    /// 0 = raw passthrough (exact, no filter math at all). 1 = strongest
+    /// smoothing at rest, still opening up at high speed.
+    public var smoothingStrength: Double = 0.0
+
+    /// strength → 0: cutoff stays high, i.e. barely filters even at rest.
+    private static let minCutoffCeiling: Double = 2.0
+    /// strength = 1, speed ≈ 0: strongest smoothing.
+    private static let minCutoffFloor: Double = 0.03
+    /// strength = 1: how fast the filter opens up as speed increases.
+    private static let betaMax: Double = 0.4
+    /// Cutoff for the derivative's own low-pass — steadies the speed
+    /// estimate against per-sample noise.
+    private static let derivativeCutoff: Double = 1.0
+
+    private var lastFilterRawPoint: CGPoint = .zero
+    private var filteredDelta: CGVector = .zero
+    private var hasFilteredDelta = false
+
+    /// Te = 1 (one sample): alpha(cutoff) = 1 / (1 + tau), tau = 1/(2*pi*cutoff).
+    private static func alpha(forCutoff cutoff: Double) -> Double {
+        let tau = 1.0 / (2.0 * Double.pi * cutoff)
+        return 1.0 / (1.0 + tau)
+    }
 
     // MARK: - Short-window velocity (last 4 position deltas)
 
@@ -60,19 +95,53 @@ public struct CursorSmoother {
 
     // MARK: - Mutations
 
-    /// Apply EMA smoothing to `rawPoint` and return the smoothed result.
+    /// Apply adaptive smoothing to `rawPoint` and return the smoothed result.
     /// On proximity entry (or first ever call) the raw point is adopted
     /// as-is to avoid an initial slide-in from the previous smoothedPoint.
+    /// `smoothingStrength <= 0` is an exact passthrough — no filter math runs.
     public mutating func applySmoothing(rawPoint: CGPoint, enteringProximity: Bool) -> CGPoint {
-        if enteringProximity || !hasSmoothedPoint {
+        guard smoothingStrength > 0 else {
             smoothedPoint = rawPoint
             hasSmoothedPoint = true
-        } else {
-            smoothedPoint = CGPoint(
-                x: smoothedPoint.x + smoothingAlpha * (rawPoint.x - smoothedPoint.x),
-                y: smoothedPoint.y + smoothingAlpha * (rawPoint.y - smoothedPoint.y)
-            )
+            lastFilterRawPoint = rawPoint
+            filteredDelta = .zero
+            hasFilteredDelta = false
+            return rawPoint
         }
+
+        guard !enteringProximity, hasSmoothedPoint else {
+            smoothedPoint = rawPoint
+            hasSmoothedPoint = true
+            lastFilterRawPoint = rawPoint
+            filteredDelta = .zero
+            hasFilteredDelta = false
+            return smoothedPoint
+        }
+
+        // Estimate speed from a low-pass-filtered derivative (Te = 1 sample).
+        let rawDelta = CGVector(
+            dx: rawPoint.x - lastFilterRawPoint.x, dy: rawPoint.y - lastFilterRawPoint.y)
+        lastFilterRawPoint = rawPoint
+        let dAlpha = Self.alpha(forCutoff: Self.derivativeCutoff)
+        if hasFilteredDelta {
+            filteredDelta = CGVector(
+                dx: filteredDelta.dx + dAlpha * (rawDelta.dx - filteredDelta.dx),
+                dy: filteredDelta.dy + dAlpha * (rawDelta.dy - filteredDelta.dy))
+        } else {
+            filteredDelta = rawDelta
+            hasFilteredDelta = true
+        }
+        let speed = hypot(filteredDelta.dx, filteredDelta.dy)
+
+        let minCutoff =
+            Self.minCutoffCeiling - smoothingStrength * (Self.minCutoffCeiling - Self.minCutoffFloor)
+        let beta = smoothingStrength * Self.betaMax
+        let alpha = Self.alpha(forCutoff: minCutoff + beta * speed)
+
+        smoothedPoint = CGPoint(
+            x: smoothedPoint.x + alpha * (rawPoint.x - smoothedPoint.x),
+            y: smoothedPoint.y + alpha * (rawPoint.y - smoothedPoint.y)
+        )
         return smoothedPoint
     }
 
@@ -102,11 +171,14 @@ public struct CursorSmoother {
         recentDeltaHead = (recentDeltaHead + 1) % recentDeltas.count
     }
 
-    /// Full reset for proximity exit: clears smoothed point, jitter ring,
-    /// and velocity ring. Leaves `smoothingAlpha` untouched (re-set on
-    /// next proximity entry).
+    /// Full reset for proximity exit: clears smoothed point, the derivative
+    /// filter's history, jitter ring, and velocity ring. Leaves
+    /// `smoothingStrength` untouched (it's a per-tool setting, not per-stroke
+    /// state).
     public mutating func resetOnProximityExit() {
         hasSmoothedPoint = false
+        filteredDelta = .zero
+        hasFilteredDelta = false
         hasLastRawPoint = false
         clearHoverDeltas()
         for i in recentDeltas.indices { recentDeltas[i] = 0 }
