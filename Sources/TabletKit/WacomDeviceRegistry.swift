@@ -1,6 +1,14 @@
 // MockTab — native macOS driver for supported drawing tablets
 // SPDX-FileCopyrightText: 2026 Jay Petronis (Cyzor)
 // SPDX-License-Identifier: MPL-2.0
+//
+// Entries below are mixed-provenance: some hand-authored and hardware-verified,
+// some bulk-imported from OpenTabletDriver's Wacom JSON configs via
+// `tools/import_otd_configs.py`, and some backfilled from libwacom's `.tablet`
+// dimension files via `tools/backfill_libwacom_dimensions.py`. No source data
+// (protocol constants, dimensions, PIDs) is copyrightable expression, but the
+// import/backfill tools exist specifically to keep entries traceable back to
+// their source rather than presenting them as uniformly hand-derived.
 
 import Foundation
 
