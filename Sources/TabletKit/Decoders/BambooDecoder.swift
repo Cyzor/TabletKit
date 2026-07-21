@@ -9,8 +9,19 @@ import Foundation
 /// Used by: CTT-460, CTH-460/461/470/480/490, CTL-460/470/660, and related
 /// consumer Bamboo / Wacom One series.
 ///
-/// All pen models use **Report ID 0x10, 10 bytes** — same report ID as IntuosV2
-/// but an entirely different, shorter layout with no tool-serial negotiation.
+/// Two wire formats, distinguished by report ID:
+///
+/// **Report ID 0x02, 9 bytes (BAMBOO_PT / USB)** — the format the kernel's
+/// `wacom_bpt_pen()` decodes for the 2009–2011 Bamboo generation (CTL-460/660,
+/// CTH-460/461/470, CTL-470...). Only emitted after the tablet is switched out
+/// of mouse emulation with feature report `[0x02, 0x02]` (see
+/// `WacomDeviceSpec.initSteps`); in mouse mode these tablets send 4-byte
+/// relative boot-mouse packets on report ID 0x01 instead. Confirmed against a
+/// user capture of a CTL-460 (PID 0x00D4) on 2026-07-21.
+///
+/// **Report ID 0x10, 10 bytes** — legacy synthesized layout, same report ID as
+/// IntuosV2 but an entirely different, shorter layout with no tool-serial
+/// negotiation. Retained for compatibility; not yet observed on hardware.
 ///
 /// **CTT-460 (0x00D0) is touch-only** — it has no pen interface.  Reports will
 /// never fire (maxPressure = 0, buttonCount = 0 → decoder silently returns []).
@@ -64,6 +75,9 @@ public struct BambooDecoder: TabletReportDecoder {
         state: inout DecoderState,
         deviceFamily: String
     ) -> [DecodeResult] {
+        if report[0] == 0x02, length >= 9 {
+            return decodeBPT(report: report, spec: spec, state: &state)
+        }
         guard length >= 10, report[0] == 0x10 else { return [] }
 
         let status = report[1]
@@ -139,6 +153,76 @@ public struct BambooDecoder: TabletReportDecoder {
                     eraser: isEraser,
                     inProximity: true,
                     hoverDistance: 0)))  // Not reported by Bamboo format
+
+        return results
+    }
+
+    // MARK: - BAMBOO_PT pen report (Report ID 0x02, 9 bytes)
+
+    /// Kernel `wacom_bpt_pen()` layout:
+    /// ```
+    /// [0] 0x02 Report ID
+    /// [1] status — bit 0 tip, bit 1 barrel 1, bit 2 barrel 2,
+    ///              bit 3 eraser tool, bit 5 in proximity
+    /// [2:3] X  LE16    [4:5] Y  LE16    [6:7] pressure LE16
+    /// [8] hover distance
+    /// ```
+    /// No express-key bits here — CTH pad buttons ride the separate touch
+    /// interface, and the CTL pen-only models have no express keys at all.
+    private mutating func decodeBPT(
+        report: UnsafePointer<UInt8>,
+        spec: DigitizerSpec,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        let status = report[1]
+        let inProximity = (status & 0x20) != 0
+
+        if !inProximity {
+            guard state.prevInProximity else { return [] }
+            state.prevInProximity = false
+            return [
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: state.isEraser, inProximity: false, hoverDistance: 0))
+            ]
+        }
+
+        let isEraser = (status & 0x08) != 0
+        var results: [DecodeResult] = []
+
+        if !state.prevInProximity {
+            state.isEraser = isEraser
+            state.prevInProximity = true
+            results.append(
+                .toolEnter(
+                    ToolIdentity(
+                        serial: 0,
+                        toolCode: isEraser ? 0x080A : 0x0802,
+                        isEraser: isEraser,
+                        isMouse: false)))
+        }
+
+        let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8)
+        let y = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
+        state.lastX = x
+        state.lastY = y
+        let pressure = Int(UInt16(report[6]) | UInt16(report[7]) << 8)
+
+        results.append(
+            .pen(
+                TabletPoint(
+                    x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                    pressure: pressure, maxPressure: spec.maxPressure,
+                    tiltX: 0, tiltY: 0, rotation: 0.0,  // Tilt not reported by BAMBOO_PT
+                    penButton1: (status & 0x02) != 0,
+                    penButton2: (status & 0x04) != 0,
+                    eraser: isEraser,
+                    inProximity: true,
+                    hoverDistance: Int(report[8]))))
 
         return results
     }

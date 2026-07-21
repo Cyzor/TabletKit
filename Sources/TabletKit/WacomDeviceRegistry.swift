@@ -766,8 +766,12 @@ public enum WacomDeviceRegistry {
             activeWidthMM: 311.0, activeHeightMM: 216.0),
 
         // ── Bamboo / CTL consumer line — bamboo parser ────────────────────────
-        // Report ID 0x10 (10-byte pen layout, distinct from IntuosV2's 192-byte
-        // 0x10). Decoded by BambooDecoder — experimental, not hardware-validated.
+        // BAMBOO_PT wire format: pen reports on Report ID 0x02 (9 bytes, LE),
+        // per kernel wacom_bpt_pen — but only after the feature-report mode
+        // switch [0x02, 0x02]; without it the tablet stays in boot-mouse
+        // emulation (4-byte relative packets on report 0x01) and no pen data
+        // ever reaches the decoder. Confirmed by a CTL-460 user capture
+        // 2026-07-21. BambooDecoder also keeps a legacy 0x10 path.
         .init(
             productID: 0x00D0, name: "Bamboo Touch (CTT-460)",  // ⚠ estimated
             // maxPressure 0 is intentional: CTT-460 is finger-touch only, no
@@ -779,36 +783,50 @@ public enum WacomDeviceRegistry {
             productID: 0x00D1, name: "Bamboo Pen & Touch (CTH-460)",  // ⚠ estimated
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
-            productID: 0x00D4, name: "Bamboo Capture (CTH-470)",  // ⚠ estimated
+            // Identity confirmed 2026-07-21: user capture of a unit labeled
+            // "Bamboo Pen CTL-460 / CTL-460/K" enumerating as PID 0x00D4;
+            // matches kernel wacom_features_0xD4 ("Wacom Bamboo Pen") and
+            // linux-hardware 056a:00d4 "CTL-460 [Bamboo Pen (S)]". Previously
+            // misattributed here as CTH-470 (which is 0x00DE, listed below).
+            // Pen-only: no express keys, no eraser on the LP-160 pen.
+            productID: 0x00D4, name: "Bamboo Pen (CTL-460)",
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
-            buttonCount: 4, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
-            productID: 0x00D6, name: "Bamboo Pen (CTL-460)",  // ⚠ estimated
-            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
-            buttonCount: 2, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
-        .init(
-            productID: 0x00D7, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel — dims from kernel 0xD7 (BambooPT 2FG Small); name attribution uncertain
-            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
-            buttonCount: 2, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 102),
-        .init(
-            productID: 0x00DA, name: "Bamboo Pen & Touch 2 (CTH-461)",  // ⚠ estimated
-            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
-            buttonCount: 4, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
-        .init(
-            productID: 0x00DB, name: "Bamboo Connect (CTL-470)",  // ⚠ from kernel — dims from kernel 0xDB (Bamboo 2FG 6x8 SE); name attribution uncertain
+            productID: 0x00D5, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel 0xD5 (Bamboo Pen 6x8); linux-hardware "Bamboo Pen (M)"
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
-            buttonCount: 2, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, activeWidthMM: 217, activeHeightMM: 137),
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 217, activeHeightMM: 137),
+        .init(
+            productID: 0x00D6, name: "Bamboo Fun Pen & Touch (CTH-461)",  // ⚠ from kernel — kernel 0xD6 (BambooPT 2FG 4x5); previously misnamed CTL-460 (that's 0x00D4)
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 152, activeHeightMM: 102),
+        .init(
+            productID: 0x00D7, name: "Bamboo Pen & Touch (small)",  // ⚠ from kernel — dims from kernel 0xD7 (BambooPT 2FG Small); name attribution uncertain
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 152, activeHeightMM: 102),
+        .init(
+            productID: 0x00DA, name: "Bamboo Pen & Touch SE (CTH-461SE)",  // ⚠ from kernel 0xDA (Bamboo 2FG 4x5 SE)
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+        .init(
+            productID: 0x00DB, name: "Bamboo Pen & Touch SE (CTH-661SE)",  // ⚠ from kernel — dims from kernel 0xDB (Bamboo 2FG 6x8 SE); name attribution uncertain
+            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 217, activeHeightMM: 137),
         .init(
             // libwacom wacom-bamboo-4fg-s-t.tablet: "second generation BambooPT",
             // no stylus, 2FG touch (4FG gesture). maxPressure 0 is intentional —

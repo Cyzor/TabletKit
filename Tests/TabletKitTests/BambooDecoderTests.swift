@@ -241,6 +241,95 @@ final class BambooDecoderTests: XCTestCase {
         XCTAssertTrue(aux.buttons[1])  // 0x02
     }
 
+    // MARK: - BAMBOO_PT report 0x02 (CTL-460 class, kernel wacom_bpt_pen)
+
+    // CTL-460: pen-only, no express keys, no tilt, maxPressure=1023
+    private let ctl460 = DigitizerSpec(
+        maxX: 14720, maxY: 9200, maxPressure: 1023,
+        buttonCount: 0, hasTilt: false, hasDualRings: false,
+        isPenDisplay: false, ringSlotCount: 0)
+
+    /// Build a 9-byte BAMBOO_PT report: LE16 X/Y/pressure, distance byte.
+    private func makeBPT(
+        status: UInt8, x: UInt16 = 0, y: UInt16 = 0,
+        pressure: UInt16 = 0, distance: UInt8 = 0
+    ) -> [UInt8] {
+        [0x02, status,
+         UInt8(x & 0xFF), UInt8(x >> 8),
+         UInt8(y & 0xFF), UInt8(y >> 8),
+         UInt8(pressure & 0xFF), UInt8(pressure >> 8),
+         distance]
+    }
+
+    func testBPTLE16CoordinatesAndPressure() {
+        var st = DecoderState()
+        let b = makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x2345, pressure: 1000)
+        let r = decode(b, state: &st, spec: ctl460)
+        let pen = r.first { if case .pen = $0 { return true }; return false }
+        guard case .pen(let pt) = pen else { return XCTFail("expected .pen") }
+        XCTAssertEqual(pt.x, 0x1234)
+        XCTAssertEqual(pt.y, 0x2345)
+        XCTAssertEqual(pt.pressure, 1000)
+        XCTAssertTrue(pt.inProximity)
+    }
+
+    func testBPTToolEnterAndBarrelButtons() {
+        var st = DecoderState()
+        let b = makeBPT(status: 0x20 | 0x02 | 0x04)
+        let r = decode(b, state: &st, spec: ctl460)
+        guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
+        else { return XCTFail("expected .toolEnter") }
+        XCTAssertEqual(id.toolCode, 0x0802)
+        XCTAssertFalse(id.isEraser)
+        guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
+        else { return XCTFail("expected .pen") }
+        XCTAssertTrue(pt.penButton1)
+        XCTAssertTrue(pt.penButton2)
+    }
+
+    func testBPTEraserToolBit() {
+        var st = DecoderState()
+        let b = makeBPT(status: 0x20 | 0x08)
+        let r = decode(b, state: &st, spec: ctl460)
+        guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
+        else { return XCTFail("expected .toolEnter") }
+        XCTAssertTrue(id.isEraser)
+        XCTAssertEqual(id.toolCode, 0x080A)
+    }
+
+    func testBPTProximityExit() {
+        var st = DecoderState()
+        _ = decode(makeBPT(status: 0x20, x: 500, y: 600), state: &st, spec: ctl460)
+        XCTAssertTrue(st.prevInProximity)
+        let r = decode(makeBPT(status: 0x00), state: &st, spec: ctl460)
+        guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
+        else { return XCTFail("expected .pen exit") }
+        XCTAssertFalse(pt.inProximity)
+        XCTAssertEqual(pt.pressure, 0)
+        XCTAssertEqual(pt.x, 500)
+        XCTAssertEqual(pt.y, 600)
+        XCTAssertFalse(st.prevInProximity)
+    }
+
+    func testBPTOutOfProximityIdleFramesProduceNothing() {
+        var st = DecoderState()
+        XCTAssertTrue(decode(makeBPT(status: 0x00), state: &st, spec: ctl460).isEmpty)
+    }
+
+    func testBPTHoverDistance() {
+        var st = DecoderState()
+        let b = makeBPT(status: 0x20, distance: 42)
+        let r = decode(b, state: &st, spec: ctl460)
+        guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
+        else { return XCTFail("expected .pen") }
+        XCTAssertEqual(pt.hoverDistance, 42)
+    }
+
+    func testBPTTooShortReturnsEmpty() {
+        var st = DecoderState()
+        XCTAssertTrue(decode(Array(makeBPT(status: 0x20).dropLast()), state: &st, spec: ctl460).isEmpty)
+    }
+
     func testNoPadWhenButtonCountZero() {
         var st = DecoderState()
         // CTT-460 has buttonCount=0 → no pad even when not in proximity
