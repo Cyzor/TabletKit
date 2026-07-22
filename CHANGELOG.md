@@ -7,14 +7,68 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-22
+
+Xencelabs hardware support (display, Quick Keys, dongle), a device-agnostic
+generic digitizer decoder, a Bamboo Pen Tablet (CTL-460), pressure/stabilization
+filter overhaul, and a source reorganization into topic folders.
+
 ### Added
 
+- `GenericDigitizerFrame` — a device-agnostic decoder path for HID digitizers
+  that expose standard Usage Page 0x0D elements but have no dedicated Wacom
+  decoder, gated by `BrandHeuristic` USB-string matching.
+- CTL-460 Bamboo Pen Tablet identity and mode-2 feature-report decoding.
+- Xencelabs Pen Display 16 registry entry, brightness/contrast/gamma/color-mode
+  controls, and bezel-button backlight command.
+- Xencelabs Quick Keys: screen orientation command, dial custom colors per
+  mode, battery-level decoding, wireless dongle support (shares the wired
+  puck's identity), and correct handling of config-reply frames that were
+  previously misread as button presses.
+- Onboard bezel button decoding for the DTK-2400 and Xencelabs displays.
+- Touch and express-key support for the Intuos Art tablet.
+- `PressureSmoother` — a 1€-filter-based pressure smoother (companion to
+  `CursorSmoother`) that damps sensor noise at light touch without dulling
+  firm strokes.
 - Recognition-only registry rows for the Wacom MobileStudio Pro line:
   13" (0x034D gen 1, 0x0398 gen 2) and 16" (0x034E gen 1, 0x0399 gen 2,
   0x03AA alt). Dimensions derived from libwacom physical size at 5080 LPI;
   parser guess is `.intuosV2` — the kernel drives these via descriptor-based
   generic HID, so promotion requires a user capture. Touch lives on separate
   paired USB devices (0x034A/0x034B/0x039A/0x039B/0x03AC) and is not claimed.
+- USB string brand heuristic for recognizing uncataloged tablets by vendor name.
+- `tablet-decode` sample executable target, demonstrating the decode loop
+  end-to-end against a captured report log.
+- Tag-triggered release workflow (`.github/workflows/release.yml`): runs the
+  test suite, pulls that version's `CHANGELOG.md` section for release notes,
+  and creates a draft GitHub Release.
+
+### Changed
+
+- `CursorSmoother`'s stabilization replaced its flat exponential-moving-average
+  with a 1€ filter (Casiez et al.) — cutoff now scales with estimated stroke
+  speed, easing off during fast strokes instead of lagging evenly throughout.
+- Product-identity and dimension corrections across current-generation Wacom
+  tablets, cross-referenced against libwacom.
+- Sources reorganized from a flat `Sources/TabletKit/` directory into
+  `Core/`, `Decoders/`, `Registry/`, `Smoothing/`, and `HID/` folders; two
+  oversized, misleadingly named files (`TabletDevice.swift`, `WacomToolSpec.swift`)
+  split along their actual concerns. No public API changed — pure file motion.
+- File headers changed from the MockTab app's header to a TabletKit-specific
+  one, reflecting the package's independent MPL-2.0 licensing.
+
+### Fixed
+
+- Intuos5 pad report decoding: express keys and the ring button now decode
+  correctly (byte-layout correction from a real PTH-850 capture).
+- Xencelabs cursor tracking, which was reading a truncated pen position.
+- Simulated modifier-key events now look identical to real key presses to
+  apps that distinguish synthetic input.
+- Stale doc comment referencing a retracted PTH-660 wireless product ID.
+- README inaccuracies: an "no IOKit" claim (IOKit HID is used, isolated in
+  `HIDDeviceSupport.swift`) and a stale test count.
+- Published the missing GitHub Release for the `0.2.0` tag, which had been
+  pushed but never published.
 
 ## [0.2.0] — 2026-06-10
 
