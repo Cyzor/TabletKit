@@ -4,6 +4,14 @@ TabletKit is part of a hardware driver project called [MockTab](https://github.c
 
 TabletKit ships under MPL-2.0.
 
+## Source layout
+
+- `Sources/TabletKit/Core/` — shared model types: `TabletPoint`, the `TabletDevice` and `TabletReportDecoder` protocols, `DecoderState`/`DecodeResult`.
+- `Sources/TabletKit/Decoders/` — one decoder per HID report family, plus the BLE report decoders.
+- `Sources/TabletKit/Registry/` — device and tool data tables: which PID maps to which dimensions, decoder, and confidence tier.
+- `Sources/TabletKit/Smoothing/` — cursor and pressure filters.
+- `Sources/TabletKit/HID/` — the only IOKit-touching code: descriptor queries, init handshakes, and device control (LEDs, OLED, display).
+
 ## Contribution Process
 
 - **New device profiles** in `WacomDeviceRegistry` or `VendorDeviceRegistry`. Recognition-only entries help; decoded entries help more.
@@ -29,7 +37,7 @@ See [`Extending-Support.md`](Extending-Support.md) for a walkthrough of what a c
 ## How to submit a decoder or device entry
 
 1. **Capture the device.** In MockTab, visit the *Info* pane and press the *Collect Device Data…* button. The result is a JSON file with the Human Interface Device (HID) descriptors, USB strings, and a short input report capture. A [`hid-recorder`](https://github.com/hidutils/hid-recorder) log may also help, as the test harness parses both formats.
-2. **Add the registry entry** in `Sources/TabletKit/WacomDeviceRegistry.swift` or `Sources/TabletKit/VendorDeviceRegistry.swift`. Mark confidence: `.experimental` if untested, `.crossReferenced` if it matches a known protocol family, `.verified` only with the hardware in hand.
+2. **Add the registry entry** in `Sources/TabletKit/Registry/WacomDeviceRegistry.swift` or `Sources/TabletKit/Registry/VendorDeviceRegistry.swift`. Mark confidence: `.experimental` if untested, `.crossReferenced` if it matches a known protocol family, `.verified` only with the hardware in hand.
 3. **Add a test case** in `Tests/TabletKitTests/`, alongside the matching `<Family>DecoderTests.swift`. Fixtures live inline in those files as hex strings rather than in a separate directory. At minimum, assert that the decoder emits *some* `DecodeResult` for each captured report — that catches regressions without forcing hand-annotated expected values.
 4. **Run `swift test`** locally. PRs that fail tests sit until they pass.
 5. **Open the PR** with: device model, connection (USB / Bluetooth / dongle), what got verified, and what didn't.

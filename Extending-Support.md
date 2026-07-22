@@ -56,7 +56,7 @@ None of this tells you what a byte means on its own. It just indicates where thi
 
 Everything that decides how your tablet behaves lives in two places:
 
-- **`TabletKit/Sources/TabletKit/WacomDeviceRegistry.swift`**: one entry per known tablet model. This is where a PID gets attached to a coordinate range, a button count, a touch flag, and which decoder handles its reports.
+- **`TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift`**: one entry per known tablet model. This is where a PID gets attached to a coordinate range, a button count, a touch flag, and which decoder handles its reports.
 - **`TabletKit/Sources/TabletKit/Decoders/`**: the actual code that reads raw bytes and turns them into pen positions, button presses, and touch points. Files are named by family, like `IntuosV1Decoder.swift` or `CintiqV1Decoder.swift`. Most tablets share a decoder with several other models; very few need one written from scratch.
 
 Open `WacomDeviceRegistry.swift` and search for a model close to yours, ideally one from the same generation or family name you found in Step 1 (`INTUOSHT2`, `INTUOS4`, whatever the kernel called it). Each entry looks like this:
