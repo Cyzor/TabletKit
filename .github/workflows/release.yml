@@ -1,0 +1,74 @@
+# TabletKit — tag-triggered release.
+#
+# Fires when a version tag (e.g. 0.3.0) is pushed. Runs the test suite, pulls
+# that version's section out of CHANGELOG.md for the release notes, and
+# creates a DRAFT GitHub Release — nothing is public until you click Publish.
+#
+# Unlike the MockTab app, this package has no binary to sign or notarize;
+# a tagged commit's source archive is all a Swift Package Manager consumer
+# needs, and GitHub generates that automatically for any tag.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write   # create the GitHub Release
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - name: Skip if release already exists
+        id: precheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" &>/dev/null; then
+            echo "Release $TAG already exists. Nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.precheck.outputs.skip != 'true'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run test suite
+        if: steps.precheck.outputs.skip != 'true'
+        run: swift test
+
+      - name: Extract changelog section
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          awk -v ver="$TAG" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$NOTES_FILE"
+          if [[ -s "$NOTES_FILE" ]]; then
+            echo "notes_file=$NOTES_FILE" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No CHANGELOG.md section found for $TAG — falling back to auto-generated notes"
+            echo "notes_file=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create draft GitHub Release
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ -n "$notes_file" ]]; then
+            gh release create "$TAG" --title "TabletKit $TAG" --notes-file "$notes_file" --draft
+          else
+            gh release create "$TAG" --title "TabletKit $TAG" --generate-notes --draft
+          fi
