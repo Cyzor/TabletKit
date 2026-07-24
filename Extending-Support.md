@@ -52,6 +52,22 @@ The file has one entry per **report ID**, a number that tags each kind of messag
 
 None of this tells you what a byte means on its own. It just indicates where things move. Meaning arises by comparing what you did (pressed key 2, touched the tip) against which bytes changed at that moment, and by matching the report's ID and length against a report type MockTab's decoders already understand.
 
+### The `hidReportDescriptor` block
+
+Newer captures also carry a `hidReportDescriptor` object — the tablet's own declaration of its report layout, and often the fastest way to the numbers a registry entry needs. It has two useful parts:
+
+- **`rawHex`**: the complete descriptor bytes. A canonical fingerprint; anyone with these can reconstruct the layout offline, and two devices with identical `rawHex` are the same protocol regardless of PID.
+- **`reports`**: a parsed, per-report list of *fields*. Each field records its HID **usage page** and **usage** (what the field means), its `logicalMin`/`logicalMax` (the value range the hardware reports), and `physicalMin`/`physicalMax` with `unitExponent` (the real-world size that range maps to).
+
+Two field lookups give you most of a registry entry:
+
+- **Coordinate range** — find the fields on usage page `1` (Generic Desktop) with usage `48` (`0x30`, X) and usage `49` (`0x31`, Y). Their `logicalMax` values are your `maxX` and `maxY`.
+- **Pressure range** — find the field on usage page `13` (`0x0D`, Digitizer) with usage `48` (`0x30`, Tip Pressure). Its `logicalMax` is your `maxPressure`.
+
+`physicalMax` together with `unitExponent` gives the active area in centimetres (HID length units are cm; `unitExponent` is a power-of-ten scale), which you can convert to the `activeWidthMM`/`activeHeightMM` fields.
+
+Two cautions. First, some tablets — especially older Wacom models — publish an **opaque** descriptor: every field sits on a vendor-defined page (`usagePage` ≥ `65280`, i.e. `0xFF00`) or uses undefined usage codes, and nothing readable comes out. That's normal; fall back to the byte analysis above and to the upstream sources in Step 1. Second, a descriptor's *declared* ranges can disagree with what the hardware actually sends: many tablets also expose a low-resolution generic digitizer whose `logicalMax` is nothing like the real coordinate range. When the descriptor and the Linux kernel disagree, trust the kernel. `tools/triage_discovery.py` reads all of this out automatically — including that disagreement check — and drafts a starting registry entry.
+
 ## Step 4: Find the matching source files
 
 Everything that decides how your tablet behaves lives in two places:
