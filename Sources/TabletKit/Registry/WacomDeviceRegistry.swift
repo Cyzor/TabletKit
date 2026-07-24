@@ -556,13 +556,13 @@ public enum WacomDeviceRegistry {
         // PTZ-631W (0x00B5) confirmed live; remaining entries ⚠ estimated but
         // the two-stage init and proximity bit are common to the whole PTZ family.
         .init(
-            productID: 0x00B0, name: "Intuos3 4×5 (PTZ-431)",  // ⚠ estimated
+            productID: 0x00B0, name: "Intuos3 4×5 (PTZ-430)",  // model per libwacom/OTD; ⚠ dims estimated
             parser: .intuos3, maxX: 25400, maxY: 20320, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 127, activeHeightMM: 102),
         .init(
-            productID: 0x00B1, name: "Intuos3 6×8 (PTZ-631)",  // cross-referenced: linuxwacom + OTD
+            productID: 0x00B1, name: "Intuos3 6×8 (PTZ-630)",  // cross-referenced: linuxwacom + OTD
             parser: .intuos3, maxX: 40640, maxY: 30480, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
@@ -576,7 +576,7 @@ public enum WacomDeviceRegistry {
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 305, activeHeightMM: 229),
         .init(
-            productID: 0x00B3, name: "Intuos3 12×12 (PTZ-1231)",  // ⚠ estimated
+            productID: 0x00B3, name: "Intuos3 12×12 (PTZ-1230)",  // model per libwacom/OTD; ⚠ dims estimated
             parser: .intuos3, maxX: 60960, maxY: 60960, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
@@ -798,7 +798,7 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
-            productID: 0x00D5, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel 0xD5 (Bamboo Pen 6x8); linux-hardware "Bamboo Pen (M)"
+            productID: 0x00D5, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel 0xD5 (Bamboo Pen 6×8, BAMBOO_PEN family); linux-hardware "Bamboo Pen (M)"
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
@@ -879,7 +879,7 @@ public enum WacomDeviceRegistry {
             // Kernel calls this "Cintiq 21UX2" (DTZ-2100B / second gen).
             // Pressure corrected from 1023 to 2047. Renamed to disambiguate
             // from the gen-1 21UX at 0x003F.
-            productID: 0x00CC, name: "Cintiq 21UX2 (DTZ-2100B)",  // ⚠ from kernel + OTD
+            productID: 0x00CC, name: "Cintiq 21UX2 (DTK-2100)",  // model per libwacom (DTZ-2100 is the first-gen 21UX, 0x003F); from kernel + OTD
             parser: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
@@ -1784,11 +1784,6 @@ public enum WacomDeviceRegistry {
             buttonCount: 10, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
-        .init(
-            productID: 0x00D5, name: "Bamboo Pen (6×8)",  // ⚠ from kernel (BAMBOO_PEN family)
-            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false),
         .init(
             // 27QHD uses the ExpressKey Remote (0x0331) instead of bezel keys.
             productID: 0x032A, name: "Cintiq 27QHD (DTK-2700)",  // ⚠ from kernel (WACOM_27QHD type)

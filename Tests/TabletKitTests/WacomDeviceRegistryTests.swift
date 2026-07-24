@@ -96,4 +96,52 @@ final class WacomDeviceRegistryTests: XCTestCase {
                 "canonicalPIDMap[0x\(String(variant, radix: 16))] → 0x\(String(canonical, radix: 16)) has no registry entry")
         }
     }
+
+    // MARK: - registry structural invariants
+
+    /// A PID may appear more than once only when `productStringMatch`
+    /// disambiguates the entries: distinct non-nil match strings, and at most
+    /// one catch-all (nil) entry. Any other repeat is a shadowed duplicate —
+    /// `spec(forProductID:productString:)` silently returns just one of them,
+    /// so the others are dead weight that drifts out of sync. (Regression guard
+    /// for the two 0x00D5 "Bamboo Pen" entries, both catch-alls, one of which
+    /// was never reachable.)
+    func testNoShadowedDuplicateProductIDs() {
+        let byPID = Dictionary(grouping: WacomDeviceRegistry.knownDevices, by: \.productID)
+        for (pid, group) in byPID where group.count > 1 {
+            let catchAlls = group.filter { $0.productStringMatch == nil }
+            let named = group.compactMap { $0.productStringMatch }
+            XCTAssertLessThanOrEqual(
+                catchAlls.count, 1,
+                "PID 0x\(String(pid, radix: 16)) has \(catchAlls.count) catch-all entries; "
+                + "only one entry per PID may omit productStringMatch")
+            XCTAssertEqual(
+                named.count, Set(named).count,
+                "PID 0x\(String(pid, radix: 16)) has duplicate productStringMatch values; "
+                + "each disambiguated entry needs a distinct match string")
+        }
+    }
+
+    /// Hardware whose dimensions we claim to have confirmed (`.verified`) must
+    /// imply the same LPI on both axes to within the auto-fill tolerance — a
+    /// verified entry disagreeing with itself means the coordinate range and
+    /// the mm size describe different devices. Older, non-verified entries
+    /// (Graphire/Volito) are legitimately anisotropic and only guarded against
+    /// gross error. Mirrors the 8% / 25% thresholds tools/registry_lib.py uses.
+    func testDimensionsImplyConsistentLPI() {
+        let verifiedTolerance = 0.08
+        let grossTolerance = 0.25
+        for spec in WacomDeviceRegistry.knownDevices {
+            guard let lpi = spec.lpi, min(lpi.x, lpi.y) > 0 else { continue }
+            let disagreement = abs(lpi.x - lpi.y) / min(lpi.x, lpi.y)
+            let label = "0x\(String(spec.productID, radix: 16)) \(spec.name): "
+                + "X \(Int(lpi.x)) lpi vs Y \(Int(lpi.y)) lpi"
+            XCTAssertLessThan(disagreement, grossTolerance,
+                              "\(label) — grossly inconsistent, likely a data error")
+            if spec.confidence == .verified {
+                XCTAssertLessThan(disagreement, verifiedTolerance,
+                                  "\(label) — verified entry should be near-isotropic")
+            }
+        }
+    }
 }
