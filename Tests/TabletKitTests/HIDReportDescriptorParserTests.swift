@@ -107,6 +107,50 @@ final class HIDReportDescriptorParserTests: XCTestCase {
         XCTAssertNil(layout.featureReportID(carryingUsage: 0xff0d1002))
     }
 
+    // MARK: - Differential against IOKit (validation layer 1)
+    //
+    // Notes/Scratch/Discovery-Data-Caputure/mocktab_discovery_0x520D_20260726_065414.json
+    // -- a Xencelabs Pen Display capture. Unlike the opaque-blob Xencelabs fixture
+    // above, this descriptor's digitizer report (0x07) carries genuine per-field
+    // usages (tip switch, in-range, barrel switch, X/Y, pressure, tilt), and the
+    // capture's `hidReportDescriptor.reports["input:0x07"].fields` is IOKit's own
+    // parsed element list for the same bytes -- exactly the oracle layer 1 needs.
+    // Restricted to this report (all reportCount == 1, no arrays, no padding) since
+    // report 0x02 is a single 31-byte array-like field IOKit rolls up as one
+    // 248-bit element, which is the "don't trust IOKit's rolled-up totals" case
+    // documented in the scoping doc, not a fair per-field comparison.
+
+    private let xencelabsPenDisplayHex =
+        "060aff0901a101850209027508951f150026ff008102090375089520150026ff009102c0" +
+        "050d0902a10185070920a1000942094409450946093c1500250175019505810209329501" +
+        "810295028103751095013500a4050109306513550d4664cc2650578102093146a0732692" +
+        "368102b40930450026ff1f8142093d1581257f750895018102093e1581257f8102c0c0"
+
+    func testXencelabsPenDisplayReport07MatchesIOKitElementList() throws {
+        let layout = try HIDReportDescriptorParser.parse(hex: xencelabsPenDisplayHex)
+        let report = try XCTUnwrap(layout.report(.input, id: 0x07))
+
+        // (usagePage, usage, bitSize) tuples read verbatim from this capture's
+        // `hidReportDescriptor.reports["input:0x07"].fields` (IOKit's own parse).
+        let iokitFields: [(usagePage: UInt32, usage: UInt32, bitSize: Int)] = [
+            (13, 66, 1), (13, 68, 1), (13, 69, 1), (13, 70, 1), (13, 60, 1), (13, 50, 1),
+            (1, 48, 16), (1, 49, 16), (13, 48, 16), (13, 61, 8), (13, 62, 8),
+        ]
+
+        // IOKit doesn't report the 2-bit constant padding that sits between the
+        // 6 switch bits and the 16-bit X field in the wire layout -- it only
+        // enumerates named elements. Filter those out of the walker's output
+        // before comparing, per the scoping doc's "restrict to variable items".
+        let variableFields = report.fields.filter { !$0.isConstant }
+
+        XCTAssertEqual(variableFields.count, iokitFields.count)
+        for (parsed, expected) in zip(variableFields, iokitFields) {
+            XCTAssertEqual(parsed.usagePage, expected.usagePage)
+            XCTAssertEqual(parsed.usage, expected.usage)
+            XCTAssertEqual(parsed.bitSize, expected.bitSize)
+        }
+    }
+
     // MARK: - Usage-queue drain-then-repeat fallback
     //
     // Usage Page (Generic Desktop), Usage(1), Usage(2), Report Size 8, Report Count 4,
