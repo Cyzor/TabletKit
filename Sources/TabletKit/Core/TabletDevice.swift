@@ -42,6 +42,16 @@ public protocol TabletDevice: AnyObject {
     /// the RGB by the caller — the LED has no brightness register. No-op on
     /// devices without a controllable bezel LED.
     func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8)
+    /// Re-run the device's feature/mode-switch init sequence on an already-open
+    /// connection. No-op on devices with no such sequence (e.g. Xencelabs).
+    ///
+    /// Exists because a device can connect before its digitizer endpoint is
+    /// ready to answer the mode-switch write, leaving it stuck reporting in
+    /// whatever mode it powered on in (seen: a snapped-wrong screen mapping
+    /// that only corrected after resending the same write the driver already
+    /// sends once at `open()`). Safe to call on a device that's already
+    /// correctly initialized — it's the same idempotent write.
+    func reawaken()
 }
 
 public extension TabletDevice {
@@ -55,4 +65,5 @@ public extension TabletDevice {
     public func setColorMode(_ index: Int) {}
     public func setDisplayGamma(_ gammaTimesTen: Int) {}
     public func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8) {}
+    public func reawaken() {}
 }
