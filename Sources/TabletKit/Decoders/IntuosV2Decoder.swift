@@ -17,7 +17,8 @@ import Foundation
 /// 0x11 Auxiliary (express key + touch ring) report
 /// 0x80 Wireless status report (ACK-40401 RF dongle)
 ///
-/// 0x21 Finger touch report (PTH-660/860, confirmed from live PTH-860 capture 2026-05-21)
+/// 0x21 Finger touch report (PTH-660/860, confirmed from live captures:
+///      PTH-860 2026-05-21, PTH-660 2026-07-26)
 ///      44 bytes: [0]=0x21, [1]=contact count, then 5 fixed 8-byte slots:
 ///      slot[i]: [0]=slot_id [1]=status(0x01=down,0x00=lift) [2..3]=X LE16 [4..5]=Y LE16
 ///               [6]=touch major [7]=reserved
