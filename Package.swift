@@ -24,5 +24,10 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/tablet-decode"
         ),
+        .executableTarget(
+            name: "descriptor-dump",
+            dependencies: ["TabletKit"],
+            path: "Samples/descriptor-dump"
+        ),
     ]
 )
