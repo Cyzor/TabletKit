@@ -42,6 +42,15 @@ public protocol TabletDevice: AnyObject {
     /// the RGB by the caller — the LED has no brightness register. No-op on
     /// devices without a controllable bezel LED.
     func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8)
+    /// Set the Quick Keys OLED text orientation, in 90° steps (0 = upright,
+    /// 1–3 = 90°/180°/270°). No-op on devices without one.
+    func setQuickKeysOrientation(steps: Int)
+    /// Set the Quick Keys' auto-sleep timer, in minutes (0 = never sleep).
+    /// No-op on devices without one.
+    func setQuickKeysSleepMinutes(_ minutes: Int)
+    /// Set the Quick Keys OLED's brightness level, 0 (off) through 3
+    /// (bright). No-op on devices without one.
+    func setQuickKeysOledBrightness(_ level: Int)
     /// Re-run the device's feature/mode-switch init sequence on an already-open
     /// connection. No-op on devices with no such sequence (e.g. Xencelabs).
     ///
@@ -65,5 +74,8 @@ public extension TabletDevice {
     public func setColorMode(_ index: Int) {}
     public func setDisplayGamma(_ gammaTimesTen: Int) {}
     public func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8) {}
+    public func setQuickKeysOrientation(steps: Int) {}
+    public func setQuickKeysSleepMinutes(_ minutes: Int) {}
+    public func setQuickKeysOledBrightness(_ level: Int) {}
     public func reawaken() {}
 }

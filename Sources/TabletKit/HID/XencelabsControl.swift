@@ -190,6 +190,39 @@ public enum XencelabsControl {
         return p
     }
 
+    /// Quick Keys auto-sleep timer write: `02 B4 08 01 <minutes> ... <addr>`.
+    /// `minutes` is the literal sleep delay (0 = never sleep). Decoded and
+    /// hardware-confirmed 2026-07-26 via dtrace against XencelabsDriver while
+    /// stepping the native panel's sleep-timer options (30/60/90/120/Never →
+    /// wire bytes `1e/3c/5a/78/00`); a value set this way was independently
+    /// confirmed to survive a puck power cycle, so this is safe to persist.
+    /// Byte 3 = `0x01` marks this as a SET, matching the resync GET poll's
+    /// `0x00` at the same offset (see `WacomKnownDevice.resyncXencelabsOutputsAfterRelink`).
+    public static func sleepTimerPayload(
+        minutes: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB4, 0x08, 0x01, minutes, 0x00, 0x00, 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
+    /// Quick Keys OLED brightness write: `02 B1 0A 01 <level> ... <addr>`.
+    /// `level` is a 4-step enum, 0 (off) through 3 (bright) — decoded and
+    /// hardware-confirmed 2026-07-26 via dtrace against XencelabsDriver while
+    /// stepping the native panel's OLED-brightness slider from Bright to Off
+    /// (wire bytes `03/02/01/00`). Byte 3 = `0x01` marks this as a SET, same
+    /// convention as the resync GET poll (`WacomKnownDevice.resyncXencelabsOutputsAfterRelink`).
+    /// Distinct from the `0xB5` pen-display panel brightness family
+    /// (`displayBrightnessPayload`) — this is the Quick Keys' own OLED, not a
+    /// pen display's backlight.
+    public static func oledBrightnessPayload(
+        _ level: UInt8, address: [UInt8] = []
+    ) -> [UInt8] {
+        var p: [UInt8] = [0x02, 0xB1, 0x0A, 0x01, min(level, 3), 0x00, 0x00, 0x00, 0x00, 0x00]
+        p += paddedAddress(address)
+        return p
+    }
+
     /// Dial sensitivity write: `02 B4 04 01 01 <n> ... <addr>`.
     /// Observed n = 1...5; the vendor default is 3.
     public static func dialSensitivityPayload(

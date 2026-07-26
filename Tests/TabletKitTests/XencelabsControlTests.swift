@@ -39,6 +39,43 @@ final class XencelabsControlTests: XCTestCase {
         }
     }
 
+    // MARK: - Sleep timer
+
+    func testSleepTimerMatchesCapturedFrames() {
+        // Captured 2026-07-26 stepping the native panel's sleep-timer options
+        // 30/60/90/120/Never in order: 02 b4 08 01 <1e|3c|5a|78|00> ... <addr>
+        let expected: [(minutes: UInt8, wire: UInt8)] = [
+            (30, 0x1E), (60, 0x3C), (90, 0x5A), (120, 0x78), (0, 0x00),
+        ]
+        for (minutes, wire) in expected {
+            XCTAssertEqual(
+                XencelabsControl.sleepTimerPayload(minutes: minutes, address: addr),
+                hex("02 b4 08 01") + [wire] + hex("00 00 00 00 00 aa 67 82 b9 35 f4"))
+        }
+    }
+
+    func testSleepTimerUnaddressedZeroFills() {
+        XCTAssertEqual(
+            XencelabsControl.sleepTimerPayload(minutes: 30),
+            hex("02 b4 08 01 1e 00 00 00 00 00 00 00 00 00 00 00"))
+    }
+
+    // MARK: - Quick Keys OLED brightness
+
+    func testOledBrightnessMatchesCapturedFrames() {
+        // Captured 2026-07-26 stepping the native panel's OLED brightness
+        // slider Bright→Off: 02 b1 0a 01 <03|02|01|00> ... <addr>
+        for level: UInt8 in [3, 2, 1, 0] {
+            XCTAssertEqual(
+                XencelabsControl.oledBrightnessPayload(level, address: addr),
+                hex("02 b1 0a 01") + [level] + hex("00 00 00 00 00 aa 67 82 b9 35 f4"))
+        }
+    }
+
+    func testOledBrightnessClampsAboveThree() {
+        XCTAssertEqual(XencelabsControl.oledBrightnessPayload(9)[4], 3)
+    }
+
     // MARK: - Dial LED color
 
     func testDialColorMatchesCapturedOrangeFrame() {
