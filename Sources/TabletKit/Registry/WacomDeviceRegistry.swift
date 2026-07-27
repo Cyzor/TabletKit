@@ -607,7 +607,7 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x00B8, name: "Intuos4 S (PTK-440)",  // ⚠ estimated
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
@@ -914,13 +914,13 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x0029, name: "Wacom PTK-450",  // ⚠ from OTD
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 6, hasTouchRing: false, hasEraser: true,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
             productID: 0x002A, name: "Wacom PTK-650",  // ⚠ from OTD
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
 
@@ -1806,7 +1806,7 @@ public enum WacomDeviceRegistry {
             // interface (layout unconfirmed).
             productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // ⚠ from kernel (WACOM_13HD type)
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
-            buttonCount: 9, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),

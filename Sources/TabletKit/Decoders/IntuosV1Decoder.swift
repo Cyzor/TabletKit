@@ -16,6 +16,8 @@ import Foundation
 ///         not just BLE despite the historical "HOGP" framing.
 ///   0x11  Auxiliary (express key) report — some other IntuosV1-family models
 ///         may use this instead; not observed on PTH-850.
+///   0x0C  Intuos4 (PTK-xxx) pad report: ring + express keys (kernel
+///         WACOM_REPORT_INTUOSPAD); distinct layout from 0x11 and 0x03.
 ///   0x02  USB pen report (10 bytes, Report ID 0x02 variant)
 ///   0x02  BPT3 touch/pad container (64 bytes) — INTUOSHT2 consumer
 ///         pen-and-touch models (CTH-690); gated on spec.hasFingerTouch
@@ -49,6 +51,9 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         }
         if id == 0x11 {
             return decodeAuxReport(report: report, length: length)
+        }
+        if id == 0x0C {
+            return decodeIntuos4PadReport(report: report, length: length)
         }
         if id == 0x80 {
             return decodeWirelessReport(report: report, length: length)
@@ -406,6 +411,38 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         guard length >= 2 else { return [] }
         let auxByte = report[1]
         return [.aux(AuxButtons(buttons: (0..<8).map { bit in (auxByte & (1 << bit)) != 0 }))]
+    }
+
+    // MARK: - Intuos4 pad report (0x0C)
+
+    /// Intuos4 (PTK-xxx) ExpressKey panel + touch ring, sent on report ID
+    /// 0x0C (kernel `WACOM_REPORT_INTUOSPAD` = 12) — a distinct report ID
+    /// and byte layout from the 0x11 path above and from Intuos5's own pad
+    /// report (id 0x03, `ring1 = data[2]`, `buttons = (data[4]<<1)|(data[3]&0x01)`).
+    /// Layout cross-referenced against input-wacom's `wacom_intuos_pad()`
+    /// (`features->type >= INTUOS4S && <= INTUOS4L` branch) and OTD's
+    /// `Intuos4AuxReport`, which agree byte-for-byte:
+    ///   report[1]      — ring position, bit 0x80 = valid, low 7 bits = 0-71 step
+    ///   report[2] bit 0 — ring center (mode-switch) button
+    ///   report[3]      — 8 mechanical ExpressKey bits
+    /// Experimental: no hardware capture to confirm against, same basis as
+    /// the `.crossReferenced` PTK-xxx registry entries.
+    private func decodeIntuos4PadReport(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex
+    ) -> [DecodeResult] {
+        guard length >= 4 else { return [] }
+        let ringByte = report[1]
+        let ringActive = (ringByte & 0x80) != 0
+        let ringPosition = ringActive ? (ringByte & 0x7F) : 0x7F
+        let ringButtonDown = (report[2] & 0x01) != 0
+        let mechanicalByte = report[3]
+        let buttons = (0..<8).map { bit in (mechanicalByte & (1 << bit)) != 0 }
+        return [.aux(AuxButtons(buttons: buttons,
+                                mechanicalMask: mechanicalByte,
+                                touchRingActive: ringActive,
+                                touchRingButtonDown: ringButtonDown,
+                                touchRingPosition: ringPosition))]
     }
 
 }
