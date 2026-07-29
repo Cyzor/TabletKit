@@ -1311,20 +1311,45 @@ public enum WacomDeviceRegistry {
         .init(
             // libwacom wacom-cintiq-pro-24-p.tablet: Width=508 Height=305mm,
             // Touch=false, no [Buttons] section (pen-only variant, no keys).
+            //
+            // ⚠ DIMENSIONS LIKELY WRONG the same way 0x0351's were — see the
+            // correction note there. Both variants share a panel, and libwacom's
+            // 508x305 gives a 1.666 aspect rather than the panel's 16:9, so this
+            // row is probably also 105286 x 59574 over 526.43 x 297.87 mm. NOT
+            // changed: the descriptor capture that settled 0x0351 came from the
+            // touch variant, and nobody has confirmed the pen-only unit reports
+            // identical maxima. Fix when a DTK-2420 descriptor turns up.
             productID: 0x037C, name: "Cintiq Pro 24 (DTK-2420, pen only)",  // ⚠ groundwork only
             parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 508, activeHeightMM: 305),
         .init(
-            // libwacom wacom-cintiq-pro-24-pt.tablet: same panel as 0x037C
-            // (Width=508 Height=305mm) but Touch=true (DTH-2420, touch variant).
-            productID: 0x0351, name: "Cintiq Pro 24 (DTH-2420, touch)",  // ⚠ groundwork only
-            parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
+            // Dimensions corrected 2026-07-28 from this unit's own HID report
+            // descriptor (a real capture, published in a third-party macOS driver
+            // project). The pen report declares Logical Maximum 105286 x 59574 and
+            // Physical Maximum 526.43 x 297.87 mm — exactly 200 units/mm on both
+            // axes, aspect 1.767, which matches the 3840x2160 16:9 panel.
+            //
+            // The previous values came from libwacom's Width=508 Height=305mm,
+            // which give aspect 1.666 — not 16:9, so libwacom is measuring
+            // something other than the digitizer's active area here. Density was
+            // coincidentally also 200 units/mm, so mapping was self-consistent but
+            // wrong at the edges by roughly 4% horizontally and 2% vertically.
+            //
+            // Also confirmed from the same descriptor: parser .intuosV2 is correct
+            // (report 0x10 fields match this decoder byte for byte), maxPressure
+            // 8191 is correct (declared Logical Maximum 0x1FFF), and the init step
+            // below is correct — vendor usage 0xFF0D1002 (kernel WD_DATAMODE) sits
+            // on feature report 0x02 with declared valid range 1...2, so writing
+            // [0x02, 0x02] is exactly the documented switch into full data mode.
+            productID: 0x0351, name: "Cintiq Pro 24 (DTH-2420, touch)",
+            parser: .intuosV2, maxX: 105286, maxY: 59574, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 508, activeHeightMM: 305),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 526.43, activeHeightMM: 297.87),
         .init(
             // libwacom wacom-cintiq-22.tablet: Width=483 Height=254mm,
             // Touch=false, no [Buttons] section (pen-only, non-Pro Cintiq 22).
