@@ -196,11 +196,22 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         // Only valid for general pen packets (typeNibble 0–3); rotation/airbrush frames don't
         // carry pressure data, so forward the last cached value to avoid pressure=0 spikes that
         // would cause rapid mouseUp/mouseDown ("dots instead of line" symptom).
+        //
+        // On 10-bit hardware (maxPressure ≤ 1023) the 11-bit form overshoots by exactly 2×
+        // and bit 0 of the status byte is not a pressure LSB, so normalize with >>1 — the
+        // same correction IntuosV1Decoder already applies. Without it, real captures of the
+        // Cintiq 12WX (0x00C6) and 21UX (0x003F) emit up to 1192 and 1280 against a declared
+        // maximum of 1023, which reads as a registry error but is not one: halving lands both
+        // inside range (596 and 640). Confirmed by parity — on those two the emitted value is
+        // even on 158/161 and 101/104 nonzero frames, while genuinely 2048-level hardware
+        // (21UX2, 0x00CC) is mixed 208/484 and is left untouched by this branch.
+        // Verified 2026-07-29 by replaying all three captures through hid-trace-sweep.
         // Apply tip-switch override: if raw pressure is 0 but tip-switch fired, use the
         // minimum contact threshold so apps register the click.
         let pressure: Int
         if typeNibble <= 0x03 {
-            let raw = (Int(report[6]) << 3) | ((Int(report[7]) & 0xC0) >> 5) | (Int(status) & 1)
+            let raw11 = (Int(report[6]) << 3) | ((Int(report[7]) & 0xC0) >> 5) | (Int(status) & 1)
+            let raw = spec.maxPressure <= 1023 ? raw11 >> 1 : raw11
             lastPressure = (raw == 0 && tipPressureOverride > 0) ? tipPressureOverride : raw
             pressure = lastPressure
         } else {
