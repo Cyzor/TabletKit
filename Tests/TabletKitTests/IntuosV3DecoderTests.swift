@@ -2,16 +2,18 @@
 //
 // IntuosV3 decoder fixtures (PTK-470/670/870 — Intuos Pro gen3).
 //
-// No hardware capture is available; all reports are synthesized from the
-// byte-layout comments in IntuosV3Decoder.swift and the OTD source tables.
-// These tests lock in the existing behaviour so a future refactor or
-// hardware-informed correction shows up as a test failure rather than silent
-// drift.
+// Pen report layouts (0x1F/0x1E) are still synthesized from byte-layout
+// comments and OTD source tables — no hardware capture available for those.
+// The 0x11 aux report below IS hardware-confirmed as of 2026-07-28, against
+// a real PTK-870 capture (see IntuosV3Decoder.swift's decodeAuxReport doc
+// comment for detail and provenance) — these tests assert the corrected,
+// verified layout, not a synthesized guess.
 //
 // Report IDs covered:
 //   • 0x1F — standard pen report, 16-bit XY (gated on data[1] == 0x01)
 //   • 0x1E — extended pen report, 24-bit XY, 16-bit tilt, penButton3
-//   • 0x11 — aux report: 10-button interleave + two 7-bit relative wheels
+//   • 0x11 — aux report: 8 express keys, two dial center-press buttons,
+//            two 7-bit relative wheels — hardware-confirmed
 import XCTest
 @testable import TabletKit
 
@@ -249,33 +251,46 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(r.isEmpty)
     }
 
-    func testAuxPrimaryEightButtonsDecoded() {
+    func testAuxAllEightExpressKeysDecoded() {
         var st = DecoderState()
-        // All 8 primary bits set (secondary = 0)
+        // All 8 express-key bits set, byte [3] (dial buttons) untouched.
         let r = decode([0x11, 0xFF, 0x00, 0x00, 0x00, 0x00], state: &st)
         XCTAssertFalse(r.isEmpty)
         guard case .aux(let aux) = r[0] else { return XCTFail() }
-        // positions 0..3 and 5..8 come from primary; 4 and 9 from secondary
-        XCTAssertTrue(aux.buttons[0])
-        XCTAssertTrue(aux.buttons[1])
-        XCTAssertTrue(aux.buttons[2])
-        XCTAssertTrue(aux.buttons[3])
-        XCTAssertFalse(aux.buttons[4])  // secondary bit 0, not set
-        XCTAssertTrue(aux.buttons[5])
-        XCTAssertTrue(aux.buttons[6])
-        XCTAssertTrue(aux.buttons[7])
-        XCTAssertTrue(aux.buttons[8])
-        XCTAssertFalse(aux.buttons[9])  // secondary bit 1, not set
+        XCTAssertEqual(aux.buttons.count, 8)
+        for i in 0..<8 { XCTAssertTrue(aux.buttons[i], "button \(i) should be set") }
+        XCTAssertFalse(aux.touchRingButtonDown)
     }
 
-    func testAuxSecondaryBitsInterleavedAtPositions4And9() {
+    func testAuxOnlyOneExpressKeyLit() {
         var st = DecoderState()
-        // primary = 0, secondary = 0x03 (both extra bits set)
-        let r = decode([0x11, 0x00, 0x00, 0x03, 0x00, 0x00], state: &st)
+        // Real capture (pen.buttons.hid): each key press lights exactly one
+        // bit of byte [1] alone. Confirm byte [3] never leaks into buttons[].
+        let r = decode([0x11, 0x04, 0x00, 0x00, 0x00, 0x00], state: &st)
         guard case .aux(let aux) = r[0] else { return XCTFail() }
-        XCTAssertFalse(aux.buttons[0])
-        XCTAssertTrue(aux.buttons[4])   // secondary bit 0
-        XCTAssertTrue(aux.buttons[9])   // secondary bit 1
+        XCTAssertTrue(aux.buttons[2])
+        for i in [0, 1, 3, 4, 5, 6, 7] { XCTAssertFalse(aux.buttons[i]) }
+    }
+
+    func testAuxLeftDialCenterPressSurfacedAsTouchRingButtonDown() {
+        var st = DecoderState()
+        // Real capture (pen.center-buttons.hid): left dial center press is
+        // byte [3] bit 0, independent of the express-key byte.
+        let r = decode([0x11, 0x00, 0x00, 0x01, 0x00, 0x00], state: &st)
+        guard case .aux(let aux) = r[0] else { return XCTFail() }
+        XCTAssertTrue(aux.touchRingButtonDown)
+        for b in aux.buttons { XCTAssertFalse(b) }
+    }
+
+    func testAuxRightDialCenterPressDoesNotLeakIntoButtons() {
+        var st = DecoderState()
+        // Right dial center press is byte [3] bit 1 — decoded but not yet
+        // surfaced (no touchRing2ButtonDown field exists). Confirm it stays
+        // inert rather than accidentally lighting an express key.
+        let r = decode([0x11, 0x00, 0x00, 0x02, 0x00, 0x00], state: &st)
+        guard case .aux(let aux) = r[0] else { return XCTFail() }
+        XCTAssertFalse(aux.touchRingButtonDown)
+        for b in aux.buttons { XCTAssertFalse(b) }
     }
 
     func testAuxLeftWheelPositiveDelta() {

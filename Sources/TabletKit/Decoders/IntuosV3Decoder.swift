@@ -14,7 +14,8 @@ import Foundation
 /// 0x1F  Pen report, 16-bit XY (gated on data[1] == 0x01) — main path
 /// 0x1E  Extended pen report, 24-bit XY  (note: collides with IntuosV2's
 ///       offset-pen ID; dispatch is per-decoder so this is fine)
-/// 0x11  Aux report — 10 express keys + two relative-step scroll wheels
+/// 0x11  Aux report — 8 express keys, two dial center-press buttons, two
+///       relative-step scroll wheels (dials)
 ///
 /// Byte layout differs from IntuosV2: the pen-status byte sits at [2]
 /// instead of [1], pressure is at [7..8] instead of [8..9], and bit
@@ -204,52 +205,63 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         return [.pen(point)]
     }
 
-    // MARK: - 0x11 aux report (express keys + two relative wheels)
+    // MARK: - 0x11 aux report (express keys + dial presses + two relative wheels)
 
-    /// OTD IntuosV3AuxReport.cs layout:
+    /// Layout confirmed 2026-07-28 against a real PTK-870 (Intuos Pro L gen3)
+    /// capture (`whot/wacom-recordings`, MIT-licensed) — both the device's own
+    /// HID descriptor (which declares this report field-by-field, including
+    /// usage names) and per-action recordings of every control on the pad:
     ///   [0]   = 0x11 report ID
-    ///   [1]   = primary express-key byte (8 buttons)
-    ///   [3]   = secondary express-key byte (bits 0 and 1 supply two
-    ///           extra buttons, interleaved into OTD's 10-button array
-    ///           at positions 4 and 9)
-    ///   [4]   = left wheel raw 7-bit signed delta  (bits 0–6; bit 7 ignored)
-    ///   [5]   = right wheel raw 7-bit signed delta (bits 0–6; bit 7 ignored)
+    ///   [1]   = express-key byte — **all 8 keys**, one bit each (bits 0–7)
+    ///   [2]   = reserved/constant
+    ///   [3]   = dial center-press buttons — bit 0 = left dial, bit 1 = right
+    ///           dial (descriptor names this usage "Wacom Button Center");
+    ///           bits 2–7 reserved
+    ///   [4]   = left dial raw 7-bit signed rotation delta  (bits 0–6; bit 7 ignored)
+    ///   [5]   = right dial raw 7-bit signed rotation delta (bits 0–6; bit 7 ignored)
     ///
-    /// OTD's interleave order:
-    ///   buttons[0..3] = primary bits 0..3
-    ///   buttons[4]    = secondary bit 0
-    ///   buttons[5..8] = primary bits 4..7
-    ///   buttons[9]    = secondary bit 1
+    /// `pen.buttons.hid` in that capture set presses each of the 8 express
+    /// keys individually — every press lights exactly one bit of byte [1],
+    /// byte [3] stays zero throughout. `pen.center-buttons.hid` presses the
+    /// two dial centers individually — each lights exactly one bit of byte
+    /// [3] alone. `pen.left/right-dial-cw/ccw.hid` confirm the wheel bytes
+    /// below decode correctly (sign, direction) against real dial clicks.
+    ///
+    /// This superseded an earlier layout ported from OTD's
+    /// `IntuosV3AuxReport.cs`, which treated byte [3]'s two bits as extra
+    /// *express keys* interleaved into a 10-button array at positions 4 and
+    /// 9. That model was never hardware-verified (see the header of
+    /// `IntuosV3DecoderTests.swift`) and this capture contradicts it directly:
+    /// byte [3] carries the dial buttons, not express keys, and there are
+    /// only 8 express keys, not 10.
+    ///
+    /// The left dial's center-press is surfaced via the existing
+    /// `AuxButtons.touchRingButtonDown` field, the same one IntuosV1/IntuosV2/
+    /// Xencelabs already use for a single ring's center click. There is no
+    /// equivalent second-ring field yet (`touchRing2Active`/`touchRing2Position`
+    /// exist for the right dial's rotation, but no `touchRing2ButtonDown`), so
+    /// the right dial's center-press bit is decoded but not yet surfaced
+    /// anywhere — a known, deliberate gap, not an oversight. Adding a second
+    /// field would mean threading a new binding through TabletManager,
+    /// InputInjector, and both button-mapping UI panes, which is a real
+    /// feature addition, not a bug fix, and shouldn't ride in on this one.
     ///
     /// Wheel deltas are emitted as .wheel(index:delta:) results so
     /// InputInjector can route them through touchRingSlots (scroll /
     /// key-press / off) without further state in this decoder.
-    ///
-    /// mechanicalMask is UInt8 (8 bits); the two interleaved-from-
-    /// secondary bits at positions 4 and 9 cant be carried through.
-    /// Rapid re-press detection on those two buttons is the only thing
-    /// affected — normal up/down still works.
     private func decodeAuxReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         let primary = report[1]
-        let secondary: UInt8 = length >= 4 ? report[3] : 0
-        let buttons: [Bool] = [
-            (primary   & 0x01) != 0,
-            (primary   & 0x02) != 0,
-            (primary   & 0x04) != 0,
-            (primary   & 0x08) != 0,
-            (secondary & 0x01) != 0,
-            (primary   & 0x10) != 0,
-            (primary   & 0x20) != 0,
-            (primary   & 0x40) != 0,
-            (primary   & 0x80) != 0,
-            (secondary & 0x02) != 0,
-        ]
+        let dialButtons: UInt8 = length >= 4 ? report[3] : 0
+        let buttons: [Bool] = (0..<8).map { bit in (primary & (1 << bit)) != 0 }
         var results: [DecodeResult] = [
-            .aux(AuxButtons(buttons: buttons, mechanicalMask: primary))
+            .aux(
+                AuxButtons(
+                    buttons: buttons, mechanicalMask: primary,
+                    touchRingButtonDown: (dialButtons & 0x01) != 0))
         ]
         // Sign-extend 7-bit values: shift the sign bit into bit 7, then
         // arithmetic-shift right to propagate it across the Int8 range.

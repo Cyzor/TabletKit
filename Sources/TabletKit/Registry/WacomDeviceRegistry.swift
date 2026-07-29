@@ -1531,14 +1531,23 @@ public enum WacomDeviceRegistry {
             buttonCount: 5, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 178, activeHeightMM: 102),
         .init(
+            // buttonCount/hasTouchRing/hasDualRings corrected 2026-07-28 from a
+            // real PTK-870 capture (see IntuosV3Decoder.decodeAuxReport):
+            // this family has 8 express keys plus two independently-clickable
+            // dials, not 10 express keys and no ring. The two dial usages are
+            // literally named "Wacom TouchRing" (x2) in the device's own
+            // descriptor. Applied to M and L (both known to ship with twin
+            // dials on real hardware); S (PTK-470, below) is left at
+            // buttonCount 5/no ring pending its own capture — smaller Intuos
+            // Pro units have traditionally shipped without dials.
             productID: 0x03F7, name: "Intuos Pro M gen 3 (PTK-670)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 52600, maxY: 29600, maxPressure: 8191,
-            buttonCount: 10, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 254, activeHeightMM: 152),
         .init(
-            productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model)
+            productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model); dials hardware-confirmed
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
-            buttonCount: 10, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
         .init(
             productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-cintiq-16-3), logical extents copied from same-size DTK-1660
