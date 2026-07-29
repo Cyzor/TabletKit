@@ -1045,6 +1045,13 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
+            // ⚠️ SUSPECT DECODE (2026-07-28): a real hid-recorder capture run through
+            // .intuosV1 decodes to X/Y ≈130,600 regardless of this row's maxX/maxY —
+            // same near-identical bogus ceiling on 0x0303/0x030E/0x0323. NOT a family
+            // mismatch: the captured reports are genuinely 10 bytes (the length
+            // .intuosV1 expects), so this is a real bug in IntuosV1Decoder's byte
+            // offsets/status-branch logic for this "One by Wacom" sub-family, root
+            // cause not yet found.
             productID: 0x0302, name: "Wacom CTH-480",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
@@ -1075,6 +1082,7 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
+            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
             productID: 0x0303, name: "Wacom CTH-680",  // ⚠ from OTD
             parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
@@ -1114,6 +1122,7 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
+            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
             productID: 0x030E, name: "Wacom CTL-480",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
@@ -1140,6 +1149,7 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
+            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
             productID: 0x0323, name: "Wacom CTL-680",  // ⚠ from OTD
             parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,

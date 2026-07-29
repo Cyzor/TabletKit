@@ -169,6 +169,13 @@ public struct BambooDecoder: TabletReportDecoder {
     /// ```
     /// No express-key bits here — CTH pad buttons ride the separate touch
     /// interface, and the CTL pen-only models have no express keys at all.
+    ///
+    /// Verified 2026-07-28 against a real CTL-460 (0x00D4) capture (3613 events:
+    /// hover, tip contact, both barrel buttons, eraser, proximity exit) — every
+    /// bit and byte offset above matched with no discrepancies. Bits 0x01 (tip)
+    /// and 0x10 were observed toggling independently but aren't read here: tip
+    /// contact is inferred from pressure instead, and 0x10's role (possibly a
+    /// near/far proximity-zone flag) doesn't affect current decode correctness.
     private mutating func decodeBPT(
         report: UnsafePointer<UInt8>,
         spec: DigitizerSpec,

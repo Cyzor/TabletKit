@@ -29,5 +29,10 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/descriptor-dump"
         ),
+        .executableTarget(
+            name: "hid-trace-sweep",
+            dependencies: ["TabletKit"],
+            path: "Samples/hid-trace-sweep"
+        ),
     ]
 )
