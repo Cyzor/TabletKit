@@ -1047,13 +1047,19 @@ public enum WacomDeviceRegistry {
         .init(
             // ⚠️ SUSPECT DECODE (2026-07-28): a real hid-recorder capture run through
             // .intuosV1 decodes to X/Y ≈130,600 regardless of this row's maxX/maxY —
-            // same near-identical bogus ceiling on 0x0303/0x030E/0x0323. NOT a family
-            // mismatch: the captured reports are genuinely 10 bytes (the length
-            // .intuosV1 expects), so this is a real bug in IntuosV1Decoder's byte
-            // offsets/status-branch logic for this "One by Wacom" sub-family, root
-            // cause not yet found.
+            // Parser corrected .intuosV1 → .bamboo 2026-07-29. This is the INTUOSHT
+            // generation (2013), whose pen report is ID 0x02 / 10 bytes / little-endian
+            // — kernel wacom_bpt_pen — not the big-endian IntuosV1 layout. Under
+            // .intuosV1 all four of these PIDs decoded every position to ~130,600
+            // regardless of tablet size; little-endian hits registered maxX exactly on
+            // all four. An earlier pass dismissed this as "not a family mismatch"
+            // because the reports are 10 bytes rather than BPT's 9 — but length never
+            // distinguished the families, report ID and endianness do. Their INTUOSHT2
+            // successors (0x033B/033C/033D/033E) genuinely are .intuosV1; the split is
+            // real and matches the kernel's. Express keys ride the 64-byte BPT3
+            // container, decoded by BPT3ContainerDecoder for both generations.
             productID: 0x0302, name: "Wacom CTH-480",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 1023,
+            parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
@@ -1082,9 +1088,10 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
-            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
+            // Parser corrected .intuosV1 → .bamboo 2026-07-29 — see the note on
+            // 0x0302 (CTH-480) above.
             productID: 0x0303, name: "Wacom CTH-680",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 1023,
+            parser: .bamboo, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
@@ -1122,9 +1129,10 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
         .init(
-            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
+            // Parser corrected .intuosV1 → .bamboo 2026-07-29 — see the note on
+            // 0x0302 (CTH-480) above.
             productID: 0x030E, name: "Wacom CTL-480",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 1023,
+            parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
@@ -1149,9 +1157,10 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
-            // ⚠️ SUSPECT PARSER — see the identical note on 0x0302 (CTH-480) above.
+            // Parser corrected .intuosV1 → .bamboo 2026-07-29 — see the note on
+            // 0x0302 (CTH-480) above.
             productID: 0x0323, name: "Wacom CTL-680",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 1023,
+            parser: .bamboo, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),

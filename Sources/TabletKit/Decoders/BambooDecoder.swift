@@ -19,6 +19,19 @@ import Foundation
 /// relative boot-mouse packets on report ID 0x01 instead. Confirmed against a
 /// user capture of a CTL-460 (PID 0x00D4) on 2026-07-21.
 ///
+/// The same 0x02 pen format, at 10 bytes rather than 9, also covers the
+/// INTUOSHT generation (CTH-480/680, CTL-480/680 — the 2013 "Intuos Pen &
+/// Touch" / "One by Wacom" models). Those were previously assigned `.intuosV1`,
+/// which reads coordinates big-endian and produced ~130,600 for every position
+/// regardless of tablet size; reassigned 2026-07-29 after little-endian decode
+/// hit each model's registered maxX exactly. Their INTUOSHT2 successors
+/// (CTH-490/690, CTL-490/690) genuinely are `.intuosV1` and stay there — see
+/// `BPT3ContainerDecoder` for the generation table.
+///
+/// **Report ID 0x02, 64 bytes** — BPT3 touch/pad container, shared with the
+/// INTUOSHT2 generation. Routed to `BPT3ContainerDecoder`. Dispatched on length
+/// before the pen path, since both share report ID 0x02.
+///
 /// **Report ID 0x10, 10 bytes** — legacy synthesized layout, same report ID as
 /// IntuosV2 but an entirely different, shorter layout with no tool-serial
 /// negotiation. Retained for compatibility; not yet observed on hardware.
@@ -26,9 +39,11 @@ import Foundation
 /// **CTT-460 (0x00D0) is touch-only** — it has no pen interface.  Reports will
 /// never fire (maxPressure = 0, buttonCount = 0 → decoder silently returns []).
 ///
-/// **Touch on CTH models** (CTH-460/470/480/490) arrives on a separate USB
-/// interface as a 20-byte multitouch Report ID 0x02 stream.  This decoder
-/// handles the pen interface only; touch is out of scope.
+/// **Touch on the older CTH models** (CTH-460/470) arrives on a separate USB
+/// interface as a 20-byte multitouch Report ID 0x02 stream, which this decoder
+/// does not handle. Touch on the INTUOSHT generation (CTH-480/680) instead
+/// arrives in the 64-byte BPT3 container above; those registry rows do not yet
+/// set `hasFingerTouch`, so their touch stays inert until someone enables it.
 ///
 /// ---
 ///
@@ -75,7 +90,14 @@ public struct BambooDecoder: TabletReportDecoder {
         state: inout DecoderState,
         deviceFamily: String
     ) -> [DecodeResult] {
-        if report[0] == 0x02, length >= 9 {
+        // Report ID 0x02 is overloaded on INTUOSHT hardware: a 9/10-byte pen
+        // report and a 64-byte touch/pad container share it, distinguished only
+        // by length. Dispatch on length before anything else — without this the
+        // container would be decoded as pen coordinates.
+        if report[0] == 0x02, length == BPT3ContainerDecoder.reportLength {
+            return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
+        }
+        if report[0] == 0x02, (9...10).contains(length) {
             return decodeBPT(report: report, spec: spec, state: &state)
         }
         guard length >= 10, report[0] == 0x10 else { return [] }

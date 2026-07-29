@@ -59,10 +59,10 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return decodeWirelessReport(report: report, length: length)
         }
         // BPT3 touch/pad container: 64-byte Report ID 0x02 on INTUOSHT2-family
-        // pen-and-touch models (CTH-690). Gated on hasFingerTouch so pen-only
-        // intuosV1 devices never enter this path.
-        if id == 0x02 && length == 64 && spec.hasFingerTouch {
-            return decodeBPT3Container(report: report, spec: spec, state: &state)
+        // models (CTH-690). Gated on length alone — touch and pad are gated
+        // independently inside, so pen-only models still get their express keys.
+        if id == 0x02 && length == BPT3ContainerDecoder.reportLength {
+            return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
         }
         // USB pen reports are exactly 10 bytes. PTH-850 (no touch, no Bluetooth — uses
         // an RF dongle) exposes Interface 1 as vendor-specific (Report ID 0x02, ~32-byte
@@ -321,81 +321,6 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                         isMouse: result.isMouse)))
         }
         results.append(.pen(result.point))
-        return results
-    }
-
-    // MARK: - BPT3 touch/pad container (0x02, 64 bytes)
-
-    /// INTUOSHT2-family multiplexed touch + express-key container, mirroring
-    /// kernel `wacom_bpt3_touch()`. Format confirmed by user discovery capture
-    /// from a CTH-690 (0x033E), 2026-07-03.
-    ///
-    /// Layout: [0]=0x02, [1] bits 2:0 = message count, then up to 7 fixed
-    /// 8-byte messages starting at offset 2:
-    /// ```
-    /// msg[0] 2–17   finger slot key        msg[0] 0x80   pad buttons
-    /// Touch msg: [1] bit7 = contact down
-    ///            X = msg[2]<<4 | msg[4]>>4    (12-bit, 0–4095)
-    ///            Y = msg[3]<<4 | msg[4]&0x0F  (12-bit, 0–4095)
-    ///            [5] = width, [6] = height
-    /// Pad msg:   [1] bits 0x01/0x02/0x04/0x08 = express keys
-    ///            (physical key ordering unverified — capture shows the four
-    ///            bits firing but not which physical key is which)
-    /// ```
-    ///
-    /// Containers carry only *changed* contacts, so slot state persists in
-    /// `DecoderState` across reports and the full active set is re-emitted
-    /// each time. Touch is suppressed while the pen is in proximity (kernel
-    /// touch-arbitration behavior); pen entry releases all active contacts.
-    private func decodeBPT3Container(
-        report: UnsafePointer<UInt8>,
-        spec: DigitizerSpec,
-        state: inout DecoderState
-    ) -> [DecodeResult] {
-        let messageCount = min(Int(report[1] & 0x07), 7)
-        var results: [DecodeResult] = []
-        var touchChanged = false
-
-        for i in 0..<messageCount {
-            let base = 2 + i * 8
-            let msgID = Int(report[base])
-            if (2...17).contains(msgID) {
-                let down = (report[base + 1] & 0x80) != 0 && !state.prevInProximity
-                if down {
-                    let x = (Int(report[base + 2]) << 4) | (Int(report[base + 4]) >> 4)
-                    let y = (Int(report[base + 3]) << 4) | (Int(report[base + 4]) & 0x0F)
-                    // Width/height arrive as raw bytes; pass the larger one so
-                    // contactArea stays on the same scale as IntuosV2's major byte.
-                    let area = Int(max(report[base + 5], report[base + 6]))
-                    state.bpt3TouchSlots[msgID] = TouchContact(
-                        id: msgID, x: x, y: y, contactArea: area)
-                } else {
-                    state.bpt3TouchSlots.removeValue(forKey: msgID)
-                }
-                touchChanged = true
-            } else if msgID == 0x80 && spec.buttonCount > 0 {
-                let padByte = report[base + 1]
-                results.append(
-                    .aux(
-                        AuxButtons(buttons: [
-                            (padByte & 0x01) != 0,
-                            (padByte & 0x02) != 0,
-                            (padByte & 0x04) != 0,
-                            (padByte & 0x08) != 0,
-                        ])))
-            }
-        }
-
-        // Pen proximity releases every tracked contact, even in containers
-        // that carry no touch messages of their own.
-        if state.prevInProximity && !state.bpt3TouchSlots.isEmpty {
-            state.bpt3TouchSlots.removeAll()
-            touchChanged = true
-        }
-
-        if touchChanged {
-            results.append(.touch(state.bpt3TouchSlots.values.sorted { $0.id < $1.id }))
-        }
         return results
     }
 
