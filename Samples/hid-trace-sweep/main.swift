@@ -5,8 +5,8 @@
 //
 // Input is NOT vendored: this tool reads a JSON file from stdin (or a path
 // argument), produced by `tools/hid_trace_parser.py --export-json PID` from
-// a trace file the caller has fetched separately. No device data ships with
-// this repo or with TabletKit — the source trace archive carries no license.
+// a trace file the caller supplies. No device data ships with this repo or
+// with TabletKit.
 //
 // ---
 //
