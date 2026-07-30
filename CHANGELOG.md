@@ -7,6 +7,28 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- `PrecisionTouchLayout` / `PrecisionTouchDecoder` — a device-agnostic decoder
+  for HID Precision-Touchpad-style multitouch reports (Contact Identifier,
+  Contact Count, per-finger collections), the touch counterpart to
+  `GenericDigitizerFrame`. The layout is derived from the device's own report
+  descriptor via `HIDReportDescriptorParser` rather than hardcoded per family,
+  so it carries its own axis maxima and adapts to slot counts and optional
+  fields. No device path constructs one yet — every current touch decode still
+  runs through the Wacom vendor-specific paths.
+- `classifyDigitizerInterface` — decides whether an unrecognized HID interface
+  may have a pen driver attached, by checking whether its X/Y usages sit inside
+  a Digitizer Touch Screen or Touch Pad collection. Usages alone cannot tell pen
+  from touch (both declare Generic Desktop X/Y and a Tip Switch); the enclosing
+  application collection can. Fails open as `.undetermined` when no descriptor
+  is readable. Relative X/Y never counts as pen evidence — Windows Precision
+  Touchpad devices must declare a legacy Mouse collection alongside their touch
+  collection, and treating that as a pen would misclassify most touch hardware.
+  Exists so hosts can avoid pointing a pen driver at a multitouch interface,
+  where X/Y repeat once per finger and element values cannot be attributed to a
+  contact.
+
 ## [0.3.0] — 2026-07-22
 
 Xencelabs hardware support (display, Quick Keys, dongle), a device-agnostic

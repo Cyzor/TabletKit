@@ -105,6 +105,12 @@ public enum DecodeResult {
 /// `id` is a per-contact tracking identifier reused across frames for the same
 /// finger (typically 0–9 on 10-point devices).  `contactArea` is optional and
 /// only populated on devices that report contact-major.
+///
+/// Both producers agree on that quantity: `IntuosV2Decoder.decodeTouchReport`
+/// takes report 0x21's per-slot major byte, and `PrecisionTouchDecoder` takes
+/// the HID Digitizer Width usage (0x0D/0x48), which is the major axis in that
+/// usage set.  Units still differ per device — this is a raw sensor value, not
+/// a normalized one, so any threshold tuned against it must be per-device.
 public struct TouchContact: Equatable {
     public let id: Int
     public let x: Int
