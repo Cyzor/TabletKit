@@ -104,6 +104,9 @@ public struct VendorDeviceProfile: Equatable {
     /// Lines per inch derived from `maxX`/`activeWidthMM`.  Returns nil unless
     /// both physical and logical dimensions are populated on both axes.
     /// Matches the shape of `WacomDeviceSpec.lpi` for cross-vendor consistency.
+    /// The physical fields carry the same contract documented on
+    /// `WacomDeviceSpec.activeWidthMM` — physical extent of the logical range,
+    /// not advertised drawing area — which is what makes this division valid.
     public var lpi: (x: Double, y: Double)? {
         guard let w = activeWidthMM, w > 0,
               let h = activeHeightMM, h > 0,

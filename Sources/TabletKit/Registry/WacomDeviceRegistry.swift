@@ -248,6 +248,28 @@ public struct WacomDeviceSpec {
     /// tablet-area UI.  Matches the canonical (mm, logical-max) data shape
     /// used by Huion and Xencelabs references, easing future cross-vendor
     /// support.  Nil = unknown.
+    ///
+    /// **What this measures:** the physical extent of the `maxX`/`maxY` logical
+    /// coordinate range — not the drawing area a spec sheet advertises.  The
+    /// two usually agree to within a percent or two, but they are different
+    /// quantities, and `lpi` above only means anything under the first
+    /// reading.  Sources, best first:
+    ///
+    /// 1. The device's own HID report descriptor: `Physical Maximum` scaled by
+    ///    `unitExponent` (see `Extending-Support.md`).  Exact by construction,
+    ///    since it describes the same range `maxX`/`maxY` come from.
+    /// 2. Hand measurement of the active surface.  Six `.verified` rows use it.
+    /// 3. libwacom's `.tablet` `Width`/`Height`, which is manufacturer-
+    ///    advertised and therefore an *approximation* of (1).  Most rows hold
+    ///    this, simply because a descriptor capture usually is not available.
+    ///    Rows whose libwacom figure disagreed with the `maxX`/`maxY` aspect
+    ///    ratio were rejected during the backfill rather than stored.
+    ///
+    /// Where a row's value came from is recorded in that row's own comment
+    /// (`✓ confirmed live`, `cross-referenced: libwacom`, `⚠ from OTD`, and so
+    /// on).  Mixed provenance across rows is expected: the definition is
+    /// uniform, the accuracy is not.  0x0351 (Cintiq Pro 24 touch) documents a
+    /// worked example where (1) and (3) diverge by ~4% horizontally.
     public let activeWidthMM: Double?
     /// Active-area height in millimetres.  See `activeWidthMM`.
     public let activeHeightMM: Double?
@@ -1238,6 +1260,15 @@ public enum WacomDeviceRegistry {
             // Pressure and dimensions corrected to kernel wacom_features_0x304
             // (59552×33848, 1023 pressure). Previous dims were 59800×34200 (~0.4 %
             // drift); aligned during 2026-05-21 audit pass.
+            //
+            // ⚠️ maxPressure 1023 now has teeth (2026-07-29): CintiqV1Decoder halves
+            // the 11-bit raw form whenever maxPressure ≤ 1023, so if this value is
+            // wrong the device loses half its pressure range rather than merely
+            // overshooting. Kept at 1023 because that is what the kernel declares —
+            // but note the kernel gives 2047 for 0x0333 (13HD Touch) on the *same*
+            // 59552×33848 panel, and Wacom specs the model at 2048 levels. Unresolved
+            // asymmetry; needs a real DTK-1300 capture. Run it through
+            // hid-trace-sweep's parity check: mostly-even values ⇒ 1023 is right.
             productID: 0x0304, name: "Wacom Cintiq 13HD (DTK-1300)",  // ⚠ from OTD
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
