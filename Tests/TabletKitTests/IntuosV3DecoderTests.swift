@@ -12,7 +12,7 @@
 // Report IDs covered:
 //   • 0x1F — standard pen report, 16-bit XY (gated on data[1] == 0x01)
 //   • 0x1E — extended pen report, 24-bit XY, 16-bit tilt, penButton3
-//   • 0x11 — aux report: 8 express keys, two dial center-press buttons,
+//   • 0x11 — aux report: 8 outer express keys, 2 cluster-center keys,
 //            two 7-bit relative wheels — hardware-confirmed
 import XCTest
 @testable import TabletKit
@@ -274,7 +274,7 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func testAuxLeftDialCenterPressSurfacedAsTouchRingButtonDown() {
         var st = DecoderState()
-        // Real capture (pen.center-buttons.hid): left dial center press is
+        // Real capture (pen.center-buttons.hid): left cluster-center key is
         // byte [3] bit 0, independent of the express-key byte.
         let r = decode([0x11, 0x00, 0x00, 0x01, 0x00, 0x00], state: &st)
         guard case .aux(let aux) = r[0] else { return XCTFail() }
@@ -284,7 +284,7 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func testAuxRightDialCenterPressDoesNotLeakIntoButtons() {
         var st = DecoderState()
-        // Right dial center press is byte [3] bit 1 — decoded but not yet
+        // Right cluster-center key is byte [3] bit 1 — decoded but not yet
         // surfaced (no touchRing2ButtonDown field exists). Confirm it stays
         // inert rather than accidentally lighting an express key.
         let r = decode([0x11, 0x00, 0x00, 0x02, 0x00, 0x00], state: &st)

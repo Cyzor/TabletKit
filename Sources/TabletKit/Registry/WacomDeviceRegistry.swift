@@ -1359,6 +1359,13 @@ public enum WacomDeviceRegistry {
             // changed: the descriptor capture that settled 0x0351 came from the
             // touch variant, and nobody has confirmed the pen-only unit reports
             // identical maxima. Fix when a DTK-2420 descriptor turns up.
+            //
+            // Corroboration 2026-07-29, still short of proof: a curated catalog
+            // lists one active area for both variants and gives touch as their
+            // only difference, which is what the shared-panel argument above
+            // assumed. That raises confidence that the values belong here too,
+            // but it is an advertised figure — it says nothing about the logical
+            // maxima, which are the part actually in question.
             productID: 0x037C, name: "Cintiq Pro 24 (DTK-2420, pen only)",  // ⚠ groundwork only
             parser: .intuosV2, maxX: 101600, maxY: 61000, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
@@ -1629,29 +1636,62 @@ public enum WacomDeviceRegistry {
             confidence: .crossReferenced,
             activeWidthMM: 457, activeHeightMM: 254),
         .init(
+            // Dimensions corrected 2026-07-29 — see the density note on the M
+            // size below. 37400/187 and 21000/105 are both exactly 200 units/mm;
+            // the previous 178 x 102 gave 210.1 x 205.9, anisotropic and round in
+            // neither axis.
             productID: 0x03F5, name: "Intuos Pro S gen 3 (PTK-470)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 37400, maxY: 21000, maxPressure: 8191,
             buttonCount: 5, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 178, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 187, activeHeightMM: 105),
         .init(
             // buttonCount/hasTouchRing/hasDualRings corrected 2026-07-28 from a
             // real PTK-870 capture (see IntuosV3Decoder.decodeAuxReport):
-            // this family has 8 express keys plus two independently-clickable
-            // dials, not 10 express keys and no ring. The two dial usages are
-            // literally named "Wacom TouchRing" (x2) in the device's own
-            // descriptor. Applied to M and L (both known to ship with twin
-            // dials on real hardware); S (PTK-470, below) is left at
-            // buttonCount 5/no ring pending its own capture — smaller Intuos
-            // Pro units have traditionally shipped without dials.
+            // this family has 8 express keys and two dials, not 10 express keys
+            // and no ring. The two dial usages are literally named "Wacom
+            // TouchRing" (x2) in the device's own descriptor. Applied to M and L
+            // (both known to ship with twin dials on real hardware); S (PTK-470,
+            // above) is left at buttonCount 5/no ring pending its own capture —
+            // smaller Intuos Pro units have traditionally shipped without dials.
+            //
+            // The two bits in aux byte [3] are NOT dial presses: the dials rotate
+            // only. They are the center key of each express-key cluster — vendor
+            // documentation describes "four customizable keys on the outside and
+            // one in the middle" per cluster, which is where the eight outer keys
+            // plus these two come from, and gives the middle key a default of
+            // "Dial toggle". Wording corrected 2026-07-29.
+            //
+            // ── Dimensions corrected 2026-07-29 ──
+            //
+            // This family runs at exactly 200 units/mm, the same density the
+            // DTH-2420 descriptor declares outright a few hundred rows up. Against
+            // that constant, the logical maxima imply 187 x 105 (S), 263 x 148 (M)
+            // and 349 x 195 (L). A curated third-party catalog independently lists
+            // 187 x 105 and 349 x 195 for S and L — matching to the millimeter —
+            // and 264 x 148 for M.
+            //
+            // Stored values follow the 200 units/mm constant, so M is 263 rather
+            // than the catalog's 264: maxY/148 is exactly 200 on this size, and
+            // both sibling sizes are exactly 200 on both axes, so the family
+            // density is not in doubt. One of maxX 52600 and that 264 is off by
+            // about 0.4%; which one needs a real PTK-670 descriptor to settle.
+            //
+            // Previous values (254 x 152 here, 356 x 203 on L, 178 x 102 on S)
+            // were libwacom's advertised drawing areas and produced densities of
+            // 207.1 x 194.7, 196.1 x 192.1 and 210.1 x 205.9 — none round, none
+            // even isotropic. Textbook case of the distinction documented on
+            // `activeWidthMM`.
             productID: 0x03F7, name: "Intuos Pro M gen 3 (PTK-670)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 52600, maxY: 29600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 254, activeHeightMM: 152),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 263, activeHeightMM: 148),
         .init(
+            // Dimensions corrected 2026-07-29; 69800/349 and 39000/195 are both
+            // exactly 200 units/mm. See the density note on the M size above.
             productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model); dials hardware-confirmed
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 349, activeHeightMM: 195),
         .init(
             productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-cintiq-16-3), logical extents copied from same-size DTK-1660
             parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
