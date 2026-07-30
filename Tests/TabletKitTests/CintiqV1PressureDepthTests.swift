@@ -8,7 +8,7 @@
 // IntuosV1Decoder applies.
 //
 // Without it, real captures of the Cintiq 12WX (0x00C6) and 21UX (0x003F) emit
-// up to 1192 and 1960 against a declared maximum of 1023. That reads as a
+// up to 1192 and 1280 against a declared maximum of 1023. That reads as a
 // registry error but is not one: the parity of emitted values on those two is
 // almost entirely even (158/161 and 101/104 nonzero frames), while genuinely
 // 2048-level hardware (21UX2, 0x00CC) is mixed (208/484).
