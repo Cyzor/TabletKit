@@ -1722,6 +1722,15 @@ public enum VendorDeviceRegistry {
         // bits 0-2 one-hot on a clean tap), remapped to the bezel-button
         // slots in WacomKnownDevice since this device has no puck of its own
         // to disambiguate them from.
+        // Covers the Pen Display 24 and, most likely, the Pen Display 24+ (2025):
+        // the two are understood to be the same panel and digitizer, with the
+        // plus adding color-calibration software rather than hardware, and a
+        // curated catalog lists both under one model number (LPH2412U-A). Nothing
+        // here needs to change if that holds — the plus would enumerate as this
+        // PID and inherit everything. Deliberately left generic in name for that
+        // reason. If a 24+ ever turns up reporting a PID of its own, that is the
+        // signal to revisit; the color software is host-side and out of scope
+        // either way.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
