@@ -1383,10 +1383,73 @@ public enum WacomDeviceRegistry {
             // below is correct — vendor usage 0xFF0D1002 (kernel WD_DATAMODE) sits
             // on feature report 0x02 with declared valid range 1...2, so writing
             // [0x02, 0x02] is exactly the documented switch into full data mode.
+            //
+            // ── Descriptor-derived vs. inferred, for this row ──
+            //
+            // Descriptor-derived (the four fields above plus the init step):
+            // logical maxima, physical size, pressure ceiling, mode-switch write.
+            //
+            // buttonCount stays 0, and that is not an omission. This display has
+            // no express keys at all: Wacom's own documentation for it ships every
+            // express key on a detachable ExpressKey Remote, the same arrangement
+            // 0x032A (Cintiq 27QHD) documents a few rows up.
+            //
+            // What report 0x11 does declare — four one-bit buttons at vendor
+            // usages 0x0981, 0x0982, 0x0983, 0x0986 in byte [1] — are the "Touch
+            // Keys", a lit row along the top edge of the panel. Documented
+            // functions, in order: video input source, Wacom Center, toggle
+            // on-screen keyboard, Wacom Display Settings, and touch on/off. Five
+            // keys, four declared bits, and the usage numbering skips 0x0984 and
+            // 0x0985 — consistent with touch on/off being handled in firmware
+            // rather than forwarded, which also fits report 0x13 appearing in this
+            // same descriptor (8 constant bytes, usage 0xFF0D1013 — the report
+            // that carries touch-switch state on PTH-860).
+            //
+            // These are display-function keys, not drawing shortcuts, and Wacom's
+            // documentation offers no way to reassign them — only a long-press
+            // requirement to avoid accidental taps. So `buttonCount` is the wrong
+            // field for them twice over: they are not express keys, and treating
+            // them as bindable would imply a freedom the hardware's own vendor
+            // does not offer. `bezelButtonCount` is the right field by intent
+            // (that is what it holds for the DTK-2400's OSD keys) but does not fit
+            // yet: it caps at three downstream (`InputInjector` loops 0..<3 over
+            // bezelButtonBindings) and no .intuosV2 path emits buttons[16...18] —
+            // only CintiqV1Decoder does. Wiring a fourth means widening that
+            // binding set and routing report 0x11's low bits there, which is a
+            // feature, not a registry value.
+            //
+            // Worth knowing for whoever picks that up: without Wacom's driver
+            // these four keys do nothing at all, so binding them would be additive
+            // rather than a conflict.
+            //
+            // The remote is 0x0331, still a name-only row with no pad decode. Its
+            // buttonCount 18 against Wacom's advertised "17 ExpressKeys and a
+            // Touch Ring" is the usual spec-sheet-versus-kernel-total gap, not an
+            // error — the ring's center click is the eighteenth.
+            //
+            // maxTouchContacts 5 replaces an inherited 10. Nothing here supports
+            // 10: `IntuosV2Decoder.decodeTouchReport` reads report 0x21 as five
+            // fixed 8-byte slots and caps at `min(count, 5)`, so five is the most
+            // the pipeline can deliver. The field only feeds the Touch and
+            // Scratchpad panes, so this corrects an advertised capability rather
+            // than a decode path. Several sibling .intuosV2 rows still say 10 and
+            // have the same ceiling; left alone pending their own review.
+            //
+            // touchMaxX/touchMaxY deliberately left 0 = unknown. The capture that
+            // settled everything else covers a single interface with no touch
+            // collection at all, so there is no descriptor basis for a touch
+            // coordinate range, and the Intuos `pen / 5` estimate used elsewhere
+            // in this file is a quirk of that sensor family, not a general rule —
+            // applying it here would invent provenance. Consequence to know:
+            // `InputInjector` clamps a 0 maximum to 1, so enabling touch on this
+            // device before a real range exists yields saturated coordinates.
+            // Touch is opt-in (`touchEnabled` defaults false), so nothing
+            // misbehaves until someone turns it on. A touch-interface descriptor
+            // or capture settles it.
             productID: 0x0351, name: "Cintiq Pro 24 (DTH-2420, touch)",
             parser: .intuosV2, maxX: 105286, maxY: 59574, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            hasFingerTouch: true, maxTouchContacts: 10,
+            hasFingerTouch: true, maxTouchContacts: 5,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 526.43, activeHeightMM: 297.87),
