@@ -1764,6 +1764,55 @@ public enum VendorDeviceRegistry {
             isPenDisplay: true,
             companions: [0x5202, 0x5203]),
 
+        // Hand-added 2026-07-29. These two pen tablets — the products Xencelabs
+        // is best known for, usually bundled with the Quick Keys puck — had no
+        // entry at all, so they were being ignored outright.
+        //
+        // Source is OpenTabletDriver's own configurations (XenceLabs/Pen Tablet
+        // Medium.json, Pen Tablet Small.json), the same origin as `otdParser`
+        // elsewhere in this file. NOT from a capture, and no MockTab hardware has
+        // seen either one — treat as recognition plus a strong estimate, on the
+        // same footing as the Pen Display 16 above.
+        //
+        // Three independent things make the estimate strong rather than a guess:
+        //
+        // 1. Both land on exactly 200 units/mm on both axes (52324/261.62 and
+        //    29600/148; 35600/178 and 20200/101), matching the density the Pen
+        //    Display 24's real corner sweeps established for this family.
+        // 2. OTD assigns them `XenceLabsReportParser` — the same parser as the
+        //    displays, so `XencelabsDecoder` should serve them unchanged.
+        // 3. OTD's output-init string decodes to 0x02 0xB0 0x04, byte for byte
+        //    the family tablet-mode init documented on the puck below.
+        //
+        // The three onboard buttons OTD reports are modeled as bezel buttons, not
+        // aux buttons, following the Pen Display 24's precedent: on that device
+        // the onboard capacitive buttons ride the identical report-2 0xF0 aux
+        // frame as the puck's express keys, so they occupy the bezel slots to
+        // stay distinguishable from a companion puck's keys. Unverified here.
+        VendorDeviceProfile(
+            vendor: "Xencelabs",
+            vendorID: 0x28BD, productID: 0x5201,
+            productName: "Xencelabs Pen Tablet Medium",
+            activeWidthMM: 261.62, activeHeightMM: 148,
+            maxX: 52324, maxY: 29600,
+            maxPressure: 8191,
+            penButtonCount: 3, auxButtonCount: nil, bezelButtonCount: 3,
+            otdParser: "XenceLabsReportParser",
+            productStringRegex: nil,
+            companions: [0x5202, 0x5203]),
+
+        VendorDeviceProfile(
+            vendor: "Xencelabs",
+            vendorID: 0x28BD, productID: 0x5204,
+            productName: "Xencelabs Pen Tablet Small",
+            activeWidthMM: 178, activeHeightMM: 101,
+            maxX: 35600, maxY: 20200,
+            maxPressure: 8191,
+            penButtonCount: 3, auxButtonCount: nil, bezelButtonCount: 3,
+            otdParser: "XenceLabsReportParser",
+            productStringRegex: nil,
+            companions: [0x5202, 0x5203]),
+
         // Hand-added, confirmed 2026-07-02 over direct USB on real hardware.
         // Aux-only device (8 express keys, bottom mode button, clickable dial):
         // no pen digitizer, so no coordinate maxima or pressure. Mute until it
