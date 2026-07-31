@@ -786,10 +786,20 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
-            // touchMaxX/Y still estimated as pen/5 ratio; both USB and BT
-            // paths use this entry (PTH-660 over BT presents this PID).
-            // BT touch confirmed working 2026-05-22; exact max coords
-            // unverified but cursor positioning feels correct.
+            // touchMaxX/Y confirmed 2026-07-30 against this device's own touch
+            // report descriptor: it declares Logical Maximum 8960 on X and 5920
+            // on Y, matching the pen/5 estimate these values were originally
+            // derived from — exactly, on both axes. Promoted from estimate to
+            // descriptor-derived; the numbers themselves did not change.
+            //
+            // That the pen/5 heuristic landed dead-on here is evidence for the
+            // ratio on this sensor family, not a general rule. Sibling rows
+            // still carrying estimated touch maxima stay estimates until each
+            // is checked the same way, and 0x0351's are deliberately left 0
+            // rather than estimated at all (see the note on that row).
+            //
+            // Both USB and BT paths use this entry — PTH-660 over BT presents
+            // this PID, not 0x0360. BT touch confirmed working 2026-05-22.
             touchMaxX: 8960, touchMaxY: 5920,
             seizeUSB: true,
             confidence: .verified,

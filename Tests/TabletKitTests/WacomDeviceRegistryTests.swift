@@ -75,6 +75,20 @@ final class WacomDeviceRegistryTests: XCTestCase {
 
     // MARK: - canonical PID normalization (sanity check on the file)
 
+    /// PTH-660's touch maxima are descriptor-confirmed, not estimated: the
+    /// device's own touch report declares Logical Maximum 8960 on X and 5920
+    /// on Y. Pinned because the numbers originally came from a pen/5 estimate
+    /// that happened to be exactly right, and nothing in the values themselves
+    /// distinguishes a confirmed figure from a guess.
+    func testPTH660TouchMaximaMatchDeviceDescriptor() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0357))
+
+        XCTAssertEqual(spec.touchMaxX, 8960)
+        XCTAssertEqual(spec.touchMaxY, 5920)
+        XCTAssertTrue(spec.hasFingerTouch)
+        XCTAssertEqual(spec.maxTouchContacts, 5)
+    }
+
     func testCanonicalPIDCollapsesBTToUSBForPTH660() {
         XCTAssertEqual(WacomDeviceRegistry.canonicalProductID(for: 0x0360), 0x0357)
         // 0x0359 is NOT a PTH-660 transport variant: it previously appeared

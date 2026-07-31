@@ -443,6 +443,21 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// Slot layout: [0]=slot_id [1]=status(0x01=down, 0x00=lift) [2..3]=X LE16 [4..5]=Y LE16
     ///              [6]=touch major [7]=reserved
     /// Lift frame: status=0x00 for one frame at the last position, then the slot goes silent.
+    ///
+    /// Layout confirmed 2026-07-30 against a PTH-660's own touch report
+    /// descriptor, which — unusually for this family — is structured rather
+    /// than opaque. It declares report 0x21 with a 43-byte payload: a contact
+    /// count, then five logical collections of Contact Identifier (8 bits),
+    /// Tip Switch (1 bit + 7 pad), X (16), Y (16), Width (8), Height (8). That
+    /// is this slot layout field for field, so every offset above is now
+    /// descriptor-backed rather than inferred from sample correlation.
+    ///
+    /// Two refinements it supplies. Byte [7] is not reserved — it is contact
+    /// *height*, the minor axis to [6]'s major; it stays unread only because
+    /// `TouchContact.contactArea` holds a single scalar. And the axes declare
+    /// Logical Maximum 8960 × 5920 with Width/Height maxima of 41 × 31, which
+    /// is what promoted 0x0357's registry `touchMaxX`/`touchMaxY` from
+    /// estimate to confirmed.
     private func decodeTouchReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex
