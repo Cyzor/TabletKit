@@ -82,6 +82,36 @@ public struct DescriptorLayout: Equatable {
         }
         return nil
     }
+
+    /// Feature-report usages that select a device's full reporting mode, most
+    /// specific first.
+    ///
+    /// Wacom's vendor control leads deliberately. On a device declaring both,
+    /// it is the pen-oriented one, whereas the standard Device Mode control is
+    /// shared with multitouch — writing to that first on a hybrid interface
+    /// would change more than intended.
+    ///
+    /// Both take value 2, which is why `modeSwitchFeatureReportID()` returns
+    /// only an ID and callers write a fixed payload.
+    public static let modeSwitchUsages: [UInt32] = [
+        0xFF0D_1002,  // WACOM_HID_WD_DATAMODE (vendor)
+        0x000D_0052,  // Digitizer / Device Mode (standard)
+    ]
+
+    /// Report ID of the first mode-switch control this descriptor declares, or
+    /// `nil` when it declares none.
+    ///
+    /// Modern devices boot emitting a reduced report stream until the host
+    /// writes this, and the report ID carrying it is per-device — so guessing
+    /// a fixed ID works only by coincidence. `nil` is the normal answer for
+    /// classic Wacom and Xencelabs hardware, whose descriptors declare neither
+    /// usage; those need whatever legacy write the caller used before.
+    public func modeSwitchFeatureReportID() -> UInt8? {
+        for usage in Self.modeSwitchUsages {
+            if let reportID = featureReportID(carryingUsage: usage) { return reportID }
+        }
+        return nil
+    }
 }
 
 /// Walks a raw HID report descriptor byte stream, computing per-field bit offsets.

@@ -226,4 +226,49 @@ final class HIDReportDescriptorParserTests: XCTestCase {
         let report = try XCTUnwrap(layout.reports.first)
         XCTAssertEqual(report.fields.first?.logicalMin, 0)
     }
+
+    // MARK: - Mode-switch lookup
+
+    /// A descriptor declaring the standard Device Mode control reports the
+    /// report ID carrying it, so a driver can write to the right report
+    /// instead of guessing a fixed one.
+    func testModeSwitchReportIDFoundForStandardDeviceMode() throws {
+        let layout = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.precisionTouch10Finger)
+
+        XCTAssertEqual(layout.modeSwitchFeatureReportID(), 0x83)
+    }
+
+    /// Descriptors declaring neither mode-switch usage return nil rather than
+    /// a guess. This is the answer for all classic Wacom and Xencelabs
+    /// hardware, and the reason callers must keep their legacy write: a nil
+    /// here means "no information", not "no switch needed".
+    func testModeSwitchReportIDNilWhenUndeclared() throws {
+        let pen = try HIDReportDescriptorParser.parse(hex: TouchDescriptorFixtures.pen)
+        let opaque = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.opaqueVendor)
+
+        XCTAssertNil(pen.modeSwitchFeatureReportID())
+        XCTAssertNil(opaque.modeSwitchFeatureReportID())
+    }
+
+    /// The vendor control is preferred over the standard one when a descriptor
+    /// declares both — the standard control is shared with multitouch, so on a
+    /// hybrid interface writing it first would change more than intended.
+    func testVendorModeSwitchWinsOverStandard() throws {
+        // Feature report 0x40 carrying vendor DATAMODE, and 0x83 carrying the
+        // standard Device Mode, in that descriptor order.
+        let hex =
+            // Vendor: page 0xFF0D, usage 0x1002 (DATAMODE) on feature report 0x40
+            "060dff0901a10185400a02101500250275089501b102c0"
+            // Standard: Digitizer Configuration, Device Mode on feature report 0x83
+            + "050d090ea10185830923a10209521500250a75089501b102c0c0"
+        let layout = try HIDReportDescriptorParser.parse(hex: hex)
+
+        // Both are present; the lookup must not simply take the first declared.
+        XCTAssertEqual(layout.featureReportID(carryingUsage: 0xFF0D_1002), 0x40)
+
+        XCTAssertEqual(layout.featureReportID(carryingUsage: 0x000D_0052), 0x83)
+        XCTAssertEqual(layout.modeSwitchFeatureReportID(), 0x40)
+    }
 }

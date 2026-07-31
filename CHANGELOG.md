@@ -9,6 +9,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `DescriptorLayout.modeSwitchFeatureReportID()` and the
+  `modeSwitchUsages` list behind it — the report ID a device declares
+  for switching into full reporting, vendor control preferred over the
+  standard one. Returns nil for classic hardware, which declares
+  neither, so callers keep whatever legacy write they used.
+
 - ExpressKey Remote (0x0331) report structure recorded on its registry
   row: which bits in report 0x11 carry the eighteen controls, the ring
   position byte, and what per-action recordings could not settle. The
