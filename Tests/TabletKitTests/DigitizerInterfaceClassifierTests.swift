@@ -44,6 +44,27 @@ final class DigitizerInterfaceClassifierTests: XCTestCase {
         XCTAssertEqual(try classify(TouchDescriptorFixtures.penAndTouch), .pen)
     }
 
+    /// A pen that declares its stylus under a Touch Screen collection must not
+    /// be taken for touch. Collection membership says where a field was
+    /// declared, not what the device is — and acting on that verdict would take
+    /// a working tablet away from the only driver it has.
+    func testPenUnderTouchScreenIsNotTouchOnly() throws {
+        XCTAssertNotEqual(
+            try classify(TouchDescriptorFixtures.penUnderTouchScreen), .touchOnly)
+    }
+
+    /// The same descriptor states the rule positively: touch requires evidence
+    /// of more than one contact, not merely a touch collection.
+    func testTouchOnlyRequiresMultiContactEvidence() throws {
+        let pen = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.penUnderTouchScreen)
+        let touch = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.precisionTouch10Finger)
+
+        XCTAssertFalse(PrecisionTouchLayout.derive(from: pen).contains { $0.isMultiContact })
+        XCTAssertTrue(PrecisionTouchLayout.derive(from: touch).contains { $0.isMultiContact })
+    }
+
     /// An opaque vendor descriptor with no X/Y at all yields no information —
     /// never a `.touchOnly` verdict, which the router would act on.
     func testOpaqueInterfaceIsUndetermined() throws {

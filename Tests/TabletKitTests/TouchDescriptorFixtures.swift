@@ -113,4 +113,16 @@ enum TouchDescriptorFixtures {
     static let opaqueVendor: String = [
         "060cff0900a10185107508150026ff00951f09008102c0",
     ].joined()
+
+    /// A **pen** digitizer that declares its stylus under a Touch Screen
+    /// application collection: Tip Switch, In Range, absolute X/Y, and Tip
+    /// Pressure, with no contact identifier and no contact count.
+    ///
+    /// Cheap and generic tablets really do this. It is the false positive that
+    /// a collection-membership test alone produces, and acting on that verdict
+    /// would withhold the pen driver from a device that has no other one.
+    static let penUnderTouchScreen: String = [
+        "050d0904a1018501094209321500250175019502810295068103050109300931",
+        "150026ff7f751095028102050d0930150026ff0f751095018102c0",
+    ].joined()
 }

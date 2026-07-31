@@ -95,6 +95,24 @@ public struct PrecisionTouchLayout: Equatable {
     /// Declared logical maximum of the Y axis, in device touch units.
     public let logicalMaxY: Int
 
+    /// Whether this report carries evidence of *multiple* contacts, rather than
+    /// merely sitting inside a touch collection.
+    ///
+    /// Being under a Touch Screen collection is not enough to conclude a device
+    /// is a touch digitizer: pen tablets exist that declare their stylus there,
+    /// with an absolute X/Y, a Tip Switch and Tip Pressure but no contact
+    /// tracking at all. Those are pens, and treating them as touch would take a
+    /// working device away from its driver.
+    ///
+    /// Real multitouch always shows at least one of these: more than one finger
+    /// slot, a Contact Count, or a per-slot Contact Identifier. A lone slot with
+    /// none of them is a single-pointer report whatever collection encloses it.
+    public var isMultiContact: Bool {
+        slots.count > 1
+            || contactCount != nil
+            || slots.contains { $0.contactID != nil }
+    }
+
     /// Derives every multitouch input report the descriptor declares, in
     /// report-ID order.
     ///

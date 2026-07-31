@@ -22,7 +22,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   a Digitizer Touch Screen or Touch Pad collection. Usages alone cannot tell pen
   from touch (both declare Generic Desktop X/Y and a Tip Switch); the enclosing
   application collection can. Fails open as `.undetermined` when no descriptor
-  is readable. Relative X/Y never counts as pen evidence — Windows Precision
+  is readable. A `.touchOnly` verdict requires evidence of more than one
+  contact — more than one finger slot, a contact count, or a per-slot
+  contact identifier — because some pen tablets declare their stylus
+  under a Touch Screen collection, and withholding the pen driver from
+  one of those would leave it with no driver at all. Relative X/Y never
+  counts as pen evidence — Windows Precision
   Touchpad devices must declare a legacy Mouse collection alongside their touch
   collection, and treating that as a pen would misclassify most touch hardware.
   Exists so hosts can avoid pointing a pen driver at a multitouch interface,

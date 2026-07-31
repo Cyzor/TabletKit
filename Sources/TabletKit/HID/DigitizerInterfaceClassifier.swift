@@ -39,15 +39,9 @@ public enum DigitizerInterfaceKind: Equatable {
 public func classifyDigitizerInterface(
     descriptor: DescriptorLayout
 ) -> DigitizerInterfaceKind {
-    var sawTouchX = false
-
     for report in descriptor.reports where report.direction == .input {
         for field in report.fields
         where field.extendedUsage == PrecisionTouchLayout.Usage.x && !field.isConstant {
-            let isTouch =
-                field.collectionPath.contains(PrecisionTouchLayout.Usage.touchScreenCollection)
-                || field.collectionPath.contains(PrecisionTouchLayout.Usage.touchPadCollection)
-
             // Relative X never indicates a pen. Windows Precision Touchpad
             // devices are required to declare a legacy Mouse collection
             // (Generic Desktop Mouse → relative X/Y) for boot compatibility
@@ -57,14 +51,26 @@ public func classifyDigitizerInterface(
             // digitizer's X/Y are absolute by definition.
             if field.isRelative { continue }
 
-            // One absolute non-touch X is enough: the interface has something a
-            // pen driver can legitimately read, so classification stops here.
+            let isTouch =
+                field.collectionPath.contains(PrecisionTouchLayout.Usage.touchScreenCollection)
+                || field.collectionPath.contains(PrecisionTouchLayout.Usage.touchPadCollection)
+
+            // One absolute X outside any touch collection is enough: the
+            // interface has something a pen driver can legitimately read, so
+            // classification stops here.
             if !isTouch { return .pen }
-            sawTouchX = true
         }
     }
 
-    return sawTouchX ? .touchOnly : .undetermined
+    // Every absolute X sits in a touch collection — necessary for `.touchOnly`,
+    // but not sufficient. The collection says where a field was declared, not
+    // what the device is, and some pen tablets declare a stylus under Touch
+    // Screen. Withholding the pen driver from one of those would silently take
+    // a working device away from its only driver, so the verdict additionally
+    // requires a report that actually tracks multiple contacts.
+    let multiContact = PrecisionTouchLayout.derive(from: descriptor)
+        .contains { $0.isMultiContact }
+    return multiContact ? .touchOnly : .undetermined
 }
 
 /// Classifies a live device by reading and parsing its report descriptor.
