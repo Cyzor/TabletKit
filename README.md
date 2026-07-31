@@ -1,6 +1,6 @@
 # TabletKit
 
-**TabletKit** is a Human Interface Device (HID) decoder layer for drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, button, and touch events  an app can act on.  It contains no AppKit or event-injection plumbing; its only system dependency is IOKit HID, isolated in `HIDDeviceSupport.swift`.
+**TabletKit** is a Human Interface Device (HID) decoder layer for drawing tablets on macOS. It turns raw USB and Bluetooth report bytes into structured pen, button, and touch events an app can act on. It contains no AppKit or event-injection plumbing; its only system dependency is IOKit HID, isolated in `HIDDeviceSupport.swift`.
 
 TabletKit serves as the decoder for [**MockTab**](https://mocktab.org), an open-source macOS driver, mainly for older Wacom tablets ([source](https://github.com/Cyzor/tablet-driver)).
 

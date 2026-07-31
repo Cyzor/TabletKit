@@ -2,8 +2,6 @@
 
 This guide describes how to turn MockTab discovery diagnostics into a working registry entry for a specific tablet model. It assumes MockTab already supports the tablet’s protocol family but does not yet recognize this exact product ID.
 
-The guide address how to identify a tablet, interpret its captured data, update the registry and decoder configuration, and verify the result on real hardware.
-
 ## How MockTab works
 
 MockTab operates as a stack of steps:
