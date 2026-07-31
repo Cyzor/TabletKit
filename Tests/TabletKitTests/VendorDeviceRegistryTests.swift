@@ -149,4 +149,22 @@ final class VendorDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(profile?.activeHeightMM, 194)
         XCTAssertTrue(profile?.isPenDisplay == true)
     }
+
+    // MARK: - transportPriority
+
+    func testWiredPuckOutranksWirelessDongle() {
+        let wired = VendorDeviceRegistry.transportPriority(forRawProductID: 0x5202)
+        let dongle = VendorDeviceRegistry.transportPriority(forRawProductID: 0x5203)
+        XCTAssertGreaterThan(wired, dongle)
+    }
+
+    func testDisplayRelayedSharesWirelessDonglePriority() {
+        let dongle = VendorDeviceRegistry.transportPriority(forRawProductID: 0x5203)
+        let relayed = VendorDeviceRegistry.transportPriority(forRawProductID: 0x520D)
+        XCTAssertEqual(dongle, relayed)
+    }
+
+    func testUnrankedRawProductIDReturnsZero() {
+        XCTAssertEqual(VendorDeviceRegistry.transportPriority(forRawProductID: 0x0316), 0)
+    }
 }

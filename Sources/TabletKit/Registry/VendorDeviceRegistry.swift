@@ -144,6 +144,24 @@ public enum VendorDeviceRegistry {
         productID == 0x5203 ? 0x5202 : productID
     }
 
+    /// Transport priority among simultaneously-connected raw PIDs that fold
+    /// to the same `canonicalProductID` — currently just the Quick Keys
+    /// puck's three faces. Higher wins. Policy (2026-07-31): USB wins, so a
+    /// direct-wired puck always owns the live context over the wireless
+    /// dongle. 0x520D is the Pen Display tunneling the dongle's own traffic
+    /// (not a third physical path), so it ranks alongside the dongle rather
+    /// than above or below it — the two are not expected to compete in
+    /// practice, but a decidable order avoids surprises if they ever do.
+    /// Unranked PIDs return 0, so a lone connection is always installed and
+    /// promoted regardless of what this returns.
+    public static func transportPriority(forRawProductID rawProductID: Int) -> Int {
+        switch rawProductID {
+        case 0x5202: return 2  // wired puck
+        case 0x5203, 0x520D: return 1  // wireless dongle / display-relayed
+        default: return 0
+        }
+    }
+
     // MARK: - Registry
 
     public static let knownDevices: [VendorDeviceProfile] = [
