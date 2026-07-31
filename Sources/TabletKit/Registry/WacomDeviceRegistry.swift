@@ -2127,6 +2127,42 @@ public enum WacomDeviceRegistry {
         .init(
             // 18-button pad accessory for the Cintiq 27QHD line. No digitizer;
             // pad decode not yet supported.
+            //
+            // Groundwork for whoever implements it. The descriptor is opaque
+            // (31 bytes, vendor page 0xFF0C, usage 0x00 throughout), so this
+            // structure comes from correlating per-action recordings — press
+            // one control, see which bit moves — published in the MIT-licensed
+            // `whot/wacom-recordings`. Facts recorded here rather than fixtures
+            // committed, per the rule that a third-party capture's licence does
+            // not relicense Wacom's own report format.
+            //
+            // Input report 0x11, 32 bytes. Bytes [0..8] hold a report header,
+            // a device serial and a battery percentage, all steady during use.
+            // The controls live in four bytes:
+            //
+            //   [9]  bit 0        ring centre button
+            //        bits 1,4,5   the keys arranged around the ring
+            //        bits 6,7     express keys
+            //        bits 2,3     never exercised in the recordings; presumed
+            //                     the remaining two keys, see the count below
+            //   [10] bits 0..7    eight express keys
+            //   [11] bits 0,1     two express keys
+            //        bit 6        set only while the ring is turning
+            //        bit 7        set only on button events
+            //   [12]             ring position, 70 distinct values observed
+            //
+            // Eight bits in [9], eight in [10] and two in [11] give exactly the
+            // 18 controls `buttonCount` already claims from the kernel — two
+            // independent sources agreeing, which is the main reason to trust
+            // the two unexercised bits.
+            //
+            // What the recordings cannot settle, and hardware would: which bit
+            // corresponds to which key *by position on the device*, and whether
+            // the ring really spans 0...71 (70 values were seen, but an opaque
+            // descriptor declares no maximum to check against). Both matter for
+            // a binding UI more than for decode. Bytes [11] bits 6,7 are read
+            // here as an event-source pair; that is inference from five
+            // recordings, not a documented meaning.
             productID: 0x0331, name: "ExpressKey Remote (EKR-100)",  // ⚠ name-only
             parser: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 18, hasTouchRing: true, hasEraser: false,

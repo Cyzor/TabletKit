@@ -9,6 +9,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- ExpressKey Remote (0x0331) report structure recorded on its registry
+  row: which bits in report 0x11 carry the eighteen controls, the ring
+  position byte, and what per-action recordings could not settle. The
+  row stays name-only — this is groundwork for an implementer with the
+  hardware, not a decoder.
+
 - `RepeatingReportStructureDetector` — finds repeating byte-stride
   structure in a report using only per-position variance statistics, no
   descriptor required. Exists for reports the descriptor-driven tools
