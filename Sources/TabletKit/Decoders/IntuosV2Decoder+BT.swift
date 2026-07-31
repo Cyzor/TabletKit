@@ -7,9 +7,21 @@
 // the shared per-frame helper next to the only callers that use it.
 //
 // Covers:
-//   • 0x80 / 361-byte container — PTH-660 BT Classic (single frame + pad + battery)
-//   • 0x80 / 99-byte container  — PTH-860 BT Classic (7 packed pen frames)
+//   • 0x80 / 361-byte container — the same 7 packed pen frames as the
+//     99-byte container ([1...98]), plus touch woven in at offset 109 for any
+//     device with `hasFingerTouch`, plus a pad sub-report and battery byte
+//     starting at 281
+//   • 0x80 / 99-byte container  — 7 packed pen frames only, nothing past [99]
 //   • 0x80 RF wireless status   — ACK-40401 dongle
+//
+// Length, not device model, decides which container a report is: see the
+// dispatch in `IntuosV2Decoder.decode`'s `case 0x80`. An earlier version of
+// this comment attributed the two lengths to PTH-660 vs. PTH-860 specifically
+// and described the 361-byte container as a single pen frame — both wrong,
+// caught by a real PTH-860 (0x0361) capture emitting the 361-byte container
+// with touch. The dispatch code's own comment already had it right
+// ("PTH-660 BT 0x0360, PTH-860 BT 0x0361" both gated on `hasFingerTouch`,
+// both landing on this container when touch is present).
 //
 // USB and BLE paths remain in `IntuosV2Decoder.swift`.
 
@@ -65,7 +77,9 @@ extension IntuosV2Decoder {
 
         var results: [DecodeResult] = []
 
-        // PTH-660 BT 361-byte report layout (0-indexed bytes):
+        // 361-byte BT report layout (0-indexed bytes) — see the file header
+        // for how this relates to the 99-byte container and which devices
+        // send which:
         // [0] = 0x80 (report ID)
         // [1..98] = up to 7 × 14-byte pen frames (oldest first)
         // [99] = would-be frame 7 flags byte — always 0x00, acts as sentinel
@@ -342,7 +356,7 @@ extension IntuosV2Decoder {
     //   [0] = bit7 frame-valid, bits 0..6 = total contact count for the set
     //         (only the first valid frame in a set carries a non-zero count;
     //         the kernel state-machines this across frames to support >5
-    //         contacts.  PTH-660/660/860 max 5 fingers, so for V1 we treat
+    //         contacts.  PTH-460/660/860 max 5 fingers, so for V1 we treat
     //         each frame independently and ignore count==0 frames.)
     //   [1..]: up to 5 contacts, 8 bytes each
     //
