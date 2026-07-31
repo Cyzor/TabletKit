@@ -125,4 +125,22 @@ enum TouchDescriptorFixtures {
         "050d0904a1018501094209321500250175019502810295068103050109300931",
         "150026ff7f751095028102050d0930150026ff0f751095018102c0",
     ].joined()
+
+    /// A pen report on Wacom's vendor page (0xFF0D) using the *standard*
+    /// Digitizer usage numbers for every field — modeled on a real Cintiq
+    /// Pro 24 (DTH-2420) pen report, confirmed field-for-field against that
+    /// device's own descriptor via `descriptor-dump` before this was written.
+    /// Structural facts, not vendored bytes, per the independently-derived
+    /// rule: tip switch/barrel/secondary barrel/eraser/invert/in-range as six
+    /// status bits, vendor-usage 24-bit X/Y, standard-usage 16-bit pressure,
+    /// 8-bit signed tilt X/Y, 16-bit signed twist, vendor-usage 8-bit hover
+    /// distance.
+    static let vendorPagePen: String = [
+        "060dff0902a10185100942150025017501950181020944150025017501950181",
+        "02095a15002501750195018102094515002501750195018102093c1500250175",
+        "01950181020932150025017501950181027501950281030a3001150027469b01",
+        "007518950181020a3101150027b6e800007518950181020930150026ff1f7510",
+        "95018102093d15c0253f750895018102093e15c0253f7508950181020941167c",
+        "fc2683037510950181020a32011500253f750895018102c0",
+    ].joined()
 }

@@ -9,6 +9,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `GenericPenLayout` / `GenericPenDecoder` — a descriptor-driven pen
+  digitizer decoder, the pen counterpart to `PrecisionTouchLayout`.
+  Reads tip switch, in-range, barrel/secondary barrel, eraser, invert,
+  X/Y, tip pressure, tilt, twist, and hover distance from a device's own
+  report descriptor rather than a hardcoded per-family byte table.
+  Modern Wacom hardware declares these on its vendor page using the
+  standard Digitizer usage numbers `DigitizerUsage` recognizes —
+  confirmed field-for-field against a real Cintiq Pro 24 (DTH-2420)
+  descriptor, both pen report variants it declares.
+
 - `DescriptorLayout.modeSwitchFeatureReportID()` and the
   `modeSwitchUsages` list behind it — the report ID a device declares
   for switching into full reporting, vendor control preferred over the
