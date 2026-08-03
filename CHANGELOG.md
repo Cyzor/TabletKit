@@ -68,6 +68,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on three Cintiq pen-display registry rows. Cintiq
+  24HD Touch (0x00F8) had a wrong active area (533×330mm) against its own
+  confirmed-live sibling (Cintiq 24HD, 0x00F4) sharing the identical panel
+  and maxX/maxY — corrected to match. Cintiq 27QHD and 27QHD Touch (0x032A,
+  0x032B) had no activeWidthMM/Height at all — added, from Wacom's own
+  DTK-2700/DTH-2700 Important Product Information booklet. Also checked but
+  deliberately left unchanged: Cintiq Pro 24 pen-only (0x037C) and Cintiq Pro
+  32 (0x0352) each disagree with their manual's stated *display* active area
+  by several mm, but one already carries a real captured logical-maximum
+  value and the other a libwacom-sourced one — a display's active area and a
+  digitizer's logical maximum aren't guaranteed to be the same fact, so
+  neither was overwritten on a manual's word alone.
 - Active-area height on nine current-generation Wacom One/Intuos/Bamboo CTL
   and CTH registry rows (CTL-4100/4100WL ×4, CTL-472, CTL-480, CTH-480,
   CTL-490, CTH-490). Each carried a stale 102mm height against a maxY that

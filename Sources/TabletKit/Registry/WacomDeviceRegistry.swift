@@ -1049,12 +1049,20 @@ public enum WacomDeviceRegistry {
             confidence: .verified,
             activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
+            // activeWidthMM/Height corrected 533/330→519.0/324.0 to match
+            // 0x00F4 (Cintiq 24HD) exactly — same maxX/maxY, same physical
+            // panel, and Wacom's own 24HD/24HD touch IPI booklets both state
+            // an identical 518.4×324.0mm pen active area for the two variants
+            // (archived at Notes/Scratch/manuals/IPI-0x00F4.pdf and
+            // IPI-0x00F8.pdf, gitignored). Matched to 0x00F4's confirmed-live
+            // value rather than the manual's own rounder figure — that row
+            // outranks this one. Confirmed 2026-08-03.
             productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ⚠ estimated
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, activeWidthMM: 533, activeHeightMM: 330),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
@@ -2150,21 +2158,27 @@ public enum WacomDeviceRegistry {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
         .init(
             // 27QHD uses the ExpressKey Remote (0x0331) instead of bezel keys.
+            // activeWidthMM/Height added — this row had none. 596.7×335.6mm
+            // per Wacom's DTK-2700/DTH-2700 Important Product Information
+            // booklet (archived at Notes/Scratch/manuals/IPI-0x032A.pdf,
+            // gitignored), same figure for both the pen and touch active
+            // area. Confirmed 2026-08-03.
             productID: 0x032A, name: "Cintiq 27QHD (DTK-2700)",  // ⚠ from kernel (WACOM_27QHD type)
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface of the touch model; finger touch arrives on the
             // separate 0x032C interface (layout unconfirmed — see name-only
-            // entry below).
+            // entry below). activeWidthMM/Height added — same source and
+            // figure as 0x032A above. Confirmed 2026-08-03.
             productID: 0x032B, name: "Cintiq 27QHD Touch (DTH-2700)",  // ⚠ from kernel
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface; finger touch arrives on the separate 0x0335
             // interface (layout unconfirmed).
