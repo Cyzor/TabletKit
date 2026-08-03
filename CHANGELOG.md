@@ -68,6 +68,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area height on nine current-generation Wacom One/Intuos/Bamboo CTL
+  and CTH registry rows (CTL-4100/4100WL ×4, CTL-472, CTL-480, CTH-480,
+  CTL-490, CTH-490). Each carried a stale 102mm height against a maxY that
+  already meant 95mm — confirmed against Wacom's Important Product
+  Information booklets for each cluster (CTL-4100 family, One by Wacom
+  CTL-472/672, Intuos CTL-480/680 and CTH-480/680, Intuos Pen/Pen&Touch
+  CTL-490/690 and CTH-490/690). Widths, and every other row already checked
+  in this pass (CTL-6100 family, CTL-672, CTL-680, CTL-690, CTH-690,
+  CTL-671), were already correct.
 - Active-area dimensions on four Intuos5/Intuos Pro first-gen registry rows
   (PTH-450, PTH-650, PTH-850, PTH-451). Confirmed against Wacom's own
   Important Product Information booklet for the line and OpenTabletDriver's

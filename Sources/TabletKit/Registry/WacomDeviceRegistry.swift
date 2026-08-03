@@ -1222,17 +1222,27 @@ public enum WacomDeviceRegistry {
             // successors (0x033B/033C/033D/033E) genuinely are .intuosV1; the split is
             // real and matches the kernel's. Express keys ride the 64-byte BPT3
             // container, decoded by BPT3ContainerDecoder for both generations.
+            // activeHeightMM corrected 102→95 — confirmed against Wacom's
+            // Intuos (CTL-480/680), Intuos touch (CTH-480/680) Important
+            // Product Information booklet (archived at
+            // Notes/Scratch/manuals/IPI-0x0323.pdf, gitignored): "152.0 x
+            // 95.0 mm". Width was already right. Confirmed 2026-08-03.
             productID: 0x0302, name: "Wacom CTH-480",  // ⚠ from OTD
             parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // activeHeightMM corrected 102→95 — confirmed against Wacom's
+            // Intuos Pen (CTL-490/690), Intuos Pen & Touch (CTH-490/690)
+            // Important Product Information booklet (archived at
+            // Notes/Scratch/manuals/IPI-0x033b.pdf, gitignored): "152.0 x
+            // 95.0 mm". Width was already right. Confirmed 2026-08-03.
             productID: 0x033C, name: "Wacom CTH-490",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             productID: 0x00D3, name: "Wacom CTH-661",  // ⚠ from OTD
             parser: .intuosV1, maxX: 21648, maxY: 13700, maxPressure: 1023,
@@ -1292,25 +1302,34 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // activeHeightMM corrected 102→95 — confirmed against Wacom's One
+            // by Wacom (CTL-472/672) Important Product Information booklet
+            // (archived at Notes/Scratch/manuals/IPI-0x037a.pdf, gitignored).
+            // 9500÷100=95, matching maxY exactly; width was already right.
+            // Confirmed 2026-08-03.
             productID: 0x037A, name: "Wacom CTL-472",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Parser corrected .intuosV1 → .bamboo 2026-07-29 — see the note on
             // 0x0302 (CTH-480) above.
+            // activeHeightMM corrected 102→95 — same source and correction
+            // as 0x0302 (CTH-480) above. Confirmed 2026-08-03.
             productID: 0x030E, name: "Wacom CTL-480",  // ⚠ from OTD
             parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // activeHeightMM corrected 102→95 — same source and correction
+            // as 0x033C (CTH-490) above. Confirmed 2026-08-03.
             productID: 0x033B, name: "Wacom CTL-490",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Kernel wacom_features_0x301 names this "Bamboo One M" (BAMBOO_PEN
             // family) — parser switched from .intuosV1 to .bamboo to match, and
@@ -1340,26 +1359,35 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
+            // activeHeightMM corrected 102→95 — confirmed against Wacom's
+            // Intuos (CTL-4100 family) Important Product Information booklet
+            // (archived at Notes/Scratch/manuals/IPI-0x0374.pdf, gitignored —
+            // one document covers CTL-4100/4100WL/6100/6100WL). 9500÷100=95,
+            // matching maxY and the manual's "152 x 95 mm" exactly; width was
+            // already right. Confirmed 2026-08-03.
             productID: 0x0374, name: "Wacom CTL-4100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 102),
+            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0376, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0377, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x03C5, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
         .init(
             productID: 0x0375, name: "Wacom CTL-6100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
