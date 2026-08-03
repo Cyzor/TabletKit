@@ -68,6 +68,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on twelve Intuos4/Bamboo-family registry rows
+  (0x00B8/B9/BA/BB, 0x00D1/D2/D6/D7/D9/DA/DC/DD/DE, 0x0300) didn't match
+  their own already-correct maxX/maxY — the mm fields were stale or
+  copy-paste estimates, some off by close to 10%. Feeds real scaling math
+  (`DisplayMapper`'s relative-mode cursor speed) and the active-area diagram,
+  not just display text. Corrected against Wacom's own Intuos4 and Bamboo
+  460-family User's Manuals. Two touch-only rows (CTT-460, CTT-460A) were
+  deliberately left alone — their true touch coordinate space versus the
+  pen-chassis mm they currently borrow is still an open question, not
+  something a manual cross-check alone can settle.
 - Coordinate ranges for every Intuos 1 and Intuos 2 registry row. Each carried
   a plain 16-bit range, but `IntuosV1Decoder` appends a 1-bit fractional
   extension to X and Y, so the values it emits span twice that. Every one of

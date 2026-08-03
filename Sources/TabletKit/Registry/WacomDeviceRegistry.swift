@@ -672,30 +672,44 @@ public enum WacomDeviceRegistry {
 
         // ── Intuos4 (PTK-xxx, 2009–2012) — intuosV1 parser ───────────────────
         // OLED display on each express key; 2048-level pressure (11-bit).
+        //
+        // Unlike the Intuos 1/2 family, maxX/maxY here were already correct —
+        // Intuos4's own native resolution (200 lpmm) is exactly double the
+        // classic 100 lpmm, so the decoder's `<<1 | fractional bit` folds in
+        // cleanly and these rows already carried the right doubled values,
+        // confirmed against OpenTabletDriver's PTK-*.json (exact match) and
+        // Wacom's own Intuos4 User's Manual (technical specifications table,
+        // archived at Notes/Scratch/manuals/Intuos4-UserManual.pdf, gitignored).
+        // What was wrong instead: activeWidthMM/activeHeightMM on four of the
+        // five rows didn't match their own maxX/maxY (e.g. PTK-640 claimed
+        // 152mm tall against a maxY that means 140mm) — a self-consistency
+        // bug independent of the doubling question, caught by cross-checking
+        // against the manual's active-area table. PTK-540WL was already
+        // self-consistent and needed no change. Confirmed 2026-08-03.
         .init(
-            productID: 0x00B8, name: "Intuos4 S (PTK-440)",  // ⚠ estimated
+            productID: 0x00B8, name: "Intuos4 S (PTK-440)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
-            productID: 0x00B9, name: "Intuos4 M (PTK-640)",  // ⚠ estimated
+            productID: 0x00B9, name: "Intuos4 M (PTK-640)",
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBA (65024×40640).
             productID: 0x00BA, name: "Intuos4 L (PTK-840)",  // ⚠ from kernel
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 330, activeHeightMM: 203),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 325, activeHeightMM: 203),
         .init(
-            productID: 0x00BB, name: "Intuos4 XL (PTK-1240)",  // ⚠ estimated
+            productID: 0x00BB, name: "Intuos4 XL (PTK-1240)",
             parser: .intuosV1, maxX: 97536, maxY: 60960, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 483, activeHeightMM: 305),
+            confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBC (40640×25400).
             productID: 0x00BC, name: "Intuos4 WL (PTK-540WL)",  // ⚠ from kernel
@@ -854,15 +868,30 @@ public enum WacomDeviceRegistry {
             productID: 0x00D0, name: "Bamboo Touch (CTT-460)",  // ⚠ estimated
             // maxPressure 0 is intentional: CTT-460 is finger-touch only, no
             // pen. (Kernel's wacom_features_0xD0 lists the family's pen value.)
+            // Left as-is 2026-08-03: Wacom's Bamboo 460 User's Manual states
+            // this model's true touch active area as 125.0×85.0mm — neither
+            // this row's 127/76 nor the pen-chassis 147.2/92.0mm the sibling
+            // CTH-460 (0x00D1) uses. maxX/maxY (14720/9200) match the pen
+            // chassis, not 125×85, which is odd for a touch-only variant but
+            // not necessarily wrong — the physical touch sensor and the
+            // coordinate space the report actually transmits in aren't
+            // guaranteed to be the same number, and nothing here confirms
+            // which. Left alone rather than "fixed" toward either guess.
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, activeWidthMM: 127, activeHeightMM: 76),
         .init(
-            productID: 0x00D1, name: "Bamboo Pen & Touch (CTH-460)",  // ⚠ estimated
+            // Pen active area 147.2×92.0mm confirmed against Wacom's Bamboo
+            // Touch/Pen/Pen&Touch (CTT/CTL/CTH-460) User's Manual — matches
+            // this row's own maxX/maxY (14720/9200 at the family's 100 lpmm)
+            // exactly; the 152/102 this carried before didn't match either.
+            // Archived at Notes/Scratch/manuals/Bamboo-CTT-CTH-CTL-460-UserManual.pdf
+            // (gitignored). Confirmed 2026-08-03.
+            productID: 0x00D1, name: "Bamboo Pen & Touch (CTH-460)",
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             // Identity confirmed 2026-07-21: user capture of a unit labeled
             // "Bamboo Pen CTL-460 / CTL-460/K" enumerating as PID 0x00D4;
@@ -882,23 +911,29 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 217, activeHeightMM: 137),
         .init(
+            // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
+            // manual cross-check. Confirmed 2026-08-03.
             productID: 0x00D6, name: "Bamboo Fun Pen & Touch (CTH-461)",  // ⚠ from kernel — kernel 0xD6 (BambooPT 2FG 4x5); previously misnamed CTL-460 (that's 0x00D4)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 152, activeHeightMM: 102),
+            activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
+            // manual cross-check. Confirmed 2026-08-03.
             productID: 0x00D7, name: "Bamboo Pen & Touch (small)",  // ⚠ from kernel — dims from kernel 0xD7 (BambooPT 2FG Small); name attribution uncertain
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 152, activeHeightMM: 102),
+            activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
+            // manual cross-check. Confirmed 2026-08-03.
             productID: 0x00DA, name: "Bamboo Pen & Touch SE (CTH-461SE)",  // ⚠ from kernel 0xDA (Bamboo 2FG 4x5 SE)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             productID: 0x00DB, name: "Bamboo Pen & Touch SE (CTH-661SE)",  // ⚠ from kernel — dims from kernel 0xDB (Bamboo 2FG 6x8 SE); name attribution uncertain
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
@@ -918,10 +953,17 @@ public enum WacomDeviceRegistry {
             // header comment says "no stylus; 16FG touch" despite Stylus=true in
             // the [Device] section — treated as touch-only (maxPressure 0) per
             // the descriptive comment, matching CTT-460 (0x00D9) above.
+            // activeWidthMM/Height corrected to match this row's own
+            // maxX/maxY at 100 lpmm (147.2×92.0mm) — the 152/102 it carried
+            // before matched neither that nor the manual's true CTT-460-class
+            // touch active area (125.0×85.0mm; see 0x00D0's note). Which of
+            // those this touch-only variant's coordinate space actually uses
+            // is still open — this only fixes the internal inconsistency.
+            // Confirmed 2026-08-03.
             productID: 0x00DC, name: "Bamboo Touch (CTT-470)",  // ⚠ from libwacom
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 102),
+            seizeUSB: false, activeWidthMM: 147, activeHeightMM: 92),
 
         // ── Cintiq pen-display line — cintiqV1 parser ────────────────────────
         // seizeUSB policy for cintiqV1 pen displays:
@@ -1111,17 +1153,25 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 102, activeHeightMM: 76),
         .init(
+            // mm matched to this row's own maxX/maxY (147.2×92.0mm chassis,
+            // same as 0x00D1/0x00D6/0x00D7/0x00DA) per the Bamboo 460 User's
+            // Manual — see 0x00D1's note. Confirmed 2026-08-03. Whether the
+            // .intuosV1 *parser* choice itself is right for this PID is a
+            // separate, unresolved question — see the SUSPECT DECODE note on
+            // the next entry below; not addressed by this mm-only pass.
             productID: 0x00D2, name: "Wacom CTH-461",  // ⚠ from OTD
             parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // Same mm correction and same open parser-family question as
+            // 0x00D2 above. Confirmed 2026-08-03.
             productID: 0x00DE, name: "Wacom CTH-470",  // ⚠ from OTD
             parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             // ⚠️ SUSPECT DECODE (2026-07-28): a real hid-recorder capture run through
             // .intuosV1 decodes to X/Y ≈130,600 regardless of this row's maxX/maxY —
@@ -1190,16 +1240,21 @@ public enum WacomDeviceRegistry {
 
         // ── Wacom One / Intuos (CTL) pen-only line ────────────────────────────
         .init(
+            // mm matched to this row's own maxX/maxY, same 147.2×92.0mm
+            // chassis as the CTH-460 group — see 0x00D1's note. Confirmed
+            // 2026-08-03; same open parser-family caveat as 0x00D2 applies.
             productID: 0x00DD, name: "Wacom CTL-470",  // ⚠ from OTD
             parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // Same correction and caveat as 0x00DD above; maxY 9225 vs 9200
+            // is within this family's normal per-PID rounding noise.
             productID: 0x0300, name: "Wacom CTL-471",  // ⚠ from kernel
             parser: .intuosV1, maxX: 14720, maxY: 9225, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 147, activeHeightMM: 92),
         .init(
             productID: 0x037A, name: "Wacom CTL-472",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
