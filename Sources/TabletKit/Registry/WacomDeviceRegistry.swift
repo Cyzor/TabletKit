@@ -537,58 +537,85 @@ public enum WacomDeviceRegistry {
 
         // ── Intuos 1 (1998–2002) — intuosV1 parser ───────────────────────────
         // 10-byte reports, BE16, 1024-level pressure (10-bit).
+        //
+        // Coordinate ranges across this whole family (and Intuos 2 below) are
+        // twice a plain BE16 read of the coordinate bytes, because
+        // IntuosV1Decoder.decodeUSBPen appends a 1-bit fractional extension
+        // from report[9] (`<<1 | fractional bit`). Originally hardware-confirmed
+        // only on the 6×8 (0x0021) 2026-08-03 — the halved value mapped only
+        // that tablet's top-left quadrant across the full screen — but every
+        // row's maxX/maxY/mm below is now cross-checked two ways:
+        //   1. Wacom's own Intuos (GD-series) User's Manual technical-
+        //      specifications table (active area in mm, 100 lpmm resolution),
+        //      independently reproducing maxX/maxY = width/height(mm) × 100 × 2.
+        //   2. OpenTabletDriver's GD-*.json / XD-*.json configs — a mature,
+        //      long-shipping driver with its own independently-written parser
+        //      (IntuosV1TabletReport.cs) that decodes X/Y/tilt with the exact
+        //      same bit formulas as ours, and declares the same MaxX/MaxY for
+        //      every PID in this family. Confirmed 2026-08-03.
+        // maxPressure stays 1023 (not OTD's 2046): decodeUSBPen right-shifts
+        // its combined 11-bit pressure field by 1 whenever spec.maxPressure
+        // <= 1023 (see the pen-path comment below), so the two are the same
+        // value on two different scales, not a disagreement.
         .init(
-            productID: 0x0020, name: "Intuos 4×5",  // ⚠ estimated
-            parser: .intuosV1, maxX: 12700, maxY: 10600, maxPressure: 1023,
+            productID: 0x0020, name: "Intuos 4×5",
+            parser: .intuosV1, maxX: 25400, maxY: 21200, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 127, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 127, activeHeightMM: 106),
         .init(
-            productID: 0x0021, name: "Intuos 6×8",  // ⚠ estimated
-            parser: .intuosV1, maxX: 20320, maxY: 16240, maxPressure: 1023,
+            productID: 0x0021, name: "Intuos 6×8",
+            parser: .intuosV1, maxX: 40640, maxY: 32480, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 152),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 162),
         .init(
-            productID: 0x0022, name: "Intuos 9×12",  // ⚠ estimated
-            parser: .intuosV1, maxX: 30480, maxY: 24060, maxPressure: 1023,
+            productID: 0x0022, name: "Intuos 9×12",
+            parser: .intuosV1, maxX: 60960, maxY: 48120, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 229),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 241),
         .init(
-            productID: 0x0023, name: "Intuos 12×12",  // ⚠ estimated; kernel maxY 31680
-            parser: .intuosV1, maxX: 30480, maxY: 31680, maxPressure: 1023,
+            productID: 0x0023, name: "Intuos 12×12",
+            parser: .intuosV1, maxX: 60960, maxY: 63360, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 305),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 317),
         .init(
-            productID: 0x0024, name: "Intuos 12×18",  // ⚠ estimated; kernel maxY 31680
-            parser: .intuosV1, maxX: 45720, maxY: 31680, maxPressure: 1023,
+            productID: 0x0024, name: "Intuos 12×18",
+            parser: .intuosV1, maxX: 91440, maxY: 63360, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 457, activeHeightMM: 305),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 457, activeHeightMM: 317),
 
         // ── Intuos 2 (2002–2004) — intuosV1 parser ───────────────────────────
+        // Same coordinate ranges and the same two-source confirmation as
+        // Intuos 1 above — see the family note there. Wacom's GD-series manual
+        // doesn't cover the XD-series PIDs directly, but OpenTabletDriver
+        // declares identical Width/Height/MaxX/MaxY for every XD-* row against
+        // its matching GD-* row, consistent with Intuos 1 and 2 sharing the
+        // same chassis and active area per size class.
         .init(
-            productID: 0x0041, name: "Intuos 2 (4×5)",  // ⚠ estimated
-            parser: .intuosV1, maxX: 12700, maxY: 10600, maxPressure: 1023,
+            productID: 0x0041, name: "Intuos 2 (4×5)",
+            parser: .intuosV1, maxX: 25400, maxY: 21200, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 127, activeHeightMM: 102),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 127, activeHeightMM: 106),
         .init(
-            productID: 0x0042, name: "Intuos 2 (6×8)",  // ⚠ estimated
-            parser: .intuosV1, maxX: 20320, maxY: 16240, maxPressure: 1023,
+            // Same physical 6×8 tablet as 0x0021 and 0x0047.
+            productID: 0x0042, name: "Intuos 2 (6×8)",
+            parser: .intuosV1, maxX: 40640, maxY: 32480, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 152),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 162),
         .init(
-            productID: 0x0043, name: "Intuos 2 (9×12)",  // ⚠ estimated
-            parser: .intuosV1, maxX: 30480, maxY: 24060, maxPressure: 1023,
+            productID: 0x0043, name: "Intuos 2 (9×12)",
+            parser: .intuosV1, maxX: 60960, maxY: 48120, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 229),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 241),
         .init(
-            productID: 0x0044, name: "Intuos 2 (12×12)",  // ⚠ estimated; kernel maxY 31680
-            parser: .intuosV1, maxX: 30480, maxY: 31680, maxPressure: 1023,
+            productID: 0x0044, name: "Intuos 2 (12×12)",
+            parser: .intuosV1, maxX: 60960, maxY: 63360, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 305),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 305, activeHeightMM: 317),
         .init(
-            productID: 0x0045, name: "Intuos 2 (12×18)",  // ⚠ estimated; kernel maxY 31680
-            parser: .intuosV1, maxX: 45720, maxY: 31680, maxPressure: 1023,
+            productID: 0x0045, name: "Intuos 2 (12×18)",
+            parser: .intuosV1, maxX: 91440, maxY: 63360, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 457, activeHeightMM: 305),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 457, activeHeightMM: 317),
 
         // ── Intuos3 (PTZ-xxx, 2003–2006) — intuos3 parser ───────────────────
         // Status byte layout differs from Intuos5: bit 6 (0x40) is proximity.
@@ -1967,10 +1994,12 @@ public enum WacomDeviceRegistry {
             seizeUSB: false),
         .init(
             productID: 0x0047, name: "Intuos 2 (6×8, alt)",  // ⚠ from kernel — second XD-0608-U PID
-            parser: .intuosV1, maxX: 20320, maxY: 16240, maxPressure: 1023,
+            // Same 6×8 active area as 0x0021 (GD-0608-U) — see the Intuos 1
+            // family note for why the coordinate range is doubled.
+            parser: .intuosV1, maxX: 40640, maxY: 32480, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 203, activeHeightMM: 152),
+            activeWidthMM: 203, activeHeightMM: 162),
         .init(
             productID: 0x0063, name: "Volito 2 (2×3)",  // ⚠ from kernel
             parser: .graphire, maxX: 3248, maxY: 2320, maxPressure: 511,

@@ -66,6 +66,22 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   where X/Y repeat once per finger and element values cannot be attributed to a
   contact.
 
+### Fixed
+
+- Coordinate ranges for every Intuos 1 and Intuos 2 registry row. Each carried
+  a plain 16-bit range, but `IntuosV1Decoder` appends a 1-bit fractional
+  extension to X and Y, so the values it emits span twice that. Every one of
+  these tablets mapped only its top-left quadrant across the full screen.
+  A field report and a capture confirmed the bug and its direction on a
+  GD-0608-U (0x0021); the corrected values across the whole family — X/Y and
+  active-area mm alike — are cross-checked against Wacom's own Intuos (GD)
+  User's Manual and against OpenTabletDriver's GD-*/XD-* configs, whose
+  independently-written parser decodes X/Y/tilt with the same bit formulas
+  ours does and declares the same maxima for every PID in the family. Three
+  rows (Intuos 4×5, 9×12, 12×12/12×18) also had an unrelated pre-existing
+  active-height error corrected (102/229/305 mm → 106/241/317 mm), found via
+  the same manual cross-check.
+
 ## [0.3.0] — 2026-07-22
 
 Xencelabs hardware support (display, Quick Keys, dongle), a device-agnostic
