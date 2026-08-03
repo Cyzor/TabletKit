@@ -68,6 +68,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on two Intuos3 (PTZ-xxx) registry rows, PTZ-1231W
+  and PTZ-431W. Coordinate ranges for the whole seven-model family were
+  already exact matches against OpenTabletDriver's independently-declared
+  values; only these two rows' mm fields disagreed with their own maxX/maxY.
+  Confirmed against Wacom's own Intuos3 User's Manual.
 - Active-area dimensions on twelve Intuos4/Bamboo-family registry rows
   (0x00B8/B9/BA/BB, 0x00D1/D2/D6/D7/D9/DA/DC/DD/DE, 0x0300) didn't match
   their own already-correct maxX/maxY — the mm fields were stale or

@@ -623,8 +623,19 @@ public enum WacomDeviceRegistry {
         // Two-stage feature init: [0x02,0x02] immediately, [0x04,0x00] after 150 ms.
         // PTZ-631W (0x00B5) confirmed live; remaining entries ⚠ estimated but
         // the two-stage init and proximity bit are common to the whole PTZ family.
+        //
+        // maxX/maxY confirmed 2026-08-03 for every row in this family: exact
+        // match against OpenTabletDriver's PTZ-*.json, and against Wacom's own
+        // Intuos3 User's Manual (technical specifications table — active area
+        // in mm at the family's 200 lpmm, archived at
+        // Notes/Scratch/manuals/Intuos3-UserManual.pdf, gitignored) once
+        // doubled for IntuosV1Decoder's fractional-bit extension, same as the
+        // Intuos1/2/4 families. maxPressure stays 1023 (not OTD's 2046) for
+        // the same reason as Intuos4 — see that family's note. Two rows
+        // (PTZ-1231W, PTZ-431W) had activeWidthMM/Height corrected to match;
+        // the rest were already right.
         .init(
-            productID: 0x00B0, name: "Intuos3 4×5 (PTZ-430)",  // model per libwacom/OTD; ⚠ dims estimated
+            productID: 0x00B0, name: "Intuos3 4×5 (PTZ-430)",  // dims confirmed 2026-08-03 — see family note
             parser: .intuos3, maxX: 25400, maxY: 20320, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
@@ -638,23 +649,25 @@ public enum WacomDeviceRegistry {
             confidence: .crossReferenced,
             activeWidthMM: 203, activeHeightMM: 152),
         .init(
-            productID: 0x00B2, name: "Intuos3 9×12 (PTZ-930)",  // ⚠ estimated
+            productID: 0x00B2, name: "Intuos3 9×12 (PTZ-930)",  // dims confirmed 2026-08-03 — see family note
             parser: .intuos3, maxX: 60960, maxY: 45720, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 305, activeHeightMM: 229),
         .init(
-            productID: 0x00B3, name: "Intuos3 12×12 (PTZ-1230)",  // model per libwacom/OTD; ⚠ dims estimated
+            productID: 0x00B3, name: "Intuos3 12×12 (PTZ-1230)",  // dims confirmed 2026-08-03 — see family note
             parser: .intuos3, maxX: 60960, maxY: 60960, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 305, activeHeightMM: 305),
         .init(
-            productID: 0x00B4, name: "Intuos3 12×19 (PTZ-1231W)",  // ⚠ estimated
+            // activeWidthMM corrected 483→488 (487.68mm) — see the family
+            // note at the top of this section.
+            productID: 0x00B4, name: "Intuos3 12×19 (PTZ-1231W)",
             parser: .intuos3, maxX: 97536, maxY: 60960, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
-            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 483, activeHeightMM: 305),
+            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 488, activeHeightMM: 305),
         .init(
             productID: 0x00B5, name: "Intuos3 WS (PTZ-631W)",  // ✓ confirmed live
             parser: .intuos3, maxX: 54204, maxY: 31750, maxPressure: 1023,
@@ -664,11 +677,13 @@ public enum WacomDeviceRegistry {
             confidence: .verified,
             activeWidthMM: 270.5, activeHeightMM: 158.5),
         .init(
-            productID: 0x00B7, name: "Intuos3 4×6 (PTZ-431W)",  // ⚠ estimated
+            // activeWidthMM/Height corrected 152/102→157/98 (157.48/98.425mm)
+            // — see the family note at the top of this section.
+            productID: 0x00B7, name: "Intuos3 4×6 (PTZ-431W)",
             parser: .intuos3, maxX: 31496, maxY: 19685, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
-            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 152, activeHeightMM: 102),
+            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], activeWidthMM: 157, activeHeightMM: 98),
 
         // ── Intuos4 (PTK-xxx, 2009–2012) — intuosV1 parser ───────────────────
         // OLED display on each express key; 2048-level pressure (11-bit).
