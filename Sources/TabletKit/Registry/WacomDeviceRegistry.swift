@@ -759,32 +759,53 @@ public enum WacomDeviceRegistry {
         // │ switched to IntuosV2 format and added Bluetooth support.              │
         // └──────────────────────────────────────────────────────────────────────────┘
         .init(
-            productID: 0x0026, name: "Intuos5 S (PTH-450)",  // ⚠ estimated
+            // Coordinates confirmed exact against OpenTabletDriver's PTH-450.json
+            // and against Wacom's Intuos5 Important Product Information booklet
+            // (archived at Notes/Scratch/manuals/IntuosPro-PTH-451-651-851-IPI.pdf,
+            // gitignored — shared across the whole Intuos5/Intuos5-Touch line).
+            // activeWidthMM/Height corrected to match (157.48×98.43mm).
+            // Confirmed 2026-08-03. NOT fixed here: this device is genuinely
+            // touch-capable per the kernel's Device IDs table and the manual's
+            // own "Multi-finger Touch: Supported" line, but this row carries
+            // no `hasFingerTouch` and MockTab has never decoded its touch
+            // report — a real coverage gap, not a spec question. Needs a
+            // capture (touch report ID + coordinate range), not a manual.
+            productID: 0x0026, name: "Intuos5 S (PTH-450)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
-            productID: 0x0027, name: "Intuos5 M (PTH-650)",  // ⚠ estimated
+            // Same confirmation and same untouched touch-capability gap as
+            // 0x0026 above. Confirmed 2026-08-03.
+            productID: 0x0027, name: "Intuos5 M (PTH-650)",
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
+            // Same confirmation and same untouched touch-capability gap as
+            // 0x0026 above; activeWidthMM corrected 330→325 to match
+            // (325.12mm). Confirmed 2026-08-03.
             productID: 0x0028, name: "Intuos5 L (PTH-850)",
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 330, activeHeightMM: 203),
+            confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203),
 
         // ── Intuos Pro first-gen (PTH-x51, 2013) — intuosV1 parser ───────────
         // Renamed from "Intuos5" to "Intuos Pro"; same HID format.
         .init(
-            productID: 0x0314, name: "Intuos Pro S (PTH-451)",  // ⚠ estimated
+            // mm corrected to 157.48×98.43mm — confirmed against Wacom's Intuos
+            // Pro (PTH-451/651/851) IPI booklet and OTD's PTH-451.json, same
+            // sources and same untouched touch-capability gap as 0x0026 above
+            // (this Pro-generation row lacks hasFingerTouch too). Confirmed
+            // 2026-08-03.
+            productID: 0x0314, name: "Intuos Pro S (PTH-451)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
             productID: 0x0316, name: "Intuos Pro M (PTH-651)",  // ⚠ estimated
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,

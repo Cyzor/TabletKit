@@ -68,6 +68,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on four Intuos5/Intuos Pro first-gen registry rows
+  (PTH-450, PTH-650, PTH-850, PTH-451). Confirmed against Wacom's own
+  Important Product Information booklet for the line and OpenTabletDriver's
+  configs. Also surfaced, but deliberately left unfixed: all four confirmed
+  touch-capable devices (PTH-450/650/850/451/651/851) carry no
+  `hasFingerTouch` in the registry, and MockTab has never decoded their touch
+  reports — a real coverage gap, not a spec question, and outside what a
+  manual can resolve on its own.
 - Active-area dimensions on two Intuos3 (PTZ-xxx) registry rows, PTZ-1231W
   and PTZ-431W. Coordinate ranges for the whole seven-model family were
   already exact matches against OpenTabletDriver's independently-declared
