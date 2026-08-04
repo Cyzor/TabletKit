@@ -6,6 +6,10 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV2 HID report format.
 ///
+/// "V2" names TabletKit's protocol generation, unrelated to `Intuos3Decoder`
+/// (Wacom's own "Intuos3" marketing generation, PTZ-xxx, an older and
+/// differently-shaped protocol).
+///
 /// Used by: PTH-460 (0x0392/0x03DC), PTH-660 (0x0357), PTH-860 (0x0358)
 /// and any future tablet using the 192-byte IntuosV2 report layout.
 ///

@@ -6,8 +6,14 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV1 HID report format.
 ///
-/// Used by: PTH-851 (0x0317), PTZ-631W (0x00B5), DTK-2400 (0x00F4),
-/// and any tablet using the 10-byte IntuosV1 report layout.
+/// "V1" names TabletKit's protocol generation, not Wacom's marketing
+/// generation — despite the name, Intuos3 hardware (PTZ-xxx) is handled
+/// by the separate `Intuos3Decoder`, not this one; see that file's header
+/// for the incompatible status-byte difference.
+///
+/// Used by: PTH-851 (0x0317), DTK-2400 (0x00F4), and any tablet using
+/// the 10-byte IntuosV1 report layout. (PTZ-631W is Intuos3 hardware —
+/// see `Intuos3Decoder`, not this file, despite the name similarity.)
 ///
 /// Report ID routing:
 ///   0x01  BLE HOGP pen report (23 bytes)  — Intuos Pro over Bluetooth LE

@@ -6,6 +6,10 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV3 HID report format.
 ///
+/// "V3" names TabletKit's protocol generation, unrelated to `Intuos3Decoder`
+/// (Wacom's own "Intuos3" marketing generation, PTZ-xxx, a much older and
+/// differently-shaped protocol) despite the adjacent number.
+///
 /// Used by: PTK-470 (0x03F5), PTK-670 (0x03F7), PTK-870 (0x03F9) — the
 /// current-generation Intuos Pro. Ported from OpenTabletDriver's
 /// `IntuosV3ReportParser` and the three associated report structs.

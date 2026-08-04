@@ -30,8 +30,10 @@ public enum ReportParser: String {
     case graphire
 
     /// IntuosV1 — Report ID 0x02/0x10, 10 bytes, BE16 coordinates.
-    /// Covers Intuos 1–5, Intuos3 (PTZ-xxx), Intuos4 (PTK-xxx),
-    /// Intuos5 (PTH-xxx first gen), and Cintiq pen-displays.
+    /// Covers Intuos 1–2, Intuos4 (PTK-xxx), Intuos5 (PTH-xxx first gen),
+    /// and Cintiq pen-displays. Despite the similar byte layout, Intuos3
+    /// (PTZ-xxx) is routed through the separate `.intuos3` case below —
+    /// its status-byte proximity bit is incompatible (see `Intuos3Decoder`).
     /// Tool-change packets: status `(& 0xFC) == 0xC0`.
     /// 10–12 bit pressure depending on generation.
     case intuosV1

@@ -6,6 +6,10 @@ import Foundation
 
 /// Decoder for the Wacom Intuos3 HID report format (PTZ-xxx, 2003–2006).
 ///
+/// Named for Wacom's marketing generation, not TabletKit's internal "V"
+/// numbering — unrelated to `IntuosV3Decoder`, which covers the much
+/// newer PTK-470/670/870 Intuos Pro generation.
+///
 /// Covers: PTZ-431, PTZ-631, PTZ-631W (0x00B5), PTZ-930, PTZ-1231, PTZ-1231W, PTZ-431W.
 ///
 /// **Differs from IntuosV1Decoder (PTH-851/Intuos5) in three ways:**
