@@ -15,7 +15,7 @@ TabletKit is an independent, community-built project. It is not affiliated with,
 | `Core/` | Vocabulary types every other folder speaks: `DecoderState`, `DecodeResult`, `TabletReportDecoder`, geometry/math. No I/O. |
 | `Decoders/` | One file (± transport extension) per report family, fixed-format and descriptor-driven alike. Pure structs, no IOKit. |
 | `HID/` | HID mechanics: descriptor parsing, usage tables, interface classification, and the single IOKit-touching file `HIDDeviceSupport.swift`. |
-| `Control/` | Host-to-device output protocols (payload builders), as opposed to decoding inbound reports. |
+| `Output/` | Host-to-device output protocols (payload builders), as opposed to decoding inbound reports. |
 | `Registry/` | Device data and lookup. Data-as-code, maintained via `tools/`. |
 | `Smoothing/` | Pure signal-conditioning math. |
 

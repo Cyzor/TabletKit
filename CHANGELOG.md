@@ -66,6 +66,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   where X/Y repeat once per finger and element values cannot be attributed to a
   contact.
 
+### Changed
+
+- `XencelabsControl` renamed to `XencelabsOutputProtocol` (moved from
+  `Control/` to `Output/`) — the old name read as ambiguous next to
+  the report decoders. `XencelabsControl` remains available as a
+  deprecated typealias.
+
 ### Fixed
 
 - Coordinate range and active area on the Bamboo Touch CTT-460 registry row

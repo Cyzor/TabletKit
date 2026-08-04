@@ -26,7 +26,7 @@ import Foundation
 /// Over direct USB the address is optional — it defaults to empty, and the
 /// captures show direct-USB firmware accepting the frames either way (address
 /// echoes appear in both addressed and unaddressed traffic).
-public enum XencelabsControl {
+public enum XencelabsOutputProtocol {
 
     /// OLED text field selectors (payload byte 2 of an 0xB1 write).
     public enum TextField: UInt8 {
@@ -289,3 +289,6 @@ public enum XencelabsControl {
         return a
     }
 }
+
+@available(*, deprecated, renamed: "XencelabsOutputProtocol")
+public typealias XencelabsControl = XencelabsOutputProtocol
