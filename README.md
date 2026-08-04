@@ -118,14 +118,17 @@ The registry's `parser` field tells you which decoder to instantiate:
 | `ReportParser` | Decoder | Covers |
 |---|---|---|
 | `.intuosV2` | `IntuosV2Decoder` | Intuos Pro gen 2 (PTH-460/660/860) |
-| `.intuosV1` | `IntuosV1Decoder` | Intuos 1–5, Intuos4 (PTK), Intuos5 first-gen |
-| `.intuos3` | `Intuos3Decoder` | Intuos3 (PTZ-xxx) |
+| `.intuosV1` | `IntuosV1Decoder` | Intuos 1–2, Intuos4 (PTK), Intuos5 first-gen, Cintiq pen-displays |
+| `.intuosV3` | `IntuosV3Decoder` | Intuos Pro current-gen (PTK-470/670/870) — experimental |
+| `.intuos3` | `Intuos3Decoder` | Intuos3 (PTZ-xxx, 2003–2006) |
 | `.cintiqV1` | `CintiqV1Decoder` | Cintiq 24HD, 22HD, 13HD, older pen displays |
 | `.bamboo` | `BambooDecoder` | Bamboo Pen & Touch (CTL/CTH) — experimental |
 | `.graphire` | `GraphireDecoder` | Graphire 2–4, Volito — experimental |
 | `.dtus` | `DTUSDecoder` | DTK-1651, DTU-1031/1031X/1141 — experimental |
 | `.dtu` | `DTUDecoder` | DTU-1631, DTU-2231 — experimental |
 | `.xencelabs` | `XencelabsDecoder` | Xencelabs Pen Display 24 and Quick Keys puck confirmed on hardware (wired and wireless dongle); Pen Tablet Medium/Small share the protocol but are hardware-unverified |
+
+**Naming note:** `IntuosV1`/`V2`/`V3` name TabletKit's own protocol generations, not Wacom's marketing generations — `.intuosV1` covers Intuos5 hardware, for instance. `Intuos3Decoder` (no "V") is unrelated to `IntuosV3Decoder`: it exists specifically because real Intuos3 (PTZ-xxx) hardware uses an incompatible status-byte layout despite sharing IntuosV1's report shape. Don't infer a hardware generation from the "V" number.
 
 `WacomDeviceRegistry` covers Wacom devices. `VendorDeviceRegistry` covers other vendors; use `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` to look those up.
 
