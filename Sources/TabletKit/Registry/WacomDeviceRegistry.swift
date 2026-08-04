@@ -418,25 +418,38 @@ public enum WacomDeviceRegistry {
             parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false),
+        // Original Graphire (0x0004/0x0010) and Graphire 2/3/4 4×5 rows below
+        // share one active area: 127.6×92.8mm per Wacom's original Graphire
+        // manual (ET-0405-R/U) and the Graphire4 manual (CTE-440), archived
+        // at Notes/Scratch/manuals/GraphireManual.pdf and G4Manual.pdf
+        // (gitignored). maxX/maxY (10206/10208, 7422/7424) were NOT changed
+        // — they already match OpenTabletDriver's ET-0405-U.json exactly,
+        // which is real hardware-measured data. Note this contradicts the
+        // manuals' own printed "coordinate resolution" figure (40 lpmm, which
+        // would give 5104/3712, not ~10208/7424) — the manual's resolution
+        // spec isn't the same thing as the raw wire units the decoder emits,
+        // confirmed by checking OTD before trusting the manual's arithmetic.
+        // Only activeHeightMM (102→93, a stale value unrelated to the above)
+        // is corrected here. Confirmed 2026-08-03.
         .init(
             productID: 0x0004, name: "Graphire",
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false),
+            seizeUSB: false, activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0010, name: "Graphire",  // cross-referenced: linuxwacom + OTD
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire-usb.tablet (Width=127, Height=102)
             seizeUSB: false, confidence: .crossReferenced,
-            activeWidthMM: 127, activeHeightMM: 102),
+            activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0011, name: "Graphire 2 (4×5)",  // ⚠ estimated; kernel 0x11 = Graphire2 4×5
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire2-4x5.tablet (Width=127, Height=102)
             seizeUSB: false,
-            activeWidthMM: 127, activeHeightMM: 102),
+            activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0012, name: "Graphire 2 (5×7)",  // ⚠ estimated; kernel 0x12 = Graphire2 5×7
             parser: .graphire, maxX: 13918, maxY: 10206, maxPressure: 511,
@@ -449,13 +462,17 @@ public enum WacomDeviceRegistry {
             // dimensions: libwacom wacom-graphire3-4x5.tablet (Width=127, Height=102)
             seizeUSB: false,
             confidence: .crossReferenced,
-            activeWidthMM: 127, activeHeightMM: 102),
+            activeWidthMM: 127, activeHeightMM: 93),
         .init(
+            // Active area 208.8×150.8mm confirmed via the Graphire4 manual's
+            // CTE-640 entry — this row shares CTE-640's exact maxX/maxY, same
+            // hardware generation. activeWidthMM/Height corrected 203/152→
+            // 209/151. Confirmed 2026-08-03.
             productID: 0x0014, name: "Graphire 3 (6×8)",  // ⚠ estimated
             parser: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             productID: 0x0015, name: "Graphire 4 (4×5)",  // ⚠ estimated
             parser: .graphire, maxX: 10208, maxY: 7424, maxPressure: 511,
@@ -463,13 +480,16 @@ public enum WacomDeviceRegistry {
             // dimensions: libwacom wacom-graphire4-4x5.tablet (Width=127, Height=102)
             seizeUSB: false,
             confidence: .crossReferenced,
-            activeWidthMM: 127, activeHeightMM: 102),
+            activeWidthMM: 127, activeHeightMM: 93),
         .init(
+            // Active area 208.8×150.8mm confirmed directly against the
+            // Graphire4 manual's own CTE-640 entry. activeWidthMM/Height
+            // corrected 203/152→209/151. Confirmed 2026-08-03.
             productID: 0x0016, name: "Graphire 4 (6×8)",  // ⚠ estimated
             parser: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             // Kernel WACOM_MO "BambooFun 4x5"; libwacom CTE-450 (NumRings=1).
             // Was misattributed as MTE-450 here — that model is PID 0x0065.
@@ -487,6 +507,24 @@ public enum WacomDeviceRegistry {
             // dimensions: libwacom wacom-volito-4x5.tablet (Width=127, Height=102).
             // Kernel WACOM_VOLITO_RES=50 lpmm would give 102×74 mm — too small;
             // libwacom measurement supersedes for a 4×5 (FT-0405) tablet.
+            // A third figure — Wacom's own Volito manual (technical
+            // specifications, model CTF-420/G): 127.6×92.8mm, archived at
+            // Notes/Scratch/manuals/Wacom-Volito-Windows-2005.pdf, gitignored
+            // — disagrees with libwacom's height (93 vs 102) and doesn't
+            // settle it either, since "CTF-420/G" may not be the exact
+            // hardware revision this PID maps to. Left unresolved rather than
+            // picking a winner among three disagreeing sources with no
+            // capture to arbitrate. Noted 2026-08-03.
+            //
+            // Separately: maxX/maxY (5104/3712) come from the manual's stated
+            // "40 lpmm" × this same active area — exactly the arithmetic that
+            // proved wrong for the original Graphire (ET-0405), whose real
+            // hardware-measured value (OTD) was double what its own manual's
+            // "40 lpmm" implied. No independent source exists to check Volito
+            // the same way — OpenTabletDriver carries no Volito config — so
+            // this row's coordinate range carries the same unconfirmed risk
+            // and was deliberately left untouched rather than "corrected"
+            // toward either arithmetic. A capture would settle it outright.
             seizeUSB: false,
             confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 102),
@@ -2115,10 +2153,14 @@ public enum WacomDeviceRegistry {
 
         // Decoder-family matches (full entries, ⚠ from kernel unless noted):
         .init(
+            // activeWidthMM/Height added — this row had none. Shares its exact
+            // maxX/maxY with Graphire4 6×8 (CTE-640), whose 208.8×150.8mm
+            // active area is confirmed against Wacom's own manual — see that
+            // row's note. Confirmed 2026-08-03.
             productID: 0x0019, name: "Bamboo1 Medium",  // ⚠ from kernel (graphire family)
             parser: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false),
+            seizeUSB: false, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             productID: 0x0047, name: "Intuos 2 (6×8, alt)",  // ⚠ from kernel — second XD-0608-U PID
             // Same 6×8 active area as 0x0021 (GD-0608-U) — see the Intuos 1

@@ -68,6 +68,19 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on nine Graphire-family registry rows (original
+  Graphire ×2, Graphire 2/3/4 4×5, Graphire 3/4 6×8, Bamboo1 Medium), against
+  Wacom's own Graphire and Graphire4 manuals. All had a stale height carried
+  over from a copy-paste, unrelated to their own already-correct maxX/maxY.
+  Checked the original Graphire's coordinate range against the manual's
+  arithmetic first and found it would have been wrong — OpenTabletDriver's
+  hardware-measured value matches the registry's existing figure exactly, not
+  what the manual's printed "coordinate resolution" implies — so left
+  coordinate ranges alone everywhere in this family and corrected only the
+  dimensions the manuals directly and unambiguously settle. Volito's height
+  was left as a three-way disagreement between libwacom, a kernel constant,
+  and this pass's own manual reading, with no hardware capture available to
+  arbitrate; documented rather than resolved.
 - Active-area dimensions on three Cintiq pen-display registry rows. Cintiq
   24HD Touch (0x00F8) had a wrong active area (533×330mm) against its own
   confirmed-live sibling (Cintiq 24HD, 0x00F4) sharing the identical panel
