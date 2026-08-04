@@ -1521,7 +1521,13 @@ public enum WacomDeviceRegistry {
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 1023,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 165),
+            // activeWidthMM/Height corrected 294/165→299/171 (298.74×171.35mm)
+            // per Wacom's DTK-1300/DTH-1300 Important Product Information
+            // booklet (archived at Notes/Scratch/manuals/IPI-0x0304.pdf,
+            // gitignored). Unrelated to the maxPressure question noted above,
+            // which the manual doesn't settle either — still needs a capture.
+            // Confirmed 2026-08-03.
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 299, activeHeightMM: 171),
         .init(
             productID: 0x00F9, name: "Wacom Cintiq 22HD (DTK-2200)",  // ⚠ from OTD
             parser: .cintiqV1, maxX: 95040, maxY: 54260, maxPressure: 2047,
@@ -2207,24 +2213,38 @@ public enum WacomDeviceRegistry {
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false),
         .init(
+            // activeWidthMM/Height added — this row had none. 479.2×271.3mm
+            // per Wacom's DTK-2241/DTH-2242 Important Product Information
+            // booklet (archived at Notes/Scratch/manuals/IPI-0x0057.pdf,
+            // gitignored); divides the kernel's maxX/maxY exactly at 200
+            // lpmm, corroborating both sources at once. Confirmed 2026-08-03.
             productID: 0x0057, name: "Cintiq 22 (DTK-2241)",  // ⚠ from kernel (DTK type, 6 keys)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
         .init(
+            // activeWidthMM/Height added — same source and figure as 0x0057
+            // above (same panel). Confirmed 2026-08-03.
             productID: 0x0059, name: "Cintiq 22 Touch (DTH-2242)",  // ⚠ from kernel (DTK type, 6 keys)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
         .init(
+            // activeWidthMM/Height added — this row had none. 433.4×270.9mm
+            // per Wacom's Cintiq 20WSX User's Manual (archived at
+            // Notes/Scratch/manuals/Cintiq20WSX-DTZ2000W-UserManual.pdf,
+            // gitignored); divides the kernel's maxX/maxY exactly at 200
+            // lpmm, and the manual's stated 1024 pressure levels matches this
+            // row's maxPressure too — corroborating both fields at once.
+            // Confirmed 2026-08-03.
             productID: 0x00C5, name: "Cintiq 20WSX (DTZ-2000W)",  // ⚠ from kernel (WACOM_BEE type)
             parser: .cintiqV1, maxX: 86680, maxY: 54180, maxPressure: 1023,
             buttonCount: 10, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 433, activeHeightMM: 271),
         .init(
             // 27QHD uses the ExpressKey Remote (0x0331) instead of bezel keys.
             // activeWidthMM/Height added — this row had none. 596.7×335.6mm
@@ -2251,12 +2271,16 @@ public enum WacomDeviceRegistry {
         .init(
             // Pen interface; finger touch arrives on the separate 0x0335
             // interface (layout unconfirmed).
+            // activeWidthMM/Height added — this row had none. Shares its
+            // exact pen active area with 0x0304 (DTK-1300) per Wacom's own
+            // IPI booklet for this model pair — see that row's note.
+            // Confirmed 2026-08-03.
             productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // ⚠ from kernel (WACOM_13HD type)
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 299, activeHeightMM: 171),
 
         // Name-only: PL report family (wacom_pl_irq) has no decoder here.
         // Kernel dims in comments for when one lands.

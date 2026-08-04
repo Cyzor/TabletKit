@@ -68,6 +68,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on five Kernel-sweep Cintiq registry rows: 13HD
+  (DTK-1300), 13HD Touch (DTH-1300), 22 (DTK-2241), 22 Touch (DTH-2242), and
+  20WSX (DTZ-2000W). Four had no mm data at all; DTK-1300 had a stale value.
+  Every row's existing maxX/maxY was already exactly right — three pairs
+  divide out to their manual's stated active area with no rounding at all —
+  so only mm was ever in question here. This closes out the "Kernel sweep"
+  section's remaining spec-shaped gaps; what's left there (undecoded report
+  families, unconfirmed touch-sensor byte layouts, a partially-reverse-
+  engineered accessory) needs a decoder or a hardware capture, not a manual,
+  and was left alone accordingly.
 - Active-area dimensions on the Bamboo/Graphire-era CTE/CTF consumer line
   (CTE-450, CTE-460, CTE-660, CTF-430), against Wacom's Bamboo Fun
   (CTE-450/650) manual. CTE-650 was already exactly right and needed no
