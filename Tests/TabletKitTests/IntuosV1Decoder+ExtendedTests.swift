@@ -13,7 +13,7 @@
 import XCTest
 @testable import TabletKit
 
-final class IntuosV1ExtendedTests: XCTestCase {
+final class IntuosV1DecoderExtendedTests: XCTestCase {
 
     // PTH-851 (Intuos Pro L, USB). maxPressure=2047 enables the status-bit
     // 11th-pressure-bit path.

@@ -11,7 +11,7 @@ import XCTest
 
 @testable import TabletKit
 
-final class IntuosV1BPT3TouchDecoderTests: XCTestCase {
+final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
 
     private let cth690 = DigitizerSpec(
         maxX: 21600, maxY: 13500, maxPressure: 2047,

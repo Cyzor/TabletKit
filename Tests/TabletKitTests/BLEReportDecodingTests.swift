@@ -5,7 +5,7 @@
 import XCTest
 @testable import TabletKit
 
-final class WirelessReportTests: XCTestCase {
+final class BLEReportDecodingTests: XCTestCase {
 
     private func decode(_ bytes: [UInt8]) -> [DecodeResult] {
         bytes.withUnsafeBufferPointer { buf in

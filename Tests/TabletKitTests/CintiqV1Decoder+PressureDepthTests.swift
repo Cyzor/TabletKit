@@ -16,7 +16,7 @@ import XCTest
 
 @testable import TabletKit
 
-final class CintiqV1PressureDepthTests: XCTestCase {
+final class CintiqV1DecoderPressureDepthTests: XCTestCase {
 
     /// Cintiq 12WX / 21UX — 1024 pressure levels.
     private let tenBit = DigitizerSpec(

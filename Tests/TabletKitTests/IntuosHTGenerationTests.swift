@@ -12,11 +12,15 @@
 // The container fixtures mirror our own CTH-690 discovery capture (2026-07-03),
 // which is what established that the container is identical across both
 // generations — see BPT3ContainerDecoder.
+//
+// Named by hardware generation rather than <TypeName>Tests because it
+// exercises both BambooDecoder and IntuosV1Decoder against the same
+// PID range; there is no single type to name it after.
 import XCTest
 
 @testable import TabletKit
 
-final class INTUOSHTGenerationTests: XCTestCase {
+final class IntuosHTGenerationTests: XCTestCase {
 
     /// CTL-680 — pen-only, four express keys, no touch sensor.
     private let ctl680 = DigitizerSpec(
