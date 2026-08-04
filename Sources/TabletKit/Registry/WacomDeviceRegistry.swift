@@ -1276,6 +1276,17 @@ public enum WacomDeviceRegistry {
         .init(
             // Same mm correction and same open parser-family question as
             // 0x00D2 above. Confirmed 2026-08-03.
+            // ⚠️ SUSPECT DECODE, found 2026-08-03 — NOT fixed, needs a capture.
+            // `BambooDecoder`'s own doc comment lists its "Used by" devices
+            // as "CTT-460, CTH-460/461/470/480/490, CTL-460/470/660" — CTH-470
+            // is named explicitly as a `.bamboo` device. This row uses
+            // `.intuosV1` instead, contradicting the decoder's own
+            // documentation. Same shape of bug as the CTH-480/680, CTL-480/680
+            // reassignment on 2026-07-29 (see that doc comment) and the
+            // CTL-471 finding elsewhere in this file — not applying the fix
+            // here either, for the same reason: no capture to confirm which
+            // wire format this specific PID actually sends, and changing the
+            // parser without one would be a guess dressed as a fix.
             productID: 0x00DE, name: "Wacom CTH-470",  // ⚠ from OTD
             parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
@@ -1370,6 +1381,38 @@ public enum WacomDeviceRegistry {
         .init(
             // Same correction and caveat as 0x00DD above; maxY 9225 vs 9200
             // is within this family's normal per-PID rounding noise.
+            // ⚠️ SUSPECT DECODE, found 2026-08-03 — NOT fixed, needs a capture.
+            // Wacom's own CTL-471/CTL-671 Important Product Information
+            // booklet (archived at Notes/Scratch/manuals/IPI-0x0301.pdf,
+            // gitignored) gives CTL-471's pen active area as 152×95mm — not
+            // 147.2×92.25mm, what this row's current maxX/maxY (14720/9225)
+            // implies at 100 lpmm. OpenTabletDriver's independent CTL-471.json
+            // agrees with the manual exactly: Width 152, Height 95, MaxX
+            // 15200, MaxY 9500 — the same chassis size as CTH-480/CTL-480.
+            // More importantly, OTD's parser for this PID
+            // (Wacom.Intuos.IntuosReportParser / IntuosTabletReport.cs) is a
+            // different wire format entirely from what `.intuosV1` decodes
+            // here: little-endian, a plain 16-bit pressure field with no
+            // shift, and proximity/button bits at different positions (bit 7
+            // proximity, bits 1/2 buttons, bit 3 eraser — vs `.intuosV1`'s
+            // bit 5/6 proximity). That is the *exact* shape of the mismatch
+            // already found and fixed for CTH-480/680 and CTL-480/680 on
+            // 2026-07-29 (see `BambooDecoder`'s doc comment) — same era, same
+            // "One by Wacom"/INTUOSHT generation, same fix (`.intuosV1` →
+            // `.bamboo`, little-endian). CTL-471/671 simply weren't in that
+            // sweep's device list, so this looks like the same bug, missed.
+            //
+            // Not applying either the parser or the coordinate change here:
+            // that earlier fix was confirmed by a real capture showing the
+            // little-endian decode "hit each model's registered maxX
+            // exactly" — I have documentation-only evidence for CTL-471, no
+            // capture. Changing maxX/maxY alone without knowing whether the
+            // parser is actually right would be pointless at best (a correct
+            // denominator on top of an already-wrong decode fixes nothing)
+            // and would look like a bigger claim than the evidence supports.
+            // A CTL-471 (or CTL-671) capture through
+            // tools/hid_input_capture.c, checked with hid-trace-sweep the
+            // same way CTH-480 was, would settle this outright.
             productID: 0x0300, name: "Wacom CTL-471",  // ⚠ from kernel
             parser: .intuosV1, maxX: 14720, maxY: 9225, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
@@ -1549,17 +1592,26 @@ public enum WacomDeviceRegistry {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 166),
         .init(
+            // activeWidthMM/Height corrected 356/203→348/198. OTD's own
+            // DTK-1660.json states 348.16×197.59mm (maxX/maxY match this row
+            // exactly); Wacom's DTK-1660 IPI booklet gives 344×194mm — a
+            // print-rounded figure in the same direction and rough magnitude,
+            // archived at Notes/Scratch/manuals/IPI-0x0390.pdf (gitignored).
+            // Both external sources sit meaningfully below this row's old
+            // value; corrected toward OTD's more precise figure. Confirmed
+            // 2026-08-03.
             productID: 0x0390, name: "Wacom Cintiq 16 (DTK-1660)",  // ⚠ from OTD
             parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 348, activeHeightMM: 198),
         .init(
+            // Same correction as 0x0390 above — same panel. Confirmed 2026-08-03.
             productID: 0x03AE, name: "Wacom Cintiq 16 (DTK-1660)",  // ⚠ from OTD
             parser: .intuosV2, maxX: 69632, maxY: 39518, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 348, activeHeightMM: 198),
         .init(
             productID: 0x03A6, name: "Wacom DTC-133",  // ⚠ from OTD
             parser: .intuosV2, maxX: 29434, maxY: 16556, maxPressure: 4095,

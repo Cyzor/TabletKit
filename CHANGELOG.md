@@ -68,6 +68,26 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on both Cintiq 16 (DTK-1660) registry rows
+  (356×203mm → 348×198mm), corrected toward OpenTabletDriver's precise value
+  after Wacom's own DTK-1660 manual pointed the same direction.
+
+### Found, not fixed — needs a hardware capture
+
+- Two registry rows (`0x0300` "Wacom CTL-471", `0x00DE` "Wacom CTH-470")
+  look like the same parser-family mismatch already found and fixed for
+  CTH-480/680 and CTL-480/680 on 2026-07-29: `.intuosV1` decodes big-endian
+  with a fractional-bit doubling, but the evidence for both rows points to a
+  different, little-endian, no-doubling wire format instead. CTL-471's case
+  is backed by a Wacom IPI booklet and an independent OpenTabletDriver config
+  that agree with each other on both the active area and the exact parser
+  class OTD uses for it. CTH-470's case is simpler: `BambooDecoder`'s own doc
+  comment already lists it as a `.bamboo` device, and the registry row
+  contradicts that. Neither was changed — the 2026-07-29 fix this pattern
+  matches was confirmed by a real capture ("little-endian decode hit each
+  model's registered maxX exactly"), and no such capture exists for either
+  row here. Documented in place with the full reasoning; a capture through
+  `tools/hid_input_capture.c` would settle both.
 - Active-area dimensions on five Kernel-sweep Cintiq registry rows: 13HD
   (DTK-1300), 13HD Touch (DTH-1300), 22 (DTK-2241), 22 Touch (DTH-2242), and
   20WSX (DTZ-2000W). Four had no mm data at all; DTK-1300 had a stale value.
