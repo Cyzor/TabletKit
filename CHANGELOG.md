@@ -71,23 +71,24 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - Active-area dimensions on both Cintiq 16 (DTK-1660) registry rows
   (356×203mm → 348×198mm), corrected toward OpenTabletDriver's precise value
   after Wacom's own DTK-1660 manual pointed the same direction.
-
-### Found, not fixed — needs a hardware capture
-
-- Two registry rows (`0x0300` "Wacom CTL-471", `0x00DE` "Wacom CTH-470")
-  look like the same parser-family mismatch already found and fixed for
-  CTH-480/680 and CTL-480/680 on 2026-07-29: `.intuosV1` decodes big-endian
-  with a fractional-bit doubling, but the evidence for both rows points to a
-  different, little-endian, no-doubling wire format instead. CTL-471's case
-  is backed by a Wacom IPI booklet and an independent OpenTabletDriver config
-  that agree with each other on both the active area and the exact parser
-  class OTD uses for it. CTH-470's case is simpler: `BambooDecoder`'s own doc
-  comment already lists it as a `.bamboo` device, and the registry row
-  contradicts that. Neither was changed — the 2026-07-29 fix this pattern
-  matches was confirmed by a real capture ("little-endian decode hit each
-  model's registered maxX exactly"), and no such capture exists for either
-  row here. Documented in place with the full reasoning; a capture through
-  `tools/hid_input_capture.c` would settle both.
+- Parser assignment on two registry rows (`0x0300` "Wacom CTL-471", `0x00DE`
+  "Wacom CTH-470"), reassigned `.intuosV1` → `.bamboo` (little-endian, no
+  fractional-bit doubling). Both were flagged as suspect on 2026-08-03 from
+  documentation alone and left unfixed pending confirmation; the evidence was
+  since upgraded by a third independent primary source — libwacom's own
+  `.tablet` files for both PIDs (`wacom-one-by-wacom-s-p.tablet`,
+  `wacom-bamboo-16fg-s-pt.tablet`) explicitly label them "third generation
+  BambooPT", `Class=Bamboo`, the same family `BambooDecoder`'s own doc
+  comment already used to describe the little-endian report path. Combined
+  with OpenTabletDriver's independent parser choice for both PIDs (the same
+  little-endian family) and, for CTL-471, an active-area figure a fourth
+  source (a community tablet-spec mastersheet) also confirms at 152×95mm,
+  three-to-four convergent sources now outweigh the prior `.intuosV1` value,
+  which was already known wrong from the active-area mismatch alone.
+  CTL-471's coordinates were also corrected (14720×9225 → 15200×9500) to
+  match; CTH-470's coordinates (14720×9200) were already correct — only its
+  parser was wrong. Still no hardware capture for either; one through
+  `tools/hid_input_capture.c` remains the definitive check.
 - Active-area dimensions on five Kernel-sweep Cintiq registry rows: 13HD
   (DTK-1300), 13HD Touch (DTH-1300), 22 (DTK-2241), 22 Touch (DTH-2242), and
   20WSX (DTZ-2000W). Four had no mm data at all; DTK-1300 had a stale value.

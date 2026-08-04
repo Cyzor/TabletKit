@@ -1274,21 +1274,23 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
-            // Same mm correction and same open parser-family question as
-            // 0x00D2 above. Confirmed 2026-08-03.
-            // ⚠️ SUSPECT DECODE, found 2026-08-03 — NOT fixed, needs a capture.
-            // `BambooDecoder`'s own doc comment lists its "Used by" devices
-            // as "CTT-460, CTH-460/461/470/480/490, CTL-460/470/660" — CTH-470
-            // is named explicitly as a `.bamboo` device. This row uses
-            // `.intuosV1` instead, contradicting the decoder's own
-            // documentation. Same shape of bug as the CTH-480/680, CTL-480/680
-            // reassignment on 2026-07-29 (see that doc comment) and the
-            // CTL-471 finding elsewhere in this file — not applying the fix
-            // here either, for the same reason: no capture to confirm which
-            // wire format this specific PID actually sends, and changing the
-            // parser without one would be a guess dressed as a fix.
+            // Same mm correction as 0x00D2 above. Confirmed 2026-08-03.
+            // Parser corrected .intuosV1 → .bamboo 2026-08-03. `BambooDecoder`'s
+            // own doc comment already lists CTH-470 among its "Used by"
+            // devices, contradicting this row's prior `.intuosV1` assignment.
+            // Independently confirmed by two more sources: OTD's CTH-470.json
+            // uses `Wacom.Intuos.IntuosReportParser` (the same little-endian
+            // family as CTL-471's fix elsewhere in this file) while its own
+            // MaxX/MaxY (14720/9200) already match this row exactly, so only
+            // the parser was wrong here, not the coordinates; and libwacom's
+            // `wacom-bamboo-16fg-s-pt.tablet` (DeviceMatch=usb|056a|00de)
+            // labels it "third generation BambooPT", Class=Bamboo — identical
+            // wording to CTL-471's own libwacom entry. Same three-source
+            // convergence that justified that fix; see its note for the full
+            // reasoning. Still no hardware capture — a CTH-470 capture through
+            // tools/hid_input_capture.c remains the definitive check.
             productID: 0x00DE, name: "Wacom CTH-470",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
@@ -1379,44 +1381,39 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
-            // Same correction and caveat as 0x00DD above; maxY 9225 vs 9200
-            // is within this family's normal per-PID rounding noise.
-            // ⚠️ SUSPECT DECODE, found 2026-08-03 — NOT fixed, needs a capture.
-            // Wacom's own CTL-471/CTL-671 Important Product Information
-            // booklet (archived at Notes/Scratch/manuals/IPI-0x0301.pdf,
-            // gitignored) gives CTL-471's pen active area as 152×95mm — not
-            // 147.2×92.25mm, what this row's current maxX/maxY (14720/9225)
-            // implies at 100 lpmm. OpenTabletDriver's independent CTL-471.json
-            // agrees with the manual exactly: Width 152, Height 95, MaxX
-            // 15200, MaxY 9500 — the same chassis size as CTH-480/CTL-480.
-            // More importantly, OTD's parser for this PID
-            // (Wacom.Intuos.IntuosReportParser / IntuosTabletReport.cs) is a
-            // different wire format entirely from what `.intuosV1` decodes
-            // here: little-endian, a plain 16-bit pressure field with no
-            // shift, and proximity/button bits at different positions (bit 7
-            // proximity, bits 1/2 buttons, bit 3 eraser — vs `.intuosV1`'s
-            // bit 5/6 proximity). That is the *exact* shape of the mismatch
-            // already found and fixed for CTH-480/680 and CTL-480/680 on
-            // 2026-07-29 (see `BambooDecoder`'s doc comment) — same era, same
-            // "One by Wacom"/INTUOSHT generation, same fix (`.intuosV1` →
-            // `.bamboo`, little-endian). CTL-471/671 simply weren't in that
-            // sweep's device list, so this looks like the same bug, missed.
+            // Parser corrected .intuosV1 → .bamboo 2026-08-03. Originally
+            // flagged as SUSPECT DECODE on documentation alone (Wacom's IPI
+            // booklet + OTD's CTL-471.json both giving 152×95mm/15200×9500
+            // against a different, little-endian wire format than
+            // `.intuosV1` decodes) — same mismatch shape as the CTH-480/680,
+            // CTL-480/680 fix from 2026-07-29, but without that fix's capture
+            // confirmation, so left untouched at the time.
             //
-            // Not applying either the parser or the coordinate change here:
-            // that earlier fix was confirmed by a real capture showing the
-            // little-endian decode "hit each model's registered maxX
-            // exactly" — I have documentation-only evidence for CTL-471, no
-            // capture. Changing maxX/maxY alone without knowing whether the
-            // parser is actually right would be pointless at best (a correct
-            // denominator on top of an already-wrong decode fixes nothing)
-            // and would look like a bigger claim than the evidence supports.
-            // A CTL-471 (or CTL-671) capture through
-            // tools/hid_input_capture.c, checked with hid-trace-sweep the
-            // same way CTH-480 was, would settle this outright.
+            // Evidence upgraded by a third, independent, primary source:
+            // libwacom's own `wacom-one-by-wacom-s-p.tablet`
+            // (DeviceMatch=usb|056a|0300, matching this PID exactly) labels
+            // CTL-471 "third generation BambooPT" and Class=Bamboo — the same
+            // family name `BambooDecoder`'s own doc comment uses for the
+            // little-endian report-ID-0x02 path. That path's dispatch
+            // (`BambooDecoder.decode`, ~line 100) is keyed on report ID 0x02
+            // + length 9–10, not on PID, and OTD's CTL-471.json declares
+            // InputReportLength 10 — so a real CTL-471 report lands on
+            // `decodeBPT`'s LE12-bit-pressure formula, which is byte-for-byte
+            // what OTD's IntuosTabletReport.cs implements. Three independent
+            // sources (OTD's parser choice, our own decoder's terminology,
+            // libwacom's explicit classification) now converge, against a
+            // decode already confirmed wrong by the active-area mismatch —
+            // still no hardware capture, but the current state was already
+            // confirmed broken, so this is very likely a strict improvement.
+            // mm kept at OTD/manual's 152×95 rather than libwacom's
+            // self-contradictory 152×102 (which disagrees with its own
+            // "5.8 x 3.63in" ≈ 147×92mm comment).
+            // A CTL-471 capture through tools/hid_input_capture.c would still
+            // be the definitive check.
             productID: 0x0300, name: "Wacom CTL-471",  // ⚠ from kernel
-            parser: .intuosV1, maxX: 14720, maxY: 9225, maxPressure: 1023,
+            parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 147, activeHeightMM: 92),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // activeHeightMM corrected 102→95 — confirmed against Wacom's One
             // by Wacom (CTL-472/672) Important Product Information booklet
