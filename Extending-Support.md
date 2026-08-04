@@ -119,6 +119,8 @@ swift test
 
 This runs the existing test suite and confirms your registry edit didn't break anything else. It won't catch a wrong coordinate value; it only catches things like a decoder crashing on your new report length.
 
+For a deeper check against the Linux kernel and OpenTabletDriver's own data, see `tools/` in this package — `verify_registry.py`, `audit_registry.py`, and friends cross-reference every registry entry against those sources and flag drift. They're plain Python, not wired into the build; run them by hand when you want a second opinion beyond `swift test`.
+
 Then build the app itself: open `MockTab.xcodeproj` in Xcode, and run it (the Play button, or Cmd-R). Plug in your tablet.
 
 Check each behavior in order:
