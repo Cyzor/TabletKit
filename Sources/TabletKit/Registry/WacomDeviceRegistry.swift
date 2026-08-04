@@ -945,21 +945,30 @@ public enum WacomDeviceRegistry {
         // ever reaches the decoder. Confirmed by a CTL-460 user capture
         // 2026-07-21. BambooDecoder also keeps a legacy 0x10 path.
         .init(
-            productID: 0x00D0, name: "Bamboo Touch (CTT-460)",  // ⚠ estimated
+            productID: 0x00D0, name: "Bamboo Touch (CTT-460)",
             // maxPressure 0 is intentional: CTT-460 is finger-touch only, no
             // pen. (Kernel's wacom_features_0xD0 lists the family's pen value.)
-            // Left as-is 2026-08-03: Wacom's Bamboo 460 User's Manual states
-            // this model's true touch active area as 125.0×85.0mm — neither
-            // this row's 127/76 nor the pen-chassis 147.2/92.0mm the sibling
-            // CTH-460 (0x00D1) uses. maxX/maxY (14720/9200) match the pen
-            // chassis, not 125×85, which is odd for a touch-only variant but
-            // not necessarily wrong — the physical touch sensor and the
-            // coordinate space the report actually transmits in aren't
-            // guaranteed to be the same number, and nothing here confirms
-            // which. Left alone rather than "fixed" toward either guess.
-            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
+            // Coordinates settled 2026-08-03 by a real CTT-460 hid-recorder
+            // trace (bentiss/hid-devices events/tablet/
+            // Wacom_Bamboo_2FG_056a_00D0.hid — unlicensed corpus, analysis
+            // only, do NOT vendor into Samples). Three corroborating facts:
+            // the touch interface's own HID descriptor declares logical max
+            // 480×320 (physical max 12000×8000 → 120×80mm at Wacom's usual
+            // 0.01mm scaling); the trace's 336 touch events (report 0x02,
+            // big-endian 11-bit fields per kernel wacom_bpt_touch) observe
+            // x 82–325, y 61–307, with y nearly reaching 320; and the
+            // kernel's WACOM_QUIRK_BBTOUCH_LOWRES quirk shifts raw values
+            // left by 5 purely to inflate this low-res space toward the
+            // nominal pen-chassis numbers — so the kernel's 14720×9200 for
+            // this PID was never the wire format. The manual's 125×85mm is
+            // presumably the sensor glass vs. the 120×80mm reported area;
+            // the descriptor's own figure wins here. Note BambooDecoder has
+            // no touch path for this report — decoding is still a coverage
+            // gap; these values just make the row honest about the wire.
+            parser: .bamboo, maxX: 480, maxY: 320, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, activeWidthMM: 127, activeHeightMM: 76),
+            seizeUSB: false, confidence: .verified,
+            activeWidthMM: 120, activeHeightMM: 80),
         .init(
             // Pen active area 147.2×92.0mm confirmed against Wacom's Bamboo
             // Touch/Pen/Pen&Touch (CTT/CTL/CTH-460) User's Manual — matches
@@ -1024,6 +1033,11 @@ public enum WacomDeviceRegistry {
             // libwacom wacom-bamboo-4fg-s-t.tablet: "second generation BambooPT",
             // no stylus, 2FG touch (4FG gesture). maxPressure 0 is intentional —
             // touch-only, same convention as the CTT-460 entry (0x00D0) above.
+            // Caution 2026-08-03: CTT-460's pen-chassis maxX/maxY turned out
+            // to be wrong on the wire (real touch space 480×320 — see its
+            // note). This BPT2-generation row likely uses the later BBTOUCH3
+            // format (kernel overrides those to 4096×4096), so its 14720×9200
+            // is suspect too, but no capture covers this PID — left alone.
             productID: 0x00D9, name: "Bamboo Touch (CTT-460A)",  // ⚠ from libwacom
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
@@ -1035,11 +1049,13 @@ public enum WacomDeviceRegistry {
             // the descriptive comment, matching CTT-460 (0x00D9) above.
             // activeWidthMM/Height corrected to match this row's own
             // maxX/maxY at 100 lpmm (147.2×92.0mm) — the 152/102 it carried
-            // before matched neither that nor the manual's true CTT-460-class
-            // touch active area (125.0×85.0mm; see 0x00D0's note). Which of
-            // those this touch-only variant's coordinate space actually uses
-            // is still open — this only fixes the internal inconsistency.
-            // Confirmed 2026-08-03.
+            // before matched neither that nor the manual's stated touch
+            // active area. Which coordinate space this touch-only variant
+            // actually transmits in is still open — this only fixes the
+            // internal inconsistency. Same caution as 0x00D9 above: after
+            // CTT-460's capture proved its pen-chassis numbers wrong on the
+            // wire, this third-generation row's 14720×9200 (likely BBTOUCH3,
+            // kernel says 4096×4096) is suspect too; no capture, left alone.
             productID: 0x00DC, name: "Bamboo Touch (CTT-470)",  // ⚠ from libwacom
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 0,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,

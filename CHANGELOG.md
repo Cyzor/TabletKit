@@ -68,6 +68,19 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Coordinate range and active area on the Bamboo Touch CTT-460 registry row
+  (`0x00D0`), settled by a real hid-recorder capture from the
+  bentiss/hid-devices corpus (analysis only — the trace itself is unlicensed
+  and not vendored). The touch interface's own HID descriptor declares
+  logical max 480×320 and physical max 120×80mm; the capture's touch events
+  stay inside that range with Y nearly reaching its max; and the kernel's
+  `WACOM_QUIRK_BBTOUCH_LOWRES` quirk (raw values shifted left by 5) confirms
+  the kernel's nominal 14720×9200 was never the wire format. Corrected
+  14720×9200/127×76mm → 480×320/120×80mm and upgraded the row to verified
+  confidence. The two later-generation touch-only siblings (CTT-460A
+  `0x00D9`, CTT-470 `0x00DC`) likely use the BBTOUCH3 4096×4096 space
+  instead, but no capture covers them — annotated as suspect, values left
+  alone. Touch decoding for all three remains an open coverage gap.
 - Active-area dimensions on both Cintiq 16 (DTK-1660) registry rows
   (356×203mm → 348×198mm), corrected toward OpenTabletDriver's precise value
   after Wacom's own DTK-1660 manual pointed the same direction.
