@@ -493,11 +493,17 @@ public enum WacomDeviceRegistry {
         .init(
             // Kernel WACOM_MO "BambooFun 4x5"; libwacom CTE-450 (NumRings=1).
             // Was misattributed as MTE-450 here — that model is PID 0x0065.
+            // Active area 147.6×92.3mm confirmed against Wacom's Bamboo Fun
+            // (CTE-450/650) User's Manual — matches this row's own maxX/maxY
+            // (14760/9225 at 100 lpmm) exactly; activeWidthMM/Height corrected
+            // 152/102→148/92. Archived at
+            // Notes/Scratch/manuals/BambooFun-CTE-450-650-UserManual.pdf
+            // (gitignored). Confirmed 2026-08-03.
             productID: 0x0017, name: "Bamboo Fun small (CTE-450)",  // ⚠ from kernel/libwacom/OTD
             parser: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false,
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 148, activeHeightMM: 92),
 
         // ── Volito / PenStation ───────────────────────────────────────────────
         .init(
@@ -1194,30 +1200,51 @@ public enum WacomDeviceRegistry {
         // ── Bamboo / Graphire-era CTE / CTF consumer line ─────────────────────
         // Graphire-era: intuosV1 8-byte format.
         .init(
+            // activeWidthMM/Height added (148/92) — this row had none. Shares
+            // its exact maxX/maxY with CTE-450 (0x0017), whose active area is
+            // confirmed against Wacom's Bamboo Fun manual — see that row's
+            // note. Confirmed 2026-08-03.
             productID: 0x006A, name: "Wacom CTE-460",  // ⚠ from kernel
             parser: .intuosV1, maxX: 14760, maxY: 9225, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 148, activeHeightMM: 92),
         .init(
+            // activeWidthMM/Height corrected 203/127→216/135 to match
+            // 0x0018 (Bamboo Fun medium, CTE-650) exactly — identical
+            // maxX/maxY, and 0x0018's mm is confirmed against Wacom's own
+            // manual (see that row's comment). This row's 203/127 didn't
+            // match its own coordinate range at any plausible resolution.
+            // Confirmed 2026-08-03.
             productID: 0x006B, name: "Wacom CTE-660",  // ⚠ from kernel
             parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 127),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
         .init(
             // Kernel WACOM_MO "BambooFun 6x8"; libwacom CTE-650 (NumRings=1).
+            // Active area 216.5×135.3mm confirmed against Wacom's Bamboo Fun
+            // (CTE-450/650) User's Manual — this row's existing maxX/maxY and
+            // mm (21648/13530, 216/135) already matched exactly; no change
+            // needed, kept as corroboration for the sibling rows above and
+            // below. Confirmed 2026-08-03.
             productID: 0x0018, name: "Bamboo Fun medium (CTE-650)",  // ⚠ from kernel/libwacom/OTD
             parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
+            // activeWidthMM/Height corrected 127/102→128/93. Shares its exact
+            // maxX/maxY with the original Graphire/Volito 4×5 chassis
+            // (127.6×92.8mm, confirmed against Wacom's Graphire manual — see
+            // that family's note above). Not directly covered by the Bamboo
+            // Fun manual; inferred from the shared coordinate range instead.
+            // Confirmed 2026-08-03.
             productID: 0x0069, name: "Wacom CTF-430",  // ⚠ from OTD
             parser: .bamboo, maxX: 5104, maxY: 3712, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            // dimensions: libwacom wacom-bamboo-one.tablet (Width=127, Height=102)
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
-            activeWidthMM: 127, activeHeightMM: 102),
+            activeWidthMM: 128, activeHeightMM: 93),
 
         // ── Bamboo CTH (pen + touch) ──────────────────────────────────────────
         .init(

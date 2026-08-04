@@ -68,6 +68,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Active-area dimensions on the Bamboo/Graphire-era CTE/CTF consumer line
+  (CTE-450, CTE-460, CTE-660, CTF-430), against Wacom's Bamboo Fun
+  (CTE-450/650) manual. CTE-650 was already exactly right and needed no
+  change; CTE-660 shared CTE-650's coordinate range but disagreed with it on
+  mm at no plausible resolution, and CTE-460/CTF-430 had no mm data at all.
 - Active-area dimensions on nine Graphire-family registry rows (original
   Graphire ×2, Graphire 2/3/4 4×5, Graphire 3/4 6×8, Bamboo1 Medium), against
   Wacom's own Graphire and Graphire4 manuals. All had a stale height carried
