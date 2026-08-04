@@ -27,6 +27,30 @@ public struct CursorSmoother {
     private var lastRawPoint: CGPoint = .zero
     private var hasLastRawPoint = false
 
+    // MARK: - Jitter histogram
+    //
+    // `jitterLevel` above resets to 0 on every tip-down and proximity exit
+    // (`clearHoverDeltas()`/`resetOnProximityExit()`), because it's meant to
+    // answer "is the pen jittery *right now*, while hovering" for the
+    // in-session HIGH warning. That makes it a poor diagnostic readout on
+    // its own: a snapshot taken moments after either transition always
+    // reads 0, indistinguishable from "no jitter has ever occurred." This
+    // histogram buckets the same per-sample hover deltas but is never
+    // cleared by those transitions, so it accumulates for the life of the
+    // tool instance — a diagnostic snapshot can show *whether* jitter has
+    // been present recently, not just whether it happens to be present in
+    // this exact hover micro-session.
+    public static let jitterHistogramBucketsPtPerSample: [CGFloat] = [0.5, 1, 2, 3, 5]
+    public private(set) var jitterHistogram: [UInt64] = [0, 0, 0, 0, 0, 0]
+
+    private mutating func bucketJitter(_ delta: CGFloat) {
+        for (i, bound) in Self.jitterHistogramBucketsPtPerSample.enumerated() where delta < bound {
+            jitterHistogram[i] &+= 1
+            return
+        }
+        jitterHistogram[Self.jitterHistogramBucketsPtPerSample.count] &+= 1
+    }
+
     // MARK: - One-Euro smoothing
     //
     // Adaptive low-pass filter (Casiez, Godin & Pucheu, "1€ Filter", CHI 2012):
@@ -196,6 +220,7 @@ public struct CursorSmoother {
         hoverRing[hoverHead] = delta
         hoverSum += delta
         hoverHead = (hoverHead + 1) % Self.jitterWindow
+        bucketJitter(delta)
     }
 
     private mutating func clearHoverDeltas() {
