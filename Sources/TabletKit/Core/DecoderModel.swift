@@ -103,25 +103,34 @@ public enum DecodeResult {
 
 /// A single capacitive contact point reported by a touch-capable Wacom display.
 /// `id` is a per-contact tracking identifier reused across frames for the same
-/// finger (typically 0–9 on 10-point devices).  `contactArea` is optional and
-/// only populated on devices that report contact-major.
+/// finger (typically 0–9 on 10-point devices). `contactArea` and
+/// `contactMinor` are optional raw major/minor footprint axes. They are only
+/// populated on devices that report those HID Digitizer usages.
 ///
 /// Both producers agree on that quantity: `IntuosV2Decoder.decodeTouchReport`
-/// takes report 0x21's per-slot major byte, and `PrecisionTouchDecoder` takes
-/// the HID Digitizer Width usage (0x0D/0x48), which is the major axis in that
-/// usage set.  Units still differ per device — this is a raw sensor value, not
-/// a normalized one, so any threshold tuned against it must be per-device.
+/// takes report 0x21's per-slot Width/Height bytes, and
+/// `PrecisionTouchDecoder` takes the HID Digitizer Width usage (0x0D/0x48).
+/// Units still differ per device — these are raw sensor values, not normalized
+/// ones, so any threshold tuned against them must be per-device.
 public struct TouchContact: Equatable {
     public let id: Int
     public let x: Int
     public let y: Int
     public let contactArea: Int?
+    public let contactMinor: Int?
 
-    public init(id: Int, x: Int, y: Int, contactArea: Int?) {
+    public init(
+        id: Int,
+        x: Int,
+        y: Int,
+        contactArea: Int?,
+        contactMinor: Int? = nil
+    ) {
         self.id = id
         self.x = x
         self.y = y
         self.contactArea = contactArea
+        self.contactMinor = contactMinor
     }
 }
 

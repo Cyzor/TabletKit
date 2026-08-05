@@ -445,7 +445,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
 
     /// 44-byte report: [0]=0x21 [1]=contact count (up to 5), then 5 × 8-byte fixed slots.
     /// Slot layout: [0]=slot_id [1]=status(0x01=down, 0x00=lift) [2..3]=X LE16 [4..5]=Y LE16
-    ///              [6]=touch major [7]=reserved
+    ///              [6]=touch major [7]=touch minor
     /// Lift frame: status=0x00 for one frame at the last position, then the slot goes silent.
     ///
     /// Layout confirmed 2026-07-30 against a PTH-660's own touch report
@@ -456,10 +456,8 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// is this slot layout field for field, so every offset above is now
     /// descriptor-backed rather than inferred from sample correlation.
     ///
-    /// Two refinements it supplies. Byte [7] is not reserved — it is contact
-    /// *height*, the minor axis to [6]'s major; it stays unread only because
-    /// `TouchContact.contactArea` holds a single scalar. And the axes declare
-    /// Logical Maximum 8960 × 5920 with Width/Height maxima of 41 × 31, which
+    /// The axes declare Logical Maximum 8960 × 5920 with Width/Height maxima
+    /// of 41 × 31, which
     /// is what promoted 0x0357's registry `touchMaxX`/`touchMaxY` from
     /// estimate to confirmed.
     private func decodeTouchReport(
@@ -477,7 +475,10 @@ public struct IntuosV2Decoder: TabletReportDecoder {
             let x = Int(report[base + 2]) | (Int(report[base + 3]) << 8)
             let y = Int(report[base + 4]) | (Int(report[base + 5]) << 8)
             let major = Int(report[base + 6])
-            contacts.append(TouchContact(id: Int(report[base]), x: x, y: y, contactArea: major))
+            let minor = Int(report[base + 7])
+            contacts.append(TouchContact(
+                id: Int(report[base]), x: x, y: y,
+                contactArea: major, contactMinor: minor))
         }
         return [.touch(contacts)]
     }

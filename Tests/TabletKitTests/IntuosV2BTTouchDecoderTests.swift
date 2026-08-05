@@ -43,9 +43,11 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     /// Build a 361-byte BT container whose pen portion is empty (frame0 flags = 0,
     /// no tool code) so the only results returned are from the touch path.
     /// `frames` is an array of (frameIndex, headerCount, contacts) where each
-    /// contact is (slot_id, status, x, y, major).
+    /// contact is (slot_id, status, x, y, major). The fixture uses one minor
+    /// value unless a case needs to mutate it directly.
     private func make361WithTouch(
-        frames: [(Int, UInt8, [(UInt8, UInt8, UInt16, UInt16, UInt8)])]
+        frames: [(Int, UInt8, [(UInt8, UInt8, UInt16, UInt16, UInt8)])],
+        minor: UInt8 = 12
     ) -> [UInt8] {
         var bytes = [UInt8](repeating: 0, count: 361)
         bytes[0] = 0x80
@@ -64,6 +66,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
                 bytes[cOff + 4] = UInt8(c.3 & 0xFF)
                 bytes[cOff + 5] = UInt8((c.3 >> 8) & 0xFF)
                 bytes[cOff + 6] = c.4
+                bytes[cOff + 7] = minor
             }
         }
         return bytes
@@ -115,6 +118,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         XCTAssertEqual(frames[0][0].x, 3456)
         XCTAssertEqual(frames[0][0].y, 2048)
         XCTAssertEqual(frames[0][0].contactArea, 28)
+        XCTAssertEqual(frames[0][0].contactMinor, 12)
     }
 
     func testLiftStatusDropsContact() {
