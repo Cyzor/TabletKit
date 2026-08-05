@@ -5,7 +5,7 @@
 // Format confirmed by live capture from PTH-860 (PID 0x0358) 2026-05-21.
 // 44-byte report: [0]=0x21 [1]=contact count, then 5 × 8-byte fixed slots.
 // Slot layout: [0]=slot_id [1]=status(0x01=down,0x00=lift) [2..3]=X LE16
-//              [4..5]=Y LE16 [6]=touch major [7]=reserved
+//              [4..5]=Y LE16 [6]=touch major [7]=touch minor
 // Coordinate range: X 0–12439, Y 0–8639 (PTH-860).
 import XCTest
 @testable import TabletKit
@@ -30,8 +30,13 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     }
 
     /// Build a 44-byte 0x21 touch report.  `slots` is an array of
-    /// (slot_id, status, x, y, major) tuples; up to 5 are written.
-    private func make0x21(count: UInt8, slots: [(UInt8, UInt8, UInt16, UInt16, UInt8)]) -> [UInt8] {
+    /// (slot_id, status, x, y, major) tuples; up to 5 are written. The test
+    /// fixture uses one minor value unless a case needs to mutate it directly.
+    private func make0x21(
+        count: UInt8,
+        slots: [(UInt8, UInt8, UInt16, UInt16, UInt8)],
+        minor: UInt8 = 12
+    ) -> [UInt8] {
         var bytes = [UInt8](repeating: 0, count: 44)
         bytes[0] = 0x21
         bytes[1] = count
@@ -44,6 +49,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
             bytes[base + 4] = UInt8(s.3 & 0xFF)        // Y low
             bytes[base + 5] = UInt8((s.3 >> 8) & 0xFF) // Y high
             bytes[base + 6] = s.4                      // touch major
+            bytes[base + 7] = minor                    // touch minor
         }
         return bytes
     }
@@ -85,6 +91,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
         XCTAssertEqual(contacts[0].x, 3456)
         XCTAssertEqual(contacts[0].y, 2048)
         XCTAssertEqual(contacts[0].contactArea, 28)
+        XCTAssertEqual(contacts[0].contactMinor, 12)
     }
 
     func testLiftFrameStatusZeroProducesEmptyContact() {

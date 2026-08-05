@@ -398,8 +398,10 @@ extension IntuosV2Decoder {
                 let x = Int(report[cOff + 2]) | (Int(report[cOff + 3]) << 8)
                 let y = Int(report[cOff + 4]) | (Int(report[cOff + 5]) << 8)
                 let major = Int(report[cOff + 6])
+                let minor = Int(report[cOff + 7])
                 contacts.append(TouchContact(
-                    id: Int(report[cOff]), x: x, y: y, contactArea: major))
+                    id: Int(report[cOff]), x: x, y: y,
+                    contactArea: major, contactMinor: minor))
             }
             results.append(.touch(contacts))
         }
