@@ -67,9 +67,10 @@ import Foundation
 /// `touchRingButtonDown`/`touchRingButtonBinding` field instead of the
 /// indexed array, mirroring how Wacom's ring center click is a dedicated
 /// slot rather than a numbered express key. All-zero = release. Byte 7
-/// carries dial rotation as per-click events: 1 = one direction, 2 = the
-/// other (physical CW/CCW mapping unconfirmed — flip `dialDelta` if
-/// inverted).
+/// carries dial rotation as per-click events: 1 = counter-clockwise, 2 =
+/// clockwise (confirmed on hardware 2026-08-06 against the puck's own
+/// bezel diagram, which labels physical rotation independent of any
+/// scroll-direction convention).
 ///
 /// Requires a tablet-mode init first: output report `[0x02, 0xB0, 0x04]`
 /// (`InitStep.outputReport`), zero-padded to MaxOutputReportSize; without
@@ -240,11 +241,14 @@ public struct XencelabsDecoder: TabletReportDecoder {
         let dialCenterDown = report[3] & 0x02 != 0
         results.append(.aux(AuxButtons(buttons: buttons, touchRingButtonDown: dialCenterDown)))
 
-        // Dial clicks arrive as discrete events, not a counter. Direction
-        // assignment (1 = clockwise) is a guess pending physical confirmation.
+        // Dial clicks arrive as discrete events, not a counter. Positive delta
+        // means physically clockwise, matching the normalized convention used
+        // by the Wacom ring paths (see InputInjector.ringDeltaIsInverted) —
+        // scroll-direction is applied later, uniformly, from the system
+        // natural-scrolling setting, not baked in here.
         switch report[7] {
-        case 1: results.append(.wheel(index: 0, delta: 1))
-        case 2: results.append(.wheel(index: 0, delta: -1))
+        case 1: results.append(.wheel(index: 0, delta: -1))
+        case 2: results.append(.wheel(index: 0, delta: 1))
         default: break
         }
         return results

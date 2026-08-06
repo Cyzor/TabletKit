@@ -293,17 +293,18 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertEqual(release?.touchRingButtonDown, false)
     }
 
-    /// Dial rotation: byte 7 = 1 or 2, one event per click.
+    /// Dial rotation: byte 7 = 1 (CCW) or 2 (CW), one event per click. Positive
+    /// delta means physically clockwise (confirmed on hardware 2026-08-06).
     func testPuckDialEmitsWheelSteps() {
         var state = DecoderState()
-        var cw = makePen(tag: 0xF0)
-        cw[7] = 0x01
-        var results = decode(cw, state: &state)
-        XCTAssertTrue(results.contains { if case .wheel(0, 1) = $0 { return true } else { return false } })
         var ccw = makePen(tag: 0xF0)
-        ccw[7] = 0x02
-        results = decode(ccw, state: &state)
+        ccw[7] = 0x01
+        var results = decode(ccw, state: &state)
         XCTAssertTrue(results.contains { if case .wheel(0, -1) = $0 { return true } else { return false } })
+        var cw = makePen(tag: 0xF0)
+        cw[7] = 0x02
+        results = decode(cw, state: &state)
+        XCTAssertTrue(results.contains { if case .wheel(0, 1) = $0 { return true } else { return false } })
     }
 
     /// Aux frames must not disturb pen proximity state.
