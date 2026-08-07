@@ -47,8 +47,26 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   `GenericDigitizerFrame`. The layout is derived from the device's own report
   descriptor via `HIDReportDescriptorParser` rather than hardcoded per family,
   so it carries its own axis maxima and adapts to slot counts and optional
-  fields. No device path constructs one yet — every current touch decode still
-  runs through the Wacom vendor-specific paths.
+  fields. As of 2026-08-06, `WacomKnownDevice` derives one for any touch
+  report ID `IntuosV2Decoder` doesn't reserve — this is what fixed touch on
+  Cintiq Pro/DTH devices whose reports were previously discarded by a
+  report-ID dispatch gap.
+
+- Backfilled `touchMaxX`/`touchMaxY` on five Cintiq Pro/DTH registry entries
+  (0x0350, 0x0354, 0x03C0, 0x03C4, 0x03EC) from the `linuxwacom/wacom-hid-descriptors`
+  corpus, with provenance comments on each row.
+
+### Fixed
+
+- `IntuosV2Decoder`'s report-ID dispatch had no case for `0x0C`, silently
+  discarding every touch report from Cintiq Pro/DTH pen displays. Touch
+  frames on those devices now decode via `PrecisionTouchDecoder`.
+
+### Changed
+
+- `TouchContact.init` gained a defaulted `contactMinor` parameter, which the
+  Swift API digester flags as a source-compatible but symbol-breaking change
+  (see `api-breakage-allowlist.txt`).
 - `classifyDigitizerInterface` — decides whether an unrecognized HID interface
   may have a pen driver attached, by checking whether its X/Y usages sit inside
   a Digitizer Touch Screen or Touch Pad collection. Usages alone cannot tell pen

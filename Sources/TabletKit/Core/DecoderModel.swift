@@ -94,10 +94,12 @@ public enum DecodeResult {
     /// Coordinates are in the same device-units space as `TabletPoint`
     /// (decoder must scale to `spec.maxX`/`spec.maxY`).  See `TouchContact`.
     ///
-    /// Currently emitted by no shipping decoder — Phase 1 plumbing for
-    /// Cintiq Pro 27 (DTH-271), Movink 13 (DTH-135), Cintiq 16 (DTH-1320),
-    /// Cintiq 24HD Touch (DTH-2400), Cintiq 22HD Touch (DTH-2200) once a
-    /// real capture confirms the per-family byte layout.
+    /// Emitted by `IntuosV2Decoder`'s BPT3-style per-family touch path and, as
+    /// of 2026-08-06, by `PrecisionTouchDecoder` for Cintiq Pro/DTH devices
+    /// whose touch report `WacomKnownDevice` derives a decoder for at
+    /// connect time. Devices with no recoverable touch coordinate maxima
+    /// still emit nothing; see `WacomDeviceRegistry`'s `touchMaxX`/`touchMaxY`
+    /// provenance comments for which devices those are.
     case touch([TouchContact])
 }
 
@@ -165,6 +167,11 @@ public struct BLEPenResult {
 
 /// Emit a toolCompatibility warning if the tool code is not fully supported on the device.
 /// Updates `state.toolIsSupported` and appends `.toolCompatibility(msg)` to results if needed.
+///
+/// Internal decoder plumbing, not part of the public contract — every
+/// in-tree decoder calls this directly, but a consumer building on
+/// `TabletReportDecoder` doesn't need to.
+@_spi(TabletKitInternals)
 public func emitToolCompatibility(
     toolCode: UInt16,
     deviceFamily: String,

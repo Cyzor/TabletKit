@@ -142,7 +142,7 @@ public struct ToolCapabilities {
 
 public extension ToolIdentity {
     /// Creates a ToolIdentity from a WacomToolSpec.
-    public init(spec: WacomToolSpec, serial: UInt32) {
+    init(spec: WacomToolSpec, serial: UInt32) {
         self.serial = serial
         self.toolCode = spec.toolCode
         self.isEraser = spec.isEraser
@@ -150,12 +150,12 @@ public extension ToolIdentity {
     }
 
     /// Returns the corresponding WacomToolSpec if available.
-    public var toolSpec: WacomToolSpec? {
+    var toolSpec: WacomToolSpec? {
         return WacomToolCatalog.spec(forToolCodeRaw: toolCode)
     }
 
     /// Returns the human-readable name for this tool.
-    public var displayName: String {
+    var displayName: String {
         return WacomToolCatalog.name(forToolCode: toolCode)
     }
 }

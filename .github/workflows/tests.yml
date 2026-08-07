@@ -14,3 +14,53 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+
+  api-breakage:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Diagnose API breaking changes
+        run: |
+          LATEST_TAG=$(git tag --sort=-v:refname | head -1)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No tags found; skipping API breakage check."
+            exit 0
+          fi
+          echo "Comparing against $LATEST_TAG"
+
+          # --breakage-allowlist-path only downgrades the underlying digester's
+          # compile diagnostics (error -> warning); it does not affect this
+          # command's own summary or exit code (verified on Swift 6.4). So the
+          # allowlist is applied here instead: fail only on a breakage line
+          # that isn't already recorded in api-breakage-allowlist.txt.
+          set -o pipefail
+          swift package diagnose-api-breaking-changes "$LATEST_TAG" --targets TabletKit 2>&1 | tee /tmp/digester_output.txt
+          DIGESTER_EXIT=$?
+
+          if [ "$DIGESTER_EXIT" -eq 0 ]; then
+            exit 0
+          fi
+
+          NEW_BREAKAGE=0
+          while IFS= read -r line; do
+            case "$line" in
+              *"💔 API breakage:"*)
+                MESSAGE=$(echo "$line" | sed 's/^.*💔 //')
+                if ! grep -qF "$MESSAGE" api-breakage-allowlist.txt; then
+                  echo "::error::New API breakage not in allowlist: $MESSAGE"
+                  NEW_BREAKAGE=1
+                fi
+                ;;
+            esac
+          done < /tmp/digester_output.txt
+
+          if [ "$NEW_BREAKAGE" -eq 1 ]; then
+            echo "One or more new API breaking changes were found. If intentional," \
+                 "document them in CHANGELOG.md and add the exact message to" \
+                 "api-breakage-allowlist.txt."
+            exit 1
+          fi
+
+          echo "All reported breakage is already recorded in api-breakage-allowlist.txt."

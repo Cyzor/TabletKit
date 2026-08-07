@@ -64,18 +64,18 @@ public protocol TabletDevice: AnyObject {
 }
 
 public extension TabletDevice {
-    public func setRingLED(index: Int) {}
-    public func setRingModeLabel(_ label: String) {}
-    public func setAuxKeyLabels(_ labels: [String]) {}
-    public func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?]) {}
-    public var hasDisplayBrightnessControl: Bool { false }
-    public func setDisplayBrightness(_ percent: Int) {}
-    public func setDisplayContrast(_ percent: Int) {}
-    public func setColorMode(_ index: Int) {}
-    public func setDisplayGamma(_ gammaTimesTen: Int) {}
-    public func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8) {}
-    public func setQuickKeysOrientation(steps: Int) {}
-    public func setQuickKeysSleepMinutes(_ minutes: Int) {}
-    public func setQuickKeysOledBrightness(_ level: Int) {}
-    public func reawaken() {}
+    func setRingLED(index: Int) {}
+    func setRingModeLabel(_ label: String) {}
+    func setAuxKeyLabels(_ labels: [String]) {}
+    func setRingLEDColors(_ colors: [(r: UInt8, g: UInt8, b: UInt8)?]) {}
+    var hasDisplayBrightnessControl: Bool { false }
+    func setDisplayBrightness(_ percent: Int) {}
+    func setDisplayContrast(_ percent: Int) {}
+    func setColorMode(_ index: Int) {}
+    func setDisplayGamma(_ gammaTimesTen: Int) {}
+    func setBezelLEDColor(r: UInt8, g: UInt8, b: UInt8) {}
+    func setQuickKeysOrientation(steps: Int) {}
+    func setQuickKeysSleepMinutes(_ minutes: Int) {}
+    func setQuickKeysOledBrightness(_ level: Int) {}
+    func reawaken() {}
 }

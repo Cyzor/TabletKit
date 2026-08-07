@@ -1,0 +1,10 @@
+# Allowlist for `swift package diagnose-api-breaking-changes`.
+# One exact breakage message per line, blank lines and lines starting with
+# `#` are ignored by us (the digester itself only reads non-comment lines
+# verbatim, but the tool tolerates comments interleaved for our own records).
+#
+# Entries here are pre-1.0 breaks already merged before this gate existed —
+# see TabletKit-Public-API-Design.md, "Phase A". After 1.0 an entry here
+# should mean a deliberate, changelog-documented break, not a silent one.
+
+API breakage: constructor TouchContact.init(id:x:y:contactArea:) has been removed
