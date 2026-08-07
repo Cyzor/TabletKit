@@ -217,6 +217,54 @@ final class PrecisionTouchDecoderTests: XCTestCase {
         XCTAssertNil(decoder.decode(report: short))
     }
 
+    // MARK: - Real-device shape (Cintiq Pro / DTH touch)
+
+    /// Pins the derived report ID and axis maxima for the Cintiq Pro / DTH
+    /// touch shape to the exact values `WacomDeviceRegistry` carries for
+    /// 0x0350/0x0354 (Cintiq Pro 16). If this ever drifts from the registry,
+    /// something changed on one side without the other — see
+    /// `TouchDescriptorFixtures.precisionTouchCintiqProShape`'s doc comment
+    /// for where those numbers came from.
+    func testCintiqProShapeMatchesRegisteredTouchMaxima() throws {
+        let parsed = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.precisionTouchCintiqProShape)
+        let layout = try XCTUnwrap(PrecisionTouchLayout.derive(from: parsed).first)
+
+        XCTAssertEqual(layout.reportID, 0x0C)
+        XCTAssertEqual(layout.logicalMaxX, 13824)
+        XCTAssertEqual(layout.logicalMaxY, 7776)
+
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0354))
+        XCTAssertEqual(layout.logicalMaxX, spec.touchMaxX)
+        XCTAssertEqual(layout.logicalMaxY, spec.touchMaxY)
+    }
+
+    /// A frame decoded through this shape lands at the same coordinates the
+    /// registry-driven projection expects — end-to-end proof the derived
+    /// layout and `PrecisionTouchDecoder` agree on where a finger is, not
+    /// just on the axis maxima.
+    func testCintiqProShapeDecodesAFinger() throws {
+        let parsed = try HIDReportDescriptorParser.parse(
+            hex: TouchDescriptorFixtures.precisionTouchCintiqProShape)
+        let layout = try XCTUnwrap(PrecisionTouchLayout.derive(from: parsed).first)
+        let decoder = PrecisionTouchDecoder(layout: layout)
+
+        // report[0]=id, [1]=TipSwitch(bit0)+pad, [2]=contactID,
+        // [3..4]=X LE16, [5..6]=Y LE16, [7]=width, [8]=height.
+        var report = [UInt8](repeating: 0, count: 9)
+        report[0] = 0x0C
+        report[1] = 0x01  // Tip Switch set
+        report[2] = 7
+        report[3] = 0x00; report[4] = 0x1B  // X = 6912 = 0x1B00, little-endian
+        report[5] = 0x30; report[6] = 0x0F  // Y = 3888 = 0x0F30, little-endian
+
+        let frame = try XCTUnwrap(decoder.decode(report: report))
+        XCTAssertEqual(frame.contacts.count, 1)
+        XCTAssertEqual(frame.contacts[0].x, 6912)
+        XCTAssertEqual(frame.contacts[0].y, 3888)
+        XCTAssertEqual(frame.contacts[0].id, 7)
+    }
+
     // MARK: - Deriver robustness
 
     /// An unrecognized per-finger field (here Digitizer Confidence) must not

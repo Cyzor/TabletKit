@@ -1642,6 +1642,10 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 120032, maxY: 67868, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            // touchMaxX/Y from this PID's own touch report descriptor
+            // (linuxwacom/wacom-hid-descriptors, 2026-08-06): Logical Maximum
+            // 23848 x 13412 on report 0x0C.
+            touchMaxX: 23848, touchMaxY: 13412,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
@@ -2156,6 +2160,10 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            // touchMaxX/Y from the paired 0x0354 interface's own touch report
+            // descriptor (linuxwacom/wacom-hid-descriptors, 2026-08-06):
+            // Logical Maximum 13824 x 7776 on report 0x0C.
+            touchMaxX: 13824, touchMaxY: 7776,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
@@ -2164,6 +2172,10 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            // touchMaxX/Y confirmed directly from this PID's own touch report
+            // descriptor (linuxwacom/wacom-hid-descriptors, 2026-08-06):
+            // Logical Maximum 13824 x 7776 on report 0x0C.
+            touchMaxX: 13824, touchMaxY: 7776,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
@@ -2199,6 +2211,11 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 76200, maxY: 40600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            // touchMaxX/Y decoded from this PID's own raw touch report
+            // descriptor via TabletKit's descriptor-dump tool
+            // (linuxwacom/wacom-hid-descriptors, 2026-08-06): Logical Maximum
+            // 15276 x 8592 on report 0x0C.
+            touchMaxX: 15276, touchMaxY: 8592,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 381, activeHeightMM: 203),
@@ -2222,6 +2239,11 @@ public enum WacomDeviceRegistry {
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            // touchMaxX/Y decoded from this PID's own raw touch report
+            // descriptor via TabletKit's descriptor-dump tool
+            // (linuxwacom/wacom-hid-descriptors, 2026-08-06): Logical Maximum
+            // 11752 x 6608 on report 0x0C.
+            touchMaxX: 11752, touchMaxY: 6608,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 330, activeHeightMM: 178),

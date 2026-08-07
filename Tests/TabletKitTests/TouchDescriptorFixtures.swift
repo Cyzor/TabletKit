@@ -143,4 +143,26 @@ enum TouchDescriptorFixtures {
         "95018102093d15c0253f750895018102093e15c0253f7508950181020941167c",
         "fc2683037510950181020a32011500253f750895018102c0",
     ].joined()
+
+    /// A single-contact touch report on `0x0C` — the shape found on every
+    /// Cintiq Pro / DTH pen-display touch descriptor checked so far (Cintiq
+    /// Pro 16, Cintiq Pro 27, Cintiq Pro 17, DTH134), against
+    /// `linuxwacom/wacom-hid-descriptors` and TabletKit's own
+    /// `descriptor-dump` tool, 2026-08-06. `IntuosV2Decoder`'s report-ID
+    /// switch has no case for `0x0C` — every one of these devices' touch
+    /// frames were silently discarded until `WacomKnownDevice` started
+    /// deriving a `PrecisionTouchDecoder` for report IDs it doesn't reserve.
+    ///
+    /// One finger slot (Tip Switch, Contact Identifier, X/Y, Width/Height) —
+    /// the real devices declare several, but one is enough to exercise the
+    /// decode path and, more importantly, to pin the axis maxima this test
+    /// asserts against `WacomDeviceRegistry`'s `touchMaxX`/`touchMaxY` for
+    /// 0x0350/0x0354 (Cintiq Pro 16): 13824 x 7776. Structure re-derived from
+    /// the HID Usage Tables and confirmed against the real descriptor via
+    /// `descriptor-dump`, not vendored bytes, per this file's standing rule.
+    static let precisionTouchCintiqProShape: String = [
+        "050d0904a101850c0922a102094215002501750195018102750795018103095175",
+        "089501150026ff008102050109307510950115002600368102093126601e810205",
+        "0d094875081500264700810209492628008102c0c0",
+    ].joined()
 }
