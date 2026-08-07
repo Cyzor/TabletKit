@@ -44,6 +44,31 @@ import registry_lib as rl
 
 DIM_TOLERANCE = 0  # exact match required for now; bump to 50 if rounding noise appears
 
+# Intuos 1 and Intuos 2: the kernel's wacom_features maxX/maxY are half of what
+# our decoder emits, so a raw comparison reports a spurious 2x disagreement on
+# all eleven PIDs.  IntuosV1Decoder.decodeUSBPen packs an extra low-order bit
+# per axis (`(hi << 8 | lo) << 1 | fractional`), giving 5080 lpi output units
+# against the kernel's 2540 lpi figures.  OTD's IntuosV1TabletReport.cs does the
+# same and its configs carry the doubled maxima, which is why OTD agrees with us
+# and only the kernel appears to disagree.
+#
+# This is load-bearing, not cosmetic: issue #5 ("screen area coverage too small")
+# was these rows carrying the un-doubled values, fixed 2026-08-03.  Without this
+# scaling the audit re-proposes that regression on every run.  See
+# Notes/Wacom-HID-GD-0608-U-Reference.md for the manual + OTD cross-check.
+KERNEL_HALF_SCALE_PIDS = frozenset({
+    0x0020, 0x0021, 0x0022, 0x0023, 0x0024,          # Intuos 1  (GD-*-U)
+    0x0041, 0x0042, 0x0043, 0x0044, 0x0045, 0x0047,  # Intuos 2  (XD-*-U)
+})
+
+# Ten of those rows still report otd_disagrees after scaling, on pressure alone:
+# OTD carries 2046 where we carry 1023.  That one is adjudicated, not open —
+# Wacom's GD-series manual specifies 1024 levels (10-bit), and an earlier draft
+# of our own notes was corrected for exactly this "11-bit" error.  OTD looks to
+# have applied the coordinate doubling to pressure too.  Deliberately not
+# whitelisted: the rows should keep failing, because the dimensions agreeing is
+# not on its own grounds to promote them.
+
 # ── Upstream + registry parsing ───────────────────────────────────────────────
 #
 # All four parsers live in registry_lib so every tools/ script sees the same
@@ -152,10 +177,36 @@ def dims_agree(a, b) -> bool:
     )
 
 
-def compute_verdict(reg, kern, otd) -> tuple[str, str]:
+def scale_kernel_dims(pid, kern):
+    """Put kernel dims into our decoder's output units.
+
+    Returns (kern, note).  Only the Intuos 1/2 rows need this; everything else
+    passes through untouched.  The CSV keeps reporting the kernel's raw figures,
+    so the note is what explains why a doubled registry row still reads as
+    agreeing.
+    """
+    if kern is None or pid not in KERNEL_HALF_SCALE_PIDS:
+        return kern, ""
+    scaled = dict(kern)
+    scaled["maxX"] = kern["maxX"] * 2
+    scaled["maxY"] = kern["maxY"] * 2
+    return scaled, ("kernel dims doubled to 5080 lpi decoder units "
+                    "(Intuos 1/2 fractional-bit packing)")
+
+
+def compute_verdict(pid, reg, kern, otd) -> tuple[str, str]:
     """Return (verdict, notes)."""
     if not kern and not otd:
         return ("unknown", "neither kernel nor OTD has this PID")
+
+    kern, scale_note = scale_kernel_dims(pid, kern)
+    if scale_note:
+        verdict, notes = _compute_verdict(reg, kern, otd)
+        return (verdict, f"{scale_note}; {notes}" if notes else scale_note)
+    return _compute_verdict(reg, kern, otd)
+
+
+def _compute_verdict(reg, kern, otd) -> tuple[str, str]:
 
     if kern and otd:
         if dims_agree(reg, kern) and dims_agree(reg, otd):
@@ -216,7 +267,7 @@ def main():
         pid = reg["pid"]
         kern = kernel.get(pid)
         otd_e = otd.get(pid)
-        verdict, notes = compute_verdict(reg, kern, otd_e)
+        verdict, notes = compute_verdict(pid, reg, kern, otd_e)
         counts[verdict] = counts.get(verdict, 0) + 1
 
         # parser comparison
