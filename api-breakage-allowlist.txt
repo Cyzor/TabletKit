@@ -8,3 +8,9 @@
 # should mean a deliberate, changelog-documented break, not a silent one.
 
 API breakage: constructor TouchContact.init(id:x:y:contactArea:) has been removed
+
+# emitToolCompatibility was made @_spi(TabletKitInternals) as part of the same
+# Phase A pass that added this gate — deliberate, see the doc comment on the
+# declaration in Core/DecoderModel.swift. Nothing outside the package called
+# it, so this isn't a real break for any consumer.
+API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) is now with @_spi
