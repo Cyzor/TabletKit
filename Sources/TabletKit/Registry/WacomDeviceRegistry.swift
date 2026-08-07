@@ -761,10 +761,11 @@ public enum WacomDeviceRegistry {
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBA (65024×40640).
-            productID: 0x00BA, name: "Intuos4 L (PTK-840)",  // ⚠ from kernel
+            productID: 0x00BA, name: "Intuos4 L (PTK-840)",  // dims kernel + OTD
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 325, activeHeightMM: 203),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203),
         .init(
             productID: 0x00BB, name: "Intuos4 XL (PTK-1240)",
             parser: .intuosV1, maxX: 97536, maxY: 60960, maxPressure: 2047,
@@ -773,10 +774,11 @@ public enum WacomDeviceRegistry {
             confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBC (40640×25400).
-            productID: 0x00BC, name: "Intuos4 WL (PTK-540WL)",  // ⚠ from kernel
+            productID: 0x00BC, name: "Intuos4 WL (PTK-540WL)",  // dims kernel + OTD
             parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 127),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 127),
         .init(
             // BT Classic PID for the same PTK-540WL: libwacom
             // wacom-intuos4-6x9-wl.tablet lists DeviceMatch
@@ -1004,19 +1006,19 @@ public enum WacomDeviceRegistry {
         .init(
             // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
             // manual cross-check. Confirmed 2026-08-03.
-            productID: 0x00D6, name: "Bamboo Fun Pen & Touch (CTH-461)",  // ⚠ from kernel — kernel 0xD6 (BambooPT 2FG 4x5); previously misnamed CTL-460 (that's 0x00D4)
+            productID: 0x00D6, name: "Bamboo Fun Pen & Touch (CTH-461)",  // dims kernel + OTD; kernel 0xD6 (BambooPT 2FG 4x5); previously misnamed CTL-460 (that's 0x00D4)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 147, activeHeightMM: 92),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
             // manual cross-check. Confirmed 2026-08-03.
-            productID: 0x00D7, name: "Bamboo Pen & Touch (small)",  // ⚠ from kernel — dims from kernel 0xD7 (BambooPT 2FG Small); name attribution uncertain
+            productID: 0x00D7, name: "Bamboo Pen & Touch (small)",  // dims kernel + OTD (kernel 0xD7, BambooPT 2FG Small); ⚠ name attribution still uncertain
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 147, activeHeightMM: 92),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             // Same 147.2×92.0mm chassis as CTH-460 (0x00D1) — see that row's
             // manual cross-check. Confirmed 2026-08-03.
@@ -1026,11 +1028,11 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
-            productID: 0x00DB, name: "Bamboo Pen & Touch SE (CTH-661SE)",  // ⚠ from kernel — dims from kernel 0xDB (Bamboo 2FG 6x8 SE); name attribution uncertain
+            productID: 0x00DB, name: "Bamboo Pen & Touch SE (CTH-661SE)",  // dims kernel + OTD (kernel 0xDB, Bamboo 2FG 6x8 SE); ⚠ name attribution still uncertain
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 217, activeHeightMM: 137),
+            confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(
             // libwacom wacom-bamboo-4fg-s-t.tablet: "second generation BambooPT",
             // no stylus, 2FG touch (4FG gesture). maxPressure 0 is intentional —
@@ -1101,7 +1103,8 @@ public enum WacomDeviceRegistry {
             parser: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 432, activeHeightMM: 330),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 432, activeHeightMM: 330),
         .init(
             productID: 0x00F4, name: "Cintiq 24HD (DTK-2400)",  // ✓ confirmed live
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
@@ -1162,7 +1165,7 @@ public enum WacomDeviceRegistry {
         // These PIDs appear when the tablet connects over BT Classic (transport="Bluetooth").
         // Coordinate ranges match the USB entries; seizeUSB=false (BT Classic needs no seizure).
         .init(
-            productID: 0x0360, name: "Wacom PTH-660",  // ⚠ from OTD
+            productID: 0x0360, name: "Wacom PTH-660",  // dims kernel + OTD
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
@@ -1172,7 +1175,8 @@ public enum WacomDeviceRegistry {
             // actually drives BT touch projection (confirmed working
             // 2026-05-22).  Kept here as a defensive fallback.
             touchMaxX: 8960, touchMaxY: 5920,
-            seizeUSB: false, activeWidthMM: 229, activeHeightMM: 152),
+            seizeUSB: false,
+            confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
         .init(
             productID: 0x0361, name: "Intuos Pro L (PTH-860) BT",  // ✓ confirmed live (BT Classic)
             parser: .intuosV2, maxX: 62200, maxY: 43200, maxPressure: 8191,
@@ -2342,12 +2346,13 @@ public enum WacomDeviceRegistry {
             // exact pen active area with 0x0304 (DTK-1300) per Wacom's own
             // IPI booklet for this model pair — see that row's note.
             // Confirmed 2026-08-03.
-            productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // ⚠ from kernel (WACOM_13HD type)
+            productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // dims kernel (WACOM_13HD type) + OTD
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 299, activeHeightMM: 171),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
 
         // Name-only: PL report family (wacom_pl_irq) has no decoder here.
         // Kernel dims in comments for when one lands.
