@@ -832,14 +832,33 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
-            // Same confirmation and same untouched touch-capability gap as
-            // 0x0026 above; activeWidthMM corrected 330→325 to match
-            // (325.12mm). Confirmed 2026-08-03.
+            // Same confirmation as 0x0026 above; activeWidthMM corrected
+            // 330→325 to match (325.12mm). Confirmed 2026-08-03.
+            //
+            // Touch confirmed live 2026-08-08 via two hardware discovery
+            // captures against this exact unit, one per interface (the pen
+            // interface's own report 0x02 is a fixed 10 bytes; the touch
+            // interface's report 0x02 is a fixed 64 bytes — same report ID,
+            // different interfaces, told apart by length, which is exactly
+            // what confused earlier capture attempts before the capture tool
+            // itself was fixed to stop misattributing reports across
+            // interfaces). The 64-byte report matches IntuosV1Decoder's
+            // existing BPT3ContainerDecoder dispatch (`id == 0x02 && length
+            // == 64`) byte-for-byte: 8-byte slot stride from offset 2, slot
+            // key 2–17, bit-7 down flag, nibble-packed 12-bit X/Y, width/
+            // height bytes — the same format already shipping for CTH-690.
+            // No decoder change needed, only this flag. touchMaxX/Y are the
+            // format's natural 12-bit ceiling, corroborated independently by
+            // OpenTabletDriver's PTH-850.json ("Touch": {"MaxX": 4095,
+            // "MaxY": 4095}). maxTouchContacts mirrors CTH-690's 16 — the
+            // slot-key range (2–17) is the same protocol, not device-specific.
             productID: 0x0028, name: "Intuos5 L (PTH-850)",
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203),
+            confidence: .verified, activeWidthMM: 325, activeHeightMM: 203),
 
         // ── Intuos Pro first-gen (PTH-x51, 2013) — intuosV1 parser ───────────
         // Renamed from "Intuos5" to "Intuos Pro"; same HID format.
