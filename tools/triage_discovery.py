@@ -130,7 +130,15 @@ def validate(doc: dict, kind: str) -> list[str]:
                         "capture is not usable for a registry entry")
     if not dev.get("name"):
         problems.append("deviceInfo.name is empty")
-    if not doc.get("reports"):
+    # captureVersion >= 7 records every interface, and the top-level block is
+    # only the primary one's.  A tablet whose pen interface stays silent
+    # pending a mode-switch write, while a secondary interface streams touch
+    # data, is a usable capture with an empty top level — flagging it as
+    # empty would condemn the exact file the multi-interface capture exists
+    # to produce.
+    if not doc.get("reports") and not any(
+            isinstance(i, dict) and i.get("reports")
+            for i in (doc.get("interfaces") or [])):
         problems.append("no `reports` captured")
 
     # Privacy: older captures may still carry a serial.  Flag it so it can be
@@ -381,6 +389,66 @@ def tool_codes_section(doc: dict) -> list[str]:
 
 # ── Upstream cross-reference ──────────────────────────────────────────────────
 
+def secondary_interfaces_section(doc: dict, kind: str) -> list[str]:
+    """Per-interface analysis for captures that recorded more than one.
+
+    captureVersion >= 7.  A tablet whose pen and touch data arrive on separate
+    HID interfaces is recorded on all of them at once; the primary interface's
+    data is what every section above already read, out of the top-level
+    `reports`.  This runs the same inventory and byte-range passes over each of
+    the others, since the interface holding the undecoded traffic is routinely
+    not the primary one — that is the entire reason the capture covers both.
+
+    An interface that recorded nothing is called out rather than skipped: a
+    listened-to interface that stayed silent for the whole session is what a
+    device sitting in a reduced boot mode looks like, and it points at a
+    mode-switch write rather than at a decoding problem.
+    """
+    interfaces = doc.get("interfaces")
+    if not isinstance(interfaces, list) or len(interfaces) < 2:
+        return []
+
+    lines = ["## Interfaces", "",
+             "This capture covers more than one HID interface. The sections "
+             "above describe the primary one.", ""]
+    for iface in interfaces:
+        if not isinstance(iface, dict):
+            continue
+        role = "primary" if iface.get("isPrimary") else "secondary"
+        label = (f"usage page `{iface.get('usagePage', '?')}` "
+                 f"usage `{iface.get('usage', '?')}`")
+        count = iface.get("sampleCount", 0)
+        lines.append(f"- {label} ({role}) — {count} events, "
+                     f"{len(iface.get('reports') or {})} report IDs")
+    lines.append("")
+
+    for iface in interfaces:
+        if not isinstance(iface, dict) or iface.get("isPrimary"):
+            continue
+        label = (f"usage page `{iface.get('usagePage', '?')}` "
+                 f"usage `{iface.get('usage', '?')}`")
+        lines += [f"### Secondary interface — {label}", ""]
+        if not iface.get("reports"):
+            lines += ["- ⚠ recorded nothing for the whole session. The driver "
+                      "was listening, so this is the device staying silent — "
+                      "consistent with an interface that needs a mode-switch "
+                      "feature write before it reports.", ""]
+            continue
+        # Same passes as the primary, over this interface's own reports and
+        # its own descriptor — `descriptorReadable` in these summaries was
+        # judged against that descriptor, not the primary's.
+        sub = {
+            "mode": doc.get("mode"),
+            "captureVersion": doc.get("captureVersion"),
+            "reports": iface.get("reports"),
+            "hidReportDescriptor": iface.get("hidReportDescriptor"),
+        }
+        lines += report_inventory(sub, kind)
+        lines += byte_ranges_section(sub, kind)
+        lines += discriminated_byte_ranges_section(sub, kind)
+    return lines
+
+
 def upstream_section(pid: Optional[int]) -> list[str]:
     lines = ["## Upstream cross-reference", ""]
     if pid is None:
@@ -545,6 +613,7 @@ def build_report(doc: dict, path: Path, do_upstream: bool) -> str:
     lines += byte_ranges_section(doc, kind)
     lines += discriminated_byte_ranges_section(doc, kind)
     lines += tool_codes_section(doc)
+    lines += secondary_interfaces_section(doc, kind)
     if do_upstream:
         lines += upstream_section(pid)
     lines += draft_entry(doc, pid)
