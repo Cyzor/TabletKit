@@ -14,6 +14,4 @@ build/
 .swiftpm/
 Package.resolved
 
-# AI session files
-CLAUDE.md
 Notes/Scratch/

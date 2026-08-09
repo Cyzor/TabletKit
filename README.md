@@ -23,7 +23,7 @@ TabletKit is an independent, community-built project. It is not affiliated with,
 
 ```swift
 // Package.swift
-.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.2.0")
+.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.3.0")
 ```
 
 Then add `"TabletKit"` to your target's dependencies and `import TabletKit`.
