@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jay Petronis (Cyzor)
+// SPDX-License-Identifier: MPL-2.0
 
 /// Accumulates standard HID digitizer element values into a `TabletPoint`.
 ///
