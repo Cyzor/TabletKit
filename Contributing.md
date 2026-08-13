@@ -26,7 +26,7 @@ App-level bugs, UI issues, and installation problems belong on the [MockTab repo
 
 Decoder work is only as good as the data behind it. Three tiers, strongest first:
 
-1. **Raw IOKit traffic via dtrace, with SIP off.** The reference script is [`tools/wacom_capture.d`](https://github.com/Cyzor/tablet-driver/blob/main/tools/wacom_capture.d) in the MockTab repo. Captures the bytes that crossed the USB boundary before any decoding interpreted them, a valuable data source for protocols, initialization, and device properties. Requires disabling Apple's System Integrity Protection (SIP) for optimal analysis.
+1. **Raw IOKit traffic via dtrace, with SIP off.** The reference script is [`tools/capture/wacom_capture.d`](https://github.com/Cyzor/tablet-driver/blob/main/tools/capture/wacom_capture.d) in the MockTab repo. Captures the bytes that crossed the USB boundary before any decoding interpreted them, a valuable data source for protocols, initialization, and device properties. Requires disabling Apple's System Integrity Protection (SIP) for optimal analysis.
 2. **Upstream cross-reference.** The Linux kernel's `input-wacom` driver, `libwacom` metadata, and OpenTabletDriver vendor configs together cover most of the field. Strong for protocol shape and device metadata, weaker for Mac-specific quirks.  Cite the source and commit when importing.
 3. **In-app capture via *Info → Collect Device Data…*.** Runs in userspace with no special permissions, parses the HID descriptor the OS exposes, and records input reports as the OS delivers them. Sufficient for variants of already-known families, but not for novel protocols or for anything that depends on output reports the OS filters.
 
