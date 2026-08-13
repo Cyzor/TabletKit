@@ -14,3 +14,10 @@ API breakage: constructor TouchContact.init(id:x:y:contactArea:) has been remove
 # declaration in Core/DecoderModel.swift. Nothing outside the package called
 # it, so this isn't a real break for any consumer.
 API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) is now with @_spi
+
+# XencelabsControl was renamed to XencelabsOutputProtocol, leaving a deprecated
+# typealias behind for one cycle. The alias has now been removed, so relative to
+# 0.3.0 the old enum name is gone. Still pre-1.0, and the only consumer is the
+# app, which was updated in the same pass. The replacement type is a drop-in
+# rename with an identical surface.
+API breakage: enum XencelabsControl has been removed

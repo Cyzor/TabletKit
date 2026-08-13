@@ -62,6 +62,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   discarding every touch report from Cintiq Pro/DTH pen displays. Touch
   frames on those devices now decode via `PrecisionTouchDecoder`.
 
+### Removed
+
+- `XencelabsControl`, the deprecated typealias left behind when the type was
+  renamed to `XencelabsOutputProtocol`. Source-breaking for anything still
+  using the old name; the replacement has an identical surface, so the fix is
+  a rename. Recorded in `api-breakage-allowlist.txt`.
+
 ### Changed
 
 - `TouchContact.init` gained a defaulted `contactMinor` parameter, which the
