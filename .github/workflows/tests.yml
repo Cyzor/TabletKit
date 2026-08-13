@@ -35,9 +35,15 @@ jobs:
           # command's own summary or exit code (verified on Swift 6.4). So the
           # allowlist is applied here instead: fail only on a breakage line
           # that isn't already recorded in api-breakage-allowlist.txt.
+          # `|| DIGESTER_EXIT=$?` is load-bearing: Actions runs this block as
+          # `bash -e`, so an unguarded failing pipeline aborts the step on the
+          # spot and every allowlist check below never executes — which made
+          # this job fail on allowlisted breakage. Putting the command in an
+          # `||` list exempts it from -e while still capturing its status.
           set -o pipefail
-          swift package diagnose-api-breaking-changes "$LATEST_TAG" --targets TabletKit 2>&1 | tee /tmp/digester_output.txt
-          DIGESTER_EXIT=$?
+          DIGESTER_EXIT=0
+          swift package diagnose-api-breaking-changes "$LATEST_TAG" --targets TabletKit 2>&1 \
+            | tee /tmp/digester_output.txt || DIGESTER_EXIT=$?
 
           if [ "$DIGESTER_EXIT" -eq 0 ]; then
             exit 0
