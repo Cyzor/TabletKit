@@ -289,6 +289,3 @@ public enum XencelabsOutputProtocol {
         return a
     }
 }
-
-@available(*, deprecated, renamed: "XencelabsOutputProtocol")
-public typealias XencelabsControl = XencelabsOutputProtocol
