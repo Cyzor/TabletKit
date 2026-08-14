@@ -18,6 +18,12 @@ Verdicts:
   otd_disagrees    — OTD has different dims; less authoritative than kernel
   kernel_only      — kernel has it, OTD doesn't
   otd_only         — OTD has it, kernel doesn't (newer hardware, typically)
+  name_only        — registry carries no dims at all (no decoder for the family);
+                     nothing to compare, so this is not a disagreement.  Matches
+                     the registry's own "Name-only:" section comments.  Beware:
+                     audit_registry.py counts a "name-only" bucket meaning
+                     something else entirely — rows where *only the name* differs
+                     from the kernel's.  Same phrase, unrelated measure.
   unknown          — neither source has the PID
   registry_only    — see "unknown"
 
@@ -194,8 +200,43 @@ def scale_kernel_dims(pid, kern):
                     "(Intuos 1/2 fractional-bit packing)")
 
 
+def is_name_only(reg) -> bool:
+    """True when a registry row carries no dimensions at all.
+
+    Twenty-five rows are deliberately dimensionless — the PL / DTF / DTU-710
+    families and the ISDv4 built-ins, whose report formats have no decoder here.
+    Their kernel figures live in comments beside them, waiting for a decoder to
+    land.  Comparing 0 against a real kernel maximum is not a disagreement, it
+    is an absence, and reporting sixteen of them as `kernel_disagrees` every run
+    buried the three rows that genuinely conflict.
+
+    Note this is deliberately *not* the same treatment as the Intuos 1/2 and
+    Intuos3 pressure rows above.  Those carry real dims and a real conflict and
+    are meant to keep failing; see the comment on KERNEL_HALF_SCALE_PIDS.  This
+    only reclassifies rows that have nothing to compare in the first place.
+    """
+    return reg["maxX"] == 0 and reg["maxY"] == 0 and reg["maxP"] == 0
+
+
+def _name_only_notes(kern, otd) -> str:
+    """Report what upstream has, so the row doubles as a decoder to-do list."""
+    available = []
+    for src, label in ((kern, "kernel"), (otd, "OTD")):
+        if src:
+            available.append(
+                f"{label} has maxX={src['maxX']} maxY={src['maxY']} maxP={src['maxP']}"
+            )
+    if not available:
+        return "registry carries no dims; neither kernel nor OTD has this PID either"
+    return ("registry carries no dims (no decoder for this family); "
+            + "; ".join(available) + " if one lands")
+
+
 def compute_verdict(pid, reg, kern, otd) -> tuple[str, str]:
     """Return (verdict, notes)."""
+    if is_name_only(reg):
+        return ("name_only", _name_only_notes(kern, otd))
+
     if not kern and not otd:
         return ("unknown", "neither kernel nor OTD has this PID")
 
