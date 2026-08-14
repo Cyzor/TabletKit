@@ -919,12 +919,26 @@ public enum WacomDeviceRegistry {
             // 0x0352 as the Cintiq Pro 32 pen interface (PairedID 0x0356 is
             // its separate touch interface — no registry entry; it would need
             // its own touch decoder). The real PTH-460 lives at 0x0392/0x03DC.
-            // Dimensions: libwacom Width=686 Height=381 mm × 200 units/mm.
-            productID: 0x0352, name: "Cintiq Pro 32 (DTH-3220)",  // ⚠ recognition-only
-            parser: .intuosV2, maxX: 137200, maxY: 76200, maxPressure: 8191,
+            //
+            // Dimensions were libwacom's Width=686 Height=381 mm (maxX 137200,
+            // maxY 76200) until 2026-08-14. OTD gained a config for this PID
+            // (upstream #4974) giving 701.92 × 396.58 mm — same 200 units/mm
+            // scale, so not a units disagreement — and Wacom's own spec sheet
+            // prints 697 × 392 mm. Two sources within ~5 mm of each other and
+            // 11–16 mm off libwacom makes libwacom the outlier here, so the
+            // OTD figures are used. Wacom's printed value is a rounded consumer
+            // spec and only breaks the tie; it is not the primary source.
+            //
+            // Same commit added initSteps, which this row was missing: OTD's
+            // FeatureInitReport `AgI=` is [0x02, 0x02], and every other
+            // intuosV2 pen display in this table already carried it.
+            productID: 0x0352, name: "Cintiq Pro 32 (DTH-3220)",  // ⚠ dims OTD + Wacom spec sheet
+            parser: .intuosV2, maxX: 140384, maxY: 79316, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
-            seizeUSB: true, activeWidthMM: 686, activeHeightMM: 381),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced,
+            activeWidthMM: 701.92, activeHeightMM: 396.58),
         .init(
             productID: 0x0357, name: "Intuos Pro M (PTH-660)",  // ✓ confirmed live
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,

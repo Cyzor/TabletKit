@@ -58,6 +58,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Cintiq Pro 32 (DTH-3220, `0x0352`) carried no init step, the only
+  IntuosV2 pen display in the registry missing one, so the device would
+  have stayed in its default reporting mode. Sends `[0x02, 0x02]` now, as
+  its thirty-five siblings already did.
+
+- Cintiq Pro 32 active area was libwacom's 686 × 381 mm. OpenTabletDriver
+  and Wacom's own spec sheet both put it near 700 × 396 mm, so the row now
+  reads 701.92 × 396.58 mm (`maxX` 140384, `maxY` 79316) and is promoted to
+  `.crossReferenced`.
+
 - `IntuosV2Decoder`'s report-ID dispatch had no case for `0x0C`, silently
   discarding every touch report from Cintiq Pro/DTH pen displays. Touch
   frames on those devices now decode via `PrecisionTouchDecoder`.
