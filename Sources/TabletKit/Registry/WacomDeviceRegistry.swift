@@ -800,7 +800,7 @@ public enum WacomDeviceRegistry {
         // │PTH-650 │ 1   │ Intuos5 M           │   0x0027    │    unknown   │  —   │
         // │PTH-850 │ 1   │ Intuos5 L           │   0x0028    │    unknown   │  —   │
         // │PTH-451 │ 2   │ Intuos Pro S (1st)  │   0x0314    │    unknown   │  —   │
-        // │PTH-651 │ 2   │ Intuos Pro M (1st)  │   0x0316    │    unknown   │  —   │
+        // │PTH-651 │ 2   │ Intuos Pro M (1st)  │   0x0315    │    unknown   │  —   │
         // │PTH-851 │ 2   │ Intuos Pro L (1st)  │   0x00F8    │    unknown   │  —   │
         // │                                                                          │
         // │ These are all IntuosV1 format. Intuos Pro 2nd-gen (PTH-460/660/860)   │
@@ -874,6 +874,11 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
+            // ⚠ estimated, and NOT the PID PTH-651 hardware was observed to
+            // use — see 0x0315 below, confirmed by capture 2026-08-19. Kept
+            // rather than deleted because some later boards are reported to
+            // enumerate here; treat as an unconfirmed variant, not the
+            // canonical row for this model.
             productID: 0x0316, name: "Intuos Pro M (PTH-651)",  // ⚠ estimated
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
@@ -1173,26 +1178,86 @@ public enum WacomDeviceRegistry {
         // estimation error; corrected during the 2026-05-15 DTUS pass.
 
         // ── Intuos4 (PTK) additional variants ────────────────────────────────
+        // activeWidthMM/HeightMM on both rows were rounded spec-sheet figures
+        // rather than the digitizer's real extent. Checking every intuosV1 row
+        // against `maxX / 5080 × 25.4` (the family's native resolution), all of
+        // them agree to within ±0.5mm except these two and 0x0315 — the three
+        // rows sourced from OTD. On 0x0029 the declared height moved the
+        // opposite direction from its width, so this is a different source
+        // rather than rounding. Corrected to match each row's PTH twin
+        // (0x0026 and 0x0027), which carry identical maxX/maxY. Buttons and
+        // coordinates untouched. See feedback on manual specs not being
+        // authoritative. Corrected 2026-08-22.
         .init(
             productID: 0x0029, name: "Wacom PTK-450",  // ⚠ from OTD
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
             productID: 0x002A, name: "Wacom PTK-650",  // ⚠ from OTD
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
 
         // ── Intuos Pro first-gen additional variant ───────────────────────────
         .init(
-            productID: 0x0315, name: "Wacom PTH-651",  // ⚠ from OTD
+            // This is the PID real PTH-651 hardware enumerates as — confirmed
+            // by three discovery captures from a reporter's unit, 2026-08-19.
+            // (The family table above previously listed PTH-651 as 0x0316;
+            // that was the error, now corrected there.)
+            //
+            // hasTouchRing was false, contradicted by those captures: the pad
+            // report 0x03 on the 0xFF0D interface carries byte 2 = 0 plus
+            // 129–199, i.e. the intuosV1 `ring1 = data[2]` layout with bit 7
+            // as the active flag and bits 6–0 as the 0–127 angular position.
+            // Byte 4 is a clean single-bit eight-key mask and byte 3 bit 0 is
+            // the ninth bit, matching `(data[4] << 1) | (data[3] & 0x01)`.
+            //
+            // activeWidthMM/HeightMM were 229×152 — the rounded spec-sheet
+            // figure. maxX/maxY at the family's 5080 lpi give 223.5×139.7, and
+            // every other intuosV1 row agrees with that computation to within
+            // ±0.5mm. Corrected to match this row's PTH-650 twin (0x0027),
+            // which carries identical maxX/maxY.
+            //
+            // Touch: the 64-byte report 0x02 on the separate 0xFF00 interface
+            // is the BPT3 container byte-for-byte — 8-byte slot stride from
+            // offset 2, slot keys inside 2–17, bit-7 down flag, nibble-packed
+            // 12-bit X/Y, width/height bytes. IntuosV1Decoder already
+            // dispatches `id == 0x02 && length == 64` to it, so this flag is
+            // the entire switch; no decoder change was needed.
+            //
+            // touchMaxX/Y are REASONED, not measured — the captures only ever
+            // reached 3535 on one axis while the other hit 4079. Two readings
+            // were possible: a genuinely lower ceiling on that axis, or an
+            // under-swept axis. Anisotropic normalization settles it. If the
+            // sensor used fixed counts per mm and the long axis topped out at
+            // the 12-bit ceiling, the short axis would reach 4095 × 140/224 =
+            // 2559. The observed 3535 is 38% above that, and this holds under
+            // *either* axis assignment, so the sensor cannot be isotropic —
+            // it normalizes each axis independently to the full 12-bit range.
+            // Hence 4095/4095, matching PTH-850 (0x0028) and OTD's
+            // PTH-850.json for the same protocol.
+            //
+            // Axis assignment assumed un-transposed. The asymmetry needs no
+            // transposition to explain: the captures came from someone testing
+            // touch, i.e. mostly vertical two-finger scrolling, which sweeps Y
+            // far more than X — exactly the observed signature. The same
+            // formula is already validated on PTH-850 and CTH-690, same
+            // protocol family. If touch comes out rotated 90° on hardware,
+            // this assumption is what to revisit first.
+            //
+            // maxTouchContacts mirrors CTH-690/PTH-850: slot range 2–17 is a
+            // property of the protocol, not the device, so 16 is the ceiling
+            // even though the spec sheet advertises 10 fingers.
+            productID: 0x0315, name: "Intuos Pro M (PTH-651)",
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 229, activeHeightMM: 152),
+            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
 
         // ── Intuos Pro second-gen Bluetooth Classic PIDs (PTH-460/660/860) ──────
         // These PIDs appear when the tablet connects over BT Classic (transport="Bluetooth").

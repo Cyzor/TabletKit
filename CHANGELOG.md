@@ -72,6 +72,22 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   discarding every touch report from Cintiq Pro/DTH pen displays. Touch
   frames on those devices now decode via `PrecisionTouchDecoder`.
 
+- Intuos Pro M (PTH-651, `0x0315`) declared no finger touch and no touch
+  ring, so both were dead on a device that has them. Discovery captures
+  show its touch arriving as the same 64-byte BPT3 container already
+  decoded for Intuos5 L and CTH-690, and its ring streaming in the pad
+  report. Both are enabled now; no decoder change was required. Touch
+  coordinate maximums are derived rather than measured — the sensor
+  normalizes each axis independently to the full 12-bit range, which the
+  captures confirm by exceeding any isotropic prediction by 38%.
+
+- Intuos Pro M (PTH-651, `0x0315`), Intuos5 S (PTK-450, `0x0029`) and
+  Intuos5 M (PTK-650, `0x002A`) carried rounded spec-sheet active areas
+  instead of the digitizer's real extent. Every other tablet in this
+  family agrees with its own coordinate range to within half a
+  millimetre; these three were off by up to 12 mm, stretching the mapping
+  from tablet to screen. Corrected to match their coordinate ranges.
+
 ### Removed
 
 - `XencelabsControl`, the deprecated typealias left behind when the type was
