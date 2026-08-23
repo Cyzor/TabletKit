@@ -440,6 +440,30 @@ def touch_pipeline_section(doc: dict) -> list[str]:
         "",
     ]
 
+    # Observed coordinate extents vs the registry ceilings. Touch pointer
+    # motion is relative and scaled by coordinate/touchMax, so a ceiling above
+    # the reachable range shrinks every gesture by that ratio — invisible in
+    # the stage counts above, which all look healthy while the cursor falls
+    # short of the screen edge.
+    lo_x, hi_x = pipe.get("observedMinX"), pipe.get("observedMaxX")
+    lo_y, hi_y = pipe.get("observedMinY"), pipe.get("observedMaxY")
+    if hi_x is not None and hi_y is not None:
+        lines += [
+            "",
+            "### Observed coordinate range",
+            "",
+            "| Axis | Min | Max |",
+            "|---|---:|---:|",
+            f"| X | {lo_x} | {hi_x} |",
+            f"| Y | {lo_y} | {hi_y} |",
+            "",
+            "Compare each max against the registry's `touchMaxX`/`touchMaxY`. "
+            "**Only meaningful if the capture traced all four edges** — an "
+            "under-swept axis reads low for a reason that has nothing to do "
+            "with the sensor.",
+            "",
+        ]
+
     # The verdict line. Each branch names one stage, in pipeline order, so the
     # first thing that went wrong is the thing reported.
     if decoded == 0:
