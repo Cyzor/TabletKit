@@ -155,6 +155,48 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         XCTAssertTrue(s.bpt3TouchSlots.isEmpty)
     }
 
+    /// A pen proximity-exit report that never arrives must not disable touch
+    /// forever. Once containers pile up without any pen report, the flag is
+    /// treated as stale and contacts are accepted again.
+    func testStaleProximityUnlatchesAfterSilentPenInterface() {
+        var s = DecoderState()
+        s.prevInProximity = true  // latched, and no exit report will follow
+
+        let container = makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)])
+        for _ in 0..<BPT3ContainerDecoder.staleProximityAfterContainers {
+            guard let list = contacts(decode(container, state: &s)) else {
+                return XCTFail("expected .touch")
+            }
+            XCTAssertTrue(list.isEmpty, "suppressed while proximity is still fresh")
+        }
+
+        guard let list = contacts(decode(container, state: &s)) else {
+            return XCTFail("expected .touch")
+        }
+        XCTAssertEqual(list.count, 1, "stale proximity must stop suppressing touch")
+        XCTAssertEqual(list[0].x, 1000)
+    }
+
+    /// The unlatch must not fire while the pen really is there: a pen in
+    /// proximity streams reports, and each one resets the staleness counter.
+    func testInterleavedPenReportsKeepSuppressionAlive() {
+        var s = DecoderState()
+        // Report 0x10 in proximity — the INTUOSHT2 pen shape.
+        var penReport = [UInt8](repeating: 0, count: 10)
+        penReport[0] = 0x10
+        penReport[1] = 0xE0
+
+        let container = makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)])
+        for _ in 0..<(BPT3ContainerDecoder.staleProximityAfterContainers * 3) {
+            _ = decode(penReport, state: &s)
+            XCTAssertTrue(s.prevInProximity, "pen report should hold proximity")
+            guard let list = contacts(decode(container, state: &s)) else {
+                return XCTFail("expected .touch")
+            }
+            XCTAssertTrue(list.isEmpty, "pen is live; touch must stay suppressed")
+        }
+    }
+
     // MARK: - Express keys (pad message 0x80)
 
     func testPadMessageAllFourKeys() {

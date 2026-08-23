@@ -52,6 +52,22 @@ enum BPT3ContainerDecoder {
     /// Length of the container report. Callers dispatch on this.
     static let reportLength: CFIndex = 64
 
+    /// Containers to accept without an intervening pen report before treating
+    /// `prevInProximity` as stale and ignoring it.
+    ///
+    /// At the ~100 Hz these containers arrive, this is roughly two seconds of
+    /// continuous finger contact with the pen interface silent — far longer
+    /// than any real interleaving, since a pen in proximity streams reports
+    /// the whole time it is there. See `DecoderState.bpt3ContainersSincePen`
+    /// for why the unlatch is needed at all.
+    ///
+    /// Being wrong here is cheap in one direction and not the other, which is
+    /// why the threshold is generous: unlatching too eagerly lets touch
+    /// through while the pen hovers, and `InputInjector`'s own
+    /// `touchPenConfirmedBusy` gate still catches that independently.
+    /// Unlatching too late costs nothing but a longer wait.
+    static let staleProximityAfterContainers = 200
+
     static func decode(
         report: UnsafePointer<UInt8>,
         spec: DigitizerSpec,
@@ -61,12 +77,20 @@ enum BPT3ContainerDecoder {
         var results: [DecodeResult] = []
         var touchChanged = false
 
+        // Pen arbitration, with an escape hatch. `prevInProximity` normally
+        // clears on the pen's proximity-exit report; when that report never
+        // arrives the flag would otherwise suppress touch permanently.
+        state.bpt3ContainersSincePen += 1
+        let penInProximity =
+            state.prevInProximity
+            && state.bpt3ContainersSincePen <= Self.staleProximityAfterContainers
+
         for i in 0..<messageCount {
             let base = 2 + i * 8
             let msgID = Int(report[base])
             if (2...17).contains(msgID) {
                 guard spec.hasFingerTouch else { continue }
-                let down = (report[base + 1] & 0x80) != 0 && !state.prevInProximity
+                let down = (report[base + 1] & 0x80) != 0 && !penInProximity
                 if down {
                     let x = (Int(report[base + 2]) << 4) | (Int(report[base + 4]) >> 4)
                     let y = (Int(report[base + 3]) << 4) | (Int(report[base + 4]) & 0x0F)
@@ -94,7 +118,7 @@ enum BPT3ContainerDecoder {
 
         // Pen proximity releases every tracked contact, even in containers
         // that carry no touch messages of their own.
-        if state.prevInProximity && !state.bpt3TouchSlots.isEmpty {
+        if penInProximity && !state.bpt3TouchSlots.isEmpty {
             state.bpt3TouchSlots.removeAll()
             touchChanged = true
         }

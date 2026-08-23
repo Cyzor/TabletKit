@@ -76,6 +76,11 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         // to the wireless dongle mechanism, not touch. Reject longer reports so this
         // payload is never decoded as garbage pen coordinates/pressure.
         guard (id == 0x02 || id == 0x10) && length == 10 else { return [] }
+        // Any pen report — in proximity or not — is proof the pen interface
+        // is live, which is what `BPT3ContainerDecoder`'s stale-proximity
+        // unlatch counts against. Reset before decoding, so it happens even
+        // on the report shapes that return early below.
+        state.bpt3ContainersSincePen = 0
         return decodeUSBPen(
             report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
     }

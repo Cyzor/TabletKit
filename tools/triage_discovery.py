@@ -387,6 +387,92 @@ def tool_codes_section(doc: dict) -> list[str]:
     return lines
 
 
+def touch_pipeline_section(doc: dict) -> list[str]:
+    """Where decoded touch contacts died inside the app.
+
+    captureVersion >= 8.  A capture used to record only what the device sent,
+    which answers nothing when well-formed contacts arrive and produce no
+    visible response.  These two blocks localize that to one stage without
+    another round trip to the reporter.
+    """
+    pipe = doc.get("touchPipeline")
+    settings = doc.get("touchSettings")
+    if not pipe and not settings:
+        return []
+
+    lines = ["## Touch pipeline", ""]
+
+    if settings:
+        area = (f"x={settings.get('areaX')} y={settings.get('areaY')} "
+                f"w={settings.get('areaWidth')} h={settings.get('areaHeight')}")
+        lines += [
+            "| Setting | Value |",
+            "|---|---|",
+            f"| Enable Finger Touch | **{settings.get('touchEnabled')}** |",
+            f"| Tap to Click | {settings.get('tapToClick')} |",
+            f"| Two-Finger Scroll | {settings.get('twoFingerScroll')} |",
+            f"| Pinch Zoom | {settings.get('pinchZoom')} |",
+            f"| Sensitivity | {settings.get('sensitivity')} |",
+            f"| Touch area | {area} |",
+            "",
+        ]
+
+    if not pipe:
+        return lines
+
+    decoded = pipe.get("framesDecoded", 0)
+    contacts = pipe.get("contactsDecoded", 0)
+    tracked = pipe.get("framesTracked", 0)
+    intents = sum(pipe.get(k, 0) for k in
+                  ("pointerMoves", "scrolls", "zooms", "rotates", "taps"))
+    lines += [
+        "| Stage | Count |",
+        "|---|---:|",
+        f"| Frames decoded | {decoded} |",
+        f"| Contacts decoded | {contacts} |",
+        f"| Dropped: touch disabled | {pipe.get('framesTouchDisabled', 0)} |",
+        f"| Dropped: no injection snapshot | {pipe.get('framesNoSnapshot', 0)} |",
+        f"| Dropped: pen arbitration | {pipe.get('framesPenBusy', 0)} |",
+        f"| Dropped: palm filter (contacts) | {pipe.get('contactsPalmRejected', 0)} |",
+        f"| Dropped: outside touch area (contacts) | {pipe.get('contactsOffArea', 0)} |",
+        f"| Frames reaching gesture tracker | {tracked} |",
+        f"| Intents posted | {intents} |",
+        "",
+    ]
+
+    # The verdict line. Each branch names one stage, in pipeline order, so the
+    # first thing that went wrong is the thing reported.
+    if decoded == 0:
+        lines.append("**Verdict:** the decoder produced no touch frames at all. "
+                     "The problem is at or above decode \u2014 check that the touch "
+                     "interface is registered and that its report reaches the "
+                     "right decoder.")
+    elif pipe.get("framesTouchDisabled", 0) >= decoded:
+        lines.append("**Verdict:** every frame was dropped because "
+                     "**Enable Finger Touch is off**. Not a defect \u2014 the "
+                     "setting needs turning on.")
+    elif pipe.get("framesPenBusy", 0) >= decoded:
+        lines.append("**Verdict:** every frame was dropped by **pen arbitration**. "
+                     "If the pen was not in use, this is a latched proximity "
+                     "state \u2014 see `DecoderState.bpt3ContainersSincePen` and "
+                     "`InputInjector.touchPenConfirmedBusy`.")
+    elif pipe.get("contactsOffArea", 0) >= contacts and contacts:
+        lines.append("**Verdict:** every contact projected **outside the touch "
+                     "area**. Either the crop rect excludes where fingers "
+                     "landed, or the registry's `touchMaxX`/`touchMaxY` are "
+                     "wrong for this device.")
+    elif tracked and not intents:
+        lines.append("**Verdict:** contacts reached the gesture tracker but it "
+                     "committed to no gesture. The fault is in "
+                     "`TouchStateTracker`, not in decode or arbitration.")
+    elif intents:
+        lines.append(f"**Verdict:** the pipeline posted {intents} intents \u2014 "
+                     "touch injection ran. A reported failure is downstream of "
+                     "MockTab (event routing, or the target app).")
+    lines.append("")
+    return lines
+
+
 # ── Upstream cross-reference ──────────────────────────────────────────────────
 
 def secondary_interfaces_section(doc: dict, kind: str) -> list[str]:
@@ -614,6 +700,7 @@ def build_report(doc: dict, path: Path, do_upstream: bool) -> str:
     lines += discriminated_byte_ranges_section(doc, kind)
     lines += tool_codes_section(doc)
     lines += secondary_interfaces_section(doc, kind)
+    lines += touch_pipeline_section(doc)
     if do_upstream:
         lines += upstream_section(pid)
     lines += draft_entry(doc, pid)
