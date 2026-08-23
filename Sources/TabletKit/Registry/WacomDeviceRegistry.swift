@@ -1486,7 +1486,19 @@ public enum WacomDeviceRegistry {
             // the kernel (wacom_features_0x33E); capture ranges consistent.
             // LP-190K pen has no eraser end.
             hasFingerTouch: true, maxTouchContacts: 16,
-            touchMaxX: 4095, touchMaxY: 4095,
+            // NOT the 12-bit ceiling, despite the 12-bit field. The kernel
+            // hardcodes touch ranges for this whole protocol family because
+            // the touch descriptor declares nothing usable, and it splits by
+            // generation (`wacom_wac.c`, the WACOM_PKGLEN_BBTOUCH3 block):
+            // INTUOSHT2 — this device — gets pen max / 10, while Intuos5/Pro
+            // gets a flat 4096. 21600/10 × 13500/10 lands on exactly 10.0
+            // units/mm on both axes over the 216 × 135 mm surface, and the
+            // 2026-07-03 capture agrees: its Y high byte tops out at 84,
+            // i.e. 1350 >> 4, exactly this ceiling. Touch pointer motion is
+            // relative and scaled by coordinate/touchMax, so the previous
+            // 4095/4095 divided every gesture down by 1.9× in X and 3.0× in
+            // Y — a full-surface swipe crossed a third of the screen.
+            touchMaxX: 2160, touchMaxY: 1350,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
 
