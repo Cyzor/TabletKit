@@ -19,6 +19,12 @@ TabletKit is an independent, community-built project. It is not affiliated with,
 | `Registry/` | Device data and lookup. Data-as-code, maintained via `tools/`. |
 | `Smoothing/` | Pure signal-conditioning math. |
 
+[`registry.json`](registry.json) is a generated, versioned snapshot of the
+device registry, for anything that wants the data without a Swift toolchain
+(a script, a website, another platform's driver). Regenerate it after any
+registry edit with `python3 tools/export_registry_json.py`; it's committed
+like `registry_audit.csv`, not built on the fly.
+
 ## Adding to your project
 
 ```swift
@@ -142,7 +148,7 @@ Some devices require a feature report before they will stream pen data. Check `s
 swift test
 ```
 
-runs the test suite (456 tests as of this writing) against fixture captures from real devices. No Xcode project required.
+runs the test suite (457 tests as of this writing) against fixture captures from real devices. No Xcode project required.
 
 ## Versioning
 

@@ -7,6 +7,24 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- `TabletKit.swift` — a front-door file at the package root carrying the
+  module overview and the four-step core decode loop, so there's one
+  designated place to start reading. Deliberately no declaration in it (a
+  type named `TabletKit` inside the `TabletKit` module collides with the
+  module's own DocC landing page).
+- `registry.json` — a generated, versioned snapshot of the device registry
+  (`tools/export_registry_json.py`), for consumers without a Swift
+  toolchain. Committed like `registry_audit.csv`; regenerate after registry
+  edits.
+- `ConformanceHarnessTests` — a data-driven fixture format: add a capture
+  log body plus a `(parser, DigitizerSpec)` pair to prove a device's
+  registry assignment actually decodes to structured events, without
+  touching any decoder file. Low bar by design (catches wrong-parser/
+  garbage-coordinates bugs, not full field correctness) — see its own doc
+  comment.
+
 ### Fixed
 
 - `WacomDeviceRegistry` — 0x00D2 (CTH-461), 0x00D3/0x00D8 (CTH-661), and
