@@ -6,8 +6,8 @@ import Foundation
 
 /// Decoder for the Wacom Bamboo consumer HID report format.
 ///
-/// Used by: CTT-460, CTH-460/461/470/480/490, CTL-460/470/660, and related
-/// consumer Bamboo / Wacom One series.
+/// Used by: CTT-460, CTH-460/461/470/480/490, CTH-661/670, CTL-460/470/660,
+/// and related consumer Bamboo / Wacom One series.
 ///
 /// Two wire formats, distinguished by report ID:
 ///

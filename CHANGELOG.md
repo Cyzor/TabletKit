@@ -7,6 +7,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Fixed
+
+- `WacomDeviceRegistry` — 0x00D2 (CTH-461), 0x00D3/0x00D8 (CTH-661), and
+  0x00DF (CTH-670) were assigned the big-endian `.intuosV1` parser; the
+  kernel's static feature table declares all four `BAMBOO_PT`, the same
+  little-endian 2009-2011 generation as 0x00D1/0x00D6/0x00D7/0x00DA.
+  Corrected to `.bamboo`. 0x00D2 also gets `hasFingerTouch` (same 480×320
+  wire space as its 0x00D1-class siblings); 0x00D3/0x00D8's 6x8 chassis
+  touch space is unconfirmed and left off. 0x00DF's active-area dimensions
+  were also wrong (152×102mm, mismatched its own maxX/maxY) — corrected to
+  216.48×137mm.
+
 ### Added
 
 - `BambooDecoder` now decodes the 20-byte Report ID 0x02 touch format used

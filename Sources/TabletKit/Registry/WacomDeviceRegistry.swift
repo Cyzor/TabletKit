@@ -1400,13 +1400,23 @@ public enum WacomDeviceRegistry {
         .init(
             // mm matched to this row's own maxX/maxY (147.2×92.0mm chassis,
             // same as 0x00D1/0x00D6/0x00D7/0x00DA) per the Bamboo 460 User's
-            // Manual — see 0x00D1's note. Confirmed 2026-08-03. Whether the
-            // .intuosV1 *parser* choice itself is right for this PID is a
-            // separate, unresolved question — see the SUSPECT DECODE note on
-            // the next entry below; not addressed by this mm-only pass.
+            // Manual — see 0x00D1's note. Confirmed 2026-08-03.
+            //
+            // Parser corrected .intuosV1 → .bamboo 2026-08-26: kernel's static
+            // table (`wacom_features_0xD2`, "Wacom Bamboo Craft") declares this
+            // PID `BAMBOO_PT` — the same little-endian 2009-2011 generation as
+            // 0x00D1/0x00D6/0x00D7/0x00DA, not the big-endian IntuosV1 layout.
+            // OTD's CTH-461.json independently bundles this PID (210) with
+            // 0x00D7 (215) and 0x00DA (218) under one config: 9-byte
+            // `IntuosReportParser` for pen (little-endian family, per the
+            // 0x00DE note's convention) and 20-byte `BambooV2AuxReportParser`
+            // for touch/pad — exactly this decoder's `decodeBPT`/`decodeBPTTouch`
+            // split. Touch enabled on the strength of that same chassis-sibling
+            // match (480×320 wire space, confirmed on 0x00D1 — see its note).
             productID: 0x00D2, name: "Wacom CTH-461",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -1466,23 +1476,53 @@ public enum WacomDeviceRegistry {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // Parser corrected .intuosV1 → .bamboo 2026-08-26: kernel's static
+            // table (`wacom_features_0xD3`, "Wacom Bamboo 2FG 6x8") declares
+            // this PID `BAMBOO_PT`, same little-endian family as 0x00D2 above
+            // — see its note. OTD's CTH-661.json bundles this PID (211) with
+            // 0x00D8 (216) and 0x00DB (219) under one config, same 9-byte
+            // pen / 20-byte touch-and-pad split. Touch NOT enabled here: this
+            // is the 6x8 chassis, not the 4x5 one 0x00D1's 480×320 wire space
+            // was confirmed on, and nothing has captured this size class's own
+            // touch descriptor — leaving `hasFingerTouch` off rather than
+            // guessing a wire space, per the CTT-460A/470 convention.
             productID: 0x00D3, name: "Wacom CTH-661",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21648, maxY: 13700, maxPressure: 1023,
+            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(
+            // Same chassis/parser fix as 0x00D3 above (kernel: "Wacom Bamboo
+            // Comic 2FG", BAMBOO_PT; OTD bundles it into the same CTH-661.json
+            // as 0x00D3/0x00DB). Touch not enabled for the same reason.
             productID: 0x00D8, name: "Wacom CTH-661",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21648, maxY: 13700, maxPressure: 1023,
+            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(
+            // Parser corrected .intuosV1 → .bamboo 2026-08-26: kernel's static
+            // table (`wacom_features_0xDF`, "Wacom Bamboo 16FG 6x8") declares
+            // this PID `BAMBOO_PT` with `touch_max = 16` — the 16-finger
+            // capacitive generation, sibling of 0x00DE (16FG 4x5, already
+            // .bamboo). OTD's CTH-670.json confirms: 9/10-byte pen via
+            // `IntuosReportParser` (little-endian) plus a 64-byte
+            // `Wacom64bAuxReportParser` — the BPT3 container, not the 20-byte
+            // format 0x00D1-class devices use. Same gap as 0x00DE: no
+            // registry row sets `hasFingerTouch` for the 64-byte container
+            // path yet, so left off here too, consistently.
+            //
+            // activeWidthMM/activeHeightMM corrected 152×102 → 216.48×137:
+            // the prior figure didn't match this row's own maxX/maxY
+            // (21648×13700, ~100 lpmm like every other row in this family) at
+            // all — it was CTH-480's 152×95-class number, misapplied here.
+            // OTD's CTH-670.json Digitizer Width/Height (216.48/137) matches
+            // maxX/maxY exactly.
             productID: 0x00DF, name: "Wacom CTH-670",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21648, maxY: 13700, maxPressure: 1023,
+            parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
+            confidence: .crossReferenced, activeWidthMM: 216.48, activeHeightMM: 137),
         .init(
             // Parser corrected .intuosV1 → .bamboo 2026-07-29 — see the note on
             // 0x0302 (CTH-480) above.
