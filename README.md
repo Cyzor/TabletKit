@@ -142,7 +142,7 @@ Some devices require a feature report before they will stream pen data. Check `s
 swift test
 ```
 
-runs the test suite (449 tests as of this writing) against fixture captures from real devices. No Xcode project required.
+runs the test suite (456 tests as of this writing) against fixture captures from real devices. No Xcode project required.
 
 ## Versioning
 

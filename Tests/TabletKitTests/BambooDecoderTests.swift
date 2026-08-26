@@ -338,4 +338,89 @@ final class BambooDecoderTests: XCTestCase {
         let auxResult = r.first { if case .aux = $0 { return true }; return false }
         XCTAssertNil(auxResult, "CTT-460 should produce no pad event")
     }
+
+    // MARK: - BAMBOO_PT touch report 0x02, 20 bytes (CTH-460 class, kernel wacom_bpt_touch)
+
+    // CTH-460: 4 express keys, 2FG touch, 480×320 wire space.
+    private let cth460Touch = DigitizerSpec(
+        maxX: 14720, maxY: 9200, maxPressure: 1023,
+        buttonCount: 4, hasTilt: false, hasDualRings: false,
+        isPenDisplay: false, ringSlotCount: 0)
+
+    /// Build a 20-byte BAMBOO_PT touch report. `padByte` carries the stride
+    /// selector (bit 7) and the 4 express keys (bits 3..0). `contacts` are
+    /// (x, y) pairs, in slot order; a nil entry marks that slot lifted. X/Y
+    /// are packed into 11 bits, big-endian, matching kernel's
+    /// `get_unaligned_be16(...) & 0x7ff`, with the touch-down flag folded
+    /// into bit 7 of the byte the mask discards.
+    private func makeBPTTouch(padByte: UInt8, contacts: [(x: UInt16, y: UInt16)?]) -> [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: 20)
+        bytes[0] = 0x02
+        bytes[1] = padByte
+        let stride = (padByte & 0x80) != 0 ? 8 : 9
+        for (i, contact) in contacts.enumerated() {
+            guard let contact else { continue }
+            let offset = stride * i
+            let xHi = UInt8((contact.x >> 8) & 0x07) | 0x80  // touch-down bit + X bits 10:8
+            bytes[offset + 3] = xHi
+            bytes[offset + 4] = UInt8(contact.x & 0xFF)
+            bytes[offset + 5] = UInt8((contact.y >> 8) & 0x07)
+            bytes[offset + 6] = UInt8(contact.y & 0xFF)
+        }
+        return bytes
+    }
+
+    func testBPTTouchSingleContactStride9() {
+        var st = DecoderState()
+        let b = makeBPTTouch(padByte: 0x00, contacts: [(x: 300, y: 200), nil])
+        let r = decode(b, state: &st, spec: cth460Touch)
+        guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
+        else { return XCTFail("expected .touch") }
+        XCTAssertEqual(contacts.count, 1)
+        XCTAssertEqual(contacts[0].id, 0)
+        XCTAssertEqual(contacts[0].x, 300)
+        XCTAssertEqual(contacts[0].y, 200)
+    }
+
+    func testBPTTouchTwoContactsStride8() {
+        var st = DecoderState()
+        let b = makeBPTTouch(padByte: 0x80, contacts: [(x: 10, y: 20), (x: 400, y: 300)])
+        let r = decode(b, state: &st, spec: cth460Touch)
+        guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
+        else { return XCTFail("expected .touch") }
+        XCTAssertEqual(contacts.count, 2)
+        XCTAssertEqual(contacts[0].id, 0)
+        XCTAssertEqual(contacts[0].x, 10)
+        XCTAssertEqual(contacts[0].y, 20)
+        XCTAssertEqual(contacts[1].id, 1)
+        XCTAssertEqual(contacts[1].x, 400)
+        XCTAssertEqual(contacts[1].y, 300)
+    }
+
+    func testBPTTouchAllFingersLiftedEmitsEmptyArray() {
+        var st = DecoderState()
+        let b = makeBPTTouch(padByte: 0x00, contacts: [nil, nil])
+        let r = decode(b, state: &st, spec: cth460Touch)
+        guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
+        else { return XCTFail("expected .touch") }
+        XCTAssertTrue(contacts.isEmpty)
+    }
+
+    func testBPTTouchExpressKeysFromByte1() {
+        var st = DecoderState()
+        // bits 3,2,1,0 → BTN_0..BTN_3; set BTN_0 and BTN_3.
+        let b = makeBPTTouch(padByte: 0x09, contacts: [nil, nil])
+        let r = decode(b, state: &st, spec: cth460Touch)
+        guard case .aux(let buttons)? = (r.first { if case .aux = $0 { return true }; return false })
+        else { return XCTFail("expected .aux") }
+        XCTAssertEqual(buttons.buttons, [true, false, false, true])
+    }
+
+    func testBPTTouchNoAuxWhenButtonCountZero() {
+        var st = DecoderState()
+        let b = makeBPTTouch(padByte: 0x0F, contacts: [nil, nil])
+        let r = decode(b, state: &st, spec: ctl460)
+        let auxResult = r.first { if case .aux = $0 { return true }; return false }
+        XCTAssertNil(auxResult, "pen-only CTL-460 spec should produce no aux event")
+    }
 }

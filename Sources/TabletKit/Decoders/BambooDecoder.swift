@@ -39,11 +39,28 @@ import Foundation
 /// **CTT-460 (0x00D0) is touch-only** — it has no pen interface.  Reports will
 /// never fire (maxPressure = 0, buttonCount = 0 → decoder silently returns []).
 ///
-/// **Touch on the older CTH models** (CTH-460/470) arrives on a separate USB
-/// interface as a 20-byte multitouch Report ID 0x02 stream, which this decoder
-/// does not handle. Touch on the INTUOSHT generation (CTH-480/680) instead
-/// arrives in the 64-byte BPT3 container above; those registry rows do not yet
-/// set `hasFingerTouch`, so their touch stays inert until someone enables it.
+/// **Report ID 0x02, 20 bytes (BAMBOO_PT touch, USB)** — a separate USB
+/// interface on the older CTH-460/461 chassis (kernel `wacom_bpt_touch()`).
+/// Two fixed slots, big-endian, 11-bit coordinates in a 480×320 wire space
+/// (same low-res space as CTT-460 — see that registry row's note), plus the
+/// 4 express keys, which ride this report's byte 1 rather than a separate pad
+/// byte. Confirmed against the kernel's static feature table (`BAMBOO_PT`,
+/// `touch_max = 2`) for 0x00D1/0x00D6/0x00D7/0x00DA on 2026-08-26; no direct
+/// hardware capture of this report exists yet, so those rows carry
+/// `.crossReferenced`, not `.verified`.
+///
+/// ```
+/// [0]  0x02   Report ID
+/// [1]  bit 7: contact stride selector — 8 bytes/contact if set, 9 if clear
+///      bit 3: BTN_0   bit 2: BTN_1   bit 1: BTN_2   bit 0: BTN_3
+/// For i in 0, 1 (fixed slot per finger), at offset = (bit7 ? 8*i : 9*i):
+///   [offset+3] bit 7: contact down; bits 6:0 + [offset+4]: X, BE16 & 0x7FF
+///   [offset+5:6]                     Y, BE16 & 0x7FF
+/// ```
+///
+/// Touch on the INTUOSHT generation (CTH-480/680) instead arrives in the
+/// 64-byte BPT3 container above; those registry rows do not yet set
+/// `hasFingerTouch`, so their touch stays inert until someone enables it.
 ///
 /// ---
 ///
@@ -96,6 +113,9 @@ public struct BambooDecoder: TabletReportDecoder {
         // container would be decoded as pen coordinates.
         if report[0] == 0x02, length == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
+        }
+        if report[0] == 0x02, length == 20 {
+            return decodeBPTTouch(report: report, spec: spec)
         }
         if report[0] == 0x02, (9...10).contains(length) {
             return decodeBPT(report: report, spec: spec, state: &state)
@@ -253,6 +273,39 @@ public struct BambooDecoder: TabletReportDecoder {
                     inProximity: true,
                     hoverDistance: Int(report[8]))))
 
+        return results
+    }
+
+    // MARK: - BAMBOO_PT touch report (Report ID 0x02, 20 bytes)
+
+    /// Kernel `wacom_bpt_touch()` layout — see the type-level doc comment for
+    /// the byte diagram. Two fixed slots; an empty result means both fingers
+    /// lifted, matching `DecodeResult.touch`'s documented convention.
+    private func decodeBPTTouch(
+        report: UnsafePointer<UInt8>,
+        spec: DigitizerSpec
+    ) -> [DecodeResult] {
+        let padByte = report[1]
+        var contacts: [TouchContact] = []
+        for i in 0..<2 {
+            let offset = (padByte & 0x80) != 0 ? 8 * i : 9 * i
+            let xHi = report[offset + 3]
+            guard (xHi & 0x80) != 0 else { continue }
+            let x = Int((UInt16(xHi) << 8 | UInt16(report[offset + 4])) & 0x07FF)
+            let y = Int((UInt16(report[offset + 5]) << 8 | UInt16(report[offset + 6])) & 0x07FF)
+            contacts.append(TouchContact(id: i, x: x, y: y, contactArea: nil, contactMinor: nil))
+        }
+
+        var results: [DecodeResult] = [.touch(contacts)]
+        if spec.buttonCount > 0 {
+            let buttons = [
+                (padByte & 0x08) != 0,  // BTN_0
+                (padByte & 0x04) != 0,  // BTN_1
+                (padByte & 0x02) != 0,  // BTN_2
+                (padByte & 0x01) != 0,  // BTN_3
+            ]
+            results.append(.aux(AuxButtons(buttons: buttons)))
+        }
         return results
     }
 

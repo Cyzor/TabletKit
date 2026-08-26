@@ -203,7 +203,9 @@ public struct WacomDeviceSpec {
     ///
     /// - `.intuosV2` — yes, report 0x21 (`decodeTouchReport`).
     /// - `.intuosV1` — yes, via `BPT3ContainerDecoder`.
-    /// - `.bamboo` — container path, gated on this flag.
+    /// - `.bamboo` — yes, two paths gated on this flag: the 20-byte
+    ///   `decodeBPTTouch` (older CTH-460/461 chassis) and the 64-byte
+    ///   `BPT3ContainerDecoder` path (INTUOSHT generation).
     /// - `.cintiqV1`, `.intuosV3` — **no touch decode exists.**  Rows in those
     ///   families were carrying this flag as of 2026-07-29 and were turned off;
     ///   several are genuinely touch-capable in hardware (Cintiq 22/24HD Touch,
@@ -1018,9 +1020,17 @@ public enum WacomDeviceRegistry {
             // exactly; the 152/102 this carried before didn't match either.
             // Archived at Notes/Scratch/manuals/Bamboo-CTT-CTH-CTL-460-UserManual.pdf
             // (gitignored). Confirmed 2026-08-03.
+            //
+            // Touch: kernel's static table (`wacom_features_0xD1`) declares this
+            // PID `BAMBOO_PT` with `touch_max = 2`, decoded by `BambooDecoder`'s
+            // 20-byte path (`decodeBPTTouch`) added 2026-08-26. 480×320 is the
+            // same low-res wire space CTT-460 (0x00D0) settled on. No direct
+            // hardware capture of this report on this PID yet — kernel-table
+            // confirmed, not hardware-verified.
             productID: 0x00D1, name: "Bamboo Pen & Touch (CTH-460)",
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -1047,6 +1057,8 @@ public enum WacomDeviceRegistry {
             productID: 0x00D6, name: "Bamboo Fun Pen & Touch (CTH-461)",  // dims kernel + OTD; kernel 0xD6 (BambooPT 2FG 4x5); previously misnamed CTL-460 (that's 0x00D4)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            // Touch: kernel table declares BAMBOO_PT, touch_max = 2 — see 0x00D1's note.
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -1055,6 +1067,8 @@ public enum WacomDeviceRegistry {
             productID: 0x00D7, name: "Bamboo Pen & Touch (small)",  // dims kernel + OTD (kernel 0xD7, BambooPT 2FG Small); ⚠ name attribution still uncertain
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            // Touch: kernel table declares BAMBOO_PT, touch_max = 2 — see 0x00D1's note.
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -1063,6 +1077,8 @@ public enum WacomDeviceRegistry {
             productID: 0x00DA, name: "Bamboo Pen & Touch SE (CTH-461SE)",  // ⚠ from kernel 0xDA (Bamboo 2FG 4x5 SE)
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            // Touch: kernel table declares BAMBOO_PT, touch_max = 2 — see 0x00D1's note.
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(

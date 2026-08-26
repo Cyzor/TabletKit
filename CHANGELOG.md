@@ -9,6 +9,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `BambooDecoder` now decodes the 20-byte Report ID 0x02 touch format used
+  by the CTH-460/461 chassis (kernel `wacom_bpt_touch`) — two fixed-slot
+  contacts plus the 4 express keys, which ride this report's byte 1 rather
+  than a separate pad byte. `hasFingerTouch`/`maxTouchContacts`/`touchMaxX`/
+  `touchMaxY` are now set on 0x00D1/0x00D6/0x00D7/0x00DA, confirmed against
+  the kernel's static feature table (`BAMBOO_PT`, `touch_max = 2`); no direct
+  hardware capture of this report exists yet, so those rows stay
+  `.crossReferenced`.
+
 - `GenericPenLayout` / `GenericPenDecoder` — a descriptor-driven pen
   digitizer decoder, the pen counterpart to `PrecisionTouchLayout`.
   Reads tip switch, in-range, barrel/secondary barrel, eraser, invert,
