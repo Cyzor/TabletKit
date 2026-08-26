@@ -159,8 +159,16 @@ public struct TouchContact: Equatable {
 public protocol TabletReportDecoder {
     /// Decode one raw HID report into zero or more results.
     /// Mutating to allow decoder structs with their own cached state if needed.
-    /// - Parameter deviceFamily: The device family string (e.g., "intuosProGen2", "cintiq")
-    ///   used to check tool compatibility and adjust feature decoding.
+    /// - Parameters:
+    ///   - report: Pointer to the raw HID report bytes, as delivered by the
+    ///     IOKit HID input report callback.
+    ///   - length: Number of valid bytes at `report`.
+    ///   - spec: The device's digitizer dimensions (coordinate/pressure ranges,
+    ///     button count, touch capability) used to interpret raw values.
+    ///   - state: Per-device decoder state, carried by the caller across calls
+    ///     for this physical device instance.
+    ///   - deviceFamily: The device family string (e.g., "intuosProGen2", "cintiq")
+    ///     used to check tool compatibility and adjust feature decoding.
     mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
