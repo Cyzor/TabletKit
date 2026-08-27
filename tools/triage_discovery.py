@@ -498,6 +498,50 @@ def touch_pipeline_section(doc: dict) -> list[str]:
                 "slow full-surface swipe.")
             lines.append("")
 
+    # captureVersion >= 12. The per-component tallies can't distinguish one
+    # sequence running pinch and rotate together from two separate
+    # single-component sequences; these two can. Late joins are components that
+    # opened after the sequence had already committed.
+    pinch = pipe.get("twoFingerResolvedPinch", 0)
+    rot = pipe.get("twoFingerResolvedRotate", 0)
+    both = pipe.get("twoFingerResolvedBoth", 0)
+    late = pipe.get("twoFingerLateJoins", 0)
+    if pinch or rot:
+        lines += [
+            "",
+            "### Two-finger gesture resolution",
+            "",
+            "| Metric | Count |",
+            "|---|---:|",
+            f"| Sequences resolving to pan | {pipe.get('twoFingerResolvedPan', 0)} |",
+            f"| Sequences with a pinch component | {pinch} |",
+            f"| Sequences with a rotate component | {rot} |",
+        ]
+        # The concurrency counters land in v12. On an older file they are
+        # simply absent, and a missing count is not a zero — reporting "never
+        # together" from a v11 capture would be inventing a finding.
+        if doc.get("captureVersion", 0) >= 12:
+            lines += [
+                f"| Sequences running both at once | {both} |",
+                f"| Components joining after commit | {late} |",
+                "",
+            ]
+            if both == 0 and pinch and rot:
+                lines.append(
+                    "**Note:** pinch and rotate each fired, but never together in "
+                    "one sequence — the user has to lift and restart to switch "
+                    "between them. On a trackpad the two are continuous and "
+                    "concurrent.")
+                lines.append("")
+        else:
+            lines += [
+                "",
+                "*(Pre-v12 capture: whether any single sequence ran pinch and "
+                "rotate together isn't recorded, so the two tallies above can't "
+                "be read as concurrent or exclusive.)*",
+                "",
+            ]
+
     # The verdict line. Each branch names one stage, in pipeline order, so the
     # first thing that went wrong is the thing reported.
     if decoded == 0:
