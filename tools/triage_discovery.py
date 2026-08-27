@@ -413,6 +413,13 @@ def touch_pipeline_section(doc: dict) -> list[str]:
             f"| Two-Finger Scroll | {settings.get('twoFingerScroll')} |",
             f"| Pinch Zoom | {settings.get('pinchZoom')} |",
             f"| Sensitivity | {settings.get('sensitivity')} |",
+        ]
+        # captureVersion >= 11. A silent defaults-only knob: 0 means the onset
+        # window is off, which makes "a palm moved the cursor" expected.
+        onset_ms = settings.get("touchOnsetDelayMs")
+        if onset_ms is not None:
+            lines.append(f"| Touch onset delay (ms) | {onset_ms} |")
+        lines += [
             f"| Touch area | {area} |",
             "",
         ]
@@ -463,6 +470,33 @@ def touch_pipeline_section(doc: dict) -> list[str]:
             "with the sensor.",
             "",
         ]
+
+    # captureVersion >= 11. A slow full-surface swipe that dips below the
+    # sensor's contact threshold re-lands as a new sequence and re-pays the
+    # onset delay — the "swipe covers only part of the screen" report. A high
+    # re-armed fraction next to a large single-contact drag is that pattern.
+    entered = pipe.get("onsetWindowsEntered", 0)
+    rearmed = pipe.get("onsetWindowsReArmedWithin", 0)
+    longest_drag = pipe.get("longestSingleContactDragMs", 0)
+    if entered:
+        lines += [
+            "",
+            "### Onset windows",
+            "",
+            "| Metric | Count |",
+            "|---|---:|",
+            f"| Sequences (onset windows entered) | {entered} |",
+            f"| Re-armed within 250 ms of a teardown | {rearmed} |",
+            f"| Longest single-contact drag (ms) | {longest_drag} |",
+            "",
+        ]
+        if rearmed and entered and rearmed / entered >= 0.3:
+            lines.append(
+                f"**Note:** {rearmed}/{entered} sequences re-armed quickly — a "
+                "single drag is being chopped into segments, each re-paying the "
+                "onset delay. Expected to feel like the cursor falling short on a "
+                "slow full-surface swipe.")
+            lines.append("")
 
     # The verdict line. Each branch names one stage, in pipeline order, so the
     # first thing that went wrong is the thing reported.
