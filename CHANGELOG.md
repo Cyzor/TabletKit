@@ -9,6 +9,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `WacomToolCatalog.hasRotation(toolCode:)` — whether a tool carries a
+  rotation sensor (Art Pen / Marker Pen). Decoders use it to scope the
+  boundary-noise proximity-exit heuristic to the tools that provoke it.
+  Unknown tool code returns false.
+
 - `TabletKit.swift` — a front-door file at the package root carrying the
   module overview and the four-step core decode loop, so there's one
   designated place to start reading. Deliberately no declaration in it (a
@@ -130,12 +135,32 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   millimetre; these three were off by up to 12 mm, stretching the mapping
   from tablet to screen. Corrected to match their coordinate ranges.
 
+- `IntuosV1Decoder` treated a plain stylus's sustained low-confidence hover
+  (status `0x20` — position live, pressure zero) as a proximity-exit
+  precursor, the same way it does for an Art Pen. On a PTH-850 Grip Pen that
+  hover state is roughly half of all hover reports, so the decoder fabricated
+  a proximity exit every few frames — on the intuosV1 touch models that reset
+  the BPT3 pen-arbitration latch and killed capacitive touch for the whole
+  time a hand rested near the tablet. The exit-frame heuristic is now scoped
+  to tools that actually carry a rotation sensor; the genuine both-bits-clear
+  exit is unchanged.
+
+- `BPT3ContainerDecoder` no longer suppresses touch contacts while a pen is
+  in proximity. That decoder-level arbitration compounded the bug above and
+  had no equivalent on the `.intuosV2` families, which rely entirely on the
+  host's own pen/touch arbitration. This decoder now matches them: it emits
+  every contact and leaves arbitration to the host.
+
 ### Removed
 
 - `XencelabsControl`, the deprecated typealias left behind when the type was
   renamed to `XencelabsOutputProtocol`. Source-breaking for anything still
   using the old name; the replacement has an identical surface, so the fix is
   a rename. Recorded in `api-breakage-allowlist.txt`.
+
+- `DecoderState.bpt3ContainersSincePen` — the container-since-pen counter that
+  drove `BPT3ContainerDecoder`'s removed proximity gate. Nothing outside the
+  package read it. Recorded in `api-breakage-allowlist.txt`.
 
 ### Changed
 

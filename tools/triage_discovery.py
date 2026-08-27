@@ -510,10 +510,11 @@ def touch_pipeline_section(doc: dict) -> list[str]:
                      "**Enable Finger Touch is off**. Not a defect \u2014 the "
                      "setting needs turning on.")
     elif pipe.get("framesPenBusy", 0) >= decoded:
-        lines.append("**Verdict:** every frame was dropped by **pen arbitration**. "
-                     "If the pen was not in use, this is a latched proximity "
-                     "state \u2014 see `DecoderState.bpt3ContainersSincePen` and "
-                     "`InputInjector.touchPenConfirmedBusy`.")
+        lines.append("**Verdict:** every frame was dropped by **pen arbitration** "
+                     "(`InputInjector.touchPenConfirmedBusy`). If the pen was not "
+                     "in use, proximity is latching or thrashing on the pen "
+                     "interface \u2014 check `penProximityEnters`/`Exits` against a "
+                     "healthy device's rate.")
     elif pipe.get("contactsOffArea", 0) >= contacts and contacts:
         lines.append("**Verdict:** every contact projected **outside the touch "
                      "area**. Either the crop rect excludes where fingers "

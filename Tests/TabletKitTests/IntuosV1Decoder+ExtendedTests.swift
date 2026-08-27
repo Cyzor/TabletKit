@@ -215,7 +215,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     func testBoundaryNoiseBelowThresholdDoesNotExit() {
         var st = DecoderState()
         st.prevInProximity = true
-        st.currentToolCode = 0x0802
+        st.currentToolCode = 0x0804  // Art Pen — the tool this heuristic is for
         // Boundary noise: bit5=prox=1, bit6=highConf=0 → status=0x20.
         // The genuine-exit path (!prox && !conf) is not triggered here.
         let b = makePen(status: 0x20)
@@ -224,10 +224,13 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         XCTAssertEqual(st.exitFrameCount, 1)
     }
 
-    func testBoundaryNoiseExitsAtThreshold() {
+    func testBoundaryNoiseExitsAtThresholdForRotationPen() {
+        // Art Pen (0x0804, hasRotation): the rotation sensor makes the
+        // confidence bit oscillate at the tracking boundary, so a sustained
+        // run of low-confidence frames really is the pen leaving.
         var st = DecoderState()
         st.prevInProximity = true
-        st.currentToolCode = 0x0802
+        st.currentToolCode = 0x0804
         let b = makePen(status: 0x20)  // prox=1, conf=0
         var lastR: [DecodeResult] = []
         for _ in 0..<DecoderState.exitThreshold {
@@ -236,14 +239,66 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         let hasExit = lastR.contains {
             if case .pen(let p) = $0 { return !p.inProximity }; return false
         }
-        XCTAssertTrue(hasExit, "Expected proximity exit at threshold")
+        XCTAssertTrue(hasExit, "Expected proximity exit at threshold for an Art Pen")
+        XCTAssertFalse(st.prevInProximity)
+    }
+
+    func testSustainedLowConfidenceIsHoverForPlainStylus() {
+        // Grip Pen (0x0802, no rotation): status 0x20 with position live and
+        // pressure zero is a high hover that can persist indefinitely while a
+        // hand rests with the pen above the tablet. It must NOT be read as the
+        // pen leaving — only the genuine both-bits-clear signal ends proximity.
+        var st = DecoderState()
+        st.prevInProximity = true
+        st.currentToolCode = 0x0802
+        let b = makePen(status: 0x20, xHigh: 0x12, xLow: 0x34, yHigh: 0x22, yLow: 0x45)
+        var sawExit = false
+        for _ in 0..<(DecoderState.exitThreshold * 4) {
+            let r = decode(b, state: &st)
+            if r.contains(where: { if case .pen(let p) = $0 { return !p.inProximity }; return false }) {
+                sawExit = true
+            }
+        }
+        XCTAssertFalse(sawExit, "A plain stylus must not fabricate a proximity exit from sustained hover")
+        XCTAssertTrue(st.prevInProximity, "Plain stylus stays in proximity through a long hover")
+    }
+
+    func testUnknownToolCodeTreatedAsNonRotation() {
+        // No tool-change packet seen, currentToolCode still 0: the rotation
+        // lookup returns false, so sustained 0x20 does not synthesize an exit.
+        var st = DecoderState()
+        st.prevInProximity = true
+        st.currentToolCode = 0
+        let b = makePen(status: 0x20, xHigh: 0x10, yHigh: 0x20)
+        var sawExit = false
+        for _ in 0..<(DecoderState.exitThreshold * 3) {
+            let r = decode(b, state: &st)
+            if r.contains(where: { if case .pen(let p) = $0 { return !p.inProximity }; return false }) {
+                sawExit = true
+            }
+        }
+        XCTAssertFalse(sawExit, "Unknown tool code must not fabricate a proximity exit")
+    }
+
+    func testGenuineExitStillEndsProximityForPlainStylus() {
+        // Both bits clear (status 0x00) is the real "pen out" signal and must
+        // still work regardless of the rotation-pen gate above.
+        var st = DecoderState()
+        st.prevInProximity = true
+        st.currentToolCode = 0x0802
+        st.lastX = 1000; st.lastY = 2000
+        let r = decode(makePen(status: 0x00), state: &st)
+        let hasExit = r.contains {
+            if case .pen(let p) = $0 { return !p.inProximity }; return false
+        }
+        XCTAssertTrue(hasExit, "Genuine both-bits-clear exit must still fire for a plain stylus")
         XCTAssertFalse(st.prevInProximity)
     }
 
     func testHighConfidenceResetsExitFrameCount() {
         var st = DecoderState()
         st.prevInProximity = true
-        st.currentToolCode = 0x0802
+        st.currentToolCode = 0x0804  // Art Pen — exitFrameCount only accrues meaningfully here
         let noisy = makePen(status: 0x20)  // prox=1, conf=0
         let clean  = makePen(status: 0x60)  // prox=1, conf=1
         _ = decode(noisy, state: &st)

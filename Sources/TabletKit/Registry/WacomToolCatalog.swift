@@ -912,6 +912,17 @@ public enum WacomToolCatalog {
         return (toolCode & 0x0008) != 0
     }
 
+    /// Whether this tool carries a rotation sensor (Art Pen / Marker Pen).
+    /// Decoders use this to scope the boundary-noise proximity-exit heuristic:
+    /// only a rotation pen's sensor produces the confidence-bit oscillation that
+    /// heuristic bridges, and applying it to a plain stylus misreads a sustained
+    /// high hover (confidence low, position live, pressure zero) as the pen
+    /// leaving. Unknown tool code → false, so the genuine both-bits-clear exit
+    /// signal is the only thing that ends proximity for an unrecognized pen.
+    public static func hasRotation(toolCode: UInt16) -> Bool {
+        spec(forToolCodeRaw: toolCode)?.hasRotation ?? false
+    }
+
     /// Returns all tool specifications for a given device family.
     public static func tools(forFamily family: String) -> [WacomToolSpec] {
         return allTools.values.filter { spec in

@@ -32,22 +32,12 @@ public struct DecoderState {
     /// Active finger contacts for the BPT3 touch container (IntuosV1 path,
     /// CTH-690). Keyed by slot ID; containers carry only changed contacts,
     /// so the full active set lives here between reports.
+    ///
+    /// `BPT3ContainerDecoder` no longer does pen/touch arbitration — it emits
+    /// every contact and `InputInjector` decides, same as the `.intuosV2`
+    /// families. See that decoder's header for why the old `prevInProximity`
+    /// gate was removed.
     public var bpt3TouchSlots: [Int: TouchContact] = [:]
-    /// BPT3 containers decoded since the last pen report on this device.
-    ///
-    /// Pen and touch share one `DecoderState` across a device's interfaces,
-    /// which is what lets touch defer to the pen (`prevInProximity`). The
-    /// hazard is that `prevInProximity` is cleared *only* by a pen
-    /// proximity-exit report: if one is never delivered — a lost frame, a
-    /// firmware that goes quiet without one — touch is suppressed forever
-    /// with no way back short of re-enumerating the device.
-    ///
-    /// This counter is the way out. A pen that is genuinely in proximity
-    /// streams reports continuously, so any pen report resets it to zero;
-    /// containers piling up without one means the pen is gone and the flag
-    /// is stale. Counting containers rather than reading a clock keeps
-    /// decoders pure and their tests deterministic.
-    public var bpt3ContainersSincePen: Int = 0
     /// BT 0x80 container pad state — emit aux only on change.
     public var lastBTPadKeys: UInt8 = 0
     public var lastBTPadRing: UInt8 = 0x7F

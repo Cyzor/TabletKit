@@ -21,3 +21,10 @@ API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) i
 # app, which was updated in the same pass. The replacement type is a drop-in
 # rename with an identical surface.
 API breakage: enum XencelabsControl has been removed
+
+# bpt3ContainersSincePen drove BPT3ContainerDecoder's pen-proximity gate, which
+# was removed (see CHANGELOG "Fixed": the gate killed PTH-850 touch on a
+# low-confidence pen hover). DecoderState is a decoder-internal state bag passed
+# inout to decode(); nothing outside the package reads its fields. Pre-1.0,
+# changelog-documented.
+API breakage: var DecoderState.bpt3ContainersSincePen has been removed

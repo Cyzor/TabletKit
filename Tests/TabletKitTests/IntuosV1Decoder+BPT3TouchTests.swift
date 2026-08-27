@@ -133,67 +133,52 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         XCTAssertEqual(list[0].y, 4095)
     }
 
-    // MARK: - Pen arbitration
+    // MARK: - Pen arbitration is the injector's job, not this decoder's
 
-    func testPenProximitySuppressesNewContacts() {
+    /// The decoder no longer suppresses contacts while a pen is in proximity —
+    /// it emits them and `InputInjector` (`touchPenConfirmedBusy` &c.) decides,
+    /// same as the `.intuosV2` families. This used to fail on a PTH-850 Grip
+    /// Pen whose low-confidence hover thrashed `prevInProximity` and killed
+    /// touch for the whole time a hand rested near the tablet.
+    func testContactsPassThroughRegardlessOfPenProximity() {
         var s = DecoderState()
         s.prevInProximity = true
         let results = decode(
             makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
         guard let list = contacts(results) else { return XCTFail("expected .touch") }
-        XCTAssertTrue(list.isEmpty)
-    }
-
-    func testPenProximityReleasesActiveContacts() {
-        var s = DecoderState()
-        _ = decode(makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
-        s.prevInProximity = true  // pen entered proximity via 0x10 report
-        // Pad-only container — no touch messages — must still flush contacts.
-        let results = decode(makeContainer([[0x80, 0x00, 0, 0, 0, 0, 0, 0]]), state: &s)
-        guard let list = contacts(results) else { return XCTFail("expected .touch") }
-        XCTAssertTrue(list.isEmpty)
-        XCTAssertTrue(s.bpt3TouchSlots.isEmpty)
-    }
-
-    /// A pen proximity-exit report that never arrives must not disable touch
-    /// forever. Once containers pile up without any pen report, the flag is
-    /// treated as stale and contacts are accepted again.
-    func testStaleProximityUnlatchesAfterSilentPenInterface() {
-        var s = DecoderState()
-        s.prevInProximity = true  // latched, and no exit report will follow
-
-        let container = makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)])
-        for _ in 0..<BPT3ContainerDecoder.staleProximityAfterContainers {
-            guard let list = contacts(decode(container, state: &s)) else {
-                return XCTFail("expected .touch")
-            }
-            XCTAssertTrue(list.isEmpty, "suppressed while proximity is still fresh")
-        }
-
-        guard let list = contacts(decode(container, state: &s)) else {
-            return XCTFail("expected .touch")
-        }
-        XCTAssertEqual(list.count, 1, "stale proximity must stop suppressing touch")
+        XCTAssertEqual(list.count, 1, "contacts must not be dropped at the decoder for pen proximity")
         XCTAssertEqual(list[0].x, 1000)
     }
 
-    /// The unlatch must not fire while the pen really is there: a pen in
-    /// proximity streams reports, and each one resets the staleness counter.
-    func testInterleavedPenReportsKeepSuppressionAlive() {
+    func testPenProximityDoesNotFlushActiveContacts() {
         var s = DecoderState()
-        // Report 0x10 in proximity — the INTUOSHT2 pen shape.
+        _ = decode(makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
+        s.prevInProximity = true  // pen entered proximity via a 0x10 report
+        // A pad-only container while the pen is in proximity must leave the
+        // tracked contact alone — the injector's wind-down handles teardown.
+        let results = decode(makeContainer([[0x80, 0x00, 0, 0, 0, 0, 0, 0]]), state: &s)
+        // Pad-only container carries no touch message, so no .touch result.
+        XCTAssertNil(contacts(results))
+        XCTAssertEqual(s.bpt3TouchSlots.count, 1, "contact stays tracked; injector owns arbitration")
+    }
+
+    /// A sustained pen-in-proximity state (real or a thrashing decoder flag)
+    /// must never latch touch off at this layer.
+    func testSustainedPenProximityNeverLatchesTouchOff() {
+        var s = DecoderState()
+        s.prevInProximity = true
+
         var penReport = [UInt8](repeating: 0, count: 10)
         penReport[0] = 0x10
         penReport[1] = 0xE0
 
         let container = makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)])
-        for _ in 0..<(BPT3ContainerDecoder.staleProximityAfterContainers * 3) {
+        for _ in 0..<600 {
             _ = decode(penReport, state: &s)
-            XCTAssertTrue(s.prevInProximity, "pen report should hold proximity")
             guard let list = contacts(decode(container, state: &s)) else {
                 return XCTFail("expected .touch")
             }
-            XCTAssertTrue(list.isEmpty, "pen is live; touch must stay suppressed")
+            XCTAssertEqual(list.count, 1, "touch must keep coming regardless of pen proximity")
         }
     }
 

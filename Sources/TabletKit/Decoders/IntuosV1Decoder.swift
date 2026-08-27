@@ -70,17 +70,17 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         if id == 0x02 && length == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
         }
-        // USB pen reports are exactly 10 bytes. PTH-850 (no touch, no Bluetooth — uses
-        // an RF dongle) exposes Interface 1 as vendor-specific (Report ID 0x02, ~32-byte
-        // payload, confirmed by capture 2026-07-17): content unidentified, plausibly tied
-        // to the wireless dongle mechanism, not touch. Reject longer reports so this
-        // payload is never decoded as garbage pen coordinates/pressure.
+        // USB pen reports are exactly 10 bytes. Anything else on this ID —
+        // notably the 64-byte BPT3 container handled above, or a longer
+        // vendor payload — must not fall through to the 10-byte pen decode
+        // and be read as garbage coordinates/pressure.
+        //
+        // (An earlier note here claimed the PTH-850 has no capacitive touch
+        // and its second interface is dongle telemetry. That was wrong — the
+        // PTH-850 touch (L) has a working capacitive sensor whose 64-byte
+        // BPT3 container arrives on the 0xFF00 interface; user-confirmed on
+        // hardware 2026-08-27.)
         guard (id == 0x02 || id == 0x10) && length == 10 else { return [] }
-        // Any pen report — in proximity or not — is proof the pen interface
-        // is live, which is what `BPT3ContainerDecoder`'s stale-proximity
-        // unlatch counts against. Reset before decoding, so it happens even
-        // on the report shapes that return early below.
-        state.bpt3ContainersSincePen = 0
         return decodeUSBPen(
             report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
     }
@@ -130,11 +130,28 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return []
         }
 
-        // Boundary noise: proximity=1 but confidence=0 (status=0x40).
-        // Don't exit yet - wait for sustained state.
+        // Confidence bit clear, proximity bit still set (status 0x20). Two
+        // different things wear this shape:
+        //   • Art Pen / Marker Pen: the rotation sensor makes the confidence
+        //     bit oscillate at the tracking boundary. A sustained run really
+        //     does mean the pen is leaving, so bridge exitThreshold frames and
+        //     then synthesize the exit.
+        //   • Plain stylus (Grip Pen &c.): this is just a high hover —
+        //     position live in bytes 2–5, pressure/tilt zero. It can persist
+        //     for the entire time a hand rests with the pen held above the
+        //     tablet (~50% of hover reports on a PTH-850 Grip Pen). Escalating
+        //     it fabricates a proximity exit every exitThreshold frames, which
+        //     on the intuosV1+touch models resets the BPT3 pen-arbitration
+        //     latch and kills capacitive touch for the whole hover.
+        // So only a rotation pen escalates; for everyone else 0x20 is a hover
+        // and the genuine both-bits-clear signal above is the only exit.
         if !highConfidence {
+            let toolHasRotation = WacomToolCatalog.hasRotation(toolCode: state.currentToolCode)
             state.exitFrameCount += 1
-            if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+            if toolHasRotation
+                && state.exitFrameCount >= DecoderState.exitThreshold
+                && state.prevInProximity
+            {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.toolIsMouse = false
@@ -172,6 +189,12 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                     isMouse
                     ? (subtype == 0x06 ? 0x0806 : 0x0016)
                     : (state.isEraser ? 0x080A : 0x0802)
+                // Deliberately not stored into `currentToolCode`: leaving it 0
+                // keeps this fallback `.toolEnter` firing once per proximity
+                // entry on a device that never sends a 0xC2 packet, which is
+                // the existing behavior. The rotation-pen check above reads a 0
+                // tool code as non-rotation, which is the right default for an
+                // unknown tool anyway, so nothing needs it stored.
                 results.append(
                     .toolEnter(
                         ToolIdentity(
