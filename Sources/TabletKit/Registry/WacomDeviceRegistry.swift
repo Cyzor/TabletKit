@@ -1669,13 +1669,15 @@ public enum WacomDeviceRegistry {
             productID: 0x0374, name: "Wacom CTL-4100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, activeWidthMM: 152, activeHeightMM: 95),
+            seizeUSB: false, confidence: .crossReferenced,
+            activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0376, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0377, name: "Wacom CTL-4100WL",  // ⚠ from OTD
@@ -1688,7 +1690,8 @@ public enum WacomDeviceRegistry {
             productID: 0x03C5, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             productID: 0x0375, name: "Wacom CTL-6100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,

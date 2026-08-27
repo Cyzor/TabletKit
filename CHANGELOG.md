@@ -83,6 +83,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- CTL-4100/4100WL (0x0374/0x0376/0x03C5) carried an already-verified
+  dimension correction (confirmed 2026-08-03 against Wacom's IPI manual,
+  cross-referenced with OTD's own `IntuosV2ReportParser`/192-byte report
+  assignment) but were left at the default `.experimental` confidence —
+  their sibling 0x0377 got promoted to `.crossReferenced` from the same
+  sourcing pass and these three didn't. Promoted to match.
+
 - `WacomDeviceRegistry` — 0x00D2 (CTH-461), 0x00D3/0x00D8 (CTH-661), and
   0x00DF (CTH-670) were assigned the big-endian `.intuosV1` parser; the
   kernel's static feature table declares all four `BAMBOO_PT`, the same
