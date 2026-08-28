@@ -576,6 +576,50 @@ def touch_pipeline_section(doc: dict) -> list[str]:
     return lines
 
 
+def bluetooth_link_section(doc: dict) -> list[str]:
+    """RSSI/link-quality summary for a Bluetooth capture. captureVersion >= 13;
+    absent entirely on USB or when the address guess never resolved a paired
+    device — either is normal, not a decode problem, so this renders nothing
+    rather than a block of blanks."""
+    link = doc.get("bluetoothLink")
+    if not link:
+        return []
+    lines = ["", "### Bluetooth signal", ""]
+    if link.get("addressLikelyWrong"):
+        lines += [
+            "**Warning:** the address used to find this device disagreed with "
+            "its own connection state at least once during the session — the "
+            "numbers below may describe the wrong device entirely. Treat them "
+            "as unreliable rather than correcting for them.",
+            "",
+        ]
+    lines += [
+        "| Metric | Value |",
+        "|---|---:|",
+        f"| Address used (best-effort match) | `{link.get('addressCandidate', '?')}` |",
+        f"| Samples | {link.get('sampleCount', 0)} |",
+        f"| Samples where the device read as disconnected | {link.get('disconnectedSampleCount', 0)} |",
+    ]
+    rssi_avg = link.get("rssiAvg")
+    if rssi_avg is not None:
+        lines.append(
+            f"| RSSI (golden-range, min/avg/max) | {link.get('rssiMin')} / "
+            f"{rssi_avg:.1f} / {link.get('rssiMax')} |")
+    raw_avg = link.get("rawRSSIAvg")
+    if raw_avg is not None:
+        lines.append(
+            f"| Raw RSSI (min/avg/max) | {link.get('rawRSSIMin')} / "
+            f"{raw_avg:.1f} / {link.get('rawRSSIMax')} |")
+    lines.append("")
+    lines.append(
+        "RSSI near 0 is close to the controller's target range; strongly "
+        "negative values mean a weak link. A weak or fluctuating signal here "
+        "alongside choppy cursor motion points at range/interference rather "
+        "than the pacing or batching logic.")
+    lines.append("")
+    return lines
+
+
 # ── Upstream cross-reference ──────────────────────────────────────────────────
 
 def secondary_interfaces_section(doc: dict, kind: str) -> list[str]:
@@ -804,6 +848,7 @@ def build_report(doc: dict, path: Path, do_upstream: bool) -> str:
     lines += tool_codes_section(doc)
     lines += secondary_interfaces_section(doc, kind)
     lines += touch_pipeline_section(doc)
+    lines += bluetooth_link_section(doc)
     if do_upstream:
         lines += upstream_section(pid)
     lines += draft_entry(doc, pid)
