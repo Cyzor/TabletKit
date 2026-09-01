@@ -186,6 +186,15 @@ public struct WacomDeviceSpec {
     public let bezelButtonCount: Int
     /// True if this model has a capacitive touch ring (Intuos Pro).
     public let hasTouchRing: Bool
+    /// True if this model has per-key OLED image displays on its express
+    /// keys (Intuos4 family exclusively). Gates the Intuos4 OLED
+    /// image-write protocol (`WacomOutputProtocol`) — kernel-confirmed via
+    /// `wacom_sys.c`'s device-type dispatch: `intuos4_led_attr_group` (with
+    /// the `button*_rawimg` sysfs files) is wired only to
+    /// `INTUOS4S`/`INTUOS4`/`INTUOS4WL`/`INTUOS4L`. Intuos5/Intuos Pro get a
+    /// different LED group with no image support at all, despite sharing
+    /// the same `.intuosV1` parser as Intuos4.
+    public let hasKeyOLEDs: Bool
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
     /// Implies hasTouchRing.  The two rings are independently assignable.
     public let hasDualRings: Bool
@@ -308,6 +317,7 @@ public struct WacomDeviceSpec {
         productID: Int, name: String, parser: ReportParser,
         maxX: Int, maxY: Int, maxPressure: Int,
         buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
+        hasKeyOLEDs: Bool = false,
         hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool = false,
         hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
         touchMaxX: Int = 0, touchMaxY: Int = 0,
@@ -330,6 +340,7 @@ public struct WacomDeviceSpec {
         self.bezelButtonCount = bezelButtonCount
         self.hasTouchRing = hasTouchRing
         self.hasDualRings = hasDualRings
+        self.hasKeyOLEDs = hasKeyOLEDs
         self.hasTouchStrips = hasTouchStrips
         self.hasFingerTouch = hasFingerTouch
         self.maxTouchContacts = maxTouchContacts
@@ -752,33 +763,33 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x00B8, name: "Intuos4 S (PTK-440)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            buttonCount: 6, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
             productID: 0x00B9, name: "Intuos4 M (PTK-640)",
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBA (65024×40640).
             productID: 0x00BA, name: "Intuos4 L (PTK-840)",  // dims kernel + OTD
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203),
         .init(
             productID: 0x00BB, name: "Intuos4 XL (PTK-1240)",
             parser: .intuosV1, maxX: 97536, maxY: 60960, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBC (40640×25400).
             productID: 0x00BC, name: "Intuos4 WL (PTK-540WL)",  // dims kernel + OTD
             parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 127),
         .init(
@@ -787,6 +798,14 @@ public enum WacomDeviceRegistry {
             // usb|056a|00bc;bluetooth|056a|00bd — same device, second transport.
             // Coordinates/dims mirror the USB entry above; seizeUSB=false as
             // with other BT Classic entries in this registry.
+            //
+            // hasKeyOLEDs deliberately NOT set here: the Bluetooth OLED image
+            // format is 1-bit monochrome plus a bit-scramble
+            // (`76543210`→`GECA6420`, per the kernel's sysfs ABI doc),
+            // distinct from USB's 4-bit format. WacomOutputProtocol only
+            // implements the USB encoding as of 2026-08-31 — see
+            // Notes/Scratch/intuos4-oled-image-design.md. Add this flag once
+            // BT support is actually implemented, not before.
             productID: 0x00BD, name: "Intuos4 WL (PTK-540WL) BT",  // ⚠ from libwacom
             parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
@@ -1220,13 +1239,13 @@ public enum WacomDeviceRegistry {
         .init(
             productID: 0x0029, name: "Wacom PTK-450",  // ⚠ from OTD
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            buttonCount: 6, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
             productID: 0x002A, name: "Wacom PTK-650",  // ⚠ from OTD
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
 
