@@ -42,6 +42,24 @@ See [`Extending-Support.md`](Extending-Support.md) for a walkthrough of what a c
 4. **Run `swift test`** locally. PRs that fail tests sit until they pass.
 5. **Open the PR** with: device model, connection (USB / Bluetooth / dongle), what got verified, and what didn't.
 
+## If CI reports an API breakage
+
+A separate `api-breakage` job diffs the public API against the latest tag. It
+catches more than deletions: most public types here have no explicit `init`, so
+**adding a stored property changes the synthesized memberwise initializer** and
+counts as a source break for anyone who spelled out every argument.
+
+If the break is unintended, fix it — usually by giving the new property a
+default value. If it is deliberate (still routine before 1.0), record it:
+
+1. Add the digester's exact message, verbatim, as a line in
+   `api-breakage-allowlist.txt`, with a comment above it saying why.
+2. Describe the break in `CHANGELOG.md` under `### Changed` or `### Removed`,
+   including what a caller has to do about it.
+
+Both are required — the job fails on any breakage not in the allowlist, and the
+changelog is what a consumer actually reads.
+
 ## Pull Request Characteristics
 
 - One sentence description of what the revision does.
