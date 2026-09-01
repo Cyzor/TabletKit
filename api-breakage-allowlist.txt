@@ -28,3 +28,12 @@ API breakage: enum XencelabsControl has been removed
 # inout to decode(); nothing outside the package reads its fields. Pre-1.0,
 # changelog-documented.
 API breakage: var DecoderState.bpt3ContainersSincePen has been removed
+
+# DigitizerSpec and WacomDeviceSpec both gained a `bezelButtonCount` field when
+# onboard bezel buttons were decoded for the DTK-2400 and Xencelabs Pen Display
+# (d87792e). Neither struct declares an explicit init, so their memberwise
+# initializers are synthesized and the added parameter changed both signatures.
+# Pre-1.0, changelog-documented; the app is the only consumer and builds against
+# the new shape. Callers that named every argument need the one new parameter.
+API breakage: constructor DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:) has been removed
+API breakage: constructor WacomDeviceSpec.init(productID:name:parser:maxX:maxY:maxPressure:buttonCount:bezelButtonCount:hasTouchRing:hasDualRings:hasTouchStrips:ringSlotCount:hasEraser:hasTilt:hasFingerTouch:maxTouchContacts:touchMaxX:touchMaxY:isPenDisplay:seizeUSB:initSteps:ledCompanionPID:confidence:productStringMatch:activeWidthMM:activeHeightMM:) has been removed

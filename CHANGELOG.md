@@ -175,6 +175,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - `TouchContact.init` gained a defaulted `contactMinor` parameter, which the
   Swift API digester flags as a source-compatible but symbol-breaking change
   (see `api-breakage-allowlist.txt`).
+- `DigitizerSpec` and `WacomDeviceSpec` gained a `bezelButtonCount` field for
+  the onboard bezel buttons on the DTK-2400 and Xencelabs Pen Display. Neither
+  declares an explicit initializer, so the added property changed both
+  synthesized memberwise signatures — source-breaking for any caller that
+  spelled out every argument (add the one new parameter). Recorded in
+  `api-breakage-allowlist.txt`.
 - `classifyDigitizerInterface` — decides whether an unrecognized HID interface
   may have a pen driver attached, by checking whether its X/Y usages sit inside
   a Digitizer Touch Screen or Touch Pad collection. Usages alone cannot tell pen
