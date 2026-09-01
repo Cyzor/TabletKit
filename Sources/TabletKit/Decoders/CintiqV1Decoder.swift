@@ -291,7 +291,15 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
     // MARK: - Report 0x0C: touch rings + express keys + capacitive OSD buttons
     //
-    // Confirmed layout (live USB capture, Wacom driver 6.3.46-2, DTK-2400 / Cintiq 24HD):
+    // Two distinct pad layouts share report 0x0C across `.cintiqV1` devices —
+    // confirmed against Linux kernel `wacom_wac.c` `wacom_intuos_pad()`, which
+    // dispatches DTK-2400/24HD and 21UX2/22HD through separate, independent
+    // branches. Conflating them (as this decoder did before 2026-08-31) reads
+    // 21UX2's touch-strip position bytes as if they were 24HD's OSD buttons,
+    // producing phantom button events on a strip swipe.
+    //
+    // DTK-2400 / Cintiq 24HD family (bezelButtonCount > 0), live USB capture,
+    // Wacom driver 6.3.46-2:
     //   byte[1] — left  touch ring: bit7=active, [6:0]=position 0–71
     //   byte[2] — right touch ring: same encoding (dual-ring models only)
     //   byte[3] — capacitive OSD touch buttons, group A — bit4 = left button
@@ -304,15 +312,33 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     //     icon's fixed bit — so the other bits in capA/capB are transient
     //     way-points during a swipe, not independent buttons, and are ignored.
     //   byte[5] — 0x00 (padding)
-    //   byte[6] — left  side buttons: bits 0–2 = ring-mode select 0/1/2; bits 3–7 = express keys 1–5
+    //   byte[6] — left  side express keys, full 8-bit mask
     //   byte[7] — 0x00 (padding)
-    //   byte[8] — right side buttons: same layout as byte[6]
+    //   byte[8] — right side express keys, full 8-bit mask
     //   byte[9] — 0x00 (padding)
     //
-    // buttons[] layout (AuxButtons):
-    //   [0..7]   = byte[6] left side (ring-mode 0/1/2, express keys 1–5)
-    //   [8..15]  = byte[8] right side (ring-mode 0/1/2, express keys 1–5)
-    //   [16..18] = capacitive OSD buttons, left/middle/right (fixed bits, see above)
+    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), kernel-sourced
+    // 2026-08-31, hardware-unverified — kernel's WACOM_21UX2/WACOM_22HD branch:
+    //   `buttons = (data[8]<<10) | ((data[7]&1)<<9) | (data[6]<<1) | (data[5]&1)`
+    //   byte[1]:byte[2] and byte[3]:byte[4] are touch-strip position fields on
+    //   this family (13-bit each), not buttons — NOT decoded here; MockTab has
+    //   no touch-strip control type yet, so strip position is dropped rather
+    //   than misread as OSD buttons.
+    //   byte[5] bit0 — left  center toggle
+    //   byte[6]       — left  side express keys, full 8-bit mask
+    //   byte[7] bit0 — right center toggle
+    //   byte[8]       — right side express keys, full 8-bit mask
+    //
+    // buttons[] layout (AuxButtons), 24HD family:
+    //   [0..7]   = byte[6] left side express keys
+    //   [8..15]  = byte[8] right side express keys
+    //   [16..18] = capacitive OSD buttons, left/middle/right
+    //
+    // buttons[] layout (AuxButtons), 21UX2/22HD family:
+    //   [0..7]  = byte[6] left side express keys
+    //   [8..15] = byte[8] right side express keys
+    //   [16]    = byte[5] bit0, left  center toggle
+    //   [17]    = byte[7] bit0, right center toggle
 
     private func decodeExpressKeys(
         report: UnsafePointer<UInt8>,
@@ -335,18 +361,32 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
         let leftByte  = report[6]
         let rightByte = length >= 9 ? report[8] : 0
-        let capA      = length >= 4 ? report[3] : 0
-        let capB      = length >= 5 ? report[4] : 0
-
         let leftBits:  [Bool] = (0..<8).map { bit in (leftByte  & (1 << bit)) != 0 }
         let rightBits: [Bool] = (0..<8).map { bit in (rightByte & (1 << bit)) != 0 }
-        let osdBits: [Bool] = [
-            (capA & 0x10) != 0,  // left OSD button
-            (capB & 0x40) != 0,  // middle OSD button
-            (capB & 0x01) != 0,  // right OSD button
-        ]
-        // [0..7] left side  [8..15] right side  [16..18] OSD buttons (left/middle/right)
-        let buttons = leftBits + rightBits + osdBits
+
+        let buttons: [Bool]
+        if spec.bezelButtonCount > 0 {
+            // DTK-2400 / 24HD family: bytes 3-4 are capacitive OSD buttons.
+            let capA = length >= 4 ? report[3] : 0
+            let capB = length >= 5 ? report[4] : 0
+            let osdBits: [Bool] = [
+                (capA & 0x10) != 0,  // left OSD button
+                (capB & 0x40) != 0,  // middle OSD button
+                (capB & 0x01) != 0,  // right OSD button
+            ]
+            buttons = leftBits + rightBits + osdBits
+        } else {
+            // 21UX2 / 22HD family: bytes 3-4 are touch-strip position, not
+            // buttons — not decoded (no strip control type yet). Bytes 5/7
+            // bit 0 are the two center toggles the 24HD path doesn't have.
+            let byte5 = report[5]
+            let byte7 = length >= 8 ? report[7] : 0
+            let centerToggleBits: [Bool] = [
+                (byte5 & 0x01) != 0,  // left center toggle
+                (byte7 & 0x01) != 0,  // right center toggle
+            ]
+            buttons = leftBits + rightBits + centerToggleBits
+        }
 
         return [
             .aux(

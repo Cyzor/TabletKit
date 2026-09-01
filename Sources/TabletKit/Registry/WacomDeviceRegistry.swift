@@ -1153,6 +1153,10 @@ public enum WacomDeviceRegistry {
             // Kernel calls this "Cintiq 21UX2" (DTZ-2100B / second gen).
             // Pressure corrected from 1023 to 2047. Renamed to disambiguate
             // from the gen-1 21UX at 0x003F.
+            // No bezelButtonCount (0 = default): unlike 24HD, this family has
+            // no capacitive OSD buttons — bytes 3-4 of the pad report are
+            // touch-strip position, not buttons. See CintiqV1Decoder's pad
+            // decode header comment (kernel-cross-checked 2026-08-31).
             productID: 0x00CC, name: "Cintiq 21UX2 (DTK-2100)",  // model per libwacom (DTZ-2100 is the first-gen 21UX, 0x003F); from kernel + OTD
             parser: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasEraser: true,
@@ -1178,11 +1182,20 @@ public enum WacomDeviceRegistry {
             // outranks this one. Confirmed 2026-08-03.
             productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ⚠ estimated
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true,
+            buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
+            // No bezelButtonCount (0 = default): shares 21UX2's 18-button
+            // pad field (byte[6]/byte[8] express keys + byte[5]/byte[7]
+            // center toggles), correctly routed by CintiqV1Decoder's
+            // bezelButtonCount gate. Per kernel wacom_wac.c, 22HD ALSO has a
+            // distinct byte[9] 3-key field (wrench/info/keys) this decoder
+            // does not yet decode — buttonCount: 20 (18 + 2 of those 3?)
+            // hints at this but it's unimplemented, not just unverified.
+            // Separate follow-up if pursued; not part of the 2026-08-31
+            // 21UX2 phantom-OSD-button fix.
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 20, hasTouchRing: false, hasEraser: true,

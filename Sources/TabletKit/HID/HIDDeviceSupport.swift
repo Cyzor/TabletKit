@@ -23,6 +23,11 @@ public struct DigitizerSpec {
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
     /// Used by CintiqV1Decoder to gate decoding of the second ring byte in 0x0C reports.
     public var hasDualRings: Bool = false
+    /// Number of onboard capacitive bezel buttons, e.g. the Cintiq DTK-2400's
+    /// three OSD touch buttons. Used by CintiqV1Decoder to select between the
+    /// 24HD-family pad layout (bytes 3-4 are capacitive OSD buttons) and the
+    /// 21UX2/22HD-family layout (same bytes are touch-strip position instead).
+    public var bezelButtonCount: Int = 0
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Used to gate pen-display-specific UI (e.g. parallax offset calibration).
     public var isPenDisplay: Bool = false
@@ -45,6 +50,7 @@ public struct DigitizerSpec {
         buttonCount: Int = 0,
         hasTilt: Bool = false,
         hasDualRings: Bool = false,
+        bezelButtonCount: Int = 0,
         isPenDisplay: Bool = false,
         ringSlotCount: Int = 4,
         hasFingerTouch: Bool = false,
@@ -56,6 +62,7 @@ public struct DigitizerSpec {
         self.buttonCount = buttonCount
         self.hasTilt = hasTilt
         self.hasDualRings = hasDualRings
+        self.bezelButtonCount = bezelButtonCount
         self.isPenDisplay = isPenDisplay
         self.ringSlotCount = ringSlotCount
         self.hasFingerTouch = hasFingerTouch

@@ -27,18 +27,29 @@ final class CintiqV1DecoderTests: XCTestCase {
     private let dtk2400 = DigitizerSpec(
         maxX: 104859, maxY: 65535, maxPressure: 2047,
         buttonCount: 16, hasTilt: true, hasDualRings: true,
+        bezelButtonCount: 3,
+        isPenDisplay: true, ringSlotCount: 4)
+
+    // Cintiq 21UX2 (0x00CC) dimensions. No bezelButtonCount (0 = default):
+    // this family has no capacitive OSD buttons — bytes 3-4 are touch-strip
+    // position on real hardware, not buttons. See CintiqV1Decoder's pad
+    // decode header comment for the kernel cross-check.
+    private let cintiq21ux2 = DigitizerSpec(
+        maxX: 87200, maxY: 65600, maxPressure: 2047,
+        buttonCount: 18, hasTilt: true, hasDualRings: false,
         isPenDisplay: true, ringSlotCount: 4)
 
     private func decode(
         _ bytes: [UInt8],
         decoder: inout CintiqV1Decoder,
         state: inout DecoderState,
+        spec: DigitizerSpec? = nil,
         family: String = "cintiq"
     ) -> [DecodeResult] {
         bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: dtk2400, state: &state, deviceFamily: family)
+                spec: spec ?? dtk2400, state: &state, deviceFamily: family)
         }
     }
 
@@ -395,6 +406,48 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertEqual(aux3.buttons[16], false)
         XCTAssertEqual(aux3.buttons[17], false)
         XCTAssertEqual(aux3.buttons[18], false)
+    }
+
+    // Cintiq 21UX2 (0x00CC): bytes 3-4 are touch-strip position on this
+    // family, not capacitive OSD buttons — must NOT be decoded as buttons
+    // (that was the bug: applying the 24HD OSD-button decode to 21UX2
+    // produced phantom button events from a strip swipe). Kernel-sourced
+    // via wacom_wac.c wacom_intuos_pad(), see CintiqV1Decoder header comment.
+    func test21UX2ExpressKeyReportDecodesCenterTogglesNotOSDButtons() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 9)
+        bytes[0] = 0x0C
+        bytes[5] = 0x01  // left center toggle
+        bytes[6] = 0b0000_0101  // left express keys: bit0 + bit2
+        bytes[7] = 0x01  // right center toggle
+        bytes[8] = 0b0000_0010  // right express keys: bit1
+
+        let results = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2)
+        guard case .aux(let aux)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux.buttons.count, 18, "8 left + 8 right + 2 center toggles")
+        XCTAssertEqual(aux.buttons[0], true, "left express key bit0")
+        XCTAssertEqual(aux.buttons[2], true, "left express key bit2")
+        XCTAssertEqual(aux.buttons[8 + 1], true, "right express key bit1")
+        XCTAssertEqual(aux.buttons[16], true, "left center toggle (byte[5]&1)")
+        XCTAssertEqual(aux.buttons[17], true, "right center toggle (byte[7]&1)")
+
+        // Bytes 3-4 (touch-strip position on 21UX2) must never surface as
+        // button presses, however they're set — this is the phantom-button
+        // regression the fix addresses.
+        bytes[3] = 0x10  // would be "left OSD button" on 24HD; must be inert here
+        bytes[4] = 0x41  // would be "middle + right OSD button" on 24HD
+        bytes[5] = 0
+        bytes[7] = 0
+        let results2 = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2)
+        guard case .aux(let aux2)? = results2.first else {
+            return XCTFail("Expected .aux, got \(results2)")
+        }
+        XCTAssertEqual(aux2.buttons.count, 18)
+        XCTAssertEqual(aux2.buttons[16], false, "left center toggle should be off")
+        XCTAssertEqual(aux2.buttons[17], false, "right center toggle should be off")
     }
 
     func testExpressKeyReportShortLengthRejected() {
