@@ -150,6 +150,17 @@ swift test
 
 runs the test suite (457 tests as of this writing) against fixture captures from real devices. No Xcode project required.
 
+## Documentation
+
+```
+tools/build-docs.sh
+```
+
+builds the DocC archive and prints its path; `open` it to browse. The package
+declares no dependencies, so a clone builds and tests with nothing to resolve —
+docs are opt-in rather than a plugin every build has to fetch. `docc` ships with
+Xcode, so nothing extra is needed.
+
 ## Versioning
 
 Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [SemVer](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.

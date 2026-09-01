@@ -5,6 +5,10 @@
 //
 // The `Sources/TabletKit/` layout is canonical SwiftPM. Run from this repo's root:
 //     swift test
+//
+// This package has no dependencies on purpose — a clone builds and tests with
+// nothing to resolve. API documentation is built on demand by
+// tools/build-docs.sh rather than by a SwiftPM docs plugin.
 import PackageDescription
 
 let package = Package(
@@ -13,11 +17,15 @@ let package = Package(
     products: [
         .library(name: "TabletKit", targets: ["TabletKit"]),
     ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.3.0"),
-    ],
     targets: [
-        .target(name: "TabletKit"),
+        .target(
+            name: "TabletKit",
+            // The catalog is built on demand by tools/build-docs.sh, which reads
+            // it directly, so SwiftPM must not treat it as an unhandled resource.
+            // Excluding it here is what keeps a plain `swift build` warning-free
+            // with no dependency on swift-docc-plugin.
+            exclude: ["TabletKit.docc"]
+        ),
         .testTarget(
             name: "TabletKitTests",
             dependencies: ["TabletKit"]

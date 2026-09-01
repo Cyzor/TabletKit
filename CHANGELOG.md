@@ -153,6 +153,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Removed
 
+- The `swift-docc-plugin` dependency, and with it the package's entire
+  dependency graph — a clone now builds and tests with nothing to resolve.
+  It was only ever used to render the DocC catalog, which is now built on
+  demand by `tools/build-docs.sh` (documented in the README); `docc` ships
+  with Xcode, so nothing extra is required. No API change. Removing it also
+  drops the `Package.resolved` that churned between toolchains and was
+  deleted out from under the consuming app on every `swift test`.
+
 - `XencelabsControl`, the deprecated typealias left behind when the type was
   renamed to `XencelabsOutputProtocol`. Source-breaking for anything still
   using the old name; the replacement has an identical surface, so the fix is
