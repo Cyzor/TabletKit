@@ -61,15 +61,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   row stays name-only — this is groundwork for an implementer with the
   hardware, not a decoder.
 
-- `RepeatingReportStructureDetector` — finds repeating byte-stride
-  structure in a report using only per-position variance statistics, no
-  descriptor required. Exists for reports the descriptor-driven tools
-  cannot help with — classic Wacom BT reports declare every field as
-  opaque vendor usage, so there is nothing to derive a layout from —
-  and confirmed against a real PTH-860 BT capture, where it recovers the
-  kernel-documented 4×43-byte frame / 5×8-byte contact layout from
-  statistics alone, plus a CTH-690 capture with no repeating structure,
-  correctly reporting none.
+- `RepeatingReportStructureDetector` (SPI, `@_spi(TabletKitInternals)`) —
+  finds repeating byte-stride structure in a report using only
+  per-position variance statistics, no descriptor required. Exists for
+  reports the descriptor-driven tools cannot help with — classic Wacom BT
+  reports declare every field as opaque vendor usage, so there is nothing
+  to derive a layout from — and confirmed against a real PTH-860 BT
+  capture, where it recovers the kernel-documented 4×43-byte frame /
+  5×8-byte contact layout from statistics alone, plus a CTH-690 capture
+  with no repeating structure, correctly reporting none. Behind SPI
+  because the only caller is a capture-tooling path; its three result
+  types (`ByteVarianceSignature`, `RepeatingRun`, `RepeatingReportStructure`)
+  moved with it.
 
 - `PrecisionTouchLayout` / `PrecisionTouchDecoder` — a device-agnostic decoder
   for HID Precision-Touchpad-style multitouch reports (Contact Identifier,

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import XCTest
-@testable import TabletKit
+@_spi(TabletKitInternals) @testable import TabletKit
 
 /// Repeating-structure detection against real capture evidence.
 ///

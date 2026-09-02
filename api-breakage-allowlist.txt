@@ -37,3 +37,15 @@ API breakage: var DecoderState.bpt3ContainersSincePen has been removed
 # the new shape. Callers that named every argument need the one new parameter.
 API breakage: constructor DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:) has been removed
 API breakage: constructor WacomDeviceSpec.init(productID:name:parser:maxX:maxY:maxPressure:buttonCount:bezelButtonCount:hasTouchRing:hasDualRings:hasTouchStrips:ringSlotCount:hasEraser:hasTilt:hasFingerTouch:maxTouchContacts:touchMaxX:touchMaxY:isPenDisplay:seizeUSB:initSteps:ledCompanionPID:confidence:productStringMatch:activeWidthMM:activeHeightMM:) has been removed
+
+# The repeating-structure detector and its three result types were public when
+# added (2026-07-30, after the 0.3.0 tag) but are internal machinery — a
+# statistics-only fallback for descriptor-blind Bluetooth captures, driven from
+# MockTab's CaptureEngine and nowhere else. Moved behind @_spi(TabletKitInternals)
+# in the Phase A surface-narrowing pass. Not in 0.3.0, so the digester only
+# reports these once a post-0.3.0 baseline exists; recorded now so the move is
+# on the books regardless of which tag CI compares against.
+API breakage: struct ByteVarianceSignature is now with @_spi
+API breakage: struct RepeatingRun is now with @_spi
+API breakage: struct RepeatingReportStructure is now with @_spi
+API breakage: enum RepeatingReportStructureDetector is now with @_spi

@@ -69,7 +69,6 @@ vendor. Product names are used only to describe hardware compatibility.
 - ``DigitizerUsage``
 - ``DigitizerInterfaceKind``
 - ``classifyDigitizerInterface(_:)``
-- ``RepeatingReportStructure``
 - ``GenericDigitizerFrame``
 
 ### Output protocols

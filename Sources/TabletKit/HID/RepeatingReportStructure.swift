@@ -11,7 +11,7 @@ import Foundation
 /// no truncation flag): the detector only ever buckets `distinctCount` and
 /// `max`, so callers can build this straight from whatever summary they
 /// already keep rather than reshaping one.
-public struct ByteVarianceSignature: Equatable {
+@_spi(TabletKitInternals) public struct ByteVarianceSignature: Equatable {
     public let distinctCount: Int
     public let max: Int
 
@@ -30,7 +30,7 @@ public struct ByteVarianceSignature: Equatable {
 /// arbitrarily deep result the detector itself never produces). One level of
 /// nesting is also as deep as `detect(_:)` ever searches, so the type says
 /// exactly as much as the algorithm can actually claim.
-public struct RepeatingRun: Equatable {
+@_spi(TabletKitInternals) public struct RepeatingRun: Equatable {
     /// Byte offset where the repeating region begins.
     public let startOffset: Int
     /// Stride between repeats, in bytes.
@@ -50,7 +50,7 @@ public struct RepeatingRun: Equatable {
 /// one — the fields are read-only outside the module the same way a decoded
 /// frame is, since a hand-built value would misrepresent evidence nothing
 /// actually observed.
-public struct RepeatingReportStructure: Equatable {
+@_spi(TabletKitInternals) public struct RepeatingReportStructure: Equatable {
     /// The outermost repeating structure found.
     public let outer: RepeatingRun
     /// A structure found by re-running detection inside a single repeat of
@@ -79,7 +79,7 @@ public struct RepeatingReportStructure: Equatable {
 /// 5×8-byte contact layout from statistics alone, and a CTH-690 report with
 /// no repeating structure, where every candidate period is correctly
 /// rejected.
-public enum RepeatingReportStructureDetector {
+@_spi(TabletKitInternals) public enum RepeatingReportStructureDetector {
 
     /// Two byte positions are treated as behaving alike when their variance
     /// falls in the same coarse bucket, not when it matches exactly. Real
