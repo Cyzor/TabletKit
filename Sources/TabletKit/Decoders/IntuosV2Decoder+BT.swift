@@ -71,7 +71,7 @@ extension IntuosV2Decoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 15 else { return [] }
 
@@ -435,7 +435,7 @@ extension IntuosV2Decoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 99 else { return [] }
 

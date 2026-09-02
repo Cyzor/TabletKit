@@ -38,7 +38,7 @@ final class IntuosHTGenerationTests: XCTestCase {
         return bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: spec, state: &state, deviceFamily: "intuosConsumer")
+                spec: spec, state: &state, deviceFamily: .intuosProGen1)
         }
     }
 
@@ -176,7 +176,7 @@ final class IntuosHTGenerationTests: XCTestCase {
         let results = container.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: container.count,
-                spec: cth690, state: &state, deviceFamily: "intuosConsumer")
+                spec: cth690, state: &state, deviceFamily: .intuosProGen1)
         }
         let contacts = touches(results)
         XCTAssertEqual(contacts?.count, 1)

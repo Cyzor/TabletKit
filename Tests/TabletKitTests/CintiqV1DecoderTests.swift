@@ -44,7 +44,7 @@ final class CintiqV1DecoderTests: XCTestCase {
         decoder: inout CintiqV1Decoder,
         state: inout DecoderState,
         spec: DigitizerSpec? = nil,
-        family: String = "cintiq"
+        family: DeviceFamily = .cintiq
     ) -> [DecodeResult] {
         bytes.withUnsafeBufferPointer { buf in
             decoder.decode(

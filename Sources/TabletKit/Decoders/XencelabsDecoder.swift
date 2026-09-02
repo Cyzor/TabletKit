@@ -104,7 +104,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // Frame length varies across the family — there is no single padded
         // size (confirmed 2026-07-18 against live HID descriptors): the wired

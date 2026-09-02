@@ -22,7 +22,7 @@ final class DTUSDecoderTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        family: String = "dtus"
+        family: DeviceFamily = .dtus
     ) -> [DecodeResult] {
         let decoder = DTUSDecoder()
         return bytes.withUnsafeBufferPointer { buf in

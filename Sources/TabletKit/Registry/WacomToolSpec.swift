@@ -54,7 +54,7 @@ public struct WacomToolSpec: Codable, Identifiable, Equatable, Sendable {
 
     /// Device families this tool is commonly shipped with.
     /// Empty means universal.
-    public let supportedFamilies: [String]
+    public let supportedFamilies: [DeviceFamily]
 
     public init(
         toolCode: UInt16,
@@ -67,7 +67,7 @@ public struct WacomToolSpec: Codable, Identifiable, Equatable, Sendable {
         hasWheel: Bool,
         hasEraserVariant: Bool,
         eraserToolCode: UInt16?,
-        supportedFamilies: [String]
+        supportedFamilies: [DeviceFamily]
     ) {
         self.toolCode = toolCode
         self.name = name
@@ -98,15 +98,17 @@ public struct WacomToolSpec: Codable, Identifiable, Equatable, Sendable {
     public var baseCode: UInt16 { toolCode & ~UInt16(0x0008) }
 
     /// Returns true if this tool is compatible with the given device family.
-    /// Empty supportedFamilies means universal compatibility.
-    public func isSupported(onFamily family: String) -> Bool {
+    /// Empty `supportedFamilies`, or a `nil` family (device family unknown),
+    /// means universal compatibility.
+    public func isSupported(onFamily family: DeviceFamily?) -> Bool {
         if supportedFamilies.isEmpty { return true }
+        guard let family else { return true }
         return supportedFamilies.contains(family)
     }
 
     /// Returns the tool's capabilities adjusted for the given device family.
     /// If the tool is unsupported, returns a fallback with limited features.
-    public func capabilities(forFamily family: String) -> ToolCapabilities {
+    public func capabilities(forFamily family: DeviceFamily?) -> ToolCapabilities {
         let supported = isSupported(onFamily: family)
         return ToolCapabilities(
             isSupported: supported,

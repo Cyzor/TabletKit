@@ -74,6 +74,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   types (`ByteVarianceSignature`, `RepeatingRun`, `RepeatingReportStructure`)
   moved with it.
 
+- Graphire device-family string was `"bamboo2"`, a value no `WacomDeviceSpec.family`
+  lookup could produce, so the four tool specs written for this hardware
+  (PenPartner Pen, Graphire Pen, its eraser, Graphire Mouse — all
+  `supportedFamilies: [.graphire]`) were unreachable and reported unsupported
+  on every device. Returns `.graphire` now. `GraphireDecoder` synthesises
+  Grip-Pen tool codes and never runs the compatibility check, so runtime
+  decoding is unchanged; the family string simply names what it describes.
+
 - `PrecisionTouchLayout` / `PrecisionTouchDecoder` — a device-agnostic decoder
   for HID Precision-Touchpad-style multitouch reports (Contact Identifier,
   Contact Count, per-finger collections), the touch counterpart to
@@ -175,6 +183,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Device family is now the `DeviceFamily` enum rather than a bare `String`.
+  The `deviceFamily:` parameter on `TabletReportDecoder.decode` and every
+  decoder, `WacomDeviceSpec.family`, and `WacomToolSpec.supportedFamilies`
+  (plus `isSupported(onFamily:)`, `capabilities(forFamily:)`,
+  `WacomToolCatalog.tools(forFamily:)` and `capabilities(forToolCode:family:)`)
+  all move from `String` to `DeviceFamily` / `DeviceFamily?`. A `nil` family
+  means "unknown, treat as universally compatible". The set is a closed
+  12 cases: adding one is a deliberate source break, so a family a `switch`
+  forgets to handle fails to compile instead of silently mismatching a tool.
+  Raw values are the same strings as before, so any `WacomToolSpec` JSON
+  round-trip is unchanged. Every affected signature is recorded in
+  `api-breakage-allowlist.txt`. `WacomDeviceSpec.family`'s `.intuosV1`
+  branch still inspects the device name to split one parser across four
+  families; replacing that with structured data is a separate task.
 - `TouchContact.init` gained a defaulted `contactMinor` parameter, which the
   Swift API digester flags as a source-compatible but symbol-breaking change
   (see `api-breakage-allowlist.txt`).

@@ -39,7 +39,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         switch report[0] {
@@ -113,7 +113,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
         // USB IntuosV2 status byte: bit6=proximity, bit5=highConfidence.
@@ -378,7 +378,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard
             let result = decodeBLEPenReport(

@@ -27,7 +27,7 @@ final class XencelabsDecoderTests: XCTestCase {
         return bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: display, state: &state, deviceFamily: "xencelabs")
+                spec: display, state: &state, deviceFamily: .xencelabs)
         }
     }
 

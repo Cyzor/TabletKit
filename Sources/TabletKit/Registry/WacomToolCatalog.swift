@@ -28,7 +28,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x080A,
-            supportedFamilies: ["intuos3", "intuos4", "intuos5", "intuosProGen1"]
+            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1]
         )
 
         // Grip Pen Eraser
@@ -43,7 +43,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3", "intuos4", "intuos5", "intuosProGen1"]
+            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1]
         )
 
         // Marker Pen (Intuos4 — rotation-capable; listed in kernel is_art_pen for 0x804.
@@ -59,7 +59,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x080C,
-            supportedFamilies: ["intuos4", "intuosProGen2"]
+            supportedFamilies: [.intuos4, .intuosProGen2]
         )
 
         // Marker Pen Eraser
@@ -74,7 +74,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos4"]
+            supportedFamilies: [.intuos4]
         )
 
         // Art Pen variant (toolCode 0x1108 — confirmed from live BT capture 2026-04-02).
@@ -91,7 +91,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Standard pen for Cintiq 24HD (DTK-2400) - toolCode 0x1802
@@ -107,7 +107,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x180A,
-            supportedFamilies: ["cintiq", "intuos4", "intuos5"]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5]
         )
 
         // Intuos4 Grip Pen Eraser (0x180A)
@@ -122,7 +122,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["cintiq", "intuos4", "intuos5"]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5]
         )
 
         // Art Pen extended ID (0x1804) - appears on Cintiq 24HD (DTK-2400)
@@ -138,7 +138,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x180C,
-            supportedFamilies: ["cintiq", "intuos4", "intuos5"]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5]
         )
 
         // Art Pen 0x1804 eraser
@@ -153,7 +153,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["cintiq", "intuos4", "intuos5"]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5]
         )
 
         // Intuos Mouse (cordless)
@@ -168,7 +168,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos4", "intuos5"]
+            supportedFamilies: [.intuos4, .intuos5]
         )
 
         // MARK: - Intuos Pro Gen2 / IntuosV2 Series (0x08xx extended)
@@ -185,7 +185,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x083A,
-            supportedFamilies: ["intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pro Pen 2 Eraser
@@ -200,7 +200,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pro Pen 3 (PTH-860)
@@ -215,7 +215,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x084A,
-            supportedFamilies: ["intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pro Pen 3 Eraser
@@ -230,7 +230,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pen 4K (CTL-4100, CTL-6100 series)
@@ -245,7 +245,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x085A,
-            supportedFamilies: ["bamboo2", "intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pen 4K Eraser
@@ -260,7 +260,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["bamboo2", "intuosProGen2"]
+            supportedFamilies: [.intuosProGen2]
         )
 
         // Pen 5K (Pro Pen 2 equivalent for older devices)
@@ -275,7 +275,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x086A,
-            supportedFamilies: ["intuosProGen1"]
+            supportedFamilies: [.intuosProGen1]
         )
 
         // Pen 5K Eraser
@@ -290,7 +290,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuosProGen1"]
+            supportedFamilies: [.intuosProGen1]
         )
 
         // MARK: - Art Pen (rotatable, ABS_Z barrel)
@@ -307,7 +307,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x088D,
-            supportedFamilies: ["intuos3", "intuos4"]
+            supportedFamilies: [.intuos3, .intuos4]
         )
 
         // Art Pen Eraser
@@ -322,7 +322,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3", "intuos4"]
+            supportedFamilies: [.intuos3, .intuos4]
         )
 
         // NOTE: The Intuos4 Art Pen KP-701E-2 reports as 0x10804 (extended ID assembled from
@@ -341,7 +341,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x020C,
-            supportedFamilies: ["intuos5", "intuosProGen1"]
+            supportedFamilies: [.intuos5, .intuosProGen1]
         )
 
         // Art Pen 2 Eraser
@@ -356,7 +356,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos5", "intuosProGen1"]
+            supportedFamilies: [.intuos5, .intuosProGen1]
         )
 
         // MARK: - Inking Pen
@@ -373,7 +373,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x081A,
-            supportedFamilies: ["intuos4", "intuos5"]
+            supportedFamilies: [.intuos4, .intuos5]
         )
 
         // Inking Pen Eraser
@@ -388,7 +388,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos4", "intuos5"]
+            supportedFamilies: [.intuos4, .intuos5]
         )
 
         // MARK: - Intuos3 / Graphire Era (0x00xx family)
@@ -405,7 +405,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x000A,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Grip Pen Eraser
@@ -420,7 +420,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Inking Pen
@@ -435,7 +435,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x0093,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Inking Pen Eraser
@@ -450,7 +450,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Airbrush
@@ -465,7 +465,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: true,
             eraserToolCode: 0x000C,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Airbrush Eraser
@@ -480,7 +480,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // MARK: - Mouse and Cursor Tools
@@ -497,7 +497,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos4"]
+            supportedFamilies: [.intuos4]
         )
 
         // Cordless Mouse / 4D Mouse (Intuos 1/2 legacy — kernel 0x007/0x094/0x09C → BTN_TOOL_MOUSE)
@@ -542,7 +542,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Intuos3 Mouse fallback (code from subtype-0x08 path — actual Intuos3 mouse sends 0x0017)
@@ -557,7 +557,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Lens Cursor (Intuos3 — large tablets only: PTZ-930/1231)
@@ -572,7 +572,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Lens Cursor (unverified legacy code — kept for compatibility)
@@ -604,7 +604,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x0098,
-            supportedFamilies: ["bamboo", "bamboo2"]
+            supportedFamilies: [.bamboo]
         )
 
         // Bamboo Pen Eraser
@@ -619,7 +619,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["bamboo", "bamboo2"]
+            supportedFamilies: [.bamboo]
         )
 
         // Bamboo Touch (finger input on touch-capable devices)
@@ -634,7 +634,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["bamboo2"]
+            supportedFamilies: [.bamboo]
         )
 
         // MARK: - Graphire / PenPartner (legacy)
@@ -651,7 +651,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x0028,
-            supportedFamilies: ["graphire"]
+            supportedFamilies: [.graphire]
         )
 
         // Graphire Pen Eraser
@@ -666,7 +666,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["graphire"]
+            supportedFamilies: [.graphire]
         )
 
         // Graphire Mouse
@@ -681,7 +681,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["graphire"]
+            supportedFamilies: [.graphire]
         )
 
         // PenPartner Pen (no eraser)
@@ -696,7 +696,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["graphire"]
+            supportedFamilies: [.graphire]
         )
 
         // MARK: - Airbrush (Intuos3/4)
@@ -713,7 +713,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: true,
             eraserToolCode: 0x091B,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         catalog[0x091B] = WacomToolSpec(
@@ -727,7 +727,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         // Airbrush (Intuos4 KP-400E-2) — 1 side button, ABS_WHEEL fingerwheel
@@ -742,7 +742,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: true,
             eraserToolCode: 0x090A,
-            supportedFamilies: ["intuos4", "intuos5"]
+            supportedFamilies: [.intuos4, .intuos5]
         )
 
         catalog[0x090A] = WacomToolSpec(
@@ -756,7 +756,7 @@ public enum WacomToolCatalog {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos4", "intuos5"]
+            supportedFamilies: [.intuos4, .intuos5]
         )
 
         // NOTE: Intuos4 Airbrush KP-400E-2 extended ID (0x10902), Inking Pen KP-130E (0x12802),
@@ -787,7 +787,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0xE80A,
-            supportedFamilies: ["xencelabs"]
+            supportedFamilies: [.xencelabs]
         )
 
         catalog[0xE80A] = WacomToolSpec(
@@ -801,7 +801,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["xencelabs"]
+            supportedFamilies: [.xencelabs]
         )
 
         // Inking Pen (Intuos3 ZP-130 — ink cartridge, no eraser end, pressure only)
@@ -816,7 +816,7 @@ public enum WacomToolCatalog {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: ["intuos3"]
+            supportedFamilies: [.intuos3]
         )
 
         return catalog
@@ -924,15 +924,17 @@ public enum WacomToolCatalog {
     }
 
     /// Returns all tool specifications for a given device family.
-    public static func tools(forFamily family: String) -> [WacomToolSpec] {
+    /// A `nil` family (device family unknown) matches only universal tools.
+    public static func tools(forFamily family: DeviceFamily?) -> [WacomToolSpec] {
         return allTools.values.filter { spec in
-            spec.supportedFamilies.isEmpty || spec.supportedFamilies.contains(family)
+            spec.supportedFamilies.isEmpty
+                || (family.map { spec.supportedFamilies.contains($0) } ?? false)
         }
     }
 
     /// Returns tool capabilities for a tool code on a specific device family.
     /// If the tool is unknown, returns a default unsupported capability set.
-    public static func capabilities(forToolCode toolCode: UInt16, family: String) -> ToolCapabilities {
+    public static func capabilities(forToolCode toolCode: UInt16, family: DeviceFamily?) -> ToolCapabilities {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.capabilities(forFamily: family)
         }

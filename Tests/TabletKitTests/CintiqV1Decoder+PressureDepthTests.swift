@@ -56,7 +56,7 @@ final class CintiqV1DecoderPressureDepthTests: XCTestCase {
         let results = bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: spec, state: &state, deviceFamily: "cintiq")
+                spec: spec, state: &state, deviceFamily: .cintiq)
         }
         for r in results { if case .pen(let p) = r { return p } }
         return nil

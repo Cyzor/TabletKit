@@ -32,7 +32,7 @@ public struct DTUDecoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 8 else { return [] }
         return decodePenReport(report: report, length: length, spec: spec, state: &state)

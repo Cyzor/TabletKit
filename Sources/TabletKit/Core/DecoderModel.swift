@@ -157,14 +157,14 @@ public protocol TabletReportDecoder {
     ///     button count, touch capability) used to interpret raw values.
     ///   - state: Per-device decoder state, carried by the caller across calls
     ///     for this physical device instance.
-    ///   - deviceFamily: The device family string (e.g., "intuosProGen2", "cintiq")
+    ///   - deviceFamily: The device family (e.g. `.intuosProGen2`, `.cintiq`)
     ///     used to check tool compatibility and adjust feature decoding.
     mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult]
 }
 
@@ -187,7 +187,7 @@ public struct BLEPenResult: Sendable {
 @_spi(TabletKitInternals)
 public func emitToolCompatibility(
     toolCode: UInt16,
-    deviceFamily: String,
+    deviceFamily: DeviceFamily,
     state: inout DecoderState,
     results: inout [DecodeResult]
 ) {
@@ -198,7 +198,7 @@ public func emitToolCompatibility(
         if !caps.hasPressure { limitations.append("pressure") }
         if !caps.hasTilt { limitations.append("tilt") }
         if !caps.hasRotation { limitations.append("rotation") }
-        let msg = "Tool 0x\(String(format: "%04X", toolCode)) not fully supported on \(deviceFamily). Limited to: \(limitations.joined(separator: ", "))"
+        let msg = "Tool 0x\(String(format: "%04X", toolCode)) not fully supported on \(deviceFamily.rawValue). Limited to: \(limitations.joined(separator: ", "))"
         results.append(.toolCompatibility(msg))
     }
 }

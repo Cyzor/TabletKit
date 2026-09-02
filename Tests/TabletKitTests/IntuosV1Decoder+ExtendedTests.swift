@@ -30,7 +30,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        spec: DigitizerSpec? = nil, family: String = "intuos"
+        spec: DigitizerSpec? = nil, family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
         let s = spec ?? pth851
         var decoder = IntuosV1Decoder()

@@ -41,7 +41,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         let id = report[0]
@@ -92,7 +92,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
 
@@ -286,7 +286,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     private func decodeToolChange(
         report: UnsafePointer<UInt8>,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let serial =
             UInt32(report[3] & 0x0F) << 28
@@ -327,7 +327,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // BLE uses 13-bit pressure regardless of the device's USB maxPressure.
         let bleSpec = DigitizerSpec(maxX: spec.maxX, maxY: spec.maxY, maxPressure: 8191)

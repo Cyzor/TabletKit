@@ -139,7 +139,7 @@ final class CaptureLogParserTests: XCTestCase {
             let results = record.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
                 decoder.decode(
                     report: buf.baseAddress!, length: record.length,
-                    spec: pth860, state: &state, deviceFamily: "intuosProGen2")
+                    spec: pth860, state: &state, deviceFamily: .intuosProGen2)
             }
             allResults.append(contentsOf: results)
         }
@@ -231,7 +231,7 @@ final class CaptureLogParserTests: XCTestCase {
             let r = record.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
                 decoder.decode(
                     report: buf.baseAddress!, length: record.length,
-                    spec: pth860, state: &state, deviceFamily: "intuosProGen2")
+                    spec: pth860, state: &state, deviceFamily: .intuosProGen2)
             }
             results.append(contentsOf: r)
         }

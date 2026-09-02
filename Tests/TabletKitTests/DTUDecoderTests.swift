@@ -31,7 +31,7 @@ final class DTUDecoderTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        family: String = "dtu"
+        family: DeviceFamily = .dtu
     ) -> [DecodeResult] {
         let decoder = DTUDecoder()
         return bytes.withUnsafeBufferPointer { buf in

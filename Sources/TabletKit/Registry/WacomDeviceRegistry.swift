@@ -135,6 +135,32 @@ public enum ConfidenceTier: Sendable {
     case experimental
 }
 
+// MARK: - Device family
+
+/// Coarse hardware-generation identifier, derived from a device's report
+/// parser and name by ``WacomDeviceSpec/family``. Used to check tool
+/// compatibility against ``WacomToolSpec/supportedFamilies``.
+///
+/// The set is closed and small: each case is one decoder generation the
+/// project has actually characterised. Adding a case is a source break by
+/// design — a new family that a `switch` fails to handle should not compile,
+/// rather than fall through silently. Raw values are stable strings, kept
+/// for logs and for the `Codable` round-trip on ``WacomToolSpec``.
+public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
+    case graphire
+    case intuos3
+    case intuos4
+    case intuos5
+    case intuosProGen1
+    case intuosProGen2
+    case intuosProGen3
+    case cintiq
+    case dtu
+    case dtus
+    case bamboo
+    case xencelabs
+}
+
 // MARK: - Per-device spec
 
 /// All hardware parameters for a single Wacom USB or BLE product.
@@ -368,9 +394,12 @@ public struct WacomDeviceSpec: Sendable {
         return (Double(maxX) / w * 25.4, Double(maxY) / h * 25.4)
     }
 
-    /// Derives the device family identifier from parser and name.
+    /// Derives the device family from parser and name.
     /// Used to check tool compatibility against `WacomToolSpec.supportedFamilies`.
-    public var family: String {
+    ///
+    /// The `.intuosV1` branch still sniffs `name` to split one parser across
+    /// four families; replacing that with structured data is a separate task.
+    public var family: DeviceFamily {
         switch parser {
         case .graphire:
             // Graphire / PenPartner / early consumer line. The four
@@ -381,36 +410,38 @@ public struct WacomDeviceSpec: Sendable {
             // (GraphireDecoder currently synthesises Grip-Pen tool codes and
             // never runs the compatibility check, so this is a correctness fix
             // for the family string, not a runtime behaviour change — see the
-            // decoder's own note about synthetic codes.)
-            return "graphire"
+            // decoder's own note about synthetic codes. This case also spans
+            // three Bamboo-branded CTE/MTE devices that "graphire" does not
+            // describe; that dual coverage is unresolved.)
+            return .graphire
         case .intuos3:
-            return "intuos3"
+            return .intuos3
         case .cintiqV1:
-            return "cintiq"
+            return .cintiq
         case .intuosV1:
             // Intuos 1-5 and any non-Cintiq pen displays that haven't been migrated.
             if name.contains("Cintiq") || name.contains("DTK") || name.contains("DTH") {
-                return "cintiq"
+                return .cintiq
             }
             if name.contains("Intuos 4") || name.contains("PTK") {
-                return "intuos4"
+                return .intuos4
             }
             if name.contains("Intuos 5") || name.contains("PTH-8") {
-                return "intuos5"
+                return .intuos5
             }
-            return "intuosProGen1"
+            return .intuosProGen1
         case .intuosV2:
-            return "intuosProGen2"
+            return .intuosProGen2
         case .intuosV3:
-            return "intuosProGen3"
+            return .intuosProGen3
         case .dtus:
-            return "dtus"
+            return .dtus
         case .dtu:
-            return "dtu"
+            return .dtu
         case .bamboo:
-            return "bamboo"
+            return .bamboo
         case .xencelabs:
-            return "xencelabs"
+            return .xencelabs
         }
     }
 }

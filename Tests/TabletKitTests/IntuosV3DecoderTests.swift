@@ -26,7 +26,7 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        family: String = "intuosV3"
+        family: DeviceFamily = .intuosProGen3
     ) -> [DecodeResult] {
         var decoder = IntuosV3Decoder()
         return bytes.withUnsafeBufferPointer { buf in

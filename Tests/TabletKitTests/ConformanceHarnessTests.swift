@@ -31,8 +31,8 @@ struct ConformanceFixture {
     /// enum) — e.g. "bamboo", "intuosV2".
     let parser: String
     let spec: DigitizerSpec
-    /// Device-family string passed to `decode(deviceFamily:)`.
-    let deviceFamily: String
+    /// Device family passed to `decode(deviceFamily:)`.
+    let deviceFamily: DeviceFamily
     /// Capture log body, in `CaptureLogParser`'s format. No header line
     /// needed — parsed with `requireHeader: false`.
     let captureLog: String
@@ -71,7 +71,7 @@ final class ConformanceHarnessTests: XCTestCase {
             spec: DigitizerSpec(
                 maxX: 14720, maxY: 9200, maxPressure: 1023,
                 buttonCount: 0, hasTilt: false),
-            deviceFamily: "bamboo",
+            deviceFamily: .bamboo,
             captureLog: """
             [00:00.000] CTL-460             ID=02 len=9    02 21 34 12 45 23 E8 03 00
             """),

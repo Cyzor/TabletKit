@@ -34,7 +34,7 @@ final class BambooDecoderTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        spec: DigitizerSpec? = nil, family: String = "bamboo"
+        spec: DigitizerSpec? = nil, family: DeviceFamily = .bamboo
     ) -> [DecodeResult] {
         var decoder = BambooDecoder()
         let s = spec ?? cth470

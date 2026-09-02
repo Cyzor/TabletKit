@@ -44,6 +44,7 @@ vendor. Product names are used only to describe hardware compatibility.
 - ``BrandHeuristic``
 - ``WacomToolCatalog``
 - ``WacomToolSpec``
+- ``DeviceFamily``
 
 ### Decoders
 

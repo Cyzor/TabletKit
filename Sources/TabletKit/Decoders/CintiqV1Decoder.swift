@@ -72,7 +72,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         let id = report[0]
@@ -104,7 +104,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         report: UnsafePointer<UInt8>,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
 
@@ -258,7 +258,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     private func decodeToolChange(
         report: UnsafePointer<UInt8>,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let serial =
             UInt32(report[3] & 0x0F) << 28

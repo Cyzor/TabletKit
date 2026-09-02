@@ -105,7 +105,7 @@ public struct BambooDecoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // Report ID 0x02 is overloaded on INTUOSHT hardware: a 9/10-byte pen
         // report and a 64-byte touch/pad container share it, distinguished only

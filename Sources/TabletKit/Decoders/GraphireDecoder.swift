@@ -65,7 +65,7 @@ public struct GraphireDecoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 8, report[0] == 0x02 else { return [] }
 

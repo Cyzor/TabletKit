@@ -30,7 +30,7 @@ public struct DTUSDecoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         switch report[0] {

@@ -49,3 +49,35 @@ API breakage: struct ByteVarianceSignature is now with @_spi
 API breakage: struct RepeatingRun is now with @_spi
 API breakage: struct RepeatingReportStructure is now with @_spi
 API breakage: enum RepeatingReportStructureDetector is now with @_spi
+
+# Phase B: the device-family string was replaced with the DeviceFamily enum
+# across the decode path and the tool catalog. Untyped "intuosProGen2"-style
+# strings in the most-used decoder parameter, matched against a free-text
+# supportedFamilies list, became a closed 12-case enum — a new family that a
+# switch fails to handle now fails to compile rather than silently mismatching.
+# Also fixed a latent bug the typing exposed: the graphire parser's family
+# string was "bamboo2", which no lookup could produce, leaving the PenPartner
+# and Graphire tool specs unreachable. Pre-1.0, changelog-documented; MockTab
+# migrated in the same change. Raw values are unchanged strings, so any
+# WacomToolSpec JSON round-trip is unaffected.
+API breakage: func TabletReportDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) has parameter 1 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func BambooDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func CintiqV1Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func DTUDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func DTUSDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func GraphireDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func Intuos3Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func IntuosV1Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func IntuosV2Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func IntuosV3Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func XencelabsDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 4 type change from Swift.String to TabletKit.DeviceFamily
+API breakage: var WacomDeviceSpec.family has declared type change from Swift.String to TabletKit.DeviceFamily
+API breakage: accessor WacomDeviceSpec.family.Get() has return type change from Swift.String to TabletKit.DeviceFamily
+API breakage: func WacomToolCatalog.tools(forFamily:) has parameter 0 type change from Swift.String to TabletKit.DeviceFamily?
+API breakage: func WacomToolCatalog.capabilities(forToolCode:family:) has parameter 1 type change from Swift.String to TabletKit.DeviceFamily?
+API breakage: var WacomToolSpec.supportedFamilies has declared type change from [Swift.String] to [TabletKit.DeviceFamily]
+API breakage: accessor WacomToolSpec.supportedFamilies.Get() has return type change from [Swift.String] to [TabletKit.DeviceFamily]
+API breakage: constructor WacomToolSpec.init(toolCode:name:toolType:buttonCount:maxPressure:hasTilt:hasRotation:hasWheel:hasEraserVariant:eraserToolCode:supportedFamilies:) has parameter 10 type change from [Swift.String] to [TabletKit.DeviceFamily]
+API breakage: func WacomToolSpec.isSupported(onFamily:) has parameter 0 type change from Swift.String to TabletKit.DeviceFamily?
+API breakage: func WacomToolSpec.capabilities(forFamily:) has parameter 0 type change from Swift.String to TabletKit.DeviceFamily?

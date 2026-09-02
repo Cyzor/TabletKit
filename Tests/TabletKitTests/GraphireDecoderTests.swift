@@ -28,7 +28,7 @@ final class GraphireDecoderTests: XCTestCase {
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        spec: DigitizerSpec? = nil, family: String = "graphire"
+        spec: DigitizerSpec? = nil, family: DeviceFamily = .graphire
     ) -> [DecodeResult] {
         var decoder = GraphireDecoder()
         let s = spec ?? graphire4

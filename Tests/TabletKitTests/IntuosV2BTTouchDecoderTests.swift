@@ -36,7 +36,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: spec, state: &state, deviceFamily: "intuosProGen2")
+                spec: spec, state: &state, deviceFamily: .intuosProGen2)
         }
     }
 

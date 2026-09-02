@@ -25,7 +25,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: spec, state: &state, deviceFamily: "intuosConsumer")
+                spec: spec, state: &state, deviceFamily: .intuosProGen1)
         }
     }
 

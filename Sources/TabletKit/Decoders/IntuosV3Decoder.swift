@@ -37,7 +37,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard length >= 2 else { return [] }
         switch report[0] {
@@ -83,7 +83,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
         let prox = (status & 0x40) != 0
@@ -154,7 +154,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState,
-        deviceFamily: String
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
         let prox = (status & 0x40) != 0
