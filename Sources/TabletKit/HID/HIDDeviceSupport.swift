@@ -76,6 +76,19 @@ public func hidIntProperty(_ device: IOHIDDevice, _ key: String) -> Int {
     return (val as? NSNumber)?.intValue ?? 0
 }
 
+/// The device's raw HID report descriptor as lowercase hex — the input
+/// `HIDReportDescriptorParser.parse(hex:)` expects.
+///
+/// `nil` when the property isn't exposed, which some BLE digitizers do. The
+/// bytes are the canonical layout fingerprint: with them, the report structure
+/// reconstructs offline, independent of what IOKit chooses to surface as
+/// elements.
+public func hidReportDescriptorHex(_ device: IOHIDDevice) -> String? {
+    guard let data = IOHIDDeviceGetProperty(device, kIOHIDReportDescriptorKey as CFString) as? Data
+    else { return nil }
+    return data.map { String(format: "%02x", $0) }.joined()
+}
+
 /// Query the HID descriptor elements for the digitizer's coordinate and pressure ranges.
 ///
 /// Returns `(maxX, maxY, maxPressure)` read from logical-maximum values on

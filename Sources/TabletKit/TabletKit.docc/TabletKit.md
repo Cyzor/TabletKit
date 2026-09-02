@@ -66,6 +66,7 @@ vendor. Product names are used only to describe hardware compatibility.
 
 - ``queryHIDDigitizerSpec(_:)``
 - ``hidIntProperty(_:_:)``
+- ``hidReportDescriptorHex(_:)``
 - ``sendWacomInputModeInit(_:tag:)``
 - ``HIDReportDescriptorParser``
 - ``DigitizerUsage``

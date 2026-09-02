@@ -9,6 +9,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `hidReportDescriptorHex(_:)` — the device's raw HID report descriptor as
+  hex, which is the input `HIDReportDescriptorParser.parse(hex:)` expects.
+  Closes the gap where the parser had no way to get its own input from an
+  `IOHIDDevice`.
+
 - `DeviceInstanceKey` — identity of one physical device instance (canonical
   model PID plus an instance token from USB serial, IOKit `locationID`, or
   empty for PID-only degradation). Extracted from MockTab, where it is the key
