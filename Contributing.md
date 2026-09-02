@@ -11,8 +11,9 @@ TabletKit ships under MPL-2.0.
 - `Sources/TabletKit/Registry/` — device and tool data tables: which PID maps to which dimensions, decoder, and confidence tier.
 - `Sources/TabletKit/Smoothing/` — cursor and pressure filters.
 - `Sources/TabletKit/HID/` — the only IOKit-touching code: descriptor queries, init handshakes, and device control (LEDs, OLED, display).
+- `Sources/TabletKit/Output/` — output-report encoders for device-bound writes: Wacom and Xencelabs control protocols, the Intuos OLED image encoder.
 
-## Contribution Process
+## Contribution process
 
 - **New device profiles** in `WacomDeviceRegistry` or `VendorDeviceRegistry`. Recognition-only entries help; decoded entries help more.
 - **New decoders** for tablet families MockTab doesn't yet handle, conforming to `TabletReportDecoder`.
@@ -49,13 +50,13 @@ catches more than deletions: most public types here have no explicit `init`, so
 **adding a stored property changes the synthesized memberwise initializer** and
 counts as a source break for anyone who spelled out every argument.
 
-If the break is unintended, fix it. When the cause is a new field on a public
+If the break is unintended, try fixing it. When the cause is a new field on a public
 value type, do **not** reach for a defaulted parameter on the existing
 initializer — that keeps callers compiling but still removes the old
 initializer at the symbol level, which is how `TouchContact.init` ended up in
 the allowlist. Instead, keep the existing initializer exactly as it is and add
 a **new initializer overload** carrying the extra field (the discipline
-PencilKit uses: `PKStrokePoint` has four initializers, each appending one
+Apple PencilKit uses: `PKStrokePoint` has four initializers, each appending one
 field, none ever mutated). One small extra method, zero breakage of either
 kind.
 
@@ -66,10 +67,10 @@ If the break is deliberate (still routine before 1.0), record it:
 2. Describe the break in `CHANGELOG.md` under `### Changed` or `### Removed`,
    including what a caller has to do about it.
 
-Both are required — the job fails on any breakage not in the allowlist, and the
+The job fails on any breakage not in the allowlist, and the
 changelog is what a consumer actually reads.
 
-## Pull Request Characteristics
+## Pull requests
 
 - One sentence description of what the revision does.
 - Confidence level — *"verified on a PTH-660 over USB"* vs. *"imported from OTD, untested"*. Both work; the distinction matters for review.
