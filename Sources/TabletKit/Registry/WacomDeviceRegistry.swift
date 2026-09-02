@@ -373,7 +373,16 @@ public struct WacomDeviceSpec: Sendable {
     public var family: String {
         switch parser {
         case .graphire:
-            return "bamboo2"
+            // Graphire / PenPartner / early consumer line. The four
+            // `["graphire"]` tool specs in WacomToolCatalog (PenPartner,
+            // Graphire Pen/Eraser/Mouse) are written for exactly these devices;
+            // the previous "bamboo2" pointed them at CTH/Intuos-Pro-Gen2 tools
+            // two generations later and left the graphire specs unreachable.
+            // (GraphireDecoder currently synthesises Grip-Pen tool codes and
+            // never runs the compatibility check, so this is a correctness fix
+            // for the family string, not a runtime behaviour change — see the
+            // decoder's own note about synthetic codes.)
+            return "graphire"
         case .intuos3:
             return "intuos3"
         case .cintiqV1:
