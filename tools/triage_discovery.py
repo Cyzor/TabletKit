@@ -375,6 +375,60 @@ def discriminated_byte_ranges_section(doc: dict, kind: str) -> list[str]:
     return lines
 
 
+def arrival_gaps_section(doc: dict, kind: str) -> list[str]:
+    """Inter-arrival gap histogram per report ID — captureVersion >= 14's
+    `arrivalGaps`.
+
+    Everything else in a capture describes what a report *contained*. This
+    describes when it arrived. The reason it exists: a Bluetooth tablet whose
+    touch stream stalls for a few hundred ms right before a finger lifts
+    starves the momentum path, so a two-finger scroll doesn't coast — and
+    nothing about report contents shows it. The bucket row shows the shape
+    (one high-bucket count = a clean dropout; a spread across the middle =
+    gradual thinning). The longest-gaps row shows where in the session the
+    big gaps fell.
+    """
+    if kind != "discovery":
+        return []
+    reports = doc.get("reports") or {}
+    blocks = []
+    for key in sorted(reports, key=lambda k: parse_hex_id(k) or 0):
+        gaps = reports[key].get("arrivalGaps") or {}
+        edges = gaps.get("bucketEdgesMs") or []
+        buckets = gaps.get("buckets") or []
+        if not edges or not buckets:
+            continue
+        labels = ([f"<{edges[0]:g}"]
+                  + [f"{edges[i]:g}–{edges[i + 1]:g}" for i in range(len(edges) - 1)]
+                  + [f"≥{edges[-1]:g}"])
+
+        def row(bkts):
+            return " | ".join(f"{lab}: {n}" for lab, n in zip(labels, bkts) if n)
+
+        blocks.append(f"## Report {key} arrival gaps (ms)")
+        blocks.append("")
+        blocks.append(row(buckets) or "_all gaps below the smallest bucket edge_")
+        blocks.append("")
+        in_g = gaps.get("inGestureBuckets")
+        idle = gaps.get("idleBuckets")
+        if in_g is not None or idle is not None:
+            blocks.append(f"- **contact down at both ends** (mid-gesture stall): "
+                          f"{row(in_g) if in_g else '_none_'}")
+            blocks.append(f"- **contact off at one/both ends** (idle or lift boundary): "
+                          f"{row(idle) if idle else '_none_'}")
+            blocks.append("")
+        longest = gaps.get("longestGaps") or []
+        if longest:
+            blocks.append("| longest gap (ms) | ended at session +ms |")
+            blocks.append("|-----------------:|---------------------:|")
+            for g in longest:
+                ms, at = g.get("ms"), g.get("endedAtSessionMs")
+                if ms is not None and at is not None:
+                    blocks.append(f"| {ms:.1f} | {at:.0f} |")
+            blocks.append("")
+    return blocks
+
+
 def tool_codes_section(doc: dict) -> list[str]:
     """Wacom tool codes seen during collection, when the capture recorded any."""
     codes = doc.get("observedToolCodes")
@@ -845,6 +899,7 @@ def build_report(doc: dict, path: Path, do_upstream: bool) -> str:
     lines += report_inventory(doc, kind)
     lines += byte_ranges_section(doc, kind)
     lines += discriminated_byte_ranges_section(doc, kind)
+    lines += arrival_gaps_section(doc, kind)
     lines += tool_codes_section(doc)
     lines += secondary_interfaces_section(doc, kind)
     lines += touch_pipeline_section(doc)
