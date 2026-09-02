@@ -49,8 +49,17 @@ catches more than deletions: most public types here have no explicit `init`, so
 **adding a stored property changes the synthesized memberwise initializer** and
 counts as a source break for anyone who spelled out every argument.
 
-If the break is unintended, fix it — usually by giving the new property a
-default value. If it is deliberate (still routine before 1.0), record it:
+If the break is unintended, fix it. When the cause is a new field on a public
+value type, do **not** reach for a defaulted parameter on the existing
+initializer — that keeps callers compiling but still removes the old
+initializer at the symbol level, which is how `TouchContact.init` ended up in
+the allowlist. Instead, keep the existing initializer exactly as it is and add
+a **new initializer overload** carrying the extra field (the discipline
+PencilKit uses: `PKStrokePoint` has four initializers, each appending one
+field, none ever mutated). One small extra method, zero breakage of either
+kind.
+
+If the break is deliberate (still routine before 1.0), record it:
 
 1. Add the digester's exact message, verbatim, as a line in
    `api-breakage-allowlist.txt`, with a comment above it saying why.
