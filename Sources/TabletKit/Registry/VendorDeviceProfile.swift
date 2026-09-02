@@ -24,7 +24,7 @@
 
 import Foundation
 
-public struct VendorDeviceProfile: Equatable {
+public struct VendorDeviceProfile: Equatable, Sendable {
     /// Vendor brand string as it appears in OTD ("Huion", "Xencelabs", "XP-Pen").
     public let vendor: String
     /// USB Vendor ID.

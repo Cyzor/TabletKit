@@ -9,7 +9,7 @@ import OSLog
 private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "device")
 
 /// Digitizer dimensions in device units for a given tablet model.
-public struct DigitizerSpec {
+public struct DigitizerSpec: Sendable {
     public var maxX: Int
     public var maxY: Int
     public var maxPressure: Int

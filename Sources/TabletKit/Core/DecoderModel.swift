@@ -6,7 +6,7 @@ import Foundation
 
 // MARK: - TabletReportDecoder protocol
 
-public enum WirelessStatus {
+public enum WirelessStatus: Sendable {
     case active
     case lost
     case lowBattery
@@ -15,7 +15,7 @@ public enum WirelessStatus {
 
 /// All mutable state shared between reports for a single decoder session.
 /// Passed `inout` through every `decode` call so decoders can be pure structs.
-public struct DecoderState {
+public struct DecoderState: Sendable {
     public var lastX: Int = 0
     public var lastY: Int = 0
     /// Serial number at the last tool-identity change.
@@ -70,7 +70,7 @@ public struct DecoderState {
     public init() {}
 }
 
-public enum DecodeResult {
+public enum DecodeResult: Sendable {
     case none
     case pen(TabletPoint)
     case toolEnter(ToolIdentity)
@@ -119,7 +119,7 @@ public enum DecodeResult {
 /// `PrecisionTouchDecoder` takes the HID Digitizer Width usage (0x0D/0x48).
 /// Units still differ per device — these are raw sensor values, not normalized
 /// ones, so any threshold tuned against them must be per-device.
-public struct TouchContact: Equatable {
+public struct TouchContact: Equatable, Sendable {
     public let id: Int
     public let x: Int
     public let y: Int
@@ -169,7 +169,7 @@ public protocol TabletReportDecoder {
 }
 
 /// Decoded BLE HOGP pen report. See `decodeBLEPenReport` for the wire layout.
-public struct BLEPenResult {
+public struct BLEPenResult: Sendable {
     public let point: TabletPoint
     public let serial: UInt32
     public let toolCode: UInt16

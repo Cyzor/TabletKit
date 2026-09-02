@@ -7,7 +7,7 @@ import Foundation
 // MARK: - Tool Type
 
 /// Categories of tools Wacom devices can report.
-public enum WacomToolType: String, Codable, CaseIterable {
+public enum WacomToolType: String, Codable, CaseIterable, Sendable {
     case stylus = "Stylus"
     case eraser = "Eraser"
     case mouse = "Mouse"
@@ -21,7 +21,7 @@ public enum WacomToolType: String, Codable, CaseIterable {
 
 /// Complete specification for a Wacom tool type.
 /// Derived from OpenTabletDriver conventions and Linux input-wacom driver.
-public struct WacomToolSpec: Codable, Identifiable, Equatable {
+public struct WacomToolSpec: Codable, Identifiable, Equatable, Sendable {
     /// The 16-bit Wacom tool code (e.g., 0x0802 for Grip Pen).
     public let toolCode: UInt16
 
@@ -123,7 +123,7 @@ public struct WacomToolSpec: Codable, Identifiable, Equatable {
 /// Capabilities of a tool on a specific device family.
 /// Returned by WacomToolSpec.capabilities(forFamily:) to indicate which
 /// features are available when a tool is used with an incompatible tablet.
-public struct ToolCapabilities {
+public struct ToolCapabilities: Sendable {
     /// True if this tool is officially supported on this device family.
     public let isSupported: Bool
     /// True if pressure data is available.

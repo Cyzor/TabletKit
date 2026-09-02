@@ -20,7 +20,7 @@ import Foundation
 /// The decoders in `Decoders/` are the live decode path; per-device app-side
 /// glue (`WacomKnownDevice`) still handles device-specific setup such as init
 /// steps, LED writes, and OLED labels, but no longer parses reports.
-public enum ReportParser: String {
+public enum ReportParser: String, Sendable {
     /// Graphire / early consumer line — Report ID 0x02
     /// (kernel `WACOM_REPORT_PENABLED`), 8 bytes.
     /// Covers PenPartner, Graphire 2–4, Volito, Bamboo One (CTF-430).
@@ -109,7 +109,7 @@ public enum ReportParser: String {
 /// - `.delay(_:)`: Pause before the next step, dispatched via `asyncAfter`.
 /// - `.stringDescriptor(_:)`: Probe a USB string descriptor at the given index.
 ///   Intended for Huion frame-button activation — not yet wired up.
-public enum InitStep: Equatable {
+public enum InitStep: Equatable, Sendable {
     case featureReport([UInt8])
     case outputReport([UInt8])
     case delay(TimeInterval)
@@ -129,7 +129,7 @@ public enum InitStep: Equatable {
 /// - `.experimental`: Imported from a single source (typically OTD JSON or
 ///   kernel constants) without independent confirmation. May have wrong
 ///   dimensions, missing init reports, or only partial protocol support.
-public enum ConfidenceTier {
+public enum ConfidenceTier: Sendable {
     case verified
     case crossReferenced
     case experimental
@@ -172,7 +172,7 @@ public enum ConfidenceTier {
 /// hardware; the `⚠ recognition-only` variant additionally means the parser
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
 /// named correctly but pen decode may produce nonsense until verified.
-public struct WacomDeviceSpec {
+public struct WacomDeviceSpec: Sendable {
     public let productID: Int
     public let name: String
     public let parser: ReportParser

@@ -4,7 +4,7 @@
 
 import Foundation
 
-public struct TabletPoint {
+public struct TabletPoint: Sendable {
     /// Raw digitizer X coordinate (device units)
     public var x: Int
     /// Raw digitizer Y coordinate (device units)
@@ -84,7 +84,7 @@ public struct TabletPoint {
 
 /// Identity of a physical pen as reported by the tablet firmware.
 /// Fires once per `onToolEnter` callback whenever the active tool changes.
-public struct ToolIdentity {
+public struct ToolIdentity: Sendable {
     /// Unique 32-bit serial per physical pen body.  0 means not available (IntuosV1).
     public let serial: UInt32
     /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0832 Pro Pen 2, 0x0842 Pro Pen 3.
@@ -103,7 +103,7 @@ public struct ToolIdentity {
     }
 }
 
-public struct AuxButtons {
+public struct AuxButtons: Sendable {
     public init(
         buttons: [Bool],
         mechanicalMask: UInt8 = 0,
@@ -162,7 +162,7 @@ public struct AuxButtons {
 /// Snapshot of which hardware buttons are currently held down.
 /// Published by TabletManager so the Buttons pane can light up rows
 /// in real time, like a keyboard viewer for the tablet.
-public struct LiveButtonState: Equatable {
+public struct LiveButtonState: Equatable, Sendable {
     /// Pen tip pressed (non-eraser end).
     public var tipDown: Bool = false
     /// Eraser tip pressed.
