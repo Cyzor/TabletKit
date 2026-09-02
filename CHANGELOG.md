@@ -9,6 +9,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `DeviceInstanceKey` — identity of one physical device instance (canonical
+  model PID plus an instance token from USB serial, IOKit `locationID`, or
+  empty for PID-only degradation). Extracted from MockTab, where it is the key
+  for per-device settings, windows, and state. Pure value type, `Hashable` /
+  `Codable`; `stringValue` is the stable persistence form. The host policy that
+  maps an instance to a settings namespace stays in the app.
+
 - `WacomToolCatalog.hasRotation(toolCode:)` — whether a tool carries a
   rotation sensor (Art Pen / Marker Pen). Decoders use it to scope the
   boundary-noise proximity-exit heuristic to the tools that provoke it.

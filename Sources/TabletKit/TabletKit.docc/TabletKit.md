@@ -35,6 +35,7 @@ vendor. Product names are used only to describe hardware compatibility.
 - ``TouchContact``
 - ``DigitizerSpec``
 - ``WirelessStatus``
+- ``DeviceInstanceKey``
 
 ### Device data
 
