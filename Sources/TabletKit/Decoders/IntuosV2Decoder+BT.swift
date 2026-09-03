@@ -368,6 +368,14 @@ extension IntuosV2Decoder {
     //   [6] = touch major (w)
     //   [7] = touch minor (h)
     //
+    // Frame bytes [41..42] (past the 5 contacts) are a 16-bit little-endian
+    // device timestamp: 0.225 ms per count, consecutive sub-frames exactly
+    // 100 counts (22.5 ms) apart, wrapping every 14.75 s. Neither the kernel
+    // (wacom_intuos_pro2_bt_touch) nor earlier versions of this decoder read
+    // them. Hardware-measured on a PTH-660 over two live captures,
+    // 2026-09-03; unverified on the PTH-860. Recorded into
+    // `DecoderState.btTouchFrameStamps` — see that property for how to use it.
+    //
     // Emits one `.touch` per valid frame so `TouchStateTracker` sees per-time-
     // slice snapshots, mirroring the cadence of the USB 0x21 path (one frame
     // per report there).  Lift contacts (status & 0x01 == 0) are filtered at
@@ -375,7 +383,8 @@ extension IntuosV2Decoder {
     // the lift by seeing the absence on the next emission.
     func decodeBTTouch(
         report: UnsafePointer<UInt8>,
-        length: CFIndex
+        length: CFIndex,
+        state: inout DecoderState
     ) -> [DecodeResult] {
         let frameBase = 109
         let frameLen = 43
@@ -383,6 +392,7 @@ extension IntuosV2Decoder {
         guard length >= frameBase + frameLen * frameCount else { return [] }
 
         var results: [DecodeResult] = []
+        state.btTouchFrameStamps.removeAll(keepingCapacity: true)
         for i in 0 ..< frameCount {
             let off = frameBase + i * frameLen
             let header = report[off]
@@ -403,6 +413,14 @@ extension IntuosV2Decoder {
                     id: Int(report[cOff]), x: x, y: y,
                     contactArea: major, contactMinor: minor))
             }
+            // Trailing two bytes of the sub-frame: the tablet's own 16-bit
+            // little-endian clock (low byte first). Recorded per emitted
+            // frame so the caller can time frames by when the device sampled
+            // them rather than when the container happened to arrive. Read
+            // last so a frame skipped above contributes no stamp.
+            let stampOff = off + 41
+            state.btTouchFrameStamps.append(
+                UInt16(report[stampOff + 1]) << 8 | UInt16(report[stampOff]))
             results.append(.touch(contacts))
         }
         return results

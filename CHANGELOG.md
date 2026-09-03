@@ -9,6 +9,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `DecoderState.btTouchFrameStamps` — the device-clock stamp for each touch
+  frame an Intuos Pro Bluetooth container carried, in emission order. Each
+  sub-frame ends in a 16-bit little-endian timestamp that neither this package
+  nor the Linux kernel previously read: one count is 0.225 ms and consecutive
+  sub-frames are stamped 22.5 ms apart, measured on a PTH-660. A host that
+  batches frames can now time them by when the tablet sampled rather than when
+  the container arrived. Read differences only within one container — the field
+  wraps every 14.75 seconds. Companions `btTouchMsPerCount` and
+  `btTouchCountsPerFrame` carry the measured constants.
+
 - `hidReportDescriptorHex(_:)` — the device's raw HID report descriptor as
   hex, which is the input `HIDReportDescriptorParser.parse(hex:)` expects.
   Closes the gap where the parser had no way to get its own input from an

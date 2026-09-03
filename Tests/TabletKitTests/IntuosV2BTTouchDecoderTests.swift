@@ -222,4 +222,76 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         XCTAssertEqual(frames[0][1].x, 12439)
         XCTAssertEqual(frames[0][1].y, 8639)
     }
+
+    // MARK: - Device timestamp (trailing 2 bytes of each sub-frame)
+
+    /// Real 3-sub-frame container captured from a PTH-660 over Bluetooth
+    /// (2026-09-03), whose frames are stamped 6264, 6364, 6464 — the fixed
+    /// 100-count (22.5 ms) stride the hardware emits.
+    private func containerWithStampedFrames(_ stamps: [UInt16]) -> [UInt8] {
+        var report = [UInt8](repeating: 0, count: 361)
+        report[0] = 0x80
+        for (i, stamp) in stamps.enumerated() {
+            let off = 109 + i * 43
+            report[off] = 0x81                     // valid | 1 contact
+            report[off + 1] = 0x01                 // slot id
+            report[off + 2] = 0x01                 // status: down
+            report[off + 3] = 0x14                 // X lo
+            report[off + 4] = 0x02                 // X hi
+            report[off + 5] = 0x32                 // Y lo
+            report[off + 6] = 0x03                 // Y hi
+            report[off + 7] = 0x02                 // w
+            report[off + 8] = 0x02                 // h
+            report[off + 41] = UInt8(stamp & 0xFF)         // low byte first
+            report[off + 42] = UInt8(stamp >> 8)
+        }
+        return report
+    }
+
+    func testBTTouchRecordsDeviceStampPerFrame() {
+        var state = DecoderState()
+        let results = decode(
+            containerWithStampedFrames([6264, 6364, 6464]),
+            spec: pth860BT, state: &state)
+        XCTAssertEqual(touches(results).count, 3)
+        XCTAssertEqual(state.btTouchFrameStamps, [6264, 6364, 6464])
+    }
+
+    /// The stride is what the batch pacer times frames by: consecutive
+    /// sub-frames are exactly `btTouchCountsPerFrame` apart, which at
+    /// `btTouchMsPerCount` is 22.5 ms.
+    func testBTTouchStampStrideIsOneFramePeriod() {
+        var state = DecoderState()
+        _ = decode(
+            containerWithStampedFrames([6264, 6364, 6464]),
+            spec: pth860BT, state: &state)
+        let deltas = zip(state.btTouchFrameStamps, state.btTouchFrameStamps.dropFirst())
+            .map { Int($1) - Int($0) }
+        XCTAssertEqual(deltas, [DecoderState.btTouchCountsPerFrame,
+                                DecoderState.btTouchCountsPerFrame])
+        let msApart = Double(DecoderState.btTouchCountsPerFrame) * DecoderState.btTouchMsPerCount
+        XCTAssertEqual(msApart, 22.5, accuracy: 0.001)
+    }
+
+    /// A frame the decoder skips must contribute no stamp, or stamps stop
+    /// lining up with the frames that actually reach the injector.
+    func testSkippedFrameContributesNoStamp() {
+        var state = DecoderState()
+        var report = containerWithStampedFrames([6264, 6364, 6464])
+        report[109 + 43] = 0x80          // middle frame: valid bit, count 0
+        let results = decode(report, spec: pth860BT, state: &state)
+        XCTAssertEqual(touches(results).count, 2)
+        XCTAssertEqual(state.btTouchFrameStamps, [6264, 6464])
+    }
+
+    /// Stamps reset per container — a later report must not inherit the
+    /// previous one's entries.
+    func testStampsResetBetweenContainers() {
+        var state = DecoderState()
+        _ = decode(
+            containerWithStampedFrames([6264, 6364, 6464]),
+            spec: pth860BT, state: &state)
+        _ = decode(containerWithStampedFrames([9000]), spec: pth860BT, state: &state)
+        XCTAssertEqual(state.btTouchFrameStamps, [9000])
+    }
 }

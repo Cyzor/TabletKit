@@ -95,7 +95,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
             // (PTH-660 BT 0x0360, PTH-860 BT 0x0361); spec.hasFingerTouch gates
             // the work for every other device that lands here.
             if spec.hasFingerTouch {
-                results.append(contentsOf: decodeBTTouch(report: report, length: length))
+                results.append(contentsOf: decodeBTTouch(report: report, length: length, state: &state))
             }
             return results
         default:

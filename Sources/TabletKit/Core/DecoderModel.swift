@@ -67,6 +67,29 @@ public struct DecoderState: Sendable {
     /// Last raw battery byte seen (INTUOSP2_BT 361-byte path). 0xFF = not yet received.
     /// Used to suppress redundant .battery emissions on every pen report.
     public var lastBatteryByte: UInt8 = 0xFF
+    /// Device-clock stamp for each `.touch` result the INTUOSP2_BT 361-byte
+    /// container emitted on the most recent decode, in the same order those
+    /// results were appended — one entry per emitted frame, so entries line up
+    /// after the decoder's skip filters (invalid frames and `count == 0`
+    /// continuations produce no result and no entry).
+    ///
+    /// Each Bluetooth touch sub-frame carries a 16-bit little-endian stamp
+    /// from the tablet's own clock in its trailing two bytes, at
+    /// `btTouchTicksPerCount` (0.225 ms) per count. Consecutive sub-frames in
+    /// one container are stamped exactly `btTouchTicksPerFrame` (100 counts =
+    /// 22.5 ms) apart — hardware-measured on a PTH-660, 2026-09-03. The host
+    /// only learns when the *container* arrived; this is when the tablet
+    /// actually sampled, which is what velocity `dt` wants.
+    ///
+    /// Consume only differences *within* one container. The field wraps every
+    /// 14.75 s, so a difference across containers is not recoverable from the
+    /// value alone; within a container the span is at most a few hundred
+    /// counts and cannot wrap.
+    public var btTouchFrameStamps: [UInt16] = []
+    /// Milliseconds per count of `btTouchFrameStamps`.
+    public static let btTouchMsPerCount = 0.225
+    /// Counts between consecutive sub-frames in one BT touch container.
+    public static let btTouchCountsPerFrame = 100
     public init() {}
 }
 
