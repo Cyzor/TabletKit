@@ -27,7 +27,9 @@ import Foundation
 /// See `Notes/Scratch/Upstream-Sync-2026-05-15.md` for the full diff
 /// table.
 ///
-/// Experimental: not yet validated on hardware.
+/// Experimental: the 0x11 aux report (express keys, dials) is hardware-confirmed
+/// against a real PTK-870 capture (see decodeAuxReport). The pen reports
+/// (0x1F/0x1E) are still synthesized from OTD source tables, unverified.
 public struct IntuosV3Decoder: TabletReportDecoder {
 
     public init() {}

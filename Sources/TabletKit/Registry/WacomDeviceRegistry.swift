@@ -212,6 +212,19 @@ public struct WacomDeviceSpec: Sendable {
     public let bezelButtonCount: Int
     /// True if this model has a capacitive touch ring (Intuos Pro).
     public let hasTouchRing: Bool
+    /// True if `hasTouchRing`'s control is a bare mechanical rotary encoder
+    /// (rotation only, no finger-presence sensing) rather than the classic
+    /// capacitive ring. Implies `hasTouchRing`; false = capacitive.
+    ///
+    /// PTK-470/670/870 (Intuos Pro gen 3) are the Wacom case: their HID
+    /// descriptor names the control "Wacom TouchRing" for legacy usage-table
+    /// consistency, but the device only ever reports rotation — there is no
+    /// touchRingActive-equivalent finger-down signal, confirmed against a
+    /// real PTK-870 capture (see `IntuosV3Decoder.decodeAuxReport`) and
+    /// matching libwacom's own `Dial`/`Dial2` schema naming for this family,
+    /// not `Ring`. Every other `hasTouchRing: true` row in this registry —
+    /// PTH-family built-in rings, the EKR-100 puck — is genuinely capacitive.
+    public let hasMechanicalDial: Bool
     /// True if this model has per-key OLED image displays on its express
     /// keys (Intuos4 family exclusively). Gates the Intuos4 OLED
     /// image-write protocol (`WacomOutputProtocol`) — kernel-confirmed via
@@ -343,6 +356,7 @@ public struct WacomDeviceSpec: Sendable {
         productID: Int, name: String, parser: ReportParser,
         maxX: Int, maxY: Int, maxPressure: Int,
         buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
+        hasMechanicalDial: Bool = false,
         hasKeyOLEDs: Bool = false,
         hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool = false,
         hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
@@ -364,6 +378,7 @@ public struct WacomDeviceSpec: Sendable {
         self.maxPressure = maxPressure
         self.buttonCount = buttonCount
         self.bezelButtonCount = bezelButtonCount
+        self.hasMechanicalDial = hasMechanicalDial
         self.hasTouchRing = hasTouchRing
         self.hasDualRings = hasDualRings
         self.hasKeyOLEDs = hasKeyOLEDs
@@ -2173,13 +2188,6 @@ public enum WacomDeviceRegistry {
         // (4.18 branch, April 2026). Pen-only; coordinates and pressure
         // extrapolated from OTD configs and unverified on hardware.
         //
-        // PTK-470/670/870 require the IntuosV3 decoder (added in the same
-        // session as this comment); pen-side events decode but the two
-        // relative-step scroll wheels do not — our aux pipeline models
-        // absolute touch-ring positions, not encoder deltas. PTK-670/870
-        // also have 10 express keys; the first 8 of the primary byte are
-        // exposed, the two extras drop until AuxButtons grows past 8.
-        //
         // PL-800-U was NOT imported — PLReportParser uses 8-byte reports
         // with bit-6 in-range, incompatible with our IntuosV1 decoder and
         // not worth a dedicated parser for hardware that's effectively gone.
@@ -2210,6 +2218,15 @@ public enum WacomDeviceRegistry {
             // size below. 37400/187 and 21000/105 are both exactly 200 units/mm;
             // the previous 178 x 102 gave 210.1 x 205.9, anisotropic and round in
             // neither axis.
+            //
+            // hasTouchRing left false pending its own capture — see libwacom's
+            // wacom-intuos-pro-3-s.tablet (checked 2026-09-03): it actually
+            // claims 5 buttons AND NumDials=1 (one button doubles as the
+            // dial's press), a different physical layout than M/L's 8-key +
+            // 2-separate-dial-press arrangement, and our decodeAuxReport byte
+            // layout is untested against it. Known open bug, not fixed here —
+            // if this row's hasTouchRing is ever corrected to true, it should
+            // also get hasMechanicalDial: true, matching M/L below.
             productID: 0x03F5, name: "Intuos Pro S gen 3 (PTK-470)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 37400, maxY: 21000, maxPressure: 8191,
             buttonCount: 5, hasTouchRing: false, hasEraser: true,
@@ -2253,14 +2270,14 @@ public enum WacomDeviceRegistry {
             // `activeWidthMM`.
             productID: 0x03F7, name: "Intuos Pro M gen 3 (PTK-670)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 52600, maxY: 29600, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 263, activeHeightMM: 148),
         .init(
             // Dimensions corrected 2026-07-29; 69800/349 and 39000/195 are both
             // exactly 200 units/mm. See the density note on the M size above.
             productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model); dials hardware-confirmed
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 349, activeHeightMM: 195),
         .init(
             productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-cintiq-16-3), logical extents copied from same-size DTK-1660
