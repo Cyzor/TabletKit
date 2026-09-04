@@ -306,7 +306,10 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         // Cache in state.lastRotation so boundary-noise frames can hold the last real value.
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
         let rawRot = Int16(bitPattern: UInt16(report[12]) | UInt16(report[13]) << 8)
-        // Rotation: signed Int16 with +/-900 range. Kernel formula: (raw + 900) / 5.
+        // Rotation: signed Int16, 1800 counts per revolution, so 0.2 deg per count.
+        // The kernel reports raw counts on ABS_Z rather than degrees; its scale comes
+        // from input_abs_set_res(ABS_Z, 287) units/radian (287 * 2pi ~= 1800) alongside
+        // the declared -900..899 range (wacom_wac.c:3888/3900/3920).
         // Negated here so clockwise twist produces increasing degrees, matching what
         // macOS apps (Photoshop, Krita, Illustrator) expect from a native Wacom driver.
         var rotation = isArtPen ? (900.0 - Double(rawRot)) / 5.0 : 0.0
