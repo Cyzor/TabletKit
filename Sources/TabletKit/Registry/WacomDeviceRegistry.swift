@@ -463,7 +463,7 @@ public struct WacomDeviceSpec: Sendable {
 
 // MARK: - Registry
 
-public enum WacomDeviceRegistry {
+public enum WacomDeviceRegistry: Sendable {
 
     // MARK: Known devices
 

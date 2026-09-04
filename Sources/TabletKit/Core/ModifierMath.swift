@@ -14,7 +14,7 @@
 import CoreGraphics
 import Foundation
 
-public enum ModifierMath {
+public enum ModifierMath: Sendable {
 
     /// Device-dependent modifier-key bits (NX_DEVICE…KEYMASK low byte + RCTL).
     /// Real hardware events carry one of these alongside each device-independent

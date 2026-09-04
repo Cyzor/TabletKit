@@ -8,7 +8,7 @@ import Foundation
 
 /// Registry of all known Wacom tool specifications.
 /// Keys are tool codes (UInt16).
-public enum WacomToolCatalog {
+public enum WacomToolCatalog: Sendable {
 
     /// All known tool specifications, keyed by tool code.
     public static let allTools: [UInt16: WacomToolSpec] = {

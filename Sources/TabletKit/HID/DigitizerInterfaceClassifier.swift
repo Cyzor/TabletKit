@@ -10,7 +10,7 @@ import IOKit.hid
 /// Answers one narrow routing question: may a *pen* driver be attached to this
 /// interface? Nothing more — it says nothing about whether a device is
 /// supported, only whether pointing the pen path at it would be a mistake.
-public enum DigitizerInterfaceKind: Equatable {
+public enum DigitizerInterfaceKind: Equatable, Sendable {
     /// At least one X/Y-bearing input report sits outside a touch collection.
     /// A pen driver is appropriate. Hybrid interfaces that carry both pen and
     /// touch reports land here — the pen half is drivable and must not be lost.

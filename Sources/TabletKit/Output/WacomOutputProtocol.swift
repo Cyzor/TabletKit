@@ -25,7 +25,7 @@ import Foundation
 /// Unlike `XencelabsOutputProtocol`, these are HID **feature** reports, not
 /// output reports — sent via `IOHIDDeviceSetReport` with
 /// `kIOHIDReportTypeFeature` (`hidSetReport`'s default type).
-public enum WacomOutputProtocol {
+public enum WacomOutputProtocol: Sendable {
 
     /// Intuos4 OLED image transfer commands (`wacom_wac.h`).
     public enum ImageCommand {

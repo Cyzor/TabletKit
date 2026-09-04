@@ -18,7 +18,12 @@ import os
 /// The injection hot path (decode → InputInjector → CGEvent post) runs
 /// inline on this thread; UI mutations hop to the main actor via
 /// Task { @MainActor in … } from callbacks.
-public final class HIDThread {
+///
+/// `@unchecked Sendable`: the only public surface, `runLoop`, is a `let`
+/// set once during `init` and never reassigned — `CFRunLoop` itself is
+/// documented safe to use from any thread once obtained. `shared` is a
+/// `static let`, so Swift's lazy-init synchronization covers construction.
+public final class HIDThread: @unchecked Sendable {
 
     public static let shared = HIDThread()
 

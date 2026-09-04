@@ -32,7 +32,7 @@ import Foundation
 /// Independent of `CursorSmoother` by design: Stabilization has already run
 /// on the point that reaches this filter, and the two settings are separately
 /// controllable (either may be zero while the other is at maximum).
-public struct PanSmoother {
+public struct PanSmoother: Sendable {
 
     /// 0 = raw passthrough (exact, no filter math at all). 1 = strongest
     /// damping at rest, still opening up at speed.

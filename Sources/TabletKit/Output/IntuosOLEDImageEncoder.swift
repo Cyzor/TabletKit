@@ -17,7 +17,7 @@ import CoreText
 /// bit depth, which this encoder does not produce. See
 /// `Notes/Scratch/intuos4-oled-image-design.md` for the full protocol
 /// writeup this was built from.
-public enum IntuosOLEDImageEncoder {
+public enum IntuosOLEDImageEncoder: Sendable {
 
     public static let width = 64
     public static let height = 32

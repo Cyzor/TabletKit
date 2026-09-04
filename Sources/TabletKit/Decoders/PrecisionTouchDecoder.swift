@@ -10,7 +10,7 @@ import Foundation
 /// almost everything else discretionary, and real descriptors exercise that
 /// freedom (the DTH-2420's report `0x88` variant carries a Tip Switch but no
 /// Contact Identifier, for instance).
-public struct PrecisionTouchSlot: Equatable {
+public struct PrecisionTouchSlot: Equatable, Sendable {
     /// Digitizer Tip Switch (`0x0D`/`0x42`) — finger present. Absent on some
     /// single-contact reports, where `PrecisionTouchDecoder` falls back to the
     /// report's Contact Count.
@@ -48,7 +48,7 @@ public struct PrecisionTouchSlot: Equatable {
 /// descriptor or capture available to this project exercises that path, so it
 /// is not implemented rather than guessed at — `scanTime` is exposed so a
 /// future reassembly layer has the field it would need.
-public struct PrecisionTouchLayout: Equatable {
+public struct PrecisionTouchLayout: Equatable, Sendable {
 
     /// HID usages this layout recognizes, as `(page << 16) | usage`.
     public enum Usage {
@@ -239,7 +239,7 @@ public struct PrecisionTouchLayout: Equatable {
 }
 
 /// One decoded multitouch frame.
-public struct PrecisionTouchFrame: Equatable {
+public struct PrecisionTouchFrame: Equatable, Sendable {
     /// Contacts currently down, in report-slot order. Empty means "all fingers
     /// lifted" — the same signal `DecodeResult.touch([])` carries.
     ///

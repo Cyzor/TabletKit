@@ -12,7 +12,7 @@
 ///
 /// Usages follow the HID Usage Tables: Generic Desktop X/Y on page `0x01`,
 /// everything else on the Digitizer page `0x0D`.
-public struct GenericDigitizerFrame {
+public struct GenericDigitizerFrame: Sendable {
 
     // Standard usages we read. Public so the app's element-presence scan and the
     // tests reference the same constants rather than scattered magic numbers.

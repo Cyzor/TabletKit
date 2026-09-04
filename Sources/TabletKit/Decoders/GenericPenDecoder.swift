@@ -21,7 +21,7 @@ import Foundation
 /// Digitizer usage numbers `DigitizerUsage` recognizes — confirmed against a
 /// real Cintiq Pro 24 (DTH-2420) descriptor, where every field this type
 /// reads matched the device's own declared bit offsets exactly.
-public struct GenericPenLayout: Equatable {
+public struct GenericPenLayout: Equatable, Sendable {
 
     /// Report ID this layout decodes.
     public let reportID: UInt8

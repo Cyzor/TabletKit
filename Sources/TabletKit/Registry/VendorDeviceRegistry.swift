@@ -28,7 +28,7 @@
 
 import Foundation
 
-public enum VendorDeviceRegistry {
+public enum VendorDeviceRegistry: Sendable {
 
     // MARK: - Lookup
 

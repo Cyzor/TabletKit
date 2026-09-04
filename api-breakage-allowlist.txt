@@ -81,3 +81,13 @@ API breakage: accessor WacomToolSpec.supportedFamilies.Get() has return type cha
 API breakage: constructor WacomToolSpec.init(toolCode:name:toolType:buttonCount:maxPressure:hasTilt:hasRotation:hasWheel:hasEraserVariant:eraserToolCode:supportedFamilies:) has parameter 10 type change from [Swift.String] to [TabletKit.DeviceFamily]
 API breakage: func WacomToolSpec.isSupported(onFamily:) has parameter 0 type change from Swift.String to TabletKit.DeviceFamily?
 API breakage: func WacomToolSpec.capabilities(forFamily:) has parameter 0 type change from Swift.String to TabletKit.DeviceFamily?
+
+# Sendable conformance sweep (design doc §11.4): TabletReportDecoder gained a
+# Sendable inherited-protocol constraint so every decode-path value type is
+# checked, not just documented as safe. Technically source-breaking for an
+# external conformer with a non-Sendable stored property, but every existing
+# conformer is a value type of scalars already verified Sendable-clean.
+# Pre-1.0, mechanical, changelog-documented.
+API breakage: protocol TabletReportDecoder has generic signature change from  to <Self : Swift.Sendable>
+API breakage: protocol TabletReportDecoder has added inherited protocol Sendable
+API breakage: protocol TabletReportDecoder has added inherited protocol SendableMetatype

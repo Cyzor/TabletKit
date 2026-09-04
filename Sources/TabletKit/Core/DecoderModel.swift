@@ -169,7 +169,7 @@ public struct TouchContact: Equatable, Sendable {
 /// G3 publish surface for the `TabletKit` Swift package.  Implementors translate
 /// a raw HID input report into a sequence of high-level `DecodeResult` events.
 /// Stateless across calls except for the `inout DecoderState` the host owns.
-public protocol TabletReportDecoder {
+public protocol TabletReportDecoder: Sendable {
     /// Decode one raw HID report into zero or more results.
     /// Mutating to allow decoder structs with their own cached state if needed.
     /// - Parameters:

@@ -11,7 +11,7 @@
 
 import Foundation
 
-public enum BrandHeuristic {
+public enum BrandHeuristic: Sendable {
 
     /// Keyword → display name, checked in order against the lowercased
     /// manufacturer + product strings. Brand names are checked before the

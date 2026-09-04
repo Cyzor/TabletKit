@@ -12,7 +12,7 @@ import Foundation
 /// All mutating methods are HIDThread-local from the caller's perspective —
 /// the struct itself imposes no thread model. `InputInjector` holds one
 /// instance and owns its lifecycle.
-public struct CursorSmoother {
+public struct CursorSmoother: Sendable {
 
     // MARK: - Jitter tracking
     //

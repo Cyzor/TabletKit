@@ -5,7 +5,7 @@
 import Foundation
 
 /// Errors thrown while walking a raw HID report descriptor byte stream.
-public enum HIDReportDescriptorParserError: Error, Equatable {
+public enum HIDReportDescriptorParserError: Error, Equatable, Sendable {
     case truncatedItem(offset: Int)
     case oddHexString
     case invalidHexDigit(Character)
@@ -13,7 +13,7 @@ public enum HIDReportDescriptorParserError: Error, Equatable {
 }
 
 /// A single field (variable item, or one slot of an array item) within one report.
-public struct DescriptorField: Equatable {
+public struct DescriptorField: Equatable, Sendable {
     /// Combined `(usagePage << 16) | usage`. Normalizes both the extended (4-byte)
     /// usage-item encoding and the `Usage Page` + 2-byte `Usage` encoding to the same value.
     public var usagePage: UInt32
@@ -39,20 +39,20 @@ public struct DescriptorField: Equatable {
     public var extendedUsage: UInt32 { (usagePage << 16) | usage }
 }
 
-public enum HIDReportDirection: Equatable {
+public enum HIDReportDirection: Equatable, Sendable {
     case input
     case output
     case feature
 }
 
-public struct DescriptorReport: Equatable {
+public struct DescriptorReport: Equatable, Sendable {
     public var reportID: UInt8
     public var direction: HIDReportDirection
     public var fields: [DescriptorField]
     public var totalBits: Int
 }
 
-public struct DescriptorLayout: Equatable {
+public struct DescriptorLayout: Equatable, Sendable {
     public var reports: [DescriptorReport]
 
     public func report(_ direction: HIDReportDirection, id: UInt8) -> DescriptorReport? {
@@ -120,7 +120,7 @@ public struct DescriptorLayout: Equatable {
 /// field but never bit offsets — "IOKit doesn't expose a stable per-report ordering."
 /// This walker reconstructs offsets directly from the descriptor bytes, which is the
 /// one thing IOKit withholds and the one thing a usage-mapped decoder needs.
-public enum HIDReportDescriptorParser {
+public enum HIDReportDescriptorParser: Sendable {
 
     public static func parse(hex: String) throws -> DescriptorLayout {
         try parse(try bytes(fromHex: hex))

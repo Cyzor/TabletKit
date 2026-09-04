@@ -14,7 +14,7 @@ import Foundation
 /// firm pressure is comparatively clean and shouldn't be touched.
 ///
 /// HIDThread-local from the caller's perspective, same as `CursorSmoother`.
-public struct PressureSmoother {
+public struct PressureSmoother: Sendable {
 
     public private(set) var smoothedPressure: Double = 0.0
     private var hasSmoothedPressure = false

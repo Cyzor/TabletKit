@@ -23,7 +23,7 @@ import Foundation
 /// vendor pages: classic Wacom blob reports also sit on `0xFF0D`/`0xFF00`, with
 /// a uniform filler usage (`0x00` or `0x01`) on every byte. Those genuinely
 /// carry nothing. Only the usage *number* separates the two cases.
-public enum DigitizerUsage {
+public enum DigitizerUsage: Sendable {
 
     // MARK: - Standard Digitizer page (0x0D) usage numbers
     //
