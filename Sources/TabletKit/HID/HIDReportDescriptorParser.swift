@@ -116,7 +116,7 @@ public struct DescriptorLayout: Equatable, Sendable {
 
 /// Walks a raw HID report descriptor byte stream, computing per-field bit offsets.
 ///
-/// IOKit's parsed element list (see `HIDDescriptorReader`) gives usage/size/range per
+/// IOKit's parsed element list (see `LiveHIDDescriptorInspector`) gives usage/size/range per
 /// field but never bit offsets — "IOKit doesn't expose a stable per-report ordering."
 /// This walker reconstructs offsets directly from the descriptor bytes, which is the
 /// one thing IOKit withholds and the one thing a usage-mapped decoder needs.

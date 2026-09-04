@@ -109,7 +109,7 @@ enum TouchDescriptorFixtures {
     /// classification is possible. Matches the shape of real vendor accessory
     /// descriptors (Wacom's ExpressKey Remote is one), which is why capability
     /// must never be inferred from their absence. See
-    /// `HIDDescriptorReader.Parsed.hasDecodableFields`.
+    /// `LiveHIDDescriptorInspector.Parsed.hasDecodableFields`.
     static let opaqueVendor: String = [
         "060cff0900a10185107508150026ff00951f09008102c0",
     ].joined()
