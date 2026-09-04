@@ -69,6 +69,7 @@ vendor. Product names are used only to describe hardware compatibility.
 - ``hidReportDescriptorHex(_:)``
 - ``sendWacomInputModeInit(_:tag:)``
 - ``HIDThread``
+- ``LatencyProbe``
 - ``HIDReportDescriptorParser``
 - ``DigitizerUsage``
 - ``DigitizerInterfaceKind``
