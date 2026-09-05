@@ -34,14 +34,20 @@ extension IntuosV2Decoder {
     /// Decode coordinate, pressure, and tilt from a BT per-frame buffer (used by both
     /// 361-byte and 99-byte BT paths). Offsets and interpretation are identical in both formats.
     /// Pressure formula is canonical (mask high byte first).
-    func decodeBTFrame(_ f: UnsafePointer<UInt8>)
+    ///
+    /// Tilt fraction is `rawByte / 64.0` when `spec.tiltMaxDegrees` is set — confirmed by hardware
+    /// capture across three pen tool codes (0x0802, 0x0804 Art Pen, 0x0842) on PTH-860 BT, all
+    /// saturating at exactly ±64, not ±127 (2026-09-04). Falls back to the pre-D3 `/127.0` divisor
+    /// when `tiltMaxDegrees` is `nil` (family unverified) so untested devices don't silently change.
+    func decodeBTFrame(_ f: UnsafePointer<UInt8>, spec: DigitizerSpec)
         -> (x: Int, y: Int, pressure: Int, tiltX: Double, tiltY: Double, hoverDistance: Int)
     {
         let x = Int(UInt16(f[1]) | UInt16(f[2]) << 8)
         let y = Int(UInt16(f[3]) | UInt16(f[4]) << 8)
         let pressure = Int(UInt16(f[5]) | (UInt16(f[6] & 0x1F) << 8))
-        let tiltX = Double(Int8(bitPattern: f[7])) / 127.0
-        let tiltY = Double(Int8(bitPattern: f[8])) / 127.0
+        let tiltDivisor = spec.tiltMaxDegrees != nil ? 64.0 : 127.0
+        let tiltX = Double(Int8(bitPattern: f[7])) / tiltDivisor
+        let tiltY = Double(Int8(bitPattern: f[8])) / tiltDivisor
         let hoverDistance = Int(f[13])
         return (x, y, pressure, tiltX, tiltY, hoverDistance)
     }
@@ -251,7 +257,7 @@ extension IntuosV2Decoder {
             let barrel1 = (flags & 0x02) != 0
             let barrel2 = (flags & 0x04) != 0
 
-            let (x, y, pressure, rawTiltX, rawTiltY, hoverDistance) = decodeBTFrame(f)
+            let (x, y, pressure, rawTiltX, rawTiltY, hoverDistance) = decodeBTFrame(f, spec: spec)
                 let tiltX = inRange ? rawTiltX : state.lastTiltX
                 let tiltY = inRange ? rawTiltY : state.lastTiltY
                 if inRange {
@@ -523,7 +529,7 @@ extension IntuosV2Decoder {
                 state.prevInProximity = true
             }
 
-            let (x, y, pressure, rawTiltX, rawTiltY, hoverDistance) = decodeBTFrame(f)
+            let (x, y, pressure, rawTiltX, rawTiltY, hoverDistance) = decodeBTFrame(f, spec: spec)
                 let tiltX = inRange ? rawTiltX : state.lastTiltX
                 let tiltY = inRange ? rawTiltY : state.lastTiltY
                 if inRange {

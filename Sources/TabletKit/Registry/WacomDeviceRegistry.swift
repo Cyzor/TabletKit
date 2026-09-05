@@ -287,6 +287,11 @@ public struct WacomDeviceSpec: Sendable {
     /// True if this device's pen reports include tilt data (Bamboo 4-bit format).
     /// Has no effect on IntuosV1/V2/Intuos3 decoders, which always decode tilt.
     public let hasTilt: Bool
+    /// Full-scale tilt angle in degrees for this family's wire tilt value, sourced
+    /// from a HID descriptor or a kernel-cited constant — never estimated.
+    /// `nil` means unknown: decoders must not substitute a guessed constant, and
+    /// should keep the fraction unverified rather than silently claim an angle.
+    public let tiltMaxDegrees: Double?
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Pen displays may need parallax offset calibration due to thick glass layers.
     public let isPenDisplay: Bool
@@ -359,6 +364,7 @@ public struct WacomDeviceSpec: Sendable {
         hasMechanicalDial: Bool = false,
         hasKeyOLEDs: Bool = false,
         hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool = false,
+        tiltMaxDegrees: Double? = nil,
         hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
         touchMaxX: Int = 0, touchMaxY: Int = 0,
         isPenDisplay: Bool = false,
@@ -390,6 +396,7 @@ public struct WacomDeviceSpec: Sendable {
         self.ringSlotCount = ringSlotCount
         self.hasEraser = hasEraser
         self.hasTilt = hasTilt
+        self.tiltMaxDegrees = tiltMaxDegrees
         self.isPenDisplay = isPenDisplay
         self.seizeUSB = seizeUSB
         self.initSteps = initSteps
@@ -1024,6 +1031,12 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0357, name: "Intuos Pro M (PTH-660)",  // ✓ confirmed live
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            // tiltMaxDegrees 64.0: descriptor-confirmed on this family's sibling
+            // PTH-860 (X/Y Tilt usages 0x3D/0x3E declare logical/physical
+            // [-64,63], unit degrees — physical equals logical, so the raw
+            // signed byte is the angle 1:1). Not independently measured on this
+            // PID, but PTH-660/860 share one decoder path and one wire format.
+            tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 5,
             // touchMaxX/Y confirmed 2026-07-30 against this device's own touch
             // report descriptor: it declares Logical Maximum 8960 on X and 5920
@@ -1047,6 +1060,12 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0358, name: "Intuos Pro L (PTH-860)",  // ✓ confirmed live (USB + BT)
             parser: .intuosV2, maxX: 62200, maxY: 43200, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            // tiltMaxDegrees 64.0: HID descriptor-confirmed. X/Y Tilt usages
+            // (0x3D/0x3E) declare logical [-64,63], physical [-64,63], unit
+            // degrees — physical equals logical, so the raw signed byte is the
+            // angle 1:1, full scale 64°. The current /127.0 divisor in
+            // IntuosV2Decoder understates tilt by roughly half for this family.
+            tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 5,
             // USB coords confirmed 2026-05-21; BT touch confirmed 2026-05-22 via
             // live capture (PID 0x0358 presented over BT, same as PTH-660 pattern).
@@ -1369,6 +1388,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0360, name: "Wacom PTH-660",  // dims kernel + OTD
             parser: .intuosV2, maxX: 44800, maxY: 29600, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            // tiltMaxDegrees 64.0: see the 0x0357/0x0358 USB entries for the
+            // descriptor citation. Rarely hit (see note below), kept aligned.
+            tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 5,
             // Touch values mirror the USB PTH-660 entry.  In practice this
             // entry is rarely hit: PTH-660 over BT presents the USB PID
@@ -1382,6 +1404,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0361, name: "Intuos Pro L (PTH-860) BT",  // ✓ confirmed live (BT Classic)
             parser: .intuosV2, maxX: 62200, maxY: 43200, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
+            // tiltMaxDegrees 64.0: see the 0x0357/0x0358 USB entries for the
+            // descriptor citation. Rarely hit (see note below), kept aligned.
+            tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 5,
             // PTH-860 over BT presents PID 0x0358 (USB PID), not this entry —
             // same pattern as PTH-660/0x0360.  Kept as a defensive fallback.

@@ -42,6 +42,11 @@ public struct DigitizerSpec: Sendable {
     /// Maximum simultaneous touch contacts the device reports (1 for single-touch
     /// Cintiqs like DTH-2400/DTH-2200; 10 for multi-touch DTH-271/DTH-135/DTH-1320).
     public var maxTouchContacts: Int = 0
+    /// Full-scale tilt angle in degrees for this family's wire tilt value, sourced
+    /// from a HID descriptor or a kernel-cited constant — never estimated.
+    /// `nil` means unknown: decoders must not substitute a guessed constant, and
+    /// should keep the fraction unverified rather than silently claim an angle.
+    public var tiltMaxDegrees: Double? = nil
 
     public init(
         maxX: Int,
@@ -54,7 +59,8 @@ public struct DigitizerSpec: Sendable {
         isPenDisplay: Bool = false,
         ringSlotCount: Int = 4,
         hasFingerTouch: Bool = false,
-        maxTouchContacts: Int = 0
+        maxTouchContacts: Int = 0,
+        tiltMaxDegrees: Double? = nil
     ) {
         self.maxX = maxX
         self.maxY = maxY
@@ -67,6 +73,7 @@ public struct DigitizerSpec: Sendable {
         self.ringSlotCount = ringSlotCount
         self.hasFingerTouch = hasFingerTouch
         self.maxTouchContacts = maxTouchContacts
+        self.tiltMaxDegrees = tiltMaxDegrees
     }
 }
 
