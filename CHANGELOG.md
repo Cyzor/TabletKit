@@ -9,6 +9,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `XencelabsDecoder.tiltMaxDegrees` — the pen's physical tilt range (±60°),
+  hardware-confirmed. Replaces the internal `tiltScaleDegrees`, whose value
+  happened to be right for the wrong reason. `WacomDeviceSpec.tiltMaxDegrees`
+  documents that this is the physical angle, not necessarily a raw divisor.
+
+### Changed
+
+- `TabletPoint.tiltX`/`tiltY` now state their sign convention: the HID
+  Digitizer one (X positive right, Y positive toward the user). Decoders pass
+  the wire sign through; macOS `NSEvent.tilt.y` runs the other way, so
+  CGEvent consumers negate Y once at their own boundary.
+
 - `DecoderState.btTouchFrameStamps` — the device-clock stamp for each touch
   frame an Intuos Pro Bluetooth container carried, in emission order. Each
   sub-frame ends in a 16-bit little-endian timestamp that neither this package

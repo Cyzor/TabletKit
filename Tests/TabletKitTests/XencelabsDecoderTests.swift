@@ -158,10 +158,9 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertEqual(b3?.penButton1, false)
     }
 
-    /// Both axes pass through unmodified. The raw wire signs already match the
-    /// native Xencelabs driver exactly (measured 2026-09-05 with one tablet
-    /// attached, tools/tilt_event_probe.swift), so any negation here would
-    /// disagree with the reference.
+    /// Both axes pass through unmodified. The wire already uses the HID tilt
+    /// convention TabletPoint defines (verified at the application, see
+    /// TabletPoint.tiltY), so any negation here would be wrong.
     func testTiltSignsArePassedThroughUnmodified() {
         var state = DecoderState()
         let results = decode(makePen(tag: 0x20, tiltX: 30, tiltY: 30), state: &state)

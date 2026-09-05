@@ -19,25 +19,31 @@ public struct TabletPoint: Sendable {
     public var maxPressure: Int
     /// Normalized pressure, 0.0..1.0
     public var normalizedPressure: Double { Double(pressure) / Double(maxPressure) }
-    /// Tilt X, -1.0..1.0. Positive when the pen tip leans left (west).
+    /// Tilt X, -1.0..1.0. Positive when the top of the pen leans right (east),
+    /// the HID Digitizer X Tilt convention (usage 0x3D).
     public var tiltX: Double
-    /// Tilt Y, -1.0..1.0. Positive when the pen tip leans away from the user.
+    /// Tilt Y, -1.0..1.0. Positive when the top of the pen leans toward the
+    /// user (south), the HID Digitizer Y Tilt convention (usage 0x3E).
     ///
-    /// Apple documents only magnitude and range for `kCGTabletEventTiltY` and
-    /// `NSEvent.tilt` — never which direction is positive — so this convention
-    /// is taken from a reference driver, not the platform. Established
-    /// 2026-09-05 by reading `NSEvent.tilt` under the native Xencelabs driver
-    /// with a single tablet attached (`tools/tilt_event_probe.swift`): leaning
-    /// away gives +1.0, leaning west +1.0.
+    /// Both axes follow the HID Usage Tables definition, which is also what
+    /// the W3C Pointer Events `tiltX`/`tiltY` use: X positive to the right, Y
+    /// positive toward the user. Decoders pass the wire sign through
+    /// unmodified; every device measured so far already reports in this
+    /// convention, so no decoder negates.
     ///
-    /// Every decoder passes the raw wire sign through; no device measured so
-    /// far needs correcting. Before adding a negation, re-measure with **one
-    /// tablet connected** — an earlier multi-tablet session produced readings
-    /// that disagreed with this one and prompted a negation that was wrong.
+    /// macOS is the odd one out. `NSEvent.tilt.y` is positive when the pen
+    /// leans *away* from the user — Apple never documents this, but Chromium's
+    /// macOS event builder negates `tilt.y` to reach the Pointer Events sign
+    /// and says why. Consumers that build `CGEvent`s therefore negate Y once
+    /// at their own boundary, not here; MockTab does this in
+    /// `resolveEffectivePose`. Confirmed at the application on 2026-09-05: a
+    /// Rebelle flat brush shows bristles on the correct side, in every
+    /// direction, for Xencelabs and Wacom pens, and matches the vendor drivers.
     ///
-    /// Note this is the *hardware* convention. macOS wants the opposite, so
-    /// consumers targeting CGEvent negate Y once at their own boundary rather
-    /// than here; MockTab does this in `resolveEffectivePose`.
+    /// Do not re-derive this from an event-stream probe alone. Reading
+    /// `NSEvent.tilt` under two drivers with two tablets attached produced
+    /// contradictory signs for days; judge polarity at a brush that renders
+    /// its own preview, with one tablet connected.
     public var tiltY: Double
     /// Pen rotation (twist), 0.0..360.0 degrees (approximate)
     public var rotation: Double = 0.0

@@ -223,10 +223,10 @@ public struct XencelabsDecoder: TabletReportDecoder {
         state.lastX = x
         state.lastY = y
 
-        // Both axes pass through unmodified: measured against the native
-        // Xencelabs driver on 2026-09-05 (tools/tilt_event_probe.swift, one
-        // tablet connected), the raw wire signs already match it exactly —
-        // leaning away gives +1.0 in both, leaning west +1.0 in both.
+        // Both axes pass through unmodified: the wire already uses the HID
+        // tilt convention (+X right, +Y toward the user) that TabletPoint
+        // defines. Verified at the application, not the event stream — see
+        // TabletPoint.tiltY.
         let tiltX = Double(Int8(bitPattern: report[8])) / Self.tiltRawScale
         let tiltY = Double(Int8(bitPattern: report[9])) / Self.tiltRawScale
 
