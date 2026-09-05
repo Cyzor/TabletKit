@@ -24,8 +24,17 @@ import Foundation
 /// [15–16] Tool ID (LE uint16)
 /// [17–22] Reserved
 ///
-/// Tilt encoding differs from USB: proportional to sin(angle), divide by 127
-/// to get −1..+1 — same normalization we use for IntuosV2 USB.
+/// Tilt encoding per the spec notes: this byte is proportional to
+/// sin(tilt_angle), not degrees (`tilt_degrees = asin(raw / 127.0) *
+/// 180/pi`), unlike the classic degree-linear protocols (IntuosV2 USB/BT,
+/// Intuos3, etc.) where a hardcoded /127.0 turned out to be a real bug
+/// (descriptor-confirmed full scale was 64, not 127 — see IntuosV2Decoder).
+/// **Unverified against real hardware or a capture** — this file has no
+/// tests and no capture-derived comment, only the spec notes doc, which is
+/// itself a first-pass collection of published info, not something to
+/// treat as authoritative. Do not assume this /127.0 is correct just
+/// because the spec says so; it needs the same hardware-capture scrutiny
+/// the USB path got before it can be trusted either way.
 public func decodeBLEPenReport(
     report: UnsafePointer<UInt8>,
     length: CFIndex,
