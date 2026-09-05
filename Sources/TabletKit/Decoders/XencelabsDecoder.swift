@@ -91,11 +91,27 @@ public struct XencelabsDecoder: TabletReportDecoder {
     static let tagBattery: UInt8 = 0xF2
     static let eraserBit: UInt8 = 0x40
 
-    /// Tilt bytes are assumed to be degrees (±60°, the spec'd max for this pen
-    /// family) rather than the ±127 sin-proportional encoding Wacom BLE uses.
-    /// Unverified on hardware; if live tilt saturates early or never reaches
-    /// full deflection, revisit this constant first.
-    public static let tiltScaleDegrees = 60.0
+    /// Full-scale tilt in degrees. The wire unit is 1° per count: a
+    /// stop-to-stop capture saturates at raw ±60 (see `tiltRawScale`) while
+    /// the vendor tool reads ±60° at those same stops.
+    public static let tiltMaxDegrees: Double? = 60.0
+
+    /// Divisor for the signed raw tilt bytes, hardware-confirmed 2026-09-04.
+    ///
+    /// A stop-to-stop capture (0x520D, 27767 samples) holds both bytes at
+    /// exactly ±60 with every integer in between present and nothing beyond,
+    /// on both axes, reproduced independently in the hover (A0), contact (A1),
+    /// and E0 buckets. Earlier sweeps peaked at 44 only because nobody tilted
+    /// the pen to its mechanical stop.
+    ///
+    /// Read `signedMagnitudeMax` when checking this against a capture, not
+    /// `min`/`max` — a signed byte reports 0 and 255 the moment it goes
+    /// negative, and the truncated `values` list makes a signed span look like
+    /// a plateau at the truncation boundary.
+    ///
+    /// OpenTabletDriver passes the raw sbyte straight through with no scaling,
+    /// so it offers no independent check on the divisor.
+    static let tiltRawScale = 60.0
 
     public init() {}
 
@@ -207,8 +223,12 @@ public struct XencelabsDecoder: TabletReportDecoder {
         state.lastX = x
         state.lastY = y
 
-        let tiltX = Double(Int8(bitPattern: report[8])) / Self.tiltScaleDegrees
-        let tiltY = Double(Int8(bitPattern: report[9])) / Self.tiltScaleDegrees
+        // Both axes pass through unmodified: measured against the native
+        // Xencelabs driver on 2026-09-05 (tools/tilt_event_probe.swift, one
+        // tablet connected), the raw wire signs already match it exactly —
+        // leaning away gives +1.0 in both, leaning west +1.0 in both.
+        let tiltX = Double(Int8(bitPattern: report[8])) / Self.tiltRawScale
+        let tiltY = Double(Int8(bitPattern: report[9])) / Self.tiltRawScale
 
         results.append(
             .pen(

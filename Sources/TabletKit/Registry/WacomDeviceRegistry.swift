@@ -288,9 +288,16 @@ public struct WacomDeviceSpec: Sendable {
     /// Has no effect on IntuosV1/V2/Intuos3 decoders, which always decode tilt.
     public let hasTilt: Bool
     /// Full-scale tilt angle in degrees for this family's wire tilt value, sourced
-    /// from a HID descriptor or a kernel-cited constant — never estimated.
-    /// `nil` means unknown: decoders must not substitute a guessed constant, and
-    /// should keep the fraction unverified rather than silently claim an angle.
+    /// from a HID descriptor, a kernel-cited constant, or a stop-to-stop hardware
+    /// capture paired with a vendor-tool reading — never estimated, and never a
+    /// spec-sheet figure. `nil` means unknown: decoders must not substitute a
+    /// guessed constant, and should keep the fraction unverified rather than
+    /// silently claim an angle.
+    ///
+    /// This is the *physical* range, which is not necessarily the raw divisor.
+    /// The two coincide on the devices measured so far but are independent:
+    /// a device could saturate at raw 60 while spanning 90°. Read this only as
+    /// an angle; a decoder needing a divisor should hold its own constant.
     public let tiltMaxDegrees: Double?
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Pen displays may need parallax offset calibration due to thick glass layers.

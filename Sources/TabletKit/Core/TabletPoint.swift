@@ -19,9 +19,25 @@ public struct TabletPoint: Sendable {
     public var maxPressure: Int
     /// Normalized pressure, 0.0..1.0
     public var normalizedPressure: Double { Double(pressure) / Double(maxPressure) }
-    /// Tilt X, -1.0..1.0
+    /// Tilt X, -1.0..1.0. Positive when the pen tip leans left (west).
     public var tiltX: Double
-    /// Tilt Y, -1.0..1.0
+    /// Tilt Y, -1.0..1.0. Positive when the pen tip leans away from the user.
+    ///
+    /// Apple documents only magnitude and range for `kCGTabletEventTiltY` and
+    /// `NSEvent.tilt` — never which direction is positive — so this convention
+    /// is taken from a reference driver, not the platform. Established
+    /// 2026-09-05 by reading `NSEvent.tilt` under the native Xencelabs driver
+    /// with a single tablet attached (`tools/tilt_event_probe.swift`): leaning
+    /// away gives +1.0, leaning west +1.0.
+    ///
+    /// Every decoder passes the raw wire sign through; no device measured so
+    /// far needs correcting. Before adding a negation, re-measure with **one
+    /// tablet connected** — an earlier multi-tablet session produced readings
+    /// that disagreed with this one and prompted a negation that was wrong.
+    ///
+    /// Note this is the *hardware* convention. macOS wants the opposite, so
+    /// consumers targeting CGEvent negate Y once at their own boundary rather
+    /// than here; MockTab does this in `resolveEffectivePose`.
     public var tiltY: Double
     /// Pen rotation (twist), 0.0..360.0 degrees (approximate)
     public var rotation: Double = 0.0

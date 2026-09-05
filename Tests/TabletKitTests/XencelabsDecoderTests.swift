@@ -78,7 +78,7 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertEqual(p.y, 0xe3a1)
         XCTAssertEqual(p.pressure, 0)
         XCTAssertFalse(p.eraser)
-        // tilt 0x11 = +17°, 0x21 = +33° against the ±60° scale
+        // tilt raw 17/33 normalized against the ±60 ceiling (see tiltRawScale)
         XCTAssertEqual(p.tiltX, 17.0 / 60.0, accuracy: 0.001)
         XCTAssertEqual(p.tiltY, 33.0 / 60.0, accuracy: 0.001)
     }
@@ -158,12 +158,44 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertEqual(b3?.penButton1, false)
     }
 
-    func testTiltNormalizesAgainstSixtyDegrees() {
+    /// Both axes pass through unmodified. The raw wire signs already match the
+    /// native Xencelabs driver exactly (measured 2026-09-05 with one tablet
+    /// attached, tools/tilt_event_probe.swift), so any negation here would
+    /// disagree with the reference.
+    func testTiltSignsArePassedThroughUnmodified() {
         var state = DecoderState()
-        let results = decode(makePen(tag: 0x20, tiltX: 60, tiltY: -30), state: &state)
+        let results = decode(makePen(tag: 0x20, tiltX: 30, tiltY: 30), state: &state)
+        guard let p = penPoint(results) else { return XCTFail("no pen result") }
+        XCTAssertGreaterThan(p.tiltX, 0, "positive wire X stays positive")
+        XCTAssertGreaterThan(p.tiltY, 0, "positive wire Y stays positive")
+
+        let away = decode(makePen(tag: 0x20, tiltX: -30, tiltY: -30), state: &state)
+        guard let q = penPoint(away) else { return XCTFail("no pen result") }
+        XCTAssertLessThan(q.tiltX, 0, "negative wire X stays negative")
+        XCTAssertLessThan(q.tiltY, 0, "negative wire Y stays negative")
+    }
+
+    /// The mechanical stops are raw ±60 — a stop-to-stop capture holds both
+    /// bytes there and never exceeds them — so full deflection must read as
+    /// exactly full scale.
+    func testTiltReachesFullScaleAtTheMechanicalStops() {
+        var state = DecoderState()
+        let results = decode(makePen(tag: 0x20, tiltX: 60, tiltY: -60), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertEqual(p.tiltX, 1.0, accuracy: 0.001)
-        XCTAssertEqual(p.tiltY, -0.5, accuracy: 0.001)
+        XCTAssertEqual(p.tiltY, -1.0, accuracy: 0.001)
+    }
+
+    /// Mid-range tilt must scale proportionally rather than saturate early,
+    /// which is what an under-sized divisor caused.
+    func testMidRangeTiltDoesNotClamp() {
+        var state = DecoderState()
+        let results = decode(makePen(tag: 0x20, tiltX: 30, tiltY: -45), state: &state)
+        guard let p = penPoint(results) else { return XCTFail("no pen result") }
+        XCTAssertEqual(p.tiltX, 0.5, accuracy: 0.001)
+        XCTAssertEqual(p.tiltY, -0.75, accuracy: 0.001)
+        XCTAssertLessThan(abs(p.tiltX), 1.0)
+        XCTAssertLessThan(abs(p.tiltY), 1.0)
     }
 
     /// Verbatim adjacent frames from a live mid-screen right sweep

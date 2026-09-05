@@ -45,6 +45,11 @@ extension IntuosV2Decoder {
         let x = Int(UInt16(f[1]) | UInt16(f[2]) << 8)
         let y = Int(UInt16(f[3]) | UInt16(f[4]) << 8)
         let pressure = Int(UInt16(f[5]) | (UInt16(f[6] & 0x1F) << 8))
+        // Reads tiltMaxDegrees as "has this family's tilt been measured?", not
+        // as an angle. That holds only because every measured device so far has
+        // a raw ceiling equal to its degree range; the two are independent in
+        // principle, so a device that breaks the coincidence needs its divisor
+        // carried explicitly rather than inferred here.
         let tiltDivisor = spec.tiltMaxDegrees != nil ? 64.0 : 127.0
         let tiltX = Double(Int8(bitPattern: f[7])) / tiltDivisor
         let tiltY = Double(Int8(bitPattern: f[8])) / tiltDivisor
