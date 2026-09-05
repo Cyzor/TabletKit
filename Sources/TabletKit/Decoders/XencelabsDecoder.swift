@@ -95,7 +95,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
     /// family) rather than the ±127 sin-proportional encoding Wacom BLE uses.
     /// Unverified on hardware; if live tilt saturates early or never reaches
     /// full deflection, revisit this constant first.
-    static let tiltScaleDegrees = 60.0
+    public static let tiltScaleDegrees = 60.0
 
     public init() {}
 
