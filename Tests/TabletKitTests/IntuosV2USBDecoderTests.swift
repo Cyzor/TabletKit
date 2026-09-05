@@ -20,7 +20,11 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     private let pth660 = DigitizerSpec(
         maxX: 62200, maxY: 43200, maxPressure: 8191,
         buttonCount: 8, hasTilt: true, hasDualRings: false,
-        isPenDisplay: false, ringSlotCount: 4)
+        isPenDisplay: false, ringSlotCount: 4,
+        // Descriptor-confirmed from a live PTH-660 USB capture (2026-09-05):
+        // report 0x10's X/Y Tilt usages declare logical/physical [-64, 63],
+        // unit 0x14 (degrees) — matching the BT path's hardware-measured ±64.
+        tiltMaxDegrees: 64.0)
 
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
@@ -108,8 +112,8 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         bytes[2] = 0xD0; bytes[3] = 0x07; bytes[4] = 0x00  // x = 2000 (24-bit LE)
         bytes[5] = 0xB8; bytes[6] = 0x0B; bytes[7] = 0x00  // y = 3000
         bytes[8] = 0xFF; bytes[9] = 0x07                    // pressure = 0x7FF = 2047
-        bytes[10] = 64                                       // tiltX = 64/127 ≈ 0.504
-        bytes[11] = UInt8(bitPattern: -64)                   // tiltY ≈ -0.504
+        bytes[10] = 32                                       // tiltX = 32/64 = 0.5
+        bytes[11] = UInt8(bitPattern: -32)                   // tiltY = -32/64 = -0.5
 
         let results = decode(bytes, state: &state)
         let pen = results.compactMap { r -> TabletPoint? in
@@ -121,8 +125,8 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.penButton1, true)
         XCTAssertEqual(pen?.penButton2, true)
         XCTAssertEqual(pen?.inProximity, true)
-        XCTAssertEqual(pen?.tiltX ?? 0, 64.0 / 127.0, accuracy: 0.001)
-        XCTAssertEqual(pen?.tiltY ?? 0, -64.0 / 127.0, accuracy: 0.001)
+        XCTAssertEqual(pen?.tiltX ?? 0, 32.0 / 64.0, accuracy: 0.001)
+        XCTAssertEqual(pen?.tiltY ?? 0, -32.0 / 64.0, accuracy: 0.001)
     }
 
     func testEraserBitFromStatusEmittedOnPen() {

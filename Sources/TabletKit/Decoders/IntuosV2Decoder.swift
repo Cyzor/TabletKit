@@ -292,8 +292,15 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         // ── Pen path ───────────────────────────────────────────────────────────
         // Pressure: 13-bit value (d[8] + lower 5 bits of d[9]) per kernel spec.
         let pressure = Int(UInt16(report[8]) | (UInt16(report[9] & 0x1F) << 8))
-        let tiltX = Double(Int8(bitPattern: report[10])) / 127.0
-        let tiltY = Double(Int8(bitPattern: report[11])) / 127.0
+        // Tilt divisor: this report's own HID descriptor declares X/Y Tilt
+        // (usages 0x3D/0x3E) as logical/physical [-64, 63], unit 0x14
+        // (degrees) — confirmed directly from a live PTH-660 USB descriptor
+        // capture (2026-09-05), matching the BT path's hardware-measured
+        // ±64 exactly (see decodeBTFrame). /127.0 remains the fallback for
+        // families whose USB descriptor hasn't been checked.
+        let tiltDivisor = spec.tiltMaxDegrees != nil ? 64.0 : 127.0
+        let tiltX = Double(Int8(bitPattern: report[10])) / tiltDivisor
+        let tiltY = Double(Int8(bitPattern: report[11])) / tiltDivisor
 
         // Cache tilt so that !highConfidence passthrough frames can hold the last
         // real value instead of emitting (0, 0) and snapping Rebelle's azimuth to 0°.
@@ -354,6 +361,12 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         let y = Int(UInt16(report[6]) | UInt16(report[7]) << 8) | (Int(report[8]) << 16)
         // Pressure: 13-bit value (d[9] + lower 5 bits of d[10]) per kernel spec.
         let pressure = Int(UInt16(report[9]) | (UInt16(report[10] & 0x1F) << 8))
+        // Tilt divisor left at /127.0 deliberately: a live PTH-660 USB descriptor
+        // capture (2026-09-05) shows this device doesn't emit report 0x1E at all
+        // (only 0x01/0x10/0x11/0x13), so there is no hardware to confirm this
+        // report's tilt encoding against. Do not assume it matches 0x10's
+        // descriptor-confirmed ±64 — 0x1E is a separate "driver-compatibility"
+        // repack for other family members and may encode differently.
         let tiltX = Double(Int8(bitPattern: report[11])) / 127.0
         let tiltY = Double(Int8(bitPattern: report[12])) / 127.0
         // Hover distance: same absolute position as 0x10 per kernel spec.
