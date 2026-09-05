@@ -1404,13 +1404,13 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0361, name: "Intuos Pro L (PTH-860) BT",  // ✓ confirmed live (BT Classic)
             parser: .intuosV2, maxX: 62200, maxY: 43200, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasEraser: true,
-            // tiltMaxDegrees 64.0: see the 0x0357/0x0358 USB entries for the
-            // descriptor citation. Rarely hit (see note below), kept aligned.
+            // tiltMaxDegrees 64.0: descriptor cited on the USB entries above;
+            // hardware-confirmed here too (5 BT captures, 3 tool codes, 2026-09-04).
             tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 5,
-            // PTH-860 over BT presents PID 0x0358 (USB PID), not this entry —
-            // same pattern as PTH-660/0x0360.  Kept as a defensive fallback.
-            // Touch confirmed working 2026-05-22 via 0x0358 path.
+            // 0x0361 is genuinely presented over BT Classic (5 captures
+            // 2026-09-04), not a rarely-hit fallback as previously noted.
+            // Touch values below still unverified against those captures.
             touchMaxX: 12439, touchMaxY: 8639,
             seizeUSB: false,
             confidence: .verified,
