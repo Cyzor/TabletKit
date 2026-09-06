@@ -45,5 +45,10 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/hid-trace-sweep"
         ),
+        .executableTarget(
+            name: "touch-surface",
+            dependencies: ["TabletKit"],
+            path: "Samples/touch-surface"
+        ),
     ]
 )
