@@ -23,14 +23,11 @@ import os
 ///
 /// `@unchecked Sendable`: every stored property is an independently
 /// torn-read-tolerant scalar (`Double`/`UInt64`), never combined into a
-/// compound value that needs cross-field consistency — a reader that sees
-/// `averageMs` from one instant and `stallCount` from another still gets a
-/// meaningful (if slightly stale) diagnostic snapshot, which is the only
-/// kind of read any call site ever performs. Writes happen only on
-/// `HIDThread`. This is a documented promise, not a proof — if a future
-/// change adds a field whose meaning depends on another field's value at
-/// the same instant, that invariant breaks and real synchronization
-/// (atomics or a lock) becomes necessary.
+/// value needing cross-field consistency — reading `averageMs` from one
+/// instant and `stallCount` from another still gives a meaningful, if
+/// stale, snapshot. Writes happen only on `HIDThread`. A future field whose
+/// meaning depends on another field's value at the same instant breaks
+/// this and needs real synchronization instead.
 public final class LatencyProbe: @unchecked Sendable {
 
     public static let shared = LatencyProbe()
@@ -134,34 +131,27 @@ public final class LatencyProbe: @unchecked Sendable {
         gapHistogramMs = [0, 0, 0, 0, 0, 0]
     }
 
-    /// Wall clock and this thread's consumed CPU time at the previous report,
-    /// used to tell a *stalled* thread from a *busy* one.
+    /// Wall clock and this thread's consumed CPU time at the previous
+    /// report — tells a *stalled* thread from a *busy* one. A delivery
+    /// stall alone can't say why; comparing CPU burned across the gap can:
     ///
-    /// A delivery stall says only that a report arrived late; it cannot say
-    /// why, and the three candidates want opposite fixes. Comparing how much
-    /// CPU this thread actually burned across the gap separates them:
+    ///   - CPU ≈ gap: the thread ran the whole time, busy inside another
+    ///     source or an overrun handler. Ours to fix.
+    ///   - CPU ≈ 0: the thread wasn't running. Ambiguous, not necessarily
+    ///     unfixable — could be descheduled or paging (nothing userspace
+    ///     can do), or blocked in `CGEventPost`'s mach IPC waiting on a busy
+    ///     WindowServer (ours). `totalAverageMs`/`totalWorstMs` separate
+    ///     these: a pipeline-total spike alongside the stall points at the
+    ///     post, not at paging.
     ///
-    ///   - CPU ≈ gap — the thread was running the whole time, so the run loop
-    ///     was busy inside another source (or the previous report's own
-    ///     handling overran). That is ours to fix.
-    ///   - CPU ≈ 0 — the thread was not running at all. This branch is
-    ///     ambiguous and must not be read as "unfixable": descheduled, or
-    ///     blocked in a page fault behind disk I/O (which nothing in
-    ///     userspace helps against), but equally blocked in mach IPC inside
-    ///     `CGEventPost` waiting on a busy WindowServer, which is ours. The
-    ///     pipeline-total figure separates them — an injection span that
-    ///     spikes alongside the stall points at the post, not at paging.
+    /// Measured between consecutive callbacks, not across the stall window
+    /// itself (not observable after the fact) — a superset of the stall, so
+    /// near-zero CPU is conclusive while a large delta only narrows things
+    /// to the run loop.
     ///
-    /// Measured between consecutive report callbacks rather than across the
-    /// stall window itself, which is not observable after the fact — the
-    /// interval is a superset of the stall, so a near-zero CPU delta is
-    /// conclusive while a large one points at the run loop without pinning
-    /// the exact source.
-    ///
-    /// Page-fault counters would separate "descheduled" from "page-faulted",
-    /// but `task_info` is a mach trap and this runs per report on a
-    /// time-constraint thread; the cost is not worth a distinction that only
-    /// refines an already-unfixable branch.
+    /// A page-fault counter would separate "descheduled" from "paged," but
+    /// `task_info` is a mach trap on a time-constraint thread, and the extra
+    /// precision wouldn't change what to do about an already-ambiguous case.
     private var lastRecordWall: UInt64 = 0
     private var lastRecordThreadCPUNs: UInt64 = 0
 

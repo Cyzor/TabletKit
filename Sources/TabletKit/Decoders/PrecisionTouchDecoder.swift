@@ -36,11 +36,9 @@ public struct PrecisionTouchSlot: Equatable, Sendable {
 /// no IOKit, and derived rather than hardcoded. Where the pen path can read
 /// IOKit element *values*, touch cannot — a multitouch report repeats the same
 /// usages once per finger, and IOKit's element list gives no way to tell which
-/// repetition a value came from. That is precisely the gap
-/// `HIDReportDescriptorParser` exists to fill, so this type is built from
-/// parsed bit offsets and the decoder consumes raw report bytes. Anyone
-/// tempted to "simplify" this back onto element callbacks should read that
-/// sentence twice.
+/// repetition a value came from. `HIDReportDescriptorParser` fills that gap:
+/// this type is built from parsed bit offsets, and the decoder consumes raw
+/// report bytes instead of element callbacks.
 ///
 /// Known limitation, deliberate: only single-report frames are supported. Some
 /// devices declare fewer physical slots than their maximum contact count and
@@ -98,15 +96,12 @@ public struct PrecisionTouchLayout: Equatable, Sendable {
     /// Whether this report carries evidence of *multiple* contacts, rather than
     /// merely sitting inside a touch collection.
     ///
-    /// Being under a Touch Screen collection is not enough to conclude a device
-    /// is a touch digitizer: pen tablets exist that declare their stylus there,
-    /// with an absolute X/Y, a Tip Switch and Tip Pressure but no contact
-    /// tracking at all. Those are pens, and treating them as touch would take a
-    /// working device away from its driver.
-    ///
-    /// Real multitouch always shows at least one of these: more than one finger
-    /// slot, a Contact Count, or a per-slot Contact Identifier. A lone slot with
-    /// none of them is a single-pointer report whatever collection encloses it.
+    /// Being under a Touch Screen collection isn't enough on its own: some pen
+    /// tablets declare their stylus there too, with absolute X/Y, Tip Switch,
+    /// and Tip Pressure but no contact tracking. Real multitouch always shows
+    /// at least one of: more than one finger slot, a Contact Count, or a
+    /// per-slot Contact Identifier. A lone slot with none of them is a
+    /// single-pointer report regardless of which collection encloses it.
     public var isMultiContact: Bool {
         slots.count > 1
             || contactCount != nil

@@ -14,14 +14,9 @@
 //   • 0x80 / 99-byte container  — 7 packed pen frames only, nothing past [99]
 //   • 0x80 RF wireless status   — ACK-40401 dongle
 //
-// Length, not device model, decides which container a report is: see the
-// dispatch in `IntuosV2Decoder.decode`'s `case 0x80`. An earlier version of
-// this comment attributed the two lengths to PTH-660 vs. PTH-860 specifically
-// and described the 361-byte container as a single pen frame — both wrong,
-// caught by a real PTH-860 (0x0361) capture emitting the 361-byte container
-// with touch. The dispatch code's own comment already had it right
-// ("PTH-660 BT 0x0360, PTH-860 BT 0x0361" both gated on `hasFingerTouch`,
-// both landing on this container when touch is present).
+// Length, not device model, decides which container a report is — see the
+// dispatch in `IntuosV2Decoder.decode`'s `case 0x80`. Both PTH-660 and
+// PTH-860 can land on either container; `hasFingerTouch` decides, not PID.
 //
 // USB and BLE paths remain in `IntuosV2Decoder.swift`.
 
@@ -39,6 +34,13 @@ extension IntuosV2Decoder {
     /// capture across three pen tool codes (0x0802, 0x0804 Art Pen, 0x0842) on PTH-860 BT, all
     /// saturating at exactly ±64, not ±127 (2026-09-04). Falls back to the pre-D3 `/127.0` divisor
     /// when `tiltMaxDegrees` is `nil` (family unverified) so untested devices don't silently change.
+    ///
+    /// Proximity-exit threshold, used by every pen-frame loop in this file: an Art Pen's
+    /// rotation sensor causes transient signal loss at the detection boundary (bursts of
+    /// invalid frames, or `prox=1`/`inRange=0` oscillation) that isn't a real exit. Only
+    /// confirm exit after `DecoderState.exitThreshold` consecutive bad frames; reset the
+    /// counter on any good one. A genuine firmware exit (`!prox && !inRange`) fires
+    /// immediately instead, since the kernel doesn't threshold that case.
     func decodeBTFrame(_ f: UnsafePointer<UInt8>, spec: DigitizerSpec)
         -> (x: Int, y: Int, pressure: Int, tiltX: Double, tiltY: Double, hoverDistance: Int)
     {
@@ -136,30 +138,19 @@ extension IntuosV2Decoder {
                 state: &state, results: &results)
         }
 
-        // Process up to 7 pen frames (oldest first). Each frame is 14 bytes.
-        //
-        // Proximity exit detection: The Art Pen's rotation sensor causes extended signal
-        // loss at the detection boundary, sending streams of invalid frames (flags=0x00)
-        // that are firmware "nothing to report" signals, not real exits. The kernel model
-        // would emit an immediate exit on frame[0]=0x00, but that permanently kills
-        // proximity because the pen's recovery doesn't trigger a re-entry event.
-        //
-        // Solution: threshold both types of bad frames (invalid bit7 and !inRange) using
-        // the same exitFrameCount. Only emit a real exit after N consecutive packets with
-        // no valid data or no range. Reset the counter on any good frame.
+        // Process up to 7 pen frames (oldest first), 14 bytes each. Exit
+        // detection thresholds bad frames rather than exiting immediately —
+        // see `decodeBTFrame`'s doc comment for why.
         for i in 0..<7 {
             let frameOffset = 1 + i * 14
-            // Each frame is 14 bytes; body reads through f[13] (hoverDistance).
             // Stop early if the report is truncated mid-frame. Bounds-check
             // spirit of upstream input-wacom 09bc480.
             guard frameOffset + 14 <= length else { break }
             let f = report.advanced(by: frameOffset)
             let flags = f[0]
 
-            // Invalid frame (bit7=0) — either transient "nothing to report" or a real exit.
-            // At the detection boundary (especially with Art Pen), we get bursts of 0x00.
-            // Apply the same threshold as the !inRange path: require N consecutive bad
-            // packets before confirming exit.
+            // Invalid frame (bit7=0): threshold before treating as exit, same
+            // as the !inRange path below.
             if (flags & 0x80) == 0 {
                 state.exitFrameCount += 1
                 if i == 0 && state.exitFrameCount >= DecoderState.exitThreshold
@@ -186,19 +177,16 @@ extension IntuosV2Decoder {
                 break
             }
 
-            // Valid frame — check for firmware proximity-exit signal.
-            // Kernel model (wacom_intuos_pro2_bt_irq): exit when !prox && !inRange.
-            // At the detection boundary, inRange (bit5) drops first; prox (bit6) follows.
-            // Flag sequence: 0xE0 → 0xC0 (inRange=0 but prox=1) → 0x80 (both clear).
-            // The Art Pen's rotation sensor causes transient oscillations (0xC0 ↔ 0xE0)
-            // that are NOT genuine exits. Only exit when BOTH bits clear.
+            // Kernel model (wacom_intuos_pro2_bt_irq): exit when !prox &&
+            // !inRange. At the boundary, inRange (bit5) drops before prox
+            // (bit6): 0xE0 → 0xC0 → 0x80. Only exit when both clear —
+            // 0xC0 alone is boundary noise, thresholded below.
             let prox = (flags & 0x40) != 0
             let inRange = (flags & 0x20) != 0
             let isExitSignal = !prox && !inRange
 
             if isExitSignal {
-                // Genuine firmware exit signal — both wireless and digitizer range lost.
-                // Don't threshold this; kernel fires it immediately.
+                // Genuine exit: fires immediately, no threshold.
                 if state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
@@ -221,11 +209,9 @@ extension IntuosV2Decoder {
                 break
             }
 
-            // Boundary noise: prox=1 but inRange=0 (0xC0). Oscillations here should not
-            // trigger exit. Wait for a sustained bad state (N consecutive frames) before
-            // treating it as a disconnect. Reset counter on any frame with inRange=1.
-            // NOTE: Do NOT break here — we must still decode and send the point data
-            // even during boundary noise. Only suppress the proximity exit.
+            // Boundary noise (0xC0, prox=1/inRange=0): threshold before
+            // exiting, but keep decoding and sending point data below — only
+            // the exit itself is suppressed.
             if !inRange {
                 state.exitFrameCount += 1
                 if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
@@ -481,8 +467,8 @@ extension IntuosV2Decoder {
             let barrel2 = (f[0] & 0x04) != 0
             let barrel1 = (f[0] & 0x02) != 0
 
-            // Genuine firmware exit signal — both prox and inRange lost.
-            // Kernel model: exit immediately when !prox && !inRange (0x80).
+            // Genuine exit (!prox && !inRange): fires immediately, no
+            // threshold — see `decodeBTFrame`'s doc comment.
             if !inProx && !inRange {
                 if state.prevInProximity {
                     state.exitFrameCount = 0
@@ -505,8 +491,7 @@ extension IntuosV2Decoder {
                 break
             }
 
-            // Boundary noise: prox=1 but inRange=0 (0xC0). Count consecutive bad frames;
-            // exit after exitThreshold to bridge transient oscillations at detection edge.
+            // Boundary noise (0xC0): threshold before exiting.
             if !inRange {
                 state.exitFrameCount += 1
                 if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {

@@ -155,13 +155,9 @@ public struct CintiqV1Decoder: TabletReportDecoder {
             state.lastRotation = degrees
 
         } else if typeNibble <= 0x03 {
-            // General pen packet: position, pressure, tilt, and barrel buttons.
-            //
-            // Barrel buttons are read ONLY from general packets (typeNibble 0–3).
-            // Bit 1 of the status byte has a different meaning in rotation frames
-            // (typeNibble 5): it is part of the type encoding and is always set,
-            // so reading it there would permanently latch barrel button 1.
-            // The device pulses the button bit ~1:5 while held; debounce with clear-counter.
+            // General pen packet: position, pressure, tilt, and barrel
+            // buttons — see the type header for why buttons are only read
+            // here, not from rotation frames.
             let curBtn1 = (status & 0x02) != 0
             let curBtn2 = (status & 0x04) != 0
             if curBtn1 {
@@ -206,8 +202,8 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         // even on 158/161 and 101/104 nonzero frames, while genuinely 2048-level hardware
         // (21UX2, 0x00CC) is mixed 208/484 and is left untouched by this branch.
         // Verified 2026-07-29 by replaying all three captures through hid-trace-sweep.
-        // Apply tip-switch override: if raw pressure is 0 but tip-switch fired, use the
-        // minimum contact threshold so apps register the click.
+        // `tipPressureOverride` (see type header) substitutes in below when
+        // raw pressure is 0 but the tip-switch fired.
         let pressure: Int
         if typeNibble <= 0x03 {
             let raw11 = (Int(report[6]) << 3) | ((Int(report[7]) & 0xC0) >> 5) | (Int(status) & 1)

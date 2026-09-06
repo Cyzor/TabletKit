@@ -63,16 +63,14 @@ import Foundation
 /// per-position variance statistics `DiscoveryAccumulator` already collects —
 /// no descriptor, no knowledge of what the bytes mean.
 ///
-/// Exists because the descriptor-driven tools in this file
-/// (`PrecisionTouchLayout`, `classifyDigitizerInterface`) are blind on the
-/// devices that need this most: classic Wacom BT reports declare every field
-/// as vendor page `0xFF0D` usage `0x00`, opaque by construction, so there is
-/// no descriptor to derive from. A capture's byte statistics are the only
-/// evidence available, and the shape of that evidence — a block of bytes that
-/// behaves the same way every N positions — is itself the signal that the
-/// report packs several repeated sub-records (touch contacts, frames, slots),
-/// which is exactly the fact a capture's flat byte-position list currently
-/// hides.
+/// Exists because the descriptor-driven tools (`PrecisionTouchLayout`,
+/// `classifyDigitizerInterface`) are blind on the devices that need this
+/// most: classic Wacom BT reports declare every field as vendor page
+/// `0xFF0D` usage `0x00`, opaque by construction, so there's no descriptor
+/// to derive from. Byte statistics are the only evidence left — a block of
+/// bytes behaving the same way every N positions is itself the signal that
+/// the report packs several repeated sub-records (touch contacts, frames,
+/// slots), a fact a flat byte-position list otherwise hides.
 ///
 /// Confirmed against two real captures rather than synthetic data: a PTH-860
 /// BT report where this recovers the kernel-documented 4×43-byte frame /
@@ -81,13 +79,12 @@ import Foundation
 /// rejected.
 @_spi(TabletKitInternals) public enum RepeatingReportStructureDetector {
 
-    /// Two byte positions are treated as behaving alike when their variance
-    /// falls in the same coarse bucket, not when it matches exactly. Real
-    /// repeated fields never agree byte-for-byte across samples (an X low
-    /// byte and a Y low byte both look "wide and noisy" without being
-    /// identical), so an exact-equality test would find nothing; the buckets
-    /// below are wide enough to call those alike while still separating a
-    /// status/flags byte from a coordinate byte.
+    /// Two byte positions count as alike when their variance falls in the
+    /// same coarse bucket, not when it matches exactly — real repeated
+    /// fields (an X low byte vs. a Y low byte) both look "wide and noisy"
+    /// without ever agreeing byte-for-byte, so exact equality would find
+    /// nothing. The buckets are wide enough to call those alike while still
+    /// separating a status/flags byte from a coordinate byte.
     private static func bucket(_ signature: ByteVarianceSignature) -> (Int, Int) {
         (Swift.min(signature.distinctCount, 3), signature.max / 32)
     }
@@ -114,11 +111,10 @@ import Foundation
     /// Best period found in `range`, or `nil` when nothing clears the
     /// thresholds.
     ///
-    /// Requiring `minRepeatCount` full repeats is what keeps this from
-    /// declaring victory on a coincidence: without it, a period close to the
-    /// width of a small varying range "matches" on a single compared pair and
-    /// scores 100%, which is exactly the kind of degenerate case a narrow
-    /// report (a handful of varying bytes with nothing repeating) produces.
+    /// `minRepeatCount` guards against a coincidence: without it, a period
+    /// close to the range's own width "matches" on a single compared pair
+    /// and scores 100% — the degenerate case a narrow report with nothing
+    /// actually repeating produces.
     private static func bestPeriod(
         in range: ClosedRange<Int>,
         signatures: [Int: ByteVarianceSignature],

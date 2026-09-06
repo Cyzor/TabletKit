@@ -134,27 +134,22 @@ public struct XencelabsDecoder: TabletReportDecoder {
 
         // Vendor feature-report acknowledgements (config/init handshake echoes,
         // opcodes 0xB0/0xB4/0xB5/0xB8) are read back on this same Report ID 2
-        // tunnel and were being misread as live pen/aux data — confirmed
-        // 2026-07-05 on a Pen Display: its own "02 b4 ..."/"02 b5 ..." handshake
-        // replies happened to have bit 4 (the aux-frame bit) set, so decodeAux()
-        // ran on config bytes and latched a phantom express-key/mode-button
-        // press — which stuck a mapped modifier permanently, with no puck even
-        // connected. Every known real tag value has top nibble 0x2_, 0xA_, or
-        // 0xC_; the whole opcode-echo family shares top nibble 0xB0, which
-        // never occurs in real tag data, so gate on that instead.
+        // tunnel. Some of them happen to have bit 4 (the aux-frame bit) set,
+        // which without this guard latches a phantom express-key/mode-button
+        // press and sticks a mapped modifier down with no puck connected
+        // (confirmed 2026-07-05). Every known real tag value has top nibble
+        // 0x2_, 0xA_, or 0xC_; the opcode-echo family's top nibble 0xB0 never
+        // occurs in real tag data, so gate on that.
         guard tag & 0xF0 != 0xB0 else { return [] }
 
         // ── QuickKeys puck (aux frames) ───────────────────────────────────────
-        // Real aux data always arrives with tag == 0xF0 exactly (confirmed
-        // from thousands of button/dial frames, both direct-USB and through
-        // the wireless dongle). The wireless dongle also emits a couple of
-        // one-off status/announcement frames around connect time — tags
-        // 0xF8 and 0xF2, confirmed 2026-07-06 — that happen to share bit 4
-        // (the aux-frame bit) with real data but aren't button presses; one
-        // such 0xF8 frame decoded as a phantom express-key + mode-button
-        // press with no matching release, sticking a mapped modifier down
-        // exactly like the earlier 0xB4/0xB5 config-echo bug. Requiring an
-        // exact match instead of just testing the aux bit excludes those.
+        // Real aux data always arrives with tag == 0xF0 exactly. The wireless
+        // dongle also emits one-off status/announcement frames around connect
+        // time (tags 0xF8 and 0xF2, confirmed 2026-07-06) that share bit 4
+        // with real data but aren't button presses — one decoded as a phantom
+        // press with no matching release, same failure mode as the config-echo
+        // bug above. Requiring an exact match instead of just testing the aux
+        // bit excludes those.
         if tag == Self.tagAux {
             return Self.decodeAux(report)
         }
