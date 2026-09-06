@@ -1,28 +1,29 @@
 # ``TabletKit``
 
-A HID decoder layer for drawing tablets on macOS: raw USB and Bluetooth report
-bytes in, structured pen/button/touch events out.
+TabletKit reads raw USB and Bluetooth reports from drawing tablets on macOS and turns them into structured pen, button, and touch events.
 
 ## Overview
 
-TabletKit has no AppKit or event-injection plumbing, and its only system
-dependency is IOKit HID, isolated in `HID/HIDDeviceSupport.swift`. The core loop:
+TabletKit does not depend on AppKit or inject system input. It uses IOKit HID only in `HID/HIDDeviceSupport.swift`.
 
-1. Look up the device in the registry to get its spec (``WacomDeviceRegistry``
-   or ``VendorDeviceRegistry``).
-2. Build a ``DigitizerSpec`` from the spec's coordinate and pressure ranges.
-3. Allocate a ``DecoderState`` for this device instance.
-4. On each HID report callback, hand the bytes to the matching
-   ``TabletReportDecoder`` and act on the returned ``DecodeResult`` array.
+The basic flow:
 
-See the [README](https://github.com/Cyzor/TabletKit#usage) for a full worked
-example against a real device (Wacom Intuos Pro M, PTH-660, USB).
+1. Find the device in `WacomDeviceRegistry` or `VendorDeviceRegistry`.
+2. Create a `DigitizerSpec` from the device’s coordinate and pressure ranges.
+3. Create a `DecoderState` for that device.
+4. When the device sends a HID report, pass its bytes to the matching `TabletReportDecoder`.
+5. Handle the returned `DecodeResult` values.
 
-TabletKit is an independent, community-built project. It is not affiliated
-with, endorsed by, or sponsored by Wacom Co., Ltd. or any other device
-vendor. Product names are used only to describe hardware compatibility.
+See the [README](https://github.com/Cyzor/TabletKit#usage) for a complete example using a Wacom Intuos Pro M (`PTH-660`) over USB.
+
+TabletKit is an independent community project. Wacom Co., Ltd. and other device vendors do not sponsor, endorse, or affiliate with it. Product names identify compatible hardware only.
 
 ## Topics
+
+### Guides
+
+- <doc:WhenToUse>
+- <doc:DecodingPenReports>
 
 ### Essentials
 

@@ -1,17 +1,17 @@
 # Adding Support for a New Tablet
 
-This guide describes how to turn MockTab discovery diagnostics into a working registry entry for a specific tablet model. It assumes MockTab already supports the tablet’s protocol family but does not yet recognize this exact product ID.
+This guide turns MockTab discovery diagnostics into a working registry entry for a specific tablet model. It assumes MockTab already supports the tablet's protocol family but doesn't yet recognize this exact product ID.
 
 ## How MockTab works
 
 MockTab operates as a stack of steps:
 
-1. **The tablet itself sends raw HID messages.** Move the pen, and it emits a stream of bytes over USB or Bluetooth. Those bytes mean nothing on their own; the tablet doesn't tell you which byte is X, which is pressure, or which bit is a button.
-2. **MockTab looks up the tablet's USB product ID in a device registry** (`WacomDeviceRegistry.swift`) the moment it connects, before it decodes a single byte. That lookup answers one question: *which decoder should read this device's messages, and what are its physical limits* (coordinate range, pressure range, button count, whether it has touch)? If the PID isn't in the registry, MockTab falls back to a generic driver that guesses these numbers from the HID descriptor instead, which is why a lot works badly rather than not at all.
-3. **The decoder** (in `Decoders/`) reads each raw message and, using the limits from step 2, turns it into a structured event: a pen position, a pressure value, a button press, a touch contact. This is the layer a registry entry alone can't fix; it has to already know your tablet's report format.
-4. **The app applies your own settings to those events**: the pressure curve, which screen area the tablet maps to, which key each button and express key triggers. This is what the Buttons, Tablet Area, and Pen Feel panes let you adjust, and it's independent of the registry. A wrong registry entry can make step 4's settings look broken even though they're not; fixing step 2 usually fixes what looked like a settings problem.
+1. **The tablet sends raw HID messages.** Move the pen, and it emits a stream of bytes over USB or Bluetooth. Those bytes mean nothing on their own — the tablet doesn't tell you which byte is X, which is pressure, or which bit is a button.
+2. **MockTab looks up the tablet's USB product ID in a device registry** (`WacomDeviceRegistry.swift`) the moment it connects, before decoding a single byte. That lookup answers one question: which decoder should read this device's messages, and what are its physical limits (coordinate range, pressure range, button count, touch or not)? If the PID isn't in the registry, MockTab falls back to a generic driver that guesses these numbers from the HID descriptor instead — which is why a lot works badly rather than not at all.
+3. **The decoder** (in `Decoders/`) reads each raw message and, using the limits from step 2, turns it into a structured event: a pen position, a pressure value, a button press, a touch contact. A registry entry alone can't fix this layer — it has to already know your tablet's report format.
+4. **The app applies your own settings to those events**: pressure curve, screen mapping, what each button and express key does. That's the Buttons, Tablet Area, and Pen Feel panes, independent of the registry. A wrong registry entry can make step 4 look broken even when it isn't — fixing step 2 usually fixes what looked like a settings problem.
 
-Registry revisions only affect step 2. The work tells MockTab what kind of messages to expect and how big the numbers in them can get. By itself, it doesn't decide what a button press does; that's already covered once decoding works, through the panes everyone else uses.
+Registry revisions only touch step 2: what kind of messages to expect and how big their numbers can get. They don't decide what a button press does — that's already covered once decoding works.
 
 ## Step 1: Identify your tablet
 
@@ -26,11 +26,11 @@ Search for that PID against three sources, in this order of usefulness:
        { "Wacom Intuos PT M 2", 21600, 13500, 2047, 63, INTUOSHT2, ... };
    ```
 
-   That gives you the maximum X coordinate, maximum Y coordinate, maximum pressure, button count, and a family name (`INTUOSHT2` here) almost for free. Linux has already reverse-engineered most Wacom hardware; you're borrowing that work, not redoing it.
-2. **libwacom's device database** (`github.com/linuxwacom/libwacom`, under `data/`). Confirms model name, touch support, and button layout, usually in a plain `.tablet` config file you can read without any code experience.
-3. **Your own tablet's box, manual, or a product page.** Confirms the marketing name, physical size, and pen model, useful for sanity-checking numbers you find elsewhere.
+   That's your maximum X, maximum Y, maximum pressure, button count, and a family name (`INTUOSHT2` here), almost for free. Linux has already reverse-engineered most Wacom hardware; you're borrowing that work, not redoing it.
+2. **libwacom's device database** (`github.com/linuxwacom/libwacom`, under `data/`). Confirms model name, touch support, and button layout, usually in a plain `.tablet` config file.
+3. **Your own tablet's box, manual, or a product page.** Confirms the marketing name, physical size, and pen model — useful for sanity-checking numbers you find elsewhere.
 
-Write down what you find. You'll need it in Step 4.
+You'll need what you find here in Step 4.
 
 ## Step 2: Capture your tablet's data
 
@@ -42,13 +42,13 @@ When it finishes, a JSON file lands on your Desktop. Open it in any text editor.
 
 The file has one entry per **report ID**, a number that tags each kind of message your tablet sends. A pen tablet usually sends pen movement on one report ID and button/key presses on another. Inside each report ID's entry you'll find:
 
-- **`length`**: how many bytes long that report is. This matters as much as the report ID itself. Two different report types can share the same ID number but differ in length.
+- **`length`**: how many bytes long that report is. This matters as much as the report ID itself — two different report types can share an ID number but differ in length.
 - **`varyingBytes`**: which byte positions changed at some point during your capture. A byte that never appears here either does nothing observable, or you didn't trigger the action that changes it.
-- **`constantBytes`**: byte positions that never changed. Often padding, or a fixed marker, or a feature you didn't test during capture.
+- **`constantBytes`**: byte positions that never changed — often padding, a fixed marker, or a feature you didn't test.
 - **`byteSampleValues`**: for each varying byte, up to 20 values actually observed. If a byte only ever showed `0x00` through `0x0F`, it's probably a 4-bit field, not the whole byte.
-- **`firstSample`**: the first raw report of that ID, as hex, useful as a quick reference.
+- **`firstSample`**: the first raw report of that ID, as hex, for quick reference.
 
-None of this tells you what a byte means on its own. It just indicates where things move. Meaning arises by comparing what you did (pressed key 2, touched the tip) against which bytes changed at that moment, and by matching the report's ID and length against a report type MockTab's decoders already understand.
+None of this tells you what a byte means on its own — it just shows where things move. Meaning comes from comparing what you did (pressed key 2, touched the tip) against which bytes changed, and matching the report's ID and length against a format MockTab's decoders already understand.
 
 ### The `hidReportDescriptor` block
 
@@ -64,7 +64,9 @@ Two field lookups give you most of a registry entry:
 
 `physicalMax` together with `unitExponent` gives the active area in centimetres (HID length units are cm; `unitExponent` is a power-of-ten scale), which you can convert to the `activeWidthMM`/`activeHeightMM` fields.
 
-Two cautions. First, some tablets — especially older Wacom models — publish an **opaque** descriptor: every field sits on a vendor-defined page (`usagePage` ≥ `65280`, i.e. `0xFF00`) or uses undefined usage codes, and nothing readable comes out. That's normal; fall back to the byte analysis above and to the upstream sources in Step 1. Second, a descriptor's *declared* ranges can disagree with what the hardware actually sends: many tablets also expose a low-resolution generic digitizer whose `logicalMax` is nothing like the real coordinate range. When the descriptor and the Linux kernel disagree, trust the kernel. `tools/triage_discovery.py` reads all of this out automatically — including that disagreement check — and drafts a starting registry entry.
+Two cautions. Some tablets — especially older Wacom models — publish an **opaque** descriptor: every field sits on a vendor-defined page (`usagePage` ≥ `65280`, i.e. `0xFF00`) or uses undefined usage codes, and nothing readable comes out. That's normal; fall back to the byte analysis above and the upstream sources in Step 1.
+
+A descriptor's *declared* ranges can also disagree with what the hardware actually sends — many tablets also expose a low-resolution generic digitizer whose `logicalMax` is nothing like the real coordinate range. When the descriptor and the Linux kernel disagree, trust the kernel. `tools/triage_discovery.py` checks for this disagreement automatically and drafts a starting registry entry.
 
 ## Step 4: Find the matching source files
 
@@ -97,7 +99,7 @@ Work through each field:
 - **`buttonCount`**: how many express keys the tablet actually has. Check the tablet itself, not just the capture, since a capture only proves the keys you pressed exist.
 - **`hasFingerTouch`, `maxTouchContacts`, `touchMaxX`, `touchMaxY`**: set these if your tablet has a touch surface and your capture showed a distinct report ID for touch. Leave `hasFingerTouch: false` if you didn't capture any touch data, rather than guessing at numbers you have no evidence for.
 - **`parser`**: this is the important one. It has to match a decoder that already understands your pen report's ID and length. Go back to `Decoders/` and check: does an existing decoder handle a report with the same ID and length as your pen report? If yes, use its parser value. If none match, say so plainly in your write-up rather than picking the closest one and hoping.
-- **`confidence`**: use `.experimental` if everything here is derived only from your own capture. Use `.crossReferenced` if you confirmed the numbers against the kernel or libwacom. Don't mark anything `.verified`; that's reserved for someone who has confirmed a change against real hardware after it's merged, and you're about to do that testing yourself in Step 7.
+- **`confidence`**: use `.experimental` if everything here comes only from your own capture, `.crossReferenced` if you confirmed the numbers against the kernel or libwacom. Don't mark anything `.verified` — that's reserved for a confirmed match against real hardware after merge, which Step 7 covers.
 
 Leave a short comment above your entry noting its source (the kernel struct, libwacom, or your own capture) for reference.
 
@@ -131,7 +133,7 @@ Check each behavior in order:
 4. If your tablet has touch, try a finger drag and check the Touch pane.
 5. Check screen mapping in the Tablet Area pane. A wrong `maxX`/`maxY` usually shows up here as the usable area being smaller or larger than the physical tablet.
 
-Fix any mismatch by adjusting the corresponding field and rebuilding. This loop, edit the registry entry, rebuild, test on the actual tablet, is the whole process. There's no shortcut around having the physical hardware in hand for this last part.
+Fix any mismatch by adjusting the corresponding field and rebuilding. Edit, rebuild, test on the actual tablet — that loop is the whole process, and there's no shortcut around having the hardware in hand for it.
 
 ## Step 8: Write it up
 

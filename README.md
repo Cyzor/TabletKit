@@ -134,7 +134,7 @@ The registry's `parser` field tells you which decoder to instantiate:
 | `.dtu` | `DTUDecoder` | DTU-1631, DTU-2231 — experimental |
 | `.xencelabs` | `XencelabsDecoder` | Xencelabs Pen Display 24 and Quick Keys puck confirmed on hardware (wired and wireless dongle); Pen Tablet Medium/Small share the protocol but are hardware-unverified |
 
-**Naming note:** `IntuosV1`/`V2`/`V3` name TabletKit's own protocol generations, not Wacom's marketing generations — `.intuosV1` covers Intuos5 hardware, for instance. `Intuos3Decoder` (no "V") is unrelated to `IntuosV3Decoder`: it exists specifically because real Intuos3 (PTZ-xxx) hardware uses an incompatible status-byte layout despite sharing IntuosV1's report shape. Don't infer a hardware generation from the "V" number.
+**Naming note:** `IntuosV1`/`V2`/`V3` name TabletKit's own protocol generations, not Wacom's marketing generations — `.intuosV1` covers Intuos5 hardware, for instance. `Intuos3Decoder` (no "V") is unrelated to `IntuosV3Decoder`: real Intuos3 (PTZ-xxx) hardware uses an incompatible status-byte layout despite sharing IntuosV1's report shape. Don't infer a hardware generation from the "V" number.
 
 `WacomDeviceRegistry` covers Wacom devices. `VendorDeviceRegistry` covers other vendors; use `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` to look those up.
 
@@ -170,8 +170,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt 
 TabletKit's protocol knowledge and device data draw from several open-source projects:
 
 - **[OpenTabletDriver](https://github.com/OpenTabletDriver/OpenTabletDriver)** — the non-Wacom registry entries come from OTD's per-vendor JSON configurations, the most comprehensive public database of tablet PIDs and dimensions across vendors.
-- **[libwacom](https://github.com/linuxwacom/libwacom)** — libwacom's tablet files are the authoritative source for Wacom physical dimensions; they cross-check and correct entries where the kernel's constants are inaccurate.
-- **[input-wacom](https://github.com/linuxwacom/input-wacom) / Linux kernel HID subsystem** — the kernel driver is the canonical reference for Wacom report formats and protocol constants; several decoder field mappings follow kernel source directly.
+- **[libwacom](https://github.com/linuxwacom/libwacom)** — the authoritative source for Wacom physical dimensions; corrects entries where the kernel's constants are inaccurate.
+- **[input-wacom](https://github.com/linuxwacom/input-wacom) / Linux kernel HID subsystem** — the canonical reference for Wacom report formats and protocol constants; several decoder field mappings follow kernel source directly.
 - **[wacom-hid-descriptors](https://github.com/linuxwacom/wacom-hid-descriptors)** — the linuxwacom HID descriptor corpus informed decoder development across multiple tablet families.
 
 ## Contributing
