@@ -60,13 +60,10 @@ public struct CursorSmoother: Sendable {
     // regardless of speed, which is fine at rest but causes corner-cutting
     // and stroke-end overshoot on fast motion.
     //
-    // Time is measured in samples (Te = 1), not wall-clock seconds — reports
-    // don't carry a reliable per-sample timestamp on this path (see
-    // InputInjector.currentReportTimestampNs), and devices report at a
-    // steady enough rate for a fixed-Te filter to behave predictably. If
-    // cross-device feel testing shows `smoothingStrength` landing
-    // differently on devices with very different report rates, switch this
-    // to real elapsed time.
+    // Time is real elapsed seconds (dt), not Te=1 samples — a fixed-Te
+    // filter made `smoothingStrength` mean different things at different
+    // report rates. An implausible dt (<= 0, or a stall-sized gap) adopts
+    // the raw point, same as a proximity re-entry.
 
     public private(set) var smoothedPoint: CGPoint = .zero
     public private(set) var hasSmoothedPoint = false
@@ -74,25 +71,34 @@ public struct CursorSmoother: Sendable {
     /// smoothing at rest, still opening up at high speed.
     public var smoothingStrength: Double = 0.0
 
+    /// Report rate the constants were tuned against. They were per-sample
+    /// under the old Te=1 model; rescaling by this rate keeps feel at
+    /// 133 Hz unchanged while other report rates scale correctly.
+    private static let referenceRateHz: Double = 133.0
     /// strength → 0: cutoff stays high, i.e. barely filters even at rest.
-    private static let minCutoffCeiling: Double = 2.0
+    private static let minCutoffCeiling: Double = 2.0 * referenceRateHz
     /// strength = 1, speed ≈ 0: strongest smoothing.
-    private static let minCutoffFloor: Double = 0.03
-    /// strength = 1: how fast the filter opens up as speed increases.
-    private static let betaMax: Double = 0.4
+    private static let minCutoffFloor: Double = 0.03 * referenceRateHz
+    /// strength = 1: how fast the filter opens up as speed (points/second)
+    /// increases.
+    private static let betaMax: Double = 0.4 / referenceRateHz
     /// Cutoff for the derivative's own low-pass — steadies the speed
     /// estimate against per-sample noise.
-    private static let derivativeCutoff: Double = 1.0
+    private static let derivativeCutoff: Double = 1.0 * referenceRateHz
 
     private var lastFilterRawPoint: CGPoint = .zero
     private var filteredDelta: CGVector = .zero
     private var hasFilteredDelta = false
 
-    /// Te = 1 (one sample): alpha(cutoff) = 1 / (1 + tau), tau = 1/(2*pi*cutoff).
-    private static func alpha(forCutoff cutoff: Double) -> Double {
+    /// alpha(cutoff, dt) = 1 / (1 + tau/dt), tau = 1/(2*pi*cutoff).
+    private static func alpha(forCutoff cutoff: Double, dt: Double) -> Double {
         let tau = 1.0 / (2.0 * Double.pi * cutoff)
-        return 1.0 / (1.0 + tau)
+        return 1.0 / (1.0 + tau / dt)
     }
+
+    /// Above this gap (seconds), treat the sample as a fresh start — a huge
+    /// dt after a stall would give the speed estimate a spurious spike.
+    private static let maxPlausibleDt: Double = 0.25
 
     // MARK: - Short-window velocity (last 4 position deltas)
 
@@ -123,7 +129,11 @@ public struct CursorSmoother: Sendable {
     /// On proximity entry (or first ever call) the raw point is adopted
     /// as-is to avoid an initial slide-in from the previous smoothedPoint.
     /// `smoothingStrength <= 0` is an exact passthrough — no filter math runs.
-    public mutating func applySmoothing(rawPoint: CGPoint, enteringProximity: Bool) -> CGPoint {
+    /// `dt` is real elapsed seconds since the previous report; an implausible
+    /// value is treated like a proximity re-entry (see `maxPlausibleDt`).
+    public mutating func applySmoothing(
+        rawPoint: CGPoint, enteringProximity: Bool, dt: Double
+    ) -> CGPoint {
         guard smoothingStrength > 0 else {
             smoothedPoint = rawPoint
             hasSmoothedPoint = true
@@ -133,7 +143,8 @@ public struct CursorSmoother: Sendable {
             return rawPoint
         }
 
-        guard !enteringProximity, hasSmoothedPoint else {
+        let freshStart = enteringProximity || dt <= 0 || dt > Self.maxPlausibleDt
+        guard !freshStart, hasSmoothedPoint else {
             smoothedPoint = rawPoint
             hasSmoothedPoint = true
             lastFilterRawPoint = rawPoint
@@ -142,11 +153,12 @@ public struct CursorSmoother: Sendable {
             return smoothedPoint
         }
 
-        // Estimate speed from a low-pass-filtered derivative (Te = 1 sample).
+        // Estimate speed (points/second) from a low-pass-filtered derivative.
         let rawDelta = CGVector(
-            dx: rawPoint.x - lastFilterRawPoint.x, dy: rawPoint.y - lastFilterRawPoint.y)
+            dx: (rawPoint.x - lastFilterRawPoint.x) / dt,
+            dy: (rawPoint.y - lastFilterRawPoint.y) / dt)
         lastFilterRawPoint = rawPoint
-        let dAlpha = Self.alpha(forCutoff: Self.derivativeCutoff)
+        let dAlpha = Self.alpha(forCutoff: Self.derivativeCutoff, dt: dt)
         if hasFilteredDelta {
             filteredDelta = CGVector(
                 dx: filteredDelta.dx + dAlpha * (rawDelta.dx - filteredDelta.dx),
@@ -160,7 +172,7 @@ public struct CursorSmoother: Sendable {
         let minCutoff =
             Self.minCutoffCeiling - smoothingStrength * (Self.minCutoffCeiling - Self.minCutoffFloor)
         let beta = smoothingStrength * Self.betaMax
-        let alpha = Self.alpha(forCutoff: minCutoff + beta * speed)
+        let alpha = Self.alpha(forCutoff: minCutoff + beta * speed, dt: dt)
 
         smoothedPoint = CGPoint(
             x: smoothedPoint.x + alpha * (rawPoint.x - smoothedPoint.x),

@@ -13,9 +13,9 @@ final class PressureSmootherTests: XCTestCase {
     func testStrengthZeroIsExactPassthrough() {
         var s = PressureSmoother()
         s.smoothingStrength = 0.0
-        _ = s.applySmoothing(rawPressure: 0.02, strokeStarting: true)
+        _ = s.applySmoothing(rawPressure: 0.02, strokeStarting: true, dt: 1.0 / 133.0)
         for p in [0.02, 0.021, 0.3, 0.019, 0.9] {
-            XCTAssertEqual(s.applySmoothing(rawPressure: p, strokeStarting: false), p)
+            XCTAssertEqual(s.applySmoothing(rawPressure: p, strokeStarting: false, dt: 1.0 / 133.0), p)
         }
     }
 
@@ -24,10 +24,10 @@ final class PressureSmootherTests: XCTestCase {
     func testStrokeStartAdoptsRawVerbatim() {
         var s = PressureSmoother()
         s.smoothingStrength = 1.0
-        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: true)
-        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: false)
+        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: true, dt: 1.0 / 133.0)
+        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: false, dt: 1.0 / 133.0)
         // New stroke begins at a very different pressure — should snap, not slide.
-        let out = s.applySmoothing(rawPressure: 0.05, strokeStarting: true)
+        let out = s.applySmoothing(rawPressure: 0.05, strokeStarting: true, dt: 1.0 / 133.0)
         XCTAssertEqual(out, 0.05)
     }
 
@@ -38,12 +38,12 @@ final class PressureSmootherTests: XCTestCase {
         func residualAmplitude(basePressure: Double) -> Double {
             var s = PressureSmoother()
             s.smoothingStrength = 1.0
-            _ = s.applySmoothing(rawPressure: basePressure, strokeStarting: true)
+            _ = s.applySmoothing(rawPressure: basePressure, strokeStarting: true, dt: 1.0 / 133.0)
             var maxResidual = 0.0
             for i in 0..<40 {
                 let jitter = (i % 2 == 0) ? 0.02 : -0.02
                 let out = s.applySmoothing(
-                    rawPressure: basePressure + jitter, strokeStarting: false)
+                    rawPressure: basePressure + jitter, strokeStarting: false, dt: 1.0 / 133.0)
                 if i > 20 {  // skip warm-up
                     maxResidual = max(maxResidual, (out - basePressure).magnitude)
                 }
@@ -59,8 +59,8 @@ final class PressureSmootherTests: XCTestCase {
     func testResetClearsHistoryButPreservesStrength() {
         var s = PressureSmoother()
         s.smoothingStrength = 0.6
-        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: true)
-        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: false)
+        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: true, dt: 1.0 / 133.0)
+        _ = s.applySmoothing(rawPressure: 0.5, strokeStarting: false, dt: 1.0 / 133.0)
         XCTAssertTrue(s.smoothedPressure > 0)
 
         s.reset()
@@ -68,7 +68,7 @@ final class PressureSmootherTests: XCTestCase {
         XCTAssertEqual(s.smoothingStrength, 0.6)
         // Post-reset sample without strokeStarting should still snap, since
         // reset cleared hasSmoothedPressure.
-        let out = s.applySmoothing(rawPressure: 0.9, strokeStarting: false)
+        let out = s.applySmoothing(rawPressure: 0.9, strokeStarting: false, dt: 1.0 / 133.0)
         XCTAssertEqual(out, 0.9)
     }
 }

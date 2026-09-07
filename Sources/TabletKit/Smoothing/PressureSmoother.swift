@@ -24,30 +24,40 @@ public struct PressureSmoother: Sendable {
     /// pressure rises toward a firm stroke.
     public var smoothingStrength: Double = 0.0
 
+    /// Same rescale as `CursorSmoother.referenceRateHz` — the cutoffs were
+    /// per-sample under the old Te=1 model.
+    private static let referenceRateHz: Double = 133.0
     /// Cutoff at pressure ≈ 0, strength = 1: strongest smoothing.
-    private static let minCutoffFloor: Double = 0.05
+    private static let minCutoffFloor: Double = 0.05 * referenceRateHz
     /// Cutoff at pressure = 1 (any strength), or at strength = 0: effectively passthrough.
-    private static let minCutoffCeiling: Double = 8.0
+    private static let minCutoffCeiling: Double = 8.0 * referenceRateHz
 
-    /// Te = 1 (one sample): alpha(cutoff) = 1 / (1 + tau), tau = 1/(2*pi*cutoff).
-    private static func alpha(forCutoff cutoff: Double) -> Double {
+    /// alpha(cutoff, dt) = 1 / (1 + tau/dt), tau = 1/(2*pi*cutoff).
+    private static func alpha(forCutoff cutoff: Double, dt: Double) -> Double {
         let tau = 1.0 / (2.0 * Double.pi * cutoff)
-        return 1.0 / (1.0 + tau)
+        return 1.0 / (1.0 + tau / dt)
     }
+
+    /// Same stall guard as `CursorSmoother.maxPlausibleDt`.
+    private static let maxPlausibleDt: Double = 0.25
 
     public init() {}
 
     /// Smooth `rawPressure` (expected 0...1) and return the filtered value.
     /// `strokeStarting` (first report after tip-down) adopts the raw value
     /// verbatim so a new stroke's initial line width isn't delayed by a
-    /// fade-in. `smoothingStrength <= 0` is an exact passthrough.
-    public mutating func applySmoothing(rawPressure: Double, strokeStarting: Bool) -> Double {
+    /// fade-in. `smoothingStrength <= 0` is an exact passthrough. `dt` is
+    /// real elapsed seconds since the previous report (see CursorSmoother).
+    public mutating func applySmoothing(
+        rawPressure: Double, strokeStarting: Bool, dt: Double
+    ) -> Double {
         guard smoothingStrength > 0 else {
             smoothedPressure = rawPressure
             hasSmoothedPressure = true
             return rawPressure
         }
-        guard !strokeStarting, hasSmoothedPressure else {
+        let freshStart = strokeStarting || dt <= 0 || dt > Self.maxPlausibleDt
+        guard !freshStart, hasSmoothedPressure else {
             smoothedPressure = rawPressure
             hasSmoothedPressure = true
             return rawPressure
@@ -58,7 +68,7 @@ public struct PressureSmoother: Sendable {
         let cutoff =
             Self.minCutoffCeiling
             - (1.0 - rawPressure) * smoothingStrength * (Self.minCutoffCeiling - Self.minCutoffFloor)
-        let alpha = Self.alpha(forCutoff: cutoff)
+        let alpha = Self.alpha(forCutoff: cutoff, dt: dt)
         smoothedPressure += alpha * (rawPressure - smoothedPressure)
         return smoothedPressure
     }
