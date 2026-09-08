@@ -11,8 +11,9 @@ import Foundation
 /// differently-shaped protocol) despite the adjacent number.
 ///
 /// Used by: PTK-470 (0x03F5), PTK-670 (0x03F7), PTK-870 (0x03F9) — the
-/// current-generation Intuos Pro. Ported from OpenTabletDriver's
-/// `IntuosV3ReportParser` and the three associated report structs.
+/// current-generation Intuos Pro — and the Movink 13 (0x03F0) pen display.
+/// Ported from OpenTabletDriver's `IntuosV3ReportParser` and the three
+/// associated report structs.
 ///
 /// Report ID routing:
 /// 0x1F  Pen report, 16-bit XY (gated on data[1] == 0x01) — main path
@@ -21,15 +22,13 @@ import Foundation
 /// 0x11  Aux report — 8 outer express keys, 2 cluster-center keys, two
 ///       relative-step scroll wheels (dials)
 ///
-/// Byte layout differs from IntuosV2: the pen-status byte sits at [2]
-/// instead of [1], pressure is at [7..8] instead of [8..9], and bit
-/// positions for eraser (5 vs 4) and proximity (6 vs 5) are shifted.
-/// See `Notes/Scratch/Upstream-Sync-2026-05-15.md` for the full diff
-/// table.
+/// Byte layout differs from IntuosV2's main 0x10 path: the pen-status byte
+/// sits at [2] instead of [1]. See
+/// `Notes/Scratch/Upstream-Sync-2026-05-15.md` for the full diff table.
 ///
-/// 0x11 and 0x1E are hardware-confirmed against a real PTK-870 capture — see
-/// `decodeAuxReport`/`decodeExtendedPenReport`. 0x1F is still synthesized
-/// from OTD source tables; no capture uses that report ID.
+/// 0x11 and 0x1E are hardware-confirmed against real PTK-870 and Movink 13
+/// captures — see `decodeAuxReport`/`decodeExtendedPenReport`. 0x1F is still
+/// synthesized from OTD source tables; no capture uses that report ID.
 public struct IntuosV3Decoder: TabletReportDecoder {
 
     public init() {}
@@ -139,26 +138,19 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     // MARK: - 0x1E extended pen report (24-bit XY)
 
     /// Layout confirmed 2026-09-07 against real PTK-870 pen captures
-    /// (`whot/wacom-recordings`, MIT-licensed). Only four status values ever
-    /// appear: 0x00 (out of range), 0x80 (hovering, pressure 0), 0xC0
-    /// (tip touching, transient zero-pressure), 0xC1 (touching with
-    /// pressure, up to 8191). So bit 7 is proximity and bit 6 is the tip
-    /// switch — the previous code checked bit 6 for proximity (an
-    /// unverified port from IntuosV2), which was false for every hovering
-    /// frame and so dropped the hover that precedes each stroke and
-    /// misfired proximity-exit at the hover/touch boundary.
-    ///
-    /// Bit 0 is set on every touching frame (0xC1, never 0xC0 alone once
-    /// pressure is nonzero) — it tracks the tip switch, not a barrel
-    /// button, so it's deliberately left unwired. No capture here presses
-    /// an actual barrel button, so `penButton1`/`penButton2` (bits 1/2
-    /// below) remain unverified.
+    /// (`whot/wacom-recordings`) and 2026-09-08 against a Movink 13 (DTH-135)
+    /// capture (OpenTabletDriver PR #3679, ~26k reports, Pro Pen 3). Bit 7 is
+    /// proximity, bit 6 is the tip switch — the previous code checked bit 6
+    /// for proximity (an unverified port from IntuosV2), which dropped the
+    /// hover that precedes each stroke and misfired proximity-exit at the
+    /// hover/touch boundary. The Movink capture presses all three barrel
+    /// buttons individually (bits 1/2/3), confirming those bits too. Bit 0
+    /// tracks the tip switch, not a button, on both devices' captures.
     ///
     ///   [0]       = 0x1E  report ID
     ///   [2]       pen status: bit0=tip-switch echo (not a button),
-    ///                        bit1=button1(unverified), bit2=button2
-    ///                        (unverified), bit3=button3, bit5=eraser,
-    ///                        bit6=tip switch, bit7=proximity
+    ///                        bit1=button1, bit2=button2, bit3=button3,
+    ///                        bit5=eraser, bit6=tip switch, bit7=proximity
     ///   [3..5]    X coordinate, 24-bit (LE u16 at [3..4] | byte[5] << 16)
     ///   [6..8]    Y coordinate, 24-bit (LE u16 at [6..7] | byte[8] << 16)
     ///   [9..10]   pressure, LE u16
@@ -199,11 +191,14 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let pressure = Int(UInt16(report[9]) | UInt16(report[10]) << 8)
         let rawTiltX = Int16(bitPattern: UInt16(report[11]) | UInt16(report[12]) << 8)
         let rawTiltY = Int16(bitPattern: UInt16(report[13]) | UInt16(report[14]) << 8)
-        // Without a Wacom-published full-scale value for the 16-bit tilt range,
-        // normalize against Int16.max so apps see a consistent [-1, 1] scale.
-        // May need re-tuning once a real PTK-x70 capture is available.
-        let tiltX = Double(rawTiltX) / Double(Int16.max)
-        let tiltY = Double(rawTiltY) / Double(Int16.max)
+        // Confirmed 2026-09-08 against a real Movink 13 (DTH-135) capture
+        // (OpenTabletDriver PR #3679, ~26k reports): raw tilt only ever spans
+        // -64...63, i.e. the field is already in degrees, not a 16-bit
+        // fraction — Int16.max was the wrong divisor. Matches the ±64°
+        // convention IntuosV2Decoder already uses via spec.tiltMaxDegrees.
+        let tiltDivisor = spec.tiltMaxDegrees ?? 64.0
+        let tiltX = Double(rawTiltX) / tiltDivisor
+        let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
 
         state.prevInProximity = true

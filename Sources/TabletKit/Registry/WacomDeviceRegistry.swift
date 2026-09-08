@@ -1958,12 +1958,14 @@ public enum WacomDeviceRegistry: Sendable {
             confidence: .crossReferenced,
             activeWidthMM: 610, activeHeightMM: 330),
         .init(
-            productID: 0x03F0, name: "Wacom Movink 13 (DTH-135)",  // ⚠ from OTD; buttonCount 3 per libwacom
+            productID: 0x03F0, name: "Wacom Movink 13 (DTH-135)",  // cross-referenced: OTD (real pen capture, PR #3679) + libwacom; buttonCount 3
             parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 3, hasTouchRing: false, hasEraser: true,
+            buttonCount: 3, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced,
+            activeWidthMM: 294.6, activeHeightMM: 165.1),
 
         // ── Cintiq Pro / DTK / DTH current-gen pen displays — groundwork only ──
         // groundwork only: Wacom's own macOS driver currently supports every
@@ -2280,7 +2282,7 @@ public enum WacomDeviceRegistry: Sendable {
             // also get hasMechanicalDial: true, matching M/L below.
             productID: 0x03F5, name: "Intuos Pro S gen 3 (PTK-470)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 37400, maxY: 21000, maxPressure: 8191,
-            buttonCount: 5, hasTouchRing: false, hasEraser: true,
+            buttonCount: 5, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 187, activeHeightMM: 105),
         .init(
             // buttonCount/hasTouchRing/hasDualRings corrected 2026-07-28 from a
@@ -2321,14 +2323,14 @@ public enum WacomDeviceRegistry: Sendable {
             // `activeWidthMM`.
             productID: 0x03F7, name: "Intuos Pro M gen 3 (PTK-670)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 52600, maxY: 29600, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 263, activeHeightMM: 148),
         .init(
             // Dimensions corrected 2026-07-29; 69800/349 and 39000/195 are both
             // exactly 200 units/mm. See the density note on the M size above.
             productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model); dials hardware-confirmed
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true,
+            buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 349, activeHeightMM: 195),
         .init(
             productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ recognition-only; PID + dims from libwacom (wacom-cintiq-16-3), logical extents copied from same-size DTK-1660

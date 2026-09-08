@@ -145,8 +145,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   port from IntuosV2. Real PTK-870 captures (`whot/wacom-recordings`) show
   bit 7 is proximity and bit 6 is the tip switch; the old check dropped
   every hovering frame, which precedes each stroke, and misfired
-  proximity-exit at the hover/touch boundary. Now hardware-confirmed, with
-  real-capture test fixtures replacing the synthesized ones.
+  proximity-exit at the hover/touch boundary. Also fixed this report's tilt
+  scale: a real Movink 13 capture (also 0x1E via this decoder) shows raw
+  tilt only spans -64...63, i.e. it's already in degrees, not a 16-bit
+  fraction — the old `/Int16.max` divisor collapsed real tilt to near
+  zero. Both fixes are now hardware-confirmed across two devices, with
+  real-capture test fixtures replacing the synthesized ones; the
+  previously-unconfirmed penButton1/2/3 bits are also now confirmed by the
+  Movink capture, which presses each individually.
 
 - `IntuosV2Decoder`'s 0x1E offset pen report (DTH-227/271/172, DTK-168, and
   other family members sharing this report ID) also checked the wrong

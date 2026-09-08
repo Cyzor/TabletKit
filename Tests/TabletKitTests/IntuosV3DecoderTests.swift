@@ -208,14 +208,16 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(st.prevInProximity)
     }
 
-    func test0x1ETiltNormalizedAgainstInt16Max() {
+    func test0x1ETiltNormalizedAgainst64Degrees() {
+        // A real Movink 13 capture (2026-09-08) shows raw tilt only ever
+        // spans -64...63 — the field is already in degrees, not a 16-bit
+        // fraction. 64 → 1.0, -64 → -1.0.
         var st = DecoderState()
-        let b = make0x1E(status: 0xC0, tiltX: Int16.max, tiltY: Int16.min + 1)
+        let b = make0x1E(status: 0xC0, tiltX: 64, tiltY: -64)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertEqual(pt.tiltX, 1.0, accuracy: 0.001)
-        // Int16.min+1 / Int16.max ≈ -1.0 (avoids UB at exact min)
-        XCTAssertLessThan(pt.tiltY, -0.99)
+        XCTAssertEqual(pt.tiltY, -1.0, accuracy: 0.001)
     }
 
     func test0x1EPenButton3FromBit3() {
@@ -326,6 +328,67 @@ final class IntuosV3DecoderTests: XCTestCase {
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertFalse(pt.inProximity)
         XCTAssertFalse(st.prevInProximity)
+    }
+
+    // MARK: - 0x1E real-capture fixtures (Movink 13, OpenTabletDriver PR #3679)
+    //
+    // Bytes below are taken verbatim from that capture's tablet-data.1.txt
+    // (056a:03f0, Pro Pen 3, ~26k reports). Confirms all three barrel
+    // buttons and real tilt range against a device other than the PTK-870.
+
+    func testRealCaptureMovinkBarrelButton1() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC2, 0xFD, 0x75, 0x00, 0x27, 0x42, 0x00, 0x00, 0x00,
+            0x22, 0x00, 0xFA, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x57, 0x36, 0xD9,
+            0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xE0, 0xCE, 0x1E, 0xB8,
+        ]
+        let r = decode(b, state: &st)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertTrue(pt.penButton1)
+        XCTAssertFalse(pt.penButton2)
+        XCTAssertFalse(pt.penButton3)
+    }
+
+    func testRealCaptureMovinkBarrelButton2() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC4, 0x8A, 0x71, 0x00, 0x03, 0x41, 0x00, 0x00, 0x00,
+            0x20, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x61, 0x36, 0xD9,
+            0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xB7, 0x6B, 0xE3, 0xBB,
+        ]
+        let r = decode(b, state: &st)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertFalse(pt.penButton1)
+        XCTAssertTrue(pt.penButton2)
+        XCTAssertFalse(pt.penButton3)
+    }
+
+    func testRealCaptureMovinkBarrelButton3() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC8, 0x1C, 0x6C, 0x00, 0x41, 0x43, 0x00, 0x00, 0x00,
+            0x1E, 0x00, 0xF8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x36, 0xD9,
+            0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x68, 0x1B, 0x1C, 0xC0,
+        ]
+        let r = decode(b, state: &st)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertFalse(pt.penButton1)
+        XCTAssertFalse(pt.penButton2)
+        XCTAssertTrue(pt.penButton3)
+    }
+
+    func testRealCaptureMovinkTiltMatchesDegreeScale() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC0, 0x09, 0x01, 0x00, 0xE7, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x71, 0x36, 0xD9,
+            0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x83, 0x4A, 0xDA, 0x67,
+        ]
+        let r = decode(b, state: &st)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertEqual(pt.tiltX, 0.0, accuracy: 0.001)
+        XCTAssertEqual(pt.tiltY, 31.0 / 64.0, accuracy: 0.001)
     }
 
     // MARK: - 0x11 aux report
