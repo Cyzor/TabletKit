@@ -1686,32 +1686,6 @@ public enum VendorDeviceRegistry: Sendable {
             penButtonCount: 2, auxButtonCount: nil,
             otdParser: "XP_PenGen2ReportParser",
             productStringRegex: nil),
-        // auxButtonCount is nil (not 3, an earlier OTD-import artifact from
-        // before the Quick Keys puck was modeled as its own companion
-        // device): the tablet itself has no onboard express keys or ring —
-        // those belong to the puck/dongle companion, see `companions` below.
-        VendorDeviceProfile(
-            vendor: "Xencelabs",
-            vendorID: 0x28BD, productID: 0x5201,
-            productName: "XenceLabs Pen Tablet Medium",
-            activeWidthMM: 261.62, activeHeightMM: 148,
-            maxX: 52324, maxY: 29600,
-            maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: nil,
-            otdParser: "XenceLabsReportParser",
-            productStringRegex: nil,
-            companions: [0x5202, 0x5203]),
-        VendorDeviceProfile(
-            vendor: "Xencelabs",
-            vendorID: 0x28BD, productID: 0x5204,
-            productName: "XenceLabs Pen Tablet Small",
-            activeWidthMM: 178, activeHeightMM: 101,
-            maxX: 35600, maxY: 20200,
-            maxPressure: 8191,
-            penButtonCount: 3, auxButtonCount: nil,
-            otdParser: "XenceLabsReportParser",
-            productStringRegex: nil,
-            companions: [0x5202, 0x5203]),
         // END GENERATED
 
         // Hand-added, not from the OTD import. maxX/maxY confirmed 2026-07-03
@@ -1778,6 +1752,26 @@ public enum VendorDeviceRegistry: Sendable {
         // maxima. bezelButtonCount/companions mirrored from the 24 pending
         // its own confirmation (same onboard capacitive-button hardware is
         // plausible, not verified).
+        //
+        // Checked 2026-09-08 against a real 520B HID descriptor dump
+        // (linuxwacom/wacom-hid-descriptors#618) — deliberately NOT used to
+        // correct maxX/maxY above. That descriptor's standard Digitizer
+        // collection (report 0x07) declares logical maxima of X=22352,
+        // Y=13970 against this device's own 344x194mm physical size — a
+        // density of ~65/~72 units/mm, anisotropic and nothing like this
+        // family's real ~199.3 units/mm (confirmed on the 24, extrapolated
+        // here and on the Medium/Small below). That mismatch is exactly the
+        // trap XencelabsDecoder's own doc comment already flags: report
+        // 0x07 is a standard descriptor-declared collection that never
+        // carries live data on this OEM family (report 2, vendor page
+        // 0xFF0A, does) — its numbers describe an inert collection, not
+        // this device's real coordinate system. The 0xFF0A report on the
+        // same dump (interface 000D) is fully opaque at the descriptor
+        // level (undifferentiated 31-byte blob, no field semantics), so it
+        // offers nothing either. Net result: this descriptor package
+        // confirms identity (PID, vendor page layout matches the family)
+        // but contributes no usable coordinate data — the extrapolated
+        // maxX/maxY above are still the best available estimate.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520B,
@@ -1816,6 +1810,11 @@ public enum VendorDeviceRegistry: Sendable {
         // the onboard capacitive buttons ride the identical report-2 0xF0 aux
         // frame as the puck's express keys, so they occupy the bezel slots to
         // stay distinguishable from a companion puck's keys. Unverified here.
+        //
+        // auxButtonCount is nil (not 3, an earlier OTD-import artifact from
+        // before the Quick Keys puck was modeled as its own companion
+        // device): the tablet itself has no onboard express keys or ring —
+        // those belong to the puck/dongle companion, see `companions` below.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5201,

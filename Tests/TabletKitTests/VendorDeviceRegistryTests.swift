@@ -114,11 +114,11 @@ final class VendorDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(
             VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5201)?
                 .productName,
-            "XenceLabs Pen Tablet Medium")
+            "Xencelabs Pen Tablet Medium")
         XCTAssertEqual(
             VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5204)?
                 .productName,
-            "XenceLabs Pen Tablet Small")
+            "Xencelabs Pen Tablet Small")
         // Quick Keys is drivable as an aux-only device (no pen digitizer).
         let puck = VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x5202)
         XCTAssertEqual(puck?.productName, "Xencelabs Quick Keys")
