@@ -100,6 +100,7 @@ func makeDecoder(_ parser: ReportParser) -> TabletReportDecoder {
     case .graphire:  return GraphireDecoder()
     case .xencelabs: return XencelabsDecoder()
     case .intuosV1:  return IntuosV1Decoder()
+    case .pl:        return WacomPLDecoder()
     }
 }
 

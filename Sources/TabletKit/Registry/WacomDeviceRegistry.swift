@@ -95,6 +95,17 @@ public enum ReportParser: String, Sendable {
     /// `[0x02, 0xB0, 0x04]` output-report init.  Decoded by
     /// `XencelabsDecoder` (experimental — not yet hardware-validated).
     case xencelabs
+
+    /// PL — Wacom's "PL" report family (`WACOM_REPORT_PENABLED`, Report ID
+    /// 0x02, 8 bytes). Covers the PL-400 through PL-800 LCD pen displays
+    /// (1998–2005), the direct ancestors of the Cintiq line — PL-550/PL-800
+    /// are literally the Cintiq 15X/18SX under their internal model
+    /// numbers. Ported from the kernel's `wacom_pl_irq()`; decoded by
+    /// `WacomPLDecoder`. No BT/mode-switch handshake for this family — see
+    /// that decoder's own doc comment. PL-800 has real hardware-tested
+    /// prior art (OpenTabletDriver); the other seven PIDs sharing this
+    /// decoder do not and stay experimental.
+    case pl
 }
 
 // MARK: - Init step
@@ -159,6 +170,22 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case dtus
     case bamboo
     case xencelabs
+
+    /// PL-series (PL-400–PL-800, 1998–2005 LCD pen displays). Deliberately
+    /// its own case, not folded into `.graphire` despite being roughly
+    /// contemporaneous — PL was Wacom's professional LCD pen-display line
+    /// (ancestor of Cintiq), Graphire was the consumer line; nothing
+    /// confirms shared tool compatibility across the two. No
+    /// `WacomToolCatalog` entries reference this case yet, which means
+    /// `WacomToolSpec.compatible(with:)`'s `supportedFamilies.isEmpty`
+    /// fallback currently reports every tool as compatible with PL-series
+    /// hardware — that is the documented "no data yet" fallback this
+    /// project already uses for other under-researched families, not a
+    /// verified claim that any specific tool actually works. Do not
+    /// interpret the absence of catalog entries as "unrestricted by
+    /// design" — populate real entries once someone verifies which pens
+    /// this hardware generation actually accepts.
+    case pl
 }
 
 // MARK: - Per-device spec
@@ -471,6 +498,8 @@ public struct WacomDeviceSpec: Sendable {
             return .bamboo
         case .xencelabs:
             return .xencelabs
+        case .pl:
+            return .pl
         }
     }
 }
@@ -2740,48 +2769,100 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
 
-        // Name-only: PL report family (wacom_pl_irq) has no decoder here.
-        // Kernel dims in comments for when one lands.
+        // PL report family (wacom_pl_irq), decoded by WacomPLDecoder as of
+        // 2026-09-08. Byte layout independently re-verified against the
+        // kernel source twice — once for the general layout/eraser logic,
+        // once specifically for the C integer-promotion semantics of the
+        // pressure calculation (a real bug was caught and fixed during
+        // that second pass; see WacomPLDecoder.swift's header comment).
+        // No BT/mode-switch handshake exists for this family.
+        //
+        // PL-800 (0x0035) has real hardware-tested prior art —
+        // OpenTabletDriver officially supports it, backed by a published
+        // macOS diagnostic capture confirming the `[0x02, 0x02]` feature
+        // init — so it ships at `.crossReferenced`. The other seven PIDs
+        // share the exact same kernel decoder/feature-table type but have
+        // no comparable tested implementation of their own; they stay
+        // `.experimental` with the init step marked provisional until each
+        // is confirmed individually. See
+        // `Notes/Scratch/wacom-pl-series-design-2026-09-08.md` for the full
+        // design rationale.
+        //
+        // hasEraser: true on all eight — the decoder's session-persistent
+        // eraser/button-2 classification (see its header comment) applies
+        // uniformly across this family per the kernel; there is no
+        // per-model variation in that logic.
+        //
+        // DTU-710 and DTU-1931 deliberately excluded from this pass —
+        // Wacom's own documentation places them in "non-graphics use"
+        // territory, not the Cintiq-ancestor art-tablet line these eight
+        // belong to. They remain name-only placeholders below.
         .init(
-            productID: 0x0030, name: "PL400",  // ⚠ name-only; kernel: 5408×4056×255 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0030, name: "PL400",
+            parser: .pl, maxX: 5408, maxY: 4056, maxPressure: 255,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0031, name: "PL500",  // ⚠ name-only; kernel: 6144×4608×255 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0031, name: "PL500",
+            parser: .pl, maxX: 6144, maxY: 4608, maxPressure: 255,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0032, name: "PL600",  // ⚠ name-only; kernel: 6126×4604×255 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0032, name: "PL600",
+            parser: .pl, maxX: 6126, maxY: 4604, maxPressure: 255,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0033, name: "PL600SX",  // ⚠ name-only; kernel: 6260×5016×255 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0033, name: "PL600SX",
+            parser: .pl, maxX: 6260, maxY: 5016, maxPressure: 255,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0034, name: "PL550",  // ⚠ name-only; kernel: 6144×4608×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            // PL-550 = Cintiq 15X under its internal model number. Per the
+            // design doc, this is the highest-value next real capture: it
+            // would validate whether PL-800's confirmed init/eraser logic
+            // transfers to a sibling model, not just that the decoder
+            // compiles.
+            productID: 0x0034, name: "PL550 (Cintiq 15X)",
+            parser: .pl, maxX: 6144, maxY: 4608, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0035, name: "PL800",  // ⚠ name-only; kernel: 7220×5780×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            // PL-800 = Cintiq 18SX under its internal model number.
+            // `.crossReferenced`, not `.experimental` — real hardware-
+            // tested prior art. OpenTabletDriver officially lists this
+            // device as supported, backed by a published macOS diagnostic
+            // capture (input-report-length 8, feature-report-length 2,
+            // input report ID 0x02, feature init "02 02") and support work
+            // that verified dimensions, full pressure, and the eraser/
+            // button-2 distinction on physical hardware. Not verified by
+            // this project directly — the evidence trail for the OTD work
+            // is informal (Discord discussion, not a persisted capture
+            // file) — but this is a real, shipping, tested implementation
+            // agreeing with the kernel, which is the bar `.crossReferenced`
+            // exists for.
+            productID: 0x0035, name: "PL800 (Cintiq 18SX)",
+            parser: .pl, maxX: 7220, maxY: 5780, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced),
         .init(
-            productID: 0x0037, name: "PL700",  // ⚠ name-only; kernel: 6758×5406×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0037, name: "PL700",
+            parser: .pl, maxX: 6758, maxY: 5406, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x0038, name: "PL510",  // ⚠ name-only; kernel: 6282×4762×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x0038, name: "PL510",
+            parser: .pl, maxX: 6282, maxY: 4762, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
             productID: 0x0039, name: "DTU-710",  // ⚠ name-only; kernel: 34080×27660×511 (PL)
             parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
