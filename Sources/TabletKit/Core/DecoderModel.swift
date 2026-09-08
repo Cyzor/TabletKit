@@ -90,6 +90,14 @@ public struct DecoderState: Sendable {
     public static let btTouchMsPerCount = 0.225
     /// Counts between consecutive sub-frames in one BT touch container.
     public static let btTouchCountsPerFrame = 100
+    /// WACOM_24HDT (`Wacom24HDTDecoder`) multi-packet frame accumulator.
+    /// The device's active-contact count describes the whole gesture frame,
+    /// not one packet, so contacts collect here across reports until that
+    /// count is satisfied.
+    public var wacom24HDTPendingContacts: [TouchContact] = []
+    /// Remaining contact records expected before `wacom24HDTPendingContacts`
+    /// can be emitted as a completed touch frame.
+    public var wacom24HDTRemainingContacts: Int = 0
     public init() {}
 }
 
