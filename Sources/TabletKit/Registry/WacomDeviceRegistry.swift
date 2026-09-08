@@ -2869,20 +2869,40 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             isPenDisplay: true, seizeUSB: false),
         .init(
-            productID: 0x00C0, name: "DTF-720",  // ⚠ name-only; kernel: 6858×5506×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            // Same WacomPLDecoder/kernel PL family as the eight PL-400–
+            // PL-800 rows above. PID mapping re-verified directly against
+            // the kernel's wacom_features_0xC0/0xC2/0xC4 structs
+            // 2026-09-08 rather than trusted from research alone — this
+            // project already fixed a real naming error on these exact
+            // PIDs once before (2026-05-15 audit: 0x00C0 was wrongly
+            // listed as "Cintiq 20WSX" and 0x00C4 as "Cintiq 13HD," see
+            // the note a few hundred lines up near 0x00C6). Kernel
+            // confirms 0x00C0=DTF-720 and 0x00C4=DTF-521, not the reversed
+            // mapping some `usb.ids` database editions carry.
+            // `.experimental` like the seven non-PL-800 rows above — no
+            // hardware-tested prior art exists for this trio the way it
+            // does for PL-800.
+            productID: 0x00C0, name: "DTF-720",
+            parser: .pl, maxX: 6858, maxY: 5506, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x00C2, name: "DTF-720a",  // ⚠ name-only; kernel: 6858×5506×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            // Same protocol as 0x00C0 (DTF-720) — kernel gives it
+            // identical dimensions/pressure; the distinct PID is presumed
+            // a hardware/regional revision, not a different digitizer
+            // protocol (no source found describing any decode difference).
+            productID: 0x00C2, name: "DTF-720a",
+            parser: .pl, maxX: 6858, maxY: 5506, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
-            productID: 0x00C4, name: "DTF-521",  // ⚠ name-only; kernel: 6282×4762×511 (PL)
-            parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
+            productID: 0x00C4, name: "DTF-521",
+            parser: .pl, maxX: 6282, maxY: 4762, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true, seizeUSB: true,
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
         .init(
             productID: 0x00C7, name: "DTU-1931",  // ⚠ name-only; kernel: 37832×30305×511 (PL)
             parser: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
