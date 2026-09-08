@@ -17,7 +17,8 @@ import Foundation
 /// 0x01 BLE HOGP pen report (23 bytes)
 /// 0x03 BLE HOGP pad report (9 bytes)
 /// 0x10 Standard USB pen report (192 bytes) — main path
-/// 0x1E Offset pen report (driver-compatibility mode)
+/// 0x1E Offset pen report (driver-compatibility mode) — hardware-confirmed
+///      against a real DTH-227 capture; see decodeOffsetPenReport
 /// 0x11 Auxiliary (express key + touch ring) report
 /// 0x80 Wireless status report (ACK-40401 RF dongle)
 ///
@@ -349,29 +350,57 @@ public struct IntuosV2Decoder: TabletReportDecoder {
 
     // MARK: - Offset pen report (0x1E, driver-compatibility mode)
 
+    /// Confirmed 2026-09-08 against a real DTH-227 capture (OpenTabletDriver
+    /// PR #3858, 836 reports). `report[1]` is a constant 0x01 sub-type byte
+    /// (same convention as IntuosV3's 0x1F/0x1E), not part of the pen status —
+    /// OTD's own `NearProximity` field reads a bit of that constant byte and
+    /// is always false in the capture, so it's not something to copy. Real
+    /// status is in report[2]: only 0xC0/0xC1 appear, the same
+    /// bit7=proximity/bit6=tip-switch split as IntuosV3's 0x1E (see
+    /// `IntuosV3Decoder.decodeExtendedPenReport`).
+    ///
+    /// Also corrected against OTD's `IntuosV2OffsetReport` struct, verified
+    /// field-by-field on the same capture: pressure is plain 16-bit at
+    /// [9..10] (not 13-bit masked); hover distance is byte 11, aliased with
+    /// tiltX (not byte 16); eraser is bit 4 (not bit 3).
     private func decodeOffsetPenReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
-        guard length >= 17 else { return [] }
+        guard length >= 13 else { return [] }
         let status = report[2]
+        let prox = (status & 0x80) != 0
+
+        if !prox {
+            guard state.prevInProximity else { return [] }
+            state.prevInProximity = false
+            return [
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: state.lastTiltX, tiltY: state.lastTiltY, rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: false, inProximity: false, hoverDistance: 0))
+            ]
+        }
+
         let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8) | (Int(report[5]) << 16)
         let y = Int(UInt16(report[6]) | UInt16(report[7]) << 8) | (Int(report[8]) << 16)
-        // Pressure: 13-bit value (d[9] + lower 5 bits of d[10]) per kernel spec.
-        let pressure = Int(UInt16(report[9]) | (UInt16(report[10] & 0x1F) << 8))
-        // Tilt divisor left at /127.0 deliberately: a live PTH-660 USB descriptor
-        // capture (2026-09-05) shows this device doesn't emit report 0x1E at all
-        // (only 0x01/0x10/0x11/0x13), so there is no hardware to confirm this
-        // report's tilt encoding against. Do not assume it matches 0x10's
-        // descriptor-confirmed ±64 — 0x1E is a separate "driver-compatibility"
-        // repack for other family members and may encode differently.
+        let pressure = Int(UInt16(report[9]) | UInt16(report[10]) << 8)
         let tiltX = Double(Int8(bitPattern: report[11])) / 127.0
         let tiltY = Double(Int8(bitPattern: report[12])) / 127.0
-        // Hover distance: same absolute position as 0x10 per kernel spec.
-        let hoverDistance = Int(report[16])
+        let hoverDistance = Int(report[11])
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
+
+        state.prevInProximity = true
+        state.lastX = x
+        state.lastY = y
+        state.lastTiltX = tiltX
+        state.lastTiltY = tiltY
+        state.hasValidTiltFrame = true
 
         return [
             .pen(
@@ -382,8 +411,8 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                     rotation: isArtPen ? state.lastRotation : 0.0,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
-                    eraser: (status & 0x08) != 0,
-                    inProximity: (status & 0x20) != 0,
+                    eraser: (status & 0x10) != 0,
+                    inProximity: true,
                     hoverDistance: hoverDistance))]
     }
 

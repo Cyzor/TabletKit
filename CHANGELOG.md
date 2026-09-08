@@ -148,6 +148,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   proximity-exit at the hover/touch boundary. Now hardware-confirmed, with
   real-capture test fixtures replacing the synthesized ones.
 
+- `IntuosV2Decoder`'s 0x1E offset pen report (DTH-227/271/172, DTK-168, and
+  other family members sharing this report ID) also checked the wrong
+  proximity bit — and additionally had pressure width, hover-distance byte
+  offset, and the eraser bit all wrong. Confirmed against a real DTH-227
+  capture (OpenTabletDriver PR #3858) and OTD's own `IntuosV2OffsetReport`
+  struct: proximity is bit 7 of report[2] (report[1] is a constant sub-type
+  byte, not part of the status — OTD's own proximity field reads that
+  constant byte and is always false); pressure is plain 16-bit, not 13-bit
+  masked; hover distance is byte 11 (aliased with tiltX), not byte 16;
+  eraser is bit 4, not bit 3.
+
 - CTL-4100/4100WL (0x0374/0x0376/0x03C5) carried an already-verified
   dimension correction (confirmed 2026-08-03 against Wacom's IPI manual,
   cross-referenced with OTD's own `IntuosV2ReportParser`/192-byte report

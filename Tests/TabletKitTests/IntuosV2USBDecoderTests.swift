@@ -296,13 +296,18 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     // MARK: - 0x1E offset pen report
+    //
+    // Byte layout confirmed 2026-09-08 against a real DTH-227 capture
+    // (OpenTabletDriver PR #3858) — see IntuosV2Decoder.decodeOffsetPenReport's
+    // doc comment. Proximity is bit 7 of status (report[2]), not bit 5 of
+    // report[1] as OTD's own (always-false-in-that-capture) field reads;
+    // pressure is plain 16-bit; hover distance and tiltX share byte 11.
 
     func testOffsetPenReportCoordinatesPressureAndProximity() {
-        // 0x1E layout: status at [2], x at [3..5], y at [6..8], pressure at [9..10].
         var state = DecoderState()
         var bytes = [UInt8](repeating: 0, count: 17)
         bytes[0] = 0x1E
-        bytes[2] = 0x22                                  // prox bit (0x20) only
+        bytes[2] = 0x82                                    // prox (0x80) + button1 (0x02)
         bytes[3] = 0xD0; bytes[4] = 0x07; bytes[5] = 0x00  // x = 2000
         bytes[6] = 0xB8; bytes[7] = 0x0B; bytes[8] = 0x00  // y = 3000
         bytes[9] = 0xFF; bytes[10] = 0x07                  // pressure = 2047
@@ -316,5 +321,80 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.pressure, 2047)
         XCTAssertEqual(pen?.inProximity, true)
         XCTAssertEqual(pen?.penButton1, true, "Status bit1 set → button 1 down")
+    }
+
+    func testOffsetPenReportHoveringAloneCountsAsInProximity() {
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 17)
+        bytes[0] = 0x1E
+        bytes[2] = 0x80  // proximity only, no tip switch — hovering, not touching
+        let results = decode(bytes, state: &state)
+        let pen = results.compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.inProximity, true)
+        XCTAssertEqual(pen?.pressure, 0)
+        XCTAssertTrue(state.prevInProximity)
+    }
+
+    func testOffsetPenReportExitClearsProximity() {
+        var state = DecoderState()
+        var enter = [UInt8](repeating: 0, count: 17)
+        enter[0] = 0x1E
+        enter[2] = 0xC0
+        enter[3] = 0x64  // x = 100
+        enter[6] = 0xC8  // y = 200
+        _ = decode(enter, state: &state)
+        XCTAssertTrue(state.prevInProximity)
+
+        var exit = [UInt8](repeating: 0, count: 17)
+        exit[0] = 0x1E
+        let r = decode(exit, state: &state)
+        let pen = r.compactMap { rr -> TabletPoint? in
+            if case .pen(let p) = rr { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.inProximity, false)
+        XCTAssertEqual(pen?.x, 100)
+        XCTAssertEqual(pen?.y, 200)
+        XCTAssertFalse(state.prevInProximity)
+    }
+
+    // MARK: - 0x1E real-capture fixtures (DTH-227, OpenTabletDriver PR #3858)
+    //
+    // Bytes below are taken verbatim from that capture's tablet-data.txt
+    // (056a:03d0), a stationary light-pressure touch that ramps to full
+    // pressure. Confirms pressure width, hover/tiltX byte-11 aliasing, and
+    // the corrected proximity bit against real hardware.
+
+    func testRealCaptureDTH227LightTouchFrame() {
+        var state = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC0, 0x0D, 0x77, 0x01, 0x55, 0xD4, 0x00, 0x00, 0x00,
+            0x0C, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x4D, 0x6F,
+            0x70, 0x23, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xE4, 0x4A, 0x20, 0x3D,
+        ]
+        let r = decode(b, state: &state)
+        let pen = r.compactMap { rr -> TabletPoint? in
+            if case .pen(let p) = rr { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.inProximity, true)
+        XCTAssertEqual(pen?.pressure, 0)
+        XCTAssertEqual(pen?.x, 96013)
+        XCTAssertEqual(pen?.y, 54357)
+        XCTAssertEqual(pen?.hoverDistance, 12)
+    }
+
+    func testRealCaptureDTH227FullPressureFrame() {
+        var state = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC1, 0xDB, 0xFD, 0x00, 0xF4, 0x8D, 0x00, 0xDB, 0x01,
+            0x0C, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,
+        ]
+        let r = decode(b, state: &state)
+        let pen = r.compactMap { rr -> TabletPoint? in
+            if case .pen(let p) = rr { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.inProximity, true)
+        XCTAssertEqual(pen?.pressure, 0x01DB)
     }
 }
