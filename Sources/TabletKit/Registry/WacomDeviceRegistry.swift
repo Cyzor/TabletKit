@@ -1299,10 +1299,16 @@ public enum WacomDeviceRegistry: Sendable {
             // IPI-0x00F8.pdf, gitignored). Matched to 0x00F4's confirmed-live
             // value rather than the manual's own rounder figure — that row
             // outranks this one. Confirmed 2026-08-03.
+            //
+            // hasFingerTouch flipped to true 2026-09-08: finger touch arrives
+            // on the separate 0x00F6 interface, decoded by
+            // `Wacom24HDTDecoder` — **no capture exists for either interface
+            // of this device**; see the block comment on the 0x00F6 registry
+            // row and `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
             productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ⚠ estimated
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
             buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true, tiltMaxDegrees: 64.0,
-            hasFingerTouch: false, maxTouchContacts: 0,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
@@ -2036,8 +2042,14 @@ public enum WacomDeviceRegistry: Sendable {
             //
             // buttonCount stays 0, and that is not an omission. This display has
             // no express keys at all: Wacom's own documentation for it ships every
-            // express key on a detachable ExpressKey Remote, the same arrangement
-            // 0x032A (Cintiq 27QHD) documents a few rows up.
+            // express key on a detachable ExpressKey Remote. (Correction
+            // 2026-09-08: this is NOT the same arrangement as 0x032A/Cintiq
+            // 27QHD, despite an earlier version of this comment saying so —
+            // the 27QHD has its own onboard bezel controls in addition to
+            // supporting the Remote; see that row's corrected comment. This
+            // device's own claim above is unaffected — it rests on Wacom's
+            // documentation for this specific model, not on the 27QHD
+            // analogy, which was wrong regardless.)
             //
             // What report 0x11 does declare — four one-bit buttons at vendor
             // usages 0x0981, 0x0982, 0x0983, 0x0986 in byte [1] — are the "Touch
@@ -2252,10 +2264,16 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 279, activeHeightMM: 152),
         .init(
+            // hasFingerTouch flipped to true 2026-09-08: finger touch
+            // arrives on the separate 0x005E interface, decoded by
+            // `Wacom24HDTDecoder` — **no capture exists for either
+            // interface of this device**; see the block comment on the
+            // 0x00F6 registry row and
+            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 20, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            hasFingerTouch: false, maxTouchContacts: 0,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
         .init(
@@ -2630,10 +2648,17 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // activeWidthMM/Height added — same source and figure as 0x0057
             // above (same panel). Confirmed 2026-08-03.
+            //
+            // hasFingerTouch flipped to true 2026-09-08: finger touch
+            // arrives on the separate 0x005D interface, decoded by
+            // `Wacom24HDTDecoder` — **no capture exists for either
+            // interface of this device**; see the block comment on the
+            // 0x00F6 registry row and
+            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
             productID: 0x0059, name: "Cintiq 22 Touch (DTH-2242)",  // ⚠ from kernel (DTK type, 6 keys)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            hasFingerTouch: false, maxTouchContacts: 0,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
         .init(
@@ -2650,7 +2675,20 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 433, activeHeightMM: 271),
         .init(
-            // 27QHD uses the ExpressKey Remote (0x0331) instead of bezel keys.
+            // Corrected 2026-09-08: this row's prior comment claimed the
+            // 27QHD "uses the ExpressKey Remote (0x0331) instead of bezel
+            // keys" — wrong, per the kernel's `wacom_intuos_pad()`
+            // (`WACOM_27QHD` branch, wacom_wac.c): the panel decodes its own
+            // onboard capacitive bezel controls directly from this report
+            // (wrench/on-screen-keyboard/menu-or-touch-toggle bits at data[2]
+            // bits 0-2, plus three ABS_X/Y/Z-style 16-bit values at
+            // data[4..5]/[6..7]/[8..9] the kernel attributes to the same
+            // controls) — not "instead of," this is in addition to the
+            // separate, independently-serial-numbered ExpressKey Remote
+            // accessory (decoded by the kernel's own unrelated
+            // `wacom_remote_irq()`). None of this is decoded by
+            // `CintiqV1Decoder` yet; buttonCount stays 0 pending that work,
+            // same as the touch gap below.
             // activeWidthMM/Height added — this row had none. 596.7×335.6mm
             // per Wacom's DTK-2700/DTH-2700 Important Product Information
             // booklet (archived at Notes/Scratch/manuals/IPI-0x032A.pdf,
@@ -2663,18 +2701,33 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface of the touch model; finger touch arrives on the
-            // separate 0x032C interface (layout unconfirmed — see name-only
-            // entry below). activeWidthMM/Height added — same source and
+            // separate 0x032C interface, decoded by `Wacom27QHDTDecoder`
+            // (report 0x05) as of 2026-09-08. **NO CAPTURE EXISTS for
+            // either interface of this device — byte layout is ported from
+            // the kernel's `wacom_24hdt_irq()` `WACOM_27QHDT` branch and
+            // independently re-verified against that source, but entirely
+            // unconfirmed on real hardware.** hasFingerTouch flipped to true
+            // so the app's touch UI (Touch/Scratchpad panes) appears for
+            // this device; maxTouchContacts 10 per the kernel's own ceiling
+            // for this protocol. See
+            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md` for the
+            // full design rationale and two advisor reviews that approved
+            // shipping this unverified. Do not raise confidence or treat
+            // this as working on a specific unit without a real capture.
+            // activeWidthMM/Height added — same source and
             // figure as 0x032A above. Confirmed 2026-08-03.
             productID: 0x032B, name: "Cintiq 27QHD Touch (DTH-2700)",  // ⚠ from kernel
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            hasFingerTouch: false, maxTouchContacts: 0,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface; finger touch arrives on the separate 0x0335
-            // interface (layout unconfirmed).
+            // interface, decoded by `Wacom24HDTDecoder` as of 2026-09-08 —
+            // **no capture exists for either interface of this device**;
+            // see the block comment on the 0x00F6 registry row and
+            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
             // activeWidthMM/Height added — this row had none. Shares its
             // exact pen active area with 0x0304 (DTK-1300) per Wacom's own
             // IPI booklet for this model pair — see that row's note.
@@ -2682,7 +2735,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // dims kernel (WACOM_13HD type) + OTD
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            hasFingerTouch: false, maxTouchContacts: 0,
+            hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
@@ -2755,30 +2808,54 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             isPenDisplay: true, seizeUSB: false),
 
-        // Name-only: companion touch interfaces of pen displays we already
-        // list. Touch layouts unconfirmed; pen lives on the paired PID.
+        // Companion touch interfaces of pen displays we already list.
+        //
+        // ⚠⚠⚠ NO CAPTURE EXISTS FOR ANY OF THE FIVE DEVICES BELOW. ⚠⚠⚠
+        // As of 2026-09-08, `WacomKnownDevice.deriveFixedTouchDecoder` routes
+        // these five product IDs to `Wacom24HDTDecoder` (0x00F6/0x005E/
+        // 0x005D/0x0335) or `Wacom27QHDTDecoder` (0x032C) by product ID —
+        // hand-written decoders ported from the Linux kernel
+        // (`wacom_24hdt_irq()`, both branches) and tested only against
+        // synthetic bytes, never a real capture from any of these devices.
+        // Two independent advisor reviews approved shipping this unverified,
+        // gated at `.experimental` confidence — see
+        // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md` for the full
+        // design rationale, the advisor reviews, and the phasing plan for
+        // promoting confidence once a real capture exists. DO NOT raise
+        // confidence, assume correctness on a specific unit, or add another
+        // PID to `deriveFixedTouchDecoder` without a real capture backing
+        // it. `touchMaxX`/`touchMaxY` stay `0` deliberately — never copy the
+        // paired pen row's `maxX`/`maxY` here, even provisionally; a
+        // touch sensor's logical coordinate space is not guaranteed to
+        // match its panel's pen digitizer space (see the CTH-690 touch-range
+        // bug this registry already fixed once for exactly that assumption).
         .init(
-            productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ⚠ name-only
+            productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false),
         .init(
-            productID: 0x005E, name: "Cintiq 22HD Touch sensor (pairs 0x005B)",  // ⚠ name-only
+            productID: 0x005E, name: "Cintiq 22HD Touch sensor (pairs 0x005B)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false),
         .init(
-            productID: 0x032C, name: "Cintiq 27QHD Touch sensor (pairs 0x032B)",  // ⚠ name-only
+            // Wacom27QHDTDecoder, not Wacom24HDTDecoder — different protocol
+            // (WACOM_27QHDT), routed by PID; see the block comment above.
+            // This decoder's contacts carry no width/height, unlike its
+            // 24HDT siblings above/below — any future touch consumer must
+            // handle absent contact geometry for this device specifically.
+            productID: 0x032C, name: "Cintiq 27QHD Touch sensor (pairs 0x032B)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false),
         .init(
-            productID: 0x005D, name: "Cintiq 22 Touch sensor (pairs 0x0059)",  // ⚠ name-only
+            productID: 0x005D, name: "Cintiq 22 Touch sensor (pairs 0x0059)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false),
         .init(
-            productID: 0x0335, name: "Cintiq 13HD Touch sensor (pairs 0x0333)",  // ⚠ name-only
+            productID: 0x0335, name: "Cintiq 13HD Touch sensor (pairs 0x0333)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false),
