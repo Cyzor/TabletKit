@@ -75,6 +75,37 @@ final class ConformanceHarnessTests: XCTestCase {
             captureLog: """
             [00:00.000] CTL-460             ID=02 len=9    02 21 34 12 45 23 E8 03 00
             """),
+        ConformanceFixture(
+            device: "Intuos Pro L gen 3 (PTK-870, 0x03F9) — real capture, whot/wacom-recordings",
+            parser: "intuosV3",
+            spec: DigitizerSpec(
+                maxX: 69800, maxY: 39000, maxPressure: 8191,
+                buttonCount: 8, hasTilt: true, hasDualRings: true,
+                ringSlotCount: 4, tiltMaxDegrees: 64.0),
+            deviceFamily: .intuosProGen3,
+            captureLog: """
+            [00:00.000] PTK-870             ID=1E len=34   1E 01 C1 B4 83 00 75 36 00 FF 1F 20 00 06 00 00 00 00 00 14 AA 87 C0 24 00 02 10 00 00 02 D4 18 18 3D
+            """),
+        ConformanceFixture(
+            device: "Movink 13 (DTH-135, 0x03F0) — real capture, OpenTabletDriver PR #3679",
+            parser: "intuosV3",
+            spec: DigitizerSpec(
+                maxX: 59552, maxY: 33848, maxPressure: 8191,
+                buttonCount: 3, hasTilt: true, tiltMaxDegrees: 64.0),
+            deviceFamily: .intuosProGen3,
+            captureLog: """
+            [00:00.000] DTH-135             ID=1E len=34   1E 01 C2 FD 75 00 27 42 00 00 00 22 00 FA FF 00 00 00 00 57 36 D9 50 24 00 02 10 00 00 02 E0 CE 1E B8
+            """),
+        ConformanceFixture(
+            device: "Cintiq Pro 22 (DTH-227, 0x03D0) — real capture, OpenTabletDriver PR #3858",
+            parser: "intuosV2",
+            spec: DigitizerSpec(
+                maxX: 96012, maxY: 54356, maxPressure: 8191,
+                buttonCount: 8, hasTilt: true),
+            deviceFamily: .intuosProGen2,
+            captureLog: """
+            [00:00.000] DTH-227             ID=1E len=20   1E 01 C1 DB FD 00 F4 8D 00 DB 01 0C 00 08 00 00 00 00 00 1F
+            """),
     ]
 
     func testFixturesDecodeToNonTrivialResults() throws {
