@@ -2,18 +2,10 @@
 //
 // IntuosV3 decoder fixtures (PTK-470/670/870 — Intuos Pro gen3).
 //
-// Pen report layouts (0x1F/0x1E) are still synthesized from byte-layout
-// comments and OTD source tables — no hardware capture available for those.
-// The 0x11 aux report below IS hardware-confirmed as of 2026-07-28, against
-// a real PTK-870 capture (see IntuosV3Decoder.swift's decodeAuxReport doc
-// comment for detail and provenance) — these tests assert the corrected,
-// verified layout, not a synthesized guess.
-//
-// Report IDs covered:
-//   • 0x1F — standard pen report, 16-bit XY (gated on data[1] == 0x01)
-//   • 0x1E — extended pen report, 24-bit XY, 16-bit tilt, penButton3
-//   • 0x11 — aux report: 8 outer express keys, 2 cluster-center keys,
-//            two 7-bit relative wheels — hardware-confirmed
+// 0x1F is still synthesized (no capture exists for it). 0x11 and 0x1E are
+// hardware-confirmed against real PTK-870 captures (see IntuosV3Decoder.swift)
+// — tests marked "real capture" use bytes taken verbatim from
+// `whot/wacom-recordings` (MIT-licensed), not synthesized guesses.
 import XCTest
 @testable import TabletKit
 
@@ -194,8 +186,8 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func test0x1E24BitXYDecoded() {
         var st = DecoderState()
-        // X = 0x123456, Y = 0xABCDEF
-        let b = make0x1E(status: 0x40, x: 0x123456, y: 0x0ABCDE)
+        // X = 0x123456, Y = 0xABCDEF. Status 0xC0: proximity + tip switch.
+        let b = make0x1E(status: 0xC0, x: 0x123456, y: 0x0ABCDE)
         let r = decode(b, state: &st)
         XCTAssertEqual(r.count, 1)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
@@ -203,9 +195,22 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(pt.y, 0x0ABCDE)
     }
 
+    func test0x1EHoveringAloneCountsAsInProximity() {
+        var st = DecoderState()
+        // Status 0x80: proximity set, tip switch clear — hovering must not
+        // be treated as an exit.
+        let b = make0x1E(status: 0x80, x: 1000, y: 2000)
+        let r = decode(b, state: &st)
+        XCTAssertEqual(r.count, 1)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertTrue(pt.inProximity)
+        XCTAssertEqual(pt.pressure, 0)
+        XCTAssertTrue(st.prevInProximity)
+    }
+
     func test0x1ETiltNormalizedAgainstInt16Max() {
         var st = DecoderState()
-        let b = make0x1E(status: 0x40, tiltX: Int16.max, tiltY: Int16.min + 1)
+        let b = make0x1E(status: 0xC0, tiltX: Int16.max, tiltY: Int16.min + 1)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertEqual(pt.tiltX, 1.0, accuracy: 0.001)
@@ -215,8 +220,8 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func test0x1EPenButton3FromBit3() {
         var st = DecoderState()
-        // bit3 = 0x08 alongside prox bit6
-        let b = make0x1E(status: 0x40 | 0x08)
+        // bit3 = 0x08 alongside proximity bit7 + tip switch bit6
+        let b = make0x1E(status: 0xC0 | 0x08)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertTrue(pt.penButton3)
@@ -226,7 +231,7 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func test0x1EHoverDistanceFromByte19() {
         var st = DecoderState()
-        let b = make0x1E(status: 0x40, hover: 17)
+        let b = make0x1E(status: 0xC0, hover: 17)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertEqual(pt.hoverDistance, 17)
@@ -234,13 +239,93 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     func test0x1EProximityExitCachedCoords() {
         var st = DecoderState()
-        _ = decode(make0x1E(status: 0x40, x: 55000, y: 30000), state: &st)
+        _ = decode(make0x1E(status: 0xC0, x: 55000, y: 30000), state: &st)
         let r = decode(make0x1E(status: 0x00), state: &st)
         XCTAssertEqual(r.count, 1)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
         XCTAssertFalse(pt.inProximity)
         XCTAssertEqual(pt.x, 55000)
         XCTAssertEqual(pt.y, 30000)
+    }
+
+    // MARK: - 0x1E real-capture fixtures (PTK-870, whot/wacom-recordings)
+    //
+    // Bytes below are taken verbatim from `pen.pen-strong-vertical.hid`
+    // (056a:03f9, MIT-licensed), a straight vertical stroke sweeping from
+    // light to full pressure. Each fixture is one representative frame from
+    // that recording, not a synthesized guess.
+
+    func testRealCaptureHoverFrameDecodesAsInProximityZeroPressure() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBA, 0xC8, 0xB3, 0x3A,
+        ]
+        let r = decode(b, state: &st)
+        XCTAssertEqual(r.count, 1)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertTrue(pt.inProximity)
+        XCTAssertEqual(pt.pressure, 0)
+        XCTAssertEqual(pt.x, 35665)
+        XCTAssertEqual(pt.y, 4459)
+    }
+
+    func testRealCaptureTouchdownFrameZeroPressureTransient() {
+        var st = DecoderState()
+        // Momentary zero-pressure frame right at touchdown (0xC0) — real
+        // sensor behavior, not a decode bug.
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC0, 0xEB, 0x8A, 0x00, 0xC3, 0x11, 0x00, 0x00, 0x00,
+            0x21, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79, 0xAA, 0x87,
+            0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x90, 0xCA, 0xBA, 0x3A,
+        ]
+        let r = decode(b, state: &st)
+        XCTAssertEqual(r.count, 1)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertTrue(pt.inProximity)
+        XCTAssertEqual(pt.pressure, 0)
+    }
+
+    func testRealCaptureMaxPressureFrameMatchesDeviceCeiling() {
+        var st = DecoderState()
+        // Pressure reaches exactly 8191, this device's maxPressure.
+        let b: [UInt8] = [
+            0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
+            0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0xAA, 0x87,
+            0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
+        ]
+        let r = decode(b, state: &st)
+        XCTAssertEqual(r.count, 1)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertTrue(pt.inProximity)
+        XCTAssertEqual(pt.pressure, 8191)
+        XCTAssertEqual(pt.x, 33716)
+        XCTAssertEqual(pt.y, 13941)
+    }
+
+    func testRealCaptureExitFrameClearsProximity() {
+        var st = DecoderState()
+        _ = decode(
+            [
+                0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF,
+                0x1F, 0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14,
+                0xAA, 0x87, 0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02,
+                0xD4, 0x18, 0x18, 0x3D,
+            ], state: &st)
+        XCTAssertTrue(st.prevInProximity)
+
+        // Recording's terminal frame: status 0x00, pen lifted out of range.
+        let exit: [UInt8] = [
+            0x1E, 0x01, 0x00, 0x40, 0x82, 0x00, 0x70, 0x8B, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x94, 0x84, 0x58, 0x40,
+        ]
+        let r = decode(exit, state: &st)
+        XCTAssertEqual(r.count, 1)
+        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        XCTAssertFalse(pt.inProximity)
+        XCTAssertFalse(st.prevInProximity)
     }
 
     // MARK: - 0x11 aux report

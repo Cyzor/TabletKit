@@ -140,6 +140,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `IntuosV3Decoder`'s 0x1E extended pen report (PTK-470/670/870, Intuos Pro
+  gen3) checked the wrong status bit for proximity — bit 6, an unverified
+  port from IntuosV2. Real PTK-870 captures (`whot/wacom-recordings`) show
+  bit 7 is proximity and bit 6 is the tip switch; the old check dropped
+  every hovering frame, which precedes each stroke, and misfired
+  proximity-exit at the hover/touch boundary. Now hardware-confirmed, with
+  real-capture test fixtures replacing the synthesized ones.
+
 - CTL-4100/4100WL (0x0374/0x0376/0x03C5) carried an already-verified
   dimension correction (confirmed 2026-08-03 against Wacom's IPI manual,
   cross-referenced with OTD's own `IntuosV2ReportParser`/192-byte report

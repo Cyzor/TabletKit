@@ -27,9 +27,9 @@ import Foundation
 /// See `Notes/Scratch/Upstream-Sync-2026-05-15.md` for the full diff
 /// table.
 ///
-/// Experimental: the 0x11 aux report (express keys, dials) is hardware-confirmed
-/// against a real PTK-870 capture (see decodeAuxReport). The pen reports
-/// (0x1F/0x1E) are still synthesized from OTD source tables, unverified.
+/// 0x11 and 0x1E are hardware-confirmed against a real PTK-870 capture — see
+/// `decodeAuxReport`/`decodeExtendedPenReport`. 0x1F is still synthesized
+/// from OTD source tables; no capture uses that report ID.
 public struct IntuosV3Decoder: TabletReportDecoder {
 
     public init() {}
@@ -138,10 +138,27 @@ public struct IntuosV3Decoder: TabletReportDecoder {
 
     // MARK: - 0x1E extended pen report (24-bit XY)
 
-    /// OTD IntuosV3ExtendedReport.cs layout (20+ bytes):
+    /// Layout confirmed 2026-09-07 against real PTK-870 pen captures
+    /// (`whot/wacom-recordings`, MIT-licensed). Only four status values ever
+    /// appear: 0x00 (out of range), 0x80 (hovering, pressure 0), 0xC0
+    /// (tip touching, transient zero-pressure), 0xC1 (touching with
+    /// pressure, up to 8191). So bit 7 is proximity and bit 6 is the tip
+    /// switch — the previous code checked bit 6 for proximity (an
+    /// unverified port from IntuosV2), which was false for every hovering
+    /// frame and so dropped the hover that precedes each stroke and
+    /// misfired proximity-exit at the hover/touch boundary.
+    ///
+    /// Bit 0 is set on every touching frame (0xC1, never 0xC0 alone once
+    /// pressure is nonzero) — it tracks the tip switch, not a barrel
+    /// button, so it's deliberately left unwired. No capture here presses
+    /// an actual barrel button, so `penButton1`/`penButton2` (bits 1/2
+    /// below) remain unverified.
+    ///
     ///   [0]       = 0x1E  report ID
-    ///   [2]       pen status: bit1=button1, bit2=button2, bit3=button3,
-    ///                        bit5=eraser, bit6=prox
+    ///   [2]       pen status: bit0=tip-switch echo (not a button),
+    ///                        bit1=button1(unverified), bit2=button2
+    ///                        (unverified), bit3=button3, bit5=eraser,
+    ///                        bit6=tip switch, bit7=proximity
     ///   [3..5]    X coordinate, 24-bit (LE u16 at [3..4] | byte[5] << 16)
     ///   [6..8]    Y coordinate, 24-bit (LE u16 at [6..7] | byte[8] << 16)
     ///   [9..10]   pressure, LE u16
@@ -159,7 +176,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
-        let prox = (status & 0x40) != 0
+        let prox = (status & 0x80) != 0
 
         if !prox {
             guard state.prevInProximity else { return [] }
