@@ -27,6 +27,10 @@ import Foundation
 ///   0x02  USB pen report (10 bytes, Report ID 0x02 variant)
 ///   0x02  BPT3 touch/pad container (64 bytes) — INTUOSHT2 consumer
 ///         pen-and-touch models (CTH-690); gated on spec.hasFingerTouch
+///   0x03  PTK-540WL BT aggregated report (22 bytes: 2 frames + power byte)
+///         — gated on length; the short BLE pad report (also 0x03) still
+///         hits its own path below.
+///   0x04  PTK-540WL BT aggregated report (32 bytes: 3 frames + power byte)
 ///   0x10  USB pen report (10 bytes, Report ID 0x10 variant)
 ///   0x80  Wireless status report (ACK-40401 RF dongle)
 ///
@@ -50,6 +54,12 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return decodeBLEPen(
                 report: report, length: length, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
+        }
+        if id == 0x03 && length >= 22 {
+            return decodeIntuos4WLAggregated(report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
+        }
+        if id == 0x04 && length >= 32 {
+            return decodeIntuos4WLAggregated(report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
         }
         if id == 0x03 && length >= 5 {
             guard let aux = decodeBLEPadReport(report: report, length: length) else { return [] }
@@ -370,6 +380,57 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         guard length >= 2 else { return [] }
         let auxByte = report[1]
         return [.aux(AuxButtons(buttons: (0..<8).map { bit in (auxByte & (1 << bit)) != 0 }))]
+    }
+
+    // MARK: - Intuos4 WL Bluetooth aggregated reports (0x03 / 0x04)
+
+    /// PTK-540WL over Bluetooth Classic (PID 0x00BD) batches 2–3 ordinary
+    /// 10-byte Intuos4 frames into one outer report to conserve BT bandwidth,
+    /// with a trailing power byte (kernel `wacom_intuos_bt_irq`):
+    ///   0x03 — [0]=0x03, [1..10] frame 1, [11..20] frame 2, [21] power
+    ///   0x04 — [0]=0x04, [1..10]/[11..20]/[21..30] frames 1–3, [31] power
+    /// Minimum lengths are load-bearing (kernel OOB-read fix,
+    /// GHSA-4mjh-m2x6-5qg4). Each embedded frame decodes exactly like USB —
+    /// pen frames (0x02/0x10) through `decodeUSBPen`, pad frames (0x0C)
+    /// through `decodeIntuos4PadReport`. Power byte: bits 2:0 index
+    /// `batcap_i4`, bit 3 charging, bit 4 external power.
+    /// Experimental: no hardware capture to confirm against, same basis as
+    /// the 0x00BD registry row.
+    private static let batcapI4: [Int] = [1, 15, 30, 45, 60, 70, 85, 100]
+
+    private func decodeIntuos4WLAggregated(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex,
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult] {
+        let frameCount = report[0] == 0x03 ? 2 : 3
+        let powerIndex = frameCount * 10 + 1
+        guard length >= powerIndex + 1 else { return [] }
+
+        var results: [DecodeResult] = []
+        for frame in 0..<frameCount {
+            let base = 1 + frame * 10
+            let frameID = report[base]
+            if frameID == 0x02 || frameID == 0x10 {
+                results.append(contentsOf: decodeUSBPen(
+                    report: report + base, length: 10, spec: spec,
+                    state: &state, deviceFamily: deviceFamily))
+            } else if frameID == 0x0C {
+                results.append(contentsOf: decodeIntuos4PadReport(
+                    report: report + base, length: 10))
+            }
+            // Other frame IDs (e.g. tool-change packets arrive as ordinary
+            // 0x02/0x10 frames with status 0xC0, handled inside decodeUSBPen)
+            // need no special casing here.
+        }
+
+        let power = report[powerIndex]
+        results.append(.battery(
+            percent: Self.batcapI4[Int(power & 0x07)],
+            charging: (power & 0x08) != 0))
+        return results
     }
 
     // MARK: - Intuos4 pad report (0x0C)

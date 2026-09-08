@@ -85,4 +85,88 @@ final class IntuosV1DecoderTests: XCTestCase {
         XCTAssertEqual(p.pressure, 0)
         XCTAssertFalse(state.prevInProximity)
     }
+
+    // MARK: - PTK-540WL Bluetooth aggregated reports (0x03 / 0x04)
+
+    /// Builds a 10-byte pen frame with the given X coordinate, in proximity,
+    /// no tip contact. Status 0x60 = proximity + high confidence, subtype 0.
+    private func penFrame(x: Int) -> [UInt8] {
+        var frame = [UInt8](repeating: 0, count: 10)
+        frame[0] = 0x02
+        frame[1] = 0x60
+        let xHigh = (x >> 1) & 0xFFFF
+        frame[2] = UInt8((xHigh >> 8) & 0xFF)
+        frame[3] = UInt8(xHigh & 0xFF)
+        frame[9] = UInt8((x & 1) << 1)
+        return frame
+    }
+
+    func testBT0x03UnwrapsTwoPenFramesAndBattery() {
+        var state = DecoderState()
+        let report: [UInt8] = [0x03] + penFrame(x: 1000) + penFrame(x: 2000) + [0x6A]
+        // power 0x6A = 0b1101010: index 2 → 30%, bit3 charging set, bit4 ext-power set
+        let results = decode(report, state: &state)
+
+        let pens = results.compactMap { result -> TabletPoint? in
+            guard case .pen(let p) = result, p.inProximity else { return nil }
+            return p
+        }
+        XCTAssertEqual(pens.map(\.x), [1000, 2000])
+
+        guard case .battery(let percent, let charging)? = results.last else {
+            return XCTFail("Expected trailing .battery, got \(results)")
+        }
+        XCTAssertEqual(percent, 30)
+        XCTAssertTrue(charging)
+    }
+
+    func testBT0x04UnwrapsThreePenFramesAndBattery() {
+        var state = DecoderState()
+        let report: [UInt8] = [0x04] + penFrame(x: 100) + penFrame(x: 200) + penFrame(x: 300) + [0x07]
+        // power 0x07: index 7 → 100%, not charging
+        let results = decode(report, state: &state)
+
+        let pens = results.compactMap { result -> TabletPoint? in
+            guard case .pen(let p) = result, p.inProximity else { return nil }
+            return p
+        }
+        XCTAssertEqual(pens.map(\.x), [100, 200, 300])
+
+        guard case .battery(let percent, let charging)? = results.last else {
+            return XCTFail("Expected trailing .battery, got \(results)")
+        }
+        XCTAssertEqual(percent, 100)
+        XCTAssertFalse(charging)
+    }
+
+    func testBTAggregatedPadFrameDecodes() {
+        var state = DecoderState()
+        var pad = [UInt8](repeating: 0, count: 10)
+        pad[0] = 0x0C
+        pad[1] = 0x80 | 42   // ring active, position 42
+        pad[2] = 0x01        // ring center button
+        pad[3] = 0x05        // ExpressKeys 0 and 2
+        let report: [UInt8] = [0x03] + penFrame(x: 500) + pad + [0x00]
+        let results = decode(report, state: &state)
+
+        guard case .aux(let aux)? = results.first(where: {
+            if case .aux = $0 { return true }; return false
+        }) else {
+            return XCTFail("Expected .aux from embedded pad frame, got \(results)")
+        }
+        XCTAssertTrue(aux.touchRingActive)
+        XCTAssertEqual(aux.touchRingPosition, 42)
+        XCTAssertTrue(aux.touchRingButtonDown)
+        XCTAssertTrue(aux.buttons[0])
+        XCTAssertTrue(aux.buttons[2])
+        XCTAssertFalse(aux.buttons[1])
+    }
+
+    func testBTShortAggregatedReportIsRejected() {
+        // Below the kernel-pinned minimums (22 / 32): must not read the power
+        // byte out of bounds. A short 0x03 still falls through to the BLE pad
+        // path; a short 0x04 decodes to nothing.
+        var state = DecoderState()
+        XCTAssertTrue(decode([0x04] + [UInt8](repeating: 0, count: 20), state: &state).isEmpty)
+    }
 }
