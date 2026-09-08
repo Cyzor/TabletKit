@@ -91,3 +91,12 @@ API breakage: func WacomToolSpec.capabilities(forFamily:) has parameter 0 type c
 API breakage: protocol TabletReportDecoder has generic signature change from  to <Self : Swift.Sendable>
 API breakage: protocol TabletReportDecoder has added inherited protocol Sendable
 API breakage: protocol TabletReportDecoder has added inherited protocol SendableMetatype
+
+# CursorSmoother/PressureSmoother's 1€-filter cutoff math assumed each call
+# represented exactly one fixed-rate sample (Te=1), which drifts across
+# devices with different report rates. Both now take real elapsed seconds
+# so the filter behaves consistently regardless of report rate. Pre-1.0,
+# changelog-documented; MockTab is the only consumer and passes real dt at
+# both call sites.
+API breakage: func CursorSmoother.applySmoothing(rawPoint:enteringProximity:) has been renamed to func applySmoothing(rawPoint:enteringProximity:dt:)
+API breakage: func PressureSmoother.applySmoothing(rawPressure:strokeStarting:) has been renamed to func applySmoothing(rawPressure:strokeStarting:dt:)

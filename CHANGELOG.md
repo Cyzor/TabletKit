@@ -131,6 +131,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   (0x0350, 0x0354, 0x03C0, 0x03C4, 0x03EC) from the `linuxwacom/wacom-hid-descriptors`
   corpus, with provenance comments on each row.
 
+- `CursorSmoother.applySmoothing(rawPoint:enteringProximity:)` and
+  `PressureSmoother.applySmoothing(rawPressure:strokeStarting:)` now take a
+  `dt` (real elapsed seconds since the previous sample). Both filters'
+  cutoff math previously assumed a fixed one-sample time unit (`Te=1`),
+  which drifts across devices with different report rates; passing real
+  dt makes the filters behave consistently regardless of rate.
+
 ### Fixed
 
 - CTL-4100/4100WL (0x0374/0x0376/0x03C5) carried an already-verified
