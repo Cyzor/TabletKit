@@ -96,6 +96,16 @@ public enum ReportParser: String, Sendable {
     /// `XencelabsDecoder` (experimental — not yet hardware-validated).
     case xencelabs
 
+    /// ExpressKey Remote (EKR-100, PID 0x0331) — standalone wireless
+    /// button/ring accessory, no digitizer. Report ID 0x11, 32 bytes, opaque
+    /// vendor collection (usage page 0xFF0C, no field-level HID descriptor).
+    /// Distinct byte layout from every other case here — not IntuosV1-shaped
+    /// despite the similar report-ID range. Decoded by
+    /// `ExpressKeyRemoteDecoder`, cross-referenced against Linux's
+    /// `wacom_remote_irq` (kernel source, not independently hardware-tested
+    /// by this project).
+    case expressKeyRemote
+
     /// PL — Wacom's "PL" report family (`WACOM_REPORT_PENABLED`, Report ID
     /// 0x02, 8 bytes). Covers the PL-400 through PL-800 LCD pen displays
     /// (1998–2005), the direct ancestors of the Cintiq line — PL-550/PL-800
@@ -170,6 +180,13 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case dtus
     case bamboo
     case xencelabs
+
+    /// ExpressKey Remote (EKR-100) — standalone button/ring accessory, no
+    /// digitizer and no pen. `WacomToolCatalog` has and needs no entries for
+    /// this case; a device with no pen input never reaches tool-compatibility
+    /// checking in the first place, so the `supportedFamilies.isEmpty`
+    /// fallback documented on `.pl` below is moot here rather than active.
+    case expressKeyRemote
 
     /// PL-series (PL-400–PL-800, 1998–2005 LCD pen displays). Deliberately
     /// its own case, not folded into `.graphire` despite being roughly
@@ -498,6 +515,8 @@ public struct WacomDeviceSpec: Sendable {
             return .bamboo
         case .xencelabs:
             return .xencelabs
+        case .expressKeyRemote:
+            return .expressKeyRemote
         case .pl:
             return .pl
         }
@@ -2963,48 +2982,28 @@ public enum WacomDeviceRegistry: Sendable {
 
         // Name-only: accessories and special modes.
         .init(
-            // 18-button pad accessory for the Cintiq 27QHD line. No digitizer;
-            // pad decode not yet supported.
-            //
-            // Groundwork for whoever implements it. The descriptor is opaque
-            // (31 bytes, vendor page 0xFF0C, usage 0x00 throughout), so this
-            // structure comes from correlating per-action recordings — press
-            // one control, see which bit moves — published in the MIT-licensed
-            // `whot/wacom-recordings`. Facts recorded here rather than fixtures
-            // committed, per the rule that a third-party capture's licence does
-            // not relicense Wacom's own report format.
-            //
-            // Input report 0x11, 32 bytes. Bytes [0..8] hold a report header,
-            // a device serial and a battery percentage, all steady during use.
-            // The controls live in four bytes:
-            //
-            //   [9]  bit 0        ring centre button
-            //        bits 1,4,5   the keys arranged around the ring
-            //        bits 6,7     express keys
-            //        bits 2,3     never exercised in the recordings; presumed
-            //                     the remaining two keys, see the count below
-            //   [10] bits 0..7    eight express keys
-            //   [11] bits 0,1     two express keys
-            //        bit 6        set only while the ring is turning
-            //        bit 7        set only on button events
-            //   [12]             ring position, 70 distinct values observed
-            //
-            // Eight bits in [9], eight in [10] and two in [11] give exactly the
-            // 18 controls `buttonCount` already claims from the kernel — two
-            // independent sources agreeing, which is the main reason to trust
-            // the two unexercised bits.
-            //
-            // What the recordings cannot settle, and hardware would: which bit
-            // corresponds to which key *by position on the device*, and whether
-            // the ring really spans 0...71 (70 values were seen, but an opaque
-            // descriptor declares no maximum to check against). Both matter for
-            // a binding UI more than for decode. Bytes [11] bits 6,7 are read
-            // here as an event-source pair; that is inference from five
-            // recordings, not a documented meaning.
-            productID: 0x0331, name: "ExpressKey Remote (EKR-100)",  // ⚠ name-only
-            parser: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
+            // Standalone wireless button/ring accessory, no digitizer.
+            // Decoded by `ExpressKeyRemoteDecoder` — see that type's header
+            // for the full byte layout. Cross-referenced against Linux's
+            // `wacom_remote_irq` (`drivers/hid/wacom_wac.c`), which agrees
+            // byte-for-byte with the independent bit-mapping worked out here
+            // from five action-labeled recordings in the MIT-licensed
+            // `whot/wacom-recordings` (facts recorded rather than fixtures
+            // committed, per the rule that a third-party capture's licence
+            // does not relicense Wacom's own report format) — except one
+            // point the recordings alone couldn't settle: byte 11 bits 6–7
+            // were originally read here as an event-source pair ("ring
+            // turning" / "button event"); the kernel source instead treats
+            // them as a persistent 2-bit Touch Ring mode index (0–2, "which
+            // mode select (LED light) is currently on"), which this entry
+            // now follows. The ring's 0–71 span is kernel-confirmed too
+            // (only 70 of 72 values happened to appear in the recordings).
+            // Still no hardware of this project's own — `crossReferenced`
+            // per that tier's definition, not `verified`.
+            productID: 0x0331, name: "ExpressKey Remote (EKR-100)",
+            parser: .expressKeyRemote, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 18, hasTouchRing: true, hasEraser: false, tiltMaxDegrees: 64.0,
-            seizeUSB: false),
+            seizeUSB: false, confidence: .crossReferenced),
         .init(
             // Firmware-update (DFU) mode. Never attach a driver to this.
             productID: 0x0094, name: "Wacom Bootloader (DFU mode)",  // ⚠ name-only
