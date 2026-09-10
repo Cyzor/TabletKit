@@ -398,6 +398,18 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         let pressure = Int(UInt16(report[9]) | UInt16(report[10]) << 8)
         let tiltX = Double(Int8(bitPattern: report[11])) / 127.0
         let tiltY = Double(Int8(bitPattern: report[12])) / 127.0
+        // ⚠ byte 11 is read twice — as tiltX above and as distance here. Both
+        // cannot be right. The DTH-172 HID report descriptor (LinuxWacom 2023
+        // corpus) lays this report out as status, 24-bit X, 24-bit Y, 16-bit
+        // pressure, two 16-bit tilt fields, 16-bit twist, 16-bit finger wheel,
+        // *then* 8-bit distance — so distance sits well past byte 11 and this
+        // read is almost certainly the wrong one. Left as-is deliberately:
+        // it is shared by DTH-227/271/172 and DTK-168, the one real capture on
+        // hand has a single hover value that fits either reading, and changing
+        // it blind would alter hover behavior on four shipping devices. Needs
+        // a labeled capture (pen lifted through several heights, tilt held
+        // flat) to settle. OTD carries the identical defect in
+        // `IntuosV2OffsetReport`, so it is not independent corroboration.
         let hoverDistance = Int(report[11])
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
 

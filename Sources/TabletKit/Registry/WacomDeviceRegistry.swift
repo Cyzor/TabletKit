@@ -2614,8 +2614,23 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
-            productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // ⚠ recognition-only; buttonCount 8 per libwacom
-            parser: .intuosV2, maxX: 76200, maxY: 40600, maxPressure: 8191,
+            // Corrected 2026-09-10 from the DTH-172 evidence review. Parser
+            // `.intuosV2` and 8191 pressure are corroborated: the LinuxWacom
+            // 2023 descriptor corpus and a diagnostics dump on OTD PR #4751
+            // both show interface 0 emitting 1E/11/13 with those maxima.
+            //
+            // maxY was wrong — 40600 came from libwacom's 203 mm height, which
+            // is the outlier in every source. Wacom publishes a 15.0 x 8.5 in
+            // active area (381 x 215.9 mm) and the HID descriptor's own
+            // physical maxima agree at ~382 x 215. The old value understated
+            // height ~6%, stretching everything drawn on the lower part of the
+            // display. Now the descriptor maxima (77178 x 43762, exactly 5080
+            // counts/inch) with Wacom's published active area in mm — matching
+            // how every other pen display here is keyed, sensor maxima against
+            // physical area, which is why the two don't divide to a round
+            // number (see DTK-2400, hardware-verified, at ~201 x 202/mm).
+            productID: 0x03C4, name: "Wacom Cintiq Pro 17 (DTH172)",  // buttonCount 8 per libwacom
+            parser: .intuosV2, maxX: 77178, maxY: 43762, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
             // touchMaxX/Y decoded from this PID's own raw touch report
@@ -2625,7 +2640,7 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 15276, touchMaxY: 8592,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 381, activeHeightMM: 203),
+            confidence: .crossReferenced, activeWidthMM: 381, activeHeightMM: 215.9),
         .init(
             productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",  // ⚠ recognition-only; touch per libwacom
             parser: .intuosV2, maxX: 34815, maxY: 18779, maxPressure: 4095,
