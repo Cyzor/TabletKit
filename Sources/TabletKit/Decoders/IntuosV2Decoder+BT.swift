@@ -445,6 +445,133 @@ extension IntuosV2Decoder {
     // Pad reports over BT Classic use a separate sub-report embedded in the container
     // at an unverified offset; pad decoding is deferred until hardware is available.
 
+    /// Report ID `0x81` — the `INTUOSHT3_BT` Bluetooth container used by the
+    /// consumer Intuos BT S/M (CTL-4100WL `0x0377`/`0x03C6`, CTL-6100WL
+    /// `0x0379`/`0x03C8`). Kernel type `INTUOSHT3_BT`, dispatched to
+    /// `wacom_intuos_pro2_bt_irq` alongside the Pro models but with a
+    /// different geometry: **four 8-byte pen frames**, not seven 14-byte ones.
+    ///
+    /// Layout, verified byte-for-byte against a 627-record hardware capture of
+    /// a CTL-4100WL over Bluetooth (`Notes/Scratch/Wacom-CTL-6100WL/`, OTD
+    /// debugger recording with its own decoded output alongside the raw bytes):
+    ///
+    /// | Offset | Meaning |
+    /// |---|---|
+    /// | 0 | Report ID (`0x81`) |
+    /// | 1, 9, 17, 25 | Four 8-byte pen frames |
+    /// | 33 | Pen serial, little-endian |
+    /// | 41 | Tool ID, little-endian |
+    /// | 44 | ExpressKey bitmap, bits 0-3 |
+    /// | 45 | Battery: bit 7 charging, bits 0-6 percent |
+    ///
+    /// Each frame: status byte, X and Y as unsigned LE 16-bit, pressure as
+    /// unsigned LE 16-bit, then hover distance. **No tilt** — this family
+    /// doesn't report it, unlike the Pro path above.
+    ///
+    /// Status bits match the Pro frames (bit 7 valid, 6 proximity, 5 range,
+    /// 4 eraser, 2/1 barrel buttons), which is what lets both share
+    /// `DecoderState`'s exit-threshold handling.
+    ///
+    /// Replaying the capture through this layout reproduced OTD's own decoded
+    /// position, pressure, and hover for 613 of 616 pen records; the three
+    /// misses are the opening records, where holding the last position has no
+    /// prior value to hold. All 622 aux-bearing records matched on byte 44.
+    func decodeIntuosHT3BTFrames(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex,
+        spec: DigitizerSpec,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        // Kernel accepts this family from 46 bytes; bytes 44/45 must exist
+        // before the pad and battery reads below.
+        guard length >= 46 else { return [] }
+
+        var results: [DecodeResult] = []
+
+        for i in 0..<4 {
+            let f = report.advanced(by: 1 + i * 8)
+            guard (f[0] & 0x80) != 0 else { continue }  // frame not valid
+
+            let inProx = (f[0] & 0x40) != 0
+            let inRange = (f[0] & 0x20) != 0
+            let eraser = (f[0] & 0x10) != 0
+            let barrel2 = (f[0] & 0x04) != 0
+            let barrel1 = (f[0] & 0x02) != 0
+
+            if !inProx && !inRange {
+                if state.prevInProximity {
+                    state.exitFrameCount = 0
+                    state.prevInProximity = false
+                    results.append(
+                        .pen(
+                            TabletPoint(
+                                x: state.lastX, y: state.lastY,
+                                maxX: spec.maxX, maxY: spec.maxY,
+                                pressure: 0, maxPressure: spec.maxPressure,
+                                tiltX: 0, tiltY: 0, rotation: 0.0,
+                                penButton1: false, penButton2: false,
+                                eraser: false, inProximity: false, hoverDistance: 0)))
+                }
+                break
+            }
+
+            if !inRange {
+                state.exitFrameCount += 1
+                if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+                    state.exitFrameCount = 0
+                    state.prevInProximity = false
+                    results.append(
+                        .pen(
+                            TabletPoint(
+                                x: state.lastX, y: state.lastY,
+                                maxX: spec.maxX, maxY: spec.maxY,
+                                pressure: 0, maxPressure: spec.maxPressure,
+                                tiltX: 0, tiltY: 0, rotation: 0.0,
+                                penButton1: false, penButton2: false,
+                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    break
+                }
+            } else {
+                state.exitFrameCount = 0
+                state.prevInProximity = true
+            }
+
+            // Out of range: coordinates in the frame are stale, so hold the
+            // last good position rather than reporting them. Reporting the raw
+            // bytes here is what produced periodic cursor jumps to (0,0) in
+            // OTD's first attempt at this family.
+            let x = inRange ? Int(f[1]) | (Int(f[2]) << 8) : state.lastX
+            let y = inRange ? Int(f[3]) | (Int(f[4]) << 8) : state.lastY
+            let pressure = Int(f[5]) | (Int(f[6]) << 8)
+            let hoverDistance = Int(f[7])
+
+            state.lastX = x
+            state.lastY = y
+
+            results.append(
+                .pen(
+                    TabletPoint(
+                        x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: pressure, maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: barrel1, penButton2: barrel2,
+                        eraser: eraser, inProximity: true, hoverDistance: hoverDistance)))
+        }
+
+        // Pad and battery ride in every container, valid pen frame or not —
+        // emitting them unconditionally is what keeps the ExpressKeys alive
+        // while the pen is out of range.
+        let padMask = report[44]
+        results.append(
+            .aux(AuxButtons(buttons: (0..<4).map { (padMask >> $0) & 1 != 0 })))
+
+        let battery = report[45]
+        results.append(
+            .battery(percent: Int(battery & 0x7F), charging: (battery & 0x80) != 0))
+
+        return results
+    }
+
     func decodeBTClassicFrames(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

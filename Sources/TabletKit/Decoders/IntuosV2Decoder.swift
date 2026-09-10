@@ -99,6 +99,12 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                 results.append(contentsOf: decodeBTTouch(report: report, length: length, state: &state))
             }
             return results
+        case 0x81:
+            // INTUOSHT3_BT container (consumer Intuos BT S/M over Bluetooth).
+            // Distinct geometry from the 0x80 Pro frames above — see
+            // `decodeIntuosHT3BTFrames`.
+            return decodeIntuosHT3BTFrames(
+                report: report, length: length, spec: spec, state: &state)
         default:
             return []
         }

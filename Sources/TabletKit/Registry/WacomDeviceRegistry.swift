@@ -1885,6 +1885,18 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
+            // Bluetooth PID of the later-generation CTL-4100WL (USB side is
+            // 0x03C5 above). Added 2026-09-10: `btAliases` already mapped this
+            // PID, but no row existed, so a paired later-revision unit fell
+            // through to the fallback driver. The `0x81` capture that verified
+            // `decodeIntuosHT3BTFrames` came from this exact PID. No feature
+            // init — Bluetooth doesn't take the `02 02` mode select.
+            productID: 0x03C6, name: "Wacom CTL-4100WL",
+            parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
+            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false,
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
+        .init(
             productID: 0x0375, name: "Wacom CTL-6100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
@@ -1899,6 +1911,16 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
+        .init(
+            // Bluetooth PID of the later-generation CTL-6100WL (USB side is
+            // 0x03C7 above); same gap as 0x03C6 — aliased but rowless until
+            // 2026-09-10. BT decode verified on the CTL-4100WL sibling, which
+            // shares the INTUOSHT3_BT protocol but not these dimensions.
+            productID: 0x03C8, name: "Wacom CTL-6100WL",
+            parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
+            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false,
+            confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
 
         // ── Wacom One CTC (IntuosV3) consumer line ────────────────────────────
         // CTC-4110WL / CTC-6110WL use the IntuosV3 report parser (same as
@@ -2557,11 +2579,19 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 356, activeHeightMM: 203),
         .init(
-            productID: 0x0379, name: "Wacom Intuos BT M (CTL-6100WL)",  // ⚠ recognition-only
+            // Bluetooth PID of the CTL-6100WL, whose USB side is 0x0378 (and
+            // 0x03C7 on the later revision) — libwacom groups all four under
+            // one .tablet file. mm corrected 229x127 → 216x135 (2026-09-10):
+            // this row disagreed with its own USB twin, and the kernel's units
+            // at WACOM_INTUOS_RES (100/mm) give 216x135 exactly. libwacom's
+            // 229x127 is a rounded outer-body figure, not the active area.
+            // BT decode (report 0x81) verified on the sibling CTL-4100WL, not
+            // on this model — same INTUOSHT3_BT protocol, different dimensions.
+            productID: 0x0379, name: "Wacom Intuos BT M (CTL-6100WL)",
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 229, activeHeightMM: 127),
+            confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x0398, name: "Wacom MobileStudio Pro 13 (DTH-W1321)",  // ⚠ recognition-only; touch is a separate USB device (0x039A)
             parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
@@ -3069,6 +3099,11 @@ public enum WacomDeviceRegistry: Sendable {
 
         // Intuos BT S/M (CTL-4100WL/6100WL): kernel 0x3C6/0x3C8 are the
         // INTUOSHT3_BT Bluetooth PIDs of the USB entries.
+        //
+        // All four of 0x377/0x379/0x3C6/0x3C8 are kernel type `INTUOSHT3_BT`
+        // and send report `0x81`, which had no handler until 2026-09-10 — pen
+        // data over Bluetooth decoded to nothing. Now handled by
+        // `decodeIntuosHT3BTFrames`, verified against a CTL-4100WL capture.
         0x03C6: 0x0376,
         0x03C8: 0x0378,
     ]
