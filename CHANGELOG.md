@@ -25,6 +25,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   happened to be right for the wrong reason. `WacomDeviceSpec.tiltMaxDegrees`
   documents that this is the physical angle, not necessarily a raw divisor.
 
+### Fixed
+
+- `Wacom24HDTDecoder` now emits an empty touch frame when every finger lifts.
+  It previously returned nothing for a zero-contact report, and since nothing
+  downstream times contacts out, the last ones stayed latched until the next
+  touch. `Wacom27QHDTDecoder` already behaved this way. Affects the Cintiq
+  22/22HD/24HD/13HD touch sensors.
+
 ### Changed
 
 - `TabletPoint.tiltX`/`tiltY` now state their sign convention: the HID

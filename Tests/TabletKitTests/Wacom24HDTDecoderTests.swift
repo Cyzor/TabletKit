@@ -204,10 +204,17 @@ final class Wacom24HDTDecoderTests: XCTestCase {
         XCTAssertEqual(state.wacom24HDTRemainingContacts, 6, "clamped to 10 total, minus the 4 just consumed")
     }
 
-    func testZeroFrameCountWithNoAccumulationInProgressEmitsNothing() {
+    /// Every finger lifted, so the decoder emits an empty frame to release the
+    /// previous contacts. This used to assert `results.isEmpty`, which left
+    /// them latched — nothing downstream times contacts out.
+    func testZeroFrameCountWithNoAccumulationEmitsEmptyFrame() {
         var state = DecoderState()
         let results = decode(makeReport(frameCount: 0, contacts: []), state: &state)
-        XCTAssertTrue(results.isEmpty)
+        XCTAssertEqual(results.count, 1)
+        guard case .touch(let contacts)? = results.first else {
+            return XCTFail("Expected an empty touch frame, got \(results)")
+        }
+        XCTAssertTrue(contacts.isEmpty)
     }
 
     func testWrongReportIDIsIgnored() {

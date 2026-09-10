@@ -1363,15 +1363,18 @@ public enum WacomDeviceRegistry: Sendable {
             // No bezelButtonCount (0 = default): shares 21UX2's 18-button
             // pad field (byte[6]/byte[8] express keys + byte[5]/byte[7]
             // center toggles), correctly routed by CintiqV1Decoder's
-            // bezelButtonCount gate. Per kernel wacom_wac.c, 22HD ALSO has a
-            // distinct byte[9] 3-key field (wrench/info/keys) this decoder
-            // does not yet decode — buttonCount: 20 (18 + 2 of those 3?)
-            // hints at this but it's unimplemented, not just unverified.
-            // Separate follow-up if pursued; not part of the 2026-08-31
-            // 21UX2 phantom-OSD-button fix.
+            // bezelButtonCount gate.
+            //
+            // buttonCount 20 -> 18 (2026-09-10). The kernel packs 18 numbered
+            // buttons from bytes 5-8 and puts the three OSD keys in a separate
+            // byte-9 field, so no reading yields 20 — the old value was the
+            // guess this comment used to admit to. The decoder emits 18 and
+            // never reads byte 9; `ButtonMappingView` sizes its list off
+            // `buttonCount`, so 20 meant two permanently dead rows. Decoding
+            // byte 9 needs a capture to confirm bit order.
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 20, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
         // 0x00FB previously listed as "Cintiq 21UX 2 (DTZ-2100B)" but Linux
@@ -1974,11 +1977,19 @@ public enum WacomDeviceRegistry: Sendable {
             // Confirmed 2026-08-03.
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 299, activeHeightMM: 171),
         .init(
-            productID: 0x00F9, name: "Wacom Cintiq 22HD (DTK-2200)",  // ⚠ from OTD
-            parser: .cintiqV1, maxX: 95040, maxY: 54260, maxPressure: 2047,
-            buttonCount: 20, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
+            // Second interface of the same DTK-2200 as 0x00FA, not a separate
+            // tablet (corrected 2026-09-10). OTD carries both PIDs under one
+            // config split by report length — 0x00FA is the 10-byte pen
+            // interface, this is the 5-byte one; neither kernel nor libwacom
+            // lists 0x00F9 at all. The old row invented dimensions by analogy
+            // that differed slightly from its twin, so one display could
+            // enumerate as either of two disagreeing tablets. What the 5-byte
+            // reports carry is unknown; the decoder's length guards drop them.
+            productID: 0x00F9, name: "Cintiq 22HD secondary interface (pairs 0x00FA)",  // ⚠ name-only, 5-byte reports undecoded
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            isPenDisplay: false,
+            seizeUSB: false),
         // ── IntuosV2 / IntuosV3 pen displays — seizeUSB policy ───────────────
         // IntuosV2 and IntuosV3 pen-display USB interfaces expose a
         // mouse-compatible HID collection alongside the digitizer, identical to
@@ -2284,6 +2295,13 @@ public enum WacomDeviceRegistry: Sendable {
         // Mac could ever attach to and drive. Skipped as out of scope, same
         // reasoning as the ISDV4 tablet-PC entries excluded elsewhere in this
         // registry.
+        //
+        // Covers their touch PIDs too: 0x0309 (pairs 0x0307) and 0x030C (pairs
+        // 0x030A) are `WACOM_24HDT`, the same wire family as the sensors listed
+        // further down, and a 2026-09-10 research pass proposed adding them on
+        // that resemblance. Protocol kinship isn't the criterion; reachability
+        // is, and a sensor inside a Windows tablet-PC is no more attachable
+        // than its pen side.
 
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
@@ -2340,9 +2358,12 @@ public enum WacomDeviceRegistry: Sendable {
             // interface of this device**; see the block comment on the
             // 0x00F6 registry row and
             // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
+            // buttonCount 20 -> 18 for the same reason as its pen-only
+            // sibling 0x00FA above: the decoder emits 18 and the OSD keys live
+            // in an undecoded byte-9 field.
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 20, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 483, activeHeightMM: 279),
@@ -2533,13 +2554,20 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 294, activeHeightMM: 166),
         .init(
-            productID: 0x0326, name: "Wacom Cintiq Companion 2 (DTH-W1310, alt)",  // ⚠ recognition-only
-            parser: .cintiqV1, maxX: 61000, maxY: 35600, maxPressure: 2047,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            // The Companion 2's touch interface, not a second pen PID
+            // (corrected 2026-09-10): kernel types it `HID_GENERIC` with
+            // `oPid: 0x325`, so it's descriptor-driven touch, not the
+            // `WACOM_24HDT` protocol the sensors below use. The old row's
+            // 61000 x 35600 / 2047 / eraser / four buttons were all invented by
+            // analogy to 0x0325. Kept recognition-only, though the Companion
+            // family is excluded on reachability grounds anyway — 0x0325/0x0326
+            // predate that policy rather than being exceptions to it.
+            productID: 0x0326, name: "Cintiq Companion 2 touch sensor (pairs 0x0325)",  // ⚠ name-only, no decoder routing
+            parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
             hasFingerTouch: false, maxTouchContacts: 0,
-            isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 294, activeHeightMM: 166),
+            isPenDisplay: false,
+            seizeUSB: false),
         .init(
             productID: 0x034D, name: "Wacom MobileStudio Pro 13 (DTH-W1320)",  // ⚠ recognition-only; touch is a separate USB device (0x034A)
             parser: .intuosV2, maxX: 61000, maxY: 35600, maxPressure: 8191,
@@ -3003,6 +3031,14 @@ public enum WacomDeviceRegistry: Sendable {
         // match its panel's pen digitizer space (see the CTH-690 touch-range
         // bug this registry already fixed once for exactly that assumption).
         .init(
+            // Partial exception to the block warning above: an independent
+            // 2013-14 investigation of this PID (M. McGuffin,
+            // michaelmcguffin.com/code/cintiq/) reached the same layout from
+            // real traffic — 62-byte packets, four 14-byte records, count at
+            // byte 61, continuation past four fingers — and reports X logical
+            // max 5184, Y 3240. `touchMaxX/Y` still stay 0: that's a protocol
+            // analysis, not a replayable capture. Recorded so a future capture
+            // has something to check against.
             productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,

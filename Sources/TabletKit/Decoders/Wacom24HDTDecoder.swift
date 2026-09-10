@@ -119,11 +119,14 @@ public struct Wacom24HDTDecoder: TabletReportDecoder {
         }
 
         guard state.wacom24HDTRemainingContacts > 0 else {
-            // No frame in progress and this packet declares none either —
-            // nothing to do. (Also covers the deliberately-unhandled 0x02/
-            // 0x03 report IDs, which never reach this function at all since
-            // `decode(...)` gates on report[0] == 0x01.)
-            return []
+            // Every finger lifted. Emit an empty frame, not nothing: the
+            // kernel syncs a frame on every packet including this one, and
+            // nothing downstream times contacts out, so returning `[]` left
+            // the last contacts latched until the next touch.
+            // `Wacom27QHDTDecoder` always did this; the 24HDT path was brought
+            // in line 2026-09-10. (0x02/0x03 never reach here — `decode(...)`
+            // gates on report[0] == 0x01.)
+            return [.touch([])]
         }
 
         let recordsThisPacket = min(Self.recordsPerPacket, state.wacom24HDTRemainingContacts)
