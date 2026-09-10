@@ -100,3 +100,12 @@ API breakage: protocol TabletReportDecoder has added inherited protocol Sendable
 # both call sites.
 API breakage: func CursorSmoother.applySmoothing(rawPoint:enteringProximity:) has been renamed to func applySmoothing(rawPoint:enteringProximity:dt:)
 API breakage: func PressureSmoother.applySmoothing(rawPressure:strokeStarting:) has been renamed to func applySmoothing(rawPressure:strokeStarting:dt:)
+
+# ReportParser gained `.pl` (eight PL-series pen displays) and
+# `.expressKeyRemote` (EKR-100) when those decoders landed. Adding a case to a
+# public non-frozen enum is a hard source break for an external consumer with an
+# exhaustive switch — the constraint the API design doc records as verified, and
+# why the planned frozen core exists. Pre-1.0, changelog-documented; MockTab is
+# the only consumer and was updated in the same change.
+API breakage: enumelement ReportParser.pl has been added as a new enum case
+API breakage: enumelement ReportParser.expressKeyRemote has been added as a new enum case

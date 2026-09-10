@@ -9,6 +9,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `ReportParser.pl` and `ReportParser.expressKeyRemote` — new cases routing the
+  eight PL-series pen displays and the ExpressKey Remote to their own decoders.
+
+  **Source-breaking for external consumers.** `ReportParser` is a public
+  non-frozen enum, so an exhaustive `switch` over it in another module stops
+  compiling when a case is added; `@unknown default:` avoids that but is the
+  consumer's choice, not a guarantee this package can make. Pre-1.0, and
+  MockTab — the only consumer — was updated in the same change. This is the
+  break class the API design doc flags as unavoidable for an open enum, and the
+  reason `DecodeResult` is planned to gain a frozen core rather than more cases.
+
 - `XencelabsDecoder.tiltMaxDegrees` — the pen's physical tilt range (±60°),
   hardware-confirmed. Replaces the internal `tiltScaleDegrees`, whose value
   happened to be right for the wrong reason. `WacomDeviceSpec.tiltMaxDegrees`
