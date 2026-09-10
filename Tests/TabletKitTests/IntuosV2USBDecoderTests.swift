@@ -305,7 +305,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testOffsetPenReportCoordinatesPressureAndProximity() {
         var state = DecoderState()
-        var bytes = [UInt8](repeating: 0, count: 17)
+        var bytes = [UInt8](repeating: 0, count: 34)
         bytes[0] = 0x1E
         bytes[2] = 0x82                                    // prox (0x80) + button1 (0x02)
         bytes[3] = 0xD0; bytes[4] = 0x07; bytes[5] = 0x00  // x = 2000
@@ -325,7 +325,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testOffsetPenReportHoveringAloneCountsAsInProximity() {
         var state = DecoderState()
-        var bytes = [UInt8](repeating: 0, count: 17)
+        var bytes = [UInt8](repeating: 0, count: 34)
         bytes[0] = 0x1E
         bytes[2] = 0x80  // proximity only, no tip switch — hovering, not touching
         let results = decode(bytes, state: &state)
@@ -339,7 +339,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testOffsetPenReportExitClearsProximity() {
         var state = DecoderState()
-        var enter = [UInt8](repeating: 0, count: 17)
+        var enter = [UInt8](repeating: 0, count: 34)
         enter[0] = 0x1E
         enter[2] = 0xC0
         enter[3] = 0x64  // x = 100
@@ -347,7 +347,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         _ = decode(enter, state: &state)
         XCTAssertTrue(state.prevInProximity)
 
-        var exit = [UInt8](repeating: 0, count: 17)
+        var exit = [UInt8](repeating: 0, count: 34)
         exit[0] = 0x1E
         let r = decode(exit, state: &state)
         let pen = r.compactMap { rr -> TabletPoint? in
@@ -381,7 +381,17 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.pressure, 0)
         XCTAssertEqual(pen?.x, 96013)
         XCTAssertEqual(pen?.y, 54357)
-        XCTAssertEqual(pen?.hoverDistance, 12)
+        // Height is byte 19 (0x27 = 39), not byte 11. This assertion used to
+        // read 12 — byte 11, the X tilt low byte — which is what the decoder
+        // produced before the 2026-09-10 offset correction, not what the
+        // hardware meant. The two real frames here corroborate the fix
+        // physically: this one is hovering (pressure 0) at height 39, while
+        // `testRealCaptureDTH227FullPressureFrame` is in contact (pressure
+        // 475, tip bit set) at height 31 — closer to the glass, as it should
+        // be. Byte 11 is a constant 12 in both, because the pen wasn't tilted.
+        XCTAssertEqual(pen?.hoverDistance, 39)
+        XCTAssertEqual(pen?.tiltX ?? 0, 12.0 / 90.0, accuracy: 0.0001)
+        XCTAssertEqual(pen?.tiltY ?? 0, 12.0 / 90.0, accuracy: 0.0001)
     }
 
     func testRealCaptureDTH227FullPressureFrame() {
@@ -396,5 +406,12 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         }.first
         XCTAssertEqual(pen?.inProximity, true)
         XCTAssertEqual(pen?.pressure, 0x01DB)
+        // In contact, so nearer the glass than the hovering frame above (39).
+        XCTAssertEqual(pen?.hoverDistance, 31)
+        // Both tilt axes are signed LE16 four bytes apart: 12 and 8 here.
+        // The old single-byte reading gave tiltY 0, because byte 12 is the
+        // high byte of X tilt and never moves at ordinary tilt angles.
+        XCTAssertEqual(pen?.tiltX ?? 0, 12.0 / 90.0, accuracy: 0.0001)
+        XCTAssertEqual(pen?.tiltY ?? 0, 8.0 / 90.0, accuracy: 0.0001)
     }
 }

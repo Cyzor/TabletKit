@@ -365,17 +365,35 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// bit7=proximity/bit6=tip-switch split as IntuosV3's 0x1E (see
     /// `IntuosV3Decoder.decodeExtendedPenReport`).
     ///
-    /// Also corrected against OTD's `IntuosV2OffsetReport` struct, verified
-    /// field-by-field on the same capture: pressure is plain 16-bit at
-    /// [9..10] (not 13-bit masked); hover distance is byte 11, aliased with
-    /// tiltX (not byte 16); eraser is bit 4 (not bit 3).
+    /// Field map follows Wacom's own kernel parser for this format
+    /// (`wacom_Pro2022_pen_irq`, added by a Wacom engineer for the Cintiq Pro
+    /// 27 and shared by DTH-172/227/271 — their pen descriptors are all 1184
+    /// bytes and differ only in coordinate maxima):
+    ///
+    ///     [2] flags: bit0 tip, bits1-3 buttons, bit4 eraser, bit5 invert,
+    ///                bit6 range, bit7 proximity
+    ///     [3] X LE24   [6] Y LE24   [9] pressure LE16
+    ///     [11] tiltX LE16 signed    [13] tiltY LE16 signed
+    ///     [15] rotation LE16 signed [17] fingerwheel LE16
+    ///     [19] height   [20] tool UID LE64   [28] tool type
+    ///     [30] scan time            [32] sequence number
+    ///
+    /// OTD's `IntuosV2OffsetReport` is *not* a reliable guide here — it reads
+    /// tilt as single bytes at 11/12 and hover at 11, which this decoder
+    /// inherited and which was corrected 2026-09-10. Pressure being plain
+    /// 16-bit at [9..10] (not 13-bit masked) does still hold.
+    ///
+    /// The device sends 192 bytes but only the first 34 carry payload; bit 3
+    /// is a third barrel button that `TabletPoint` has no field for.
     private func decodeOffsetPenReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
-        guard length >= 13 else { return [] }
+        // 20 bytes covers through the height byte at 19. Real devices send 192;
+        // the shortest capture on hand is exactly 20.
+        guard length >= 20 else { return [] }
         let status = report[2]
         let prox = (status & 0x80) != 0
 
@@ -396,21 +414,29 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8) | (Int(report[5]) << 16)
         let y = Int(UInt16(report[6]) | UInt16(report[7]) << 8) | (Int(report[8]) << 16)
         let pressure = Int(UInt16(report[9]) | UInt16(report[10]) << 8)
-        let tiltX = Double(Int8(bitPattern: report[11])) / 127.0
-        let tiltY = Double(Int8(bitPattern: report[12])) / 127.0
-        // ⚠ byte 11 is read twice — as tiltX above and as distance here. Both
-        // cannot be right. The DTH-172 HID report descriptor (LinuxWacom 2023
-        // corpus) lays this report out as status, 24-bit X, 24-bit Y, 16-bit
-        // pressure, two 16-bit tilt fields, 16-bit twist, 16-bit finger wheel,
-        // *then* 8-bit distance — so distance sits well past byte 11 and this
-        // read is almost certainly the wrong one. Left as-is deliberately:
-        // it is shared by DTH-227/271/172 and DTK-168, the one real capture on
-        // hand has a single hover value that fits either reading, and changing
-        // it blind would alter hover behavior on four shipping devices. Needs
-        // a labeled capture (pen lifted through several heights, tilt held
-        // flat) to settle. OTD carries the identical defect in
-        // `IntuosV2OffsetReport`, so it is not independent corroboration.
-        let hoverDistance = Int(report[11])
+        // Tilt is signed LE16, not a signed byte, and the two axes are four
+        // bytes apart — corrected 2026-09-10 from Wacom's own kernel parser
+        // (`wacom_Pro2022_pen_irq`, the Cintiq Pro 2022 format), which the
+        // 1184-byte HID descriptor for this family agrees with field for field.
+        //
+        // The previous offsets came from OpenTabletDriver's
+        // `IntuosV2OffsetReport` and were wrong in three ways at once: tiltY
+        // read byte 12, which is the *high byte of X tilt* (hence always 0 for
+        // ordinary tilt values), and hover distance read byte 11, the X tilt
+        // low byte. Checked against a real DTH-227 frame, the kernel map gives
+        // tiltX 12, tiltY 8, height 31 where ours gave 12, 0, 12 — the
+        // signature the evidence review flagged, where "hover distance" and
+        // "X tilt" track each other exactly and "Y tilt" never moves.
+        //
+        // Tilt range is ±90 per the descriptor's logical maxima, not ±127.
+        let tiltRaw = { (o: Int) -> Double in
+            let v = Int(report[o]) | (Int(report[o + 1]) << 8)
+            return Double(v >= 32768 ? v - 65536 : v)
+        }
+        let tiltX = tiltRaw(11) / 90.0
+        let tiltY = tiltRaw(13) / 90.0
+        // Byte 19, past rotation (15) and the airbrush fingerwheel (17).
+        let hoverDistance = Int(report[19])
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
 
         state.prevInProximity = true
