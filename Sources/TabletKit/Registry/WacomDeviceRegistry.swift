@@ -2810,8 +2810,16 @@ public enum WacomDeviceRegistry: Sendable {
             // exact pen active area with 0x0304 (DTK-1300) per Wacom's own
             // IPI booklet for this model pair — see that row's note.
             // Confirmed 2026-08-03.
+            // Parser corrected .cintiqV1 → .intuosV1 (2026-09-10). A macOS
+            // diagnostics dump attached to OTD PR #4822 enumerates this unit's
+            // report IDs as 01/10/11/C0. Report 0x11 is the aux/express-key
+            // report in `IntuosV1Decoder`; `CintiqV1Decoder` has no 0x11 path
+            // and expects express keys on 0x0C, which this device never emits —
+            // so all 8 keys were silently dead under the old parser. Settles the
+            // parser-family conflict recorded in the promotion checklist in
+            // OTD's favor; dims/pressure/buttonCount already agreed exactly.
             productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // dims kernel (WACOM_13HD type) + OTD
-            parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
+            parser: .intuosV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
