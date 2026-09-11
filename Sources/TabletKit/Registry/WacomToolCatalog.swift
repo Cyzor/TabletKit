@@ -575,6 +575,21 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuos3]
         )
 
+        // Lens Cursor (Intuos1/2)
+        catalog[0x0096] = WacomToolSpec(
+            toolCode: 0x0096,
+            name: "Lens Cursor",
+            toolType: .mouse,
+            buttonCount: 5,
+            maxPressure: nil,
+            hasTilt: false,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: []
+        )
+
         // Lens Cursor (unverified legacy code — kept for compatibility)
         catalog[0x0076] = WacomToolSpec(
             toolCode: 0x0076,
@@ -699,7 +714,65 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.graphire]
         )
 
-        // MARK: - Airbrush (Intuos3/4)
+        // MARK: - Airbrush (Intuos1/2/3/4)
+
+        // Airbrush (original Intuos)
+        catalog[0x0D12] = WacomToolSpec(
+            toolCode: 0x0D12,
+            name: "Airbrush",
+            toolType: .airbrush,
+            buttonCount: 1,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0x0D1A,
+            supportedFamilies: []
+        )
+
+        catalog[0x0D1A] = WacomToolSpec(
+            toolCode: 0x0D1A,
+            name: "Airbrush (Eraser)",
+            toolType: .eraser,
+            buttonCount: 1,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: []
+        )
+
+        // Airbrush (Intuos2)
+        catalog[0x0912] = WacomToolSpec(
+            toolCode: 0x0912,
+            name: "Airbrush",
+            toolType: .airbrush,
+            buttonCount: 1,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0x091A,
+            supportedFamilies: []
+        )
+
+        catalog[0x091A] = WacomToolSpec(
+            toolCode: 0x091A,
+            name: "Airbrush (Eraser)",
+            toolType: .eraser,
+            buttonCount: 1,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: []
+        )
 
         // Airbrush (Intuos3 ZP-400E) — 1 side button, ABS_WHEEL fingerwheel
         catalog[0x0913] = WacomToolSpec(
