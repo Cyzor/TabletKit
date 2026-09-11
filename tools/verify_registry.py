@@ -74,6 +74,22 @@ KERNEL_HALF_SCALE_PIDS = frozenset({
 # have applied the coordinate doubling to pressure too.  Deliberately not
 # whitelisted: the rows should keep failing, because the dimensions agreeing is
 # not on its own grounds to promote them.
+#
+# Swept the whole `otd_disagrees` bucket 2026-09-11 (27 rows) and the same two
+# explanations cover all of it — the kernel sides with this registry on every
+# one, so none is an open defect:
+#   * 18 rows differ on pressure alone, always OTD == 2 x ours.  Same
+#     over-doubling described above, now confirmed to extend past the Intuos
+#     1/2 rows to Intuos 3, Graphire and Cintiq 21UX.
+#   * 9 rows differ on dimensions.  OTD's MaxX/MaxY divide by its own
+#     Width/Height to exactly 100.0 units/mm on every consumer row involved
+#     (CTE-460, CTE-660, CTL-671) — back-computed from the millimetre figure
+#     rather than read from hardware.  Ours are un-round (99.73, 100.22,
+#     198.43) and match the kernel.
+# Left un-whitelisted on purpose, for the reason given above: a verdict of
+# "disagrees" is accurate, and suppressing it would hide future real drift.
+# The adjudication lives in WacomDeviceSpec's doc comment so it is visible
+# where someone would actually be tempted to "fix" a row.
 
 # ── Upstream + registry parsing ───────────────────────────────────────────────
 #

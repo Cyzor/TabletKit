@@ -238,6 +238,34 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
 /// For *non-Wacom* hardware (Huion / Xencelabs / XP-Pen / UC-Logic) the
 /// priority inverts: OpenTabletDriver configs are the primary public source
 /// and the kernel rarely covers them.
+///
+/// **Known systematic divergences from OpenTabletDriver (examined 2026-09-11,
+/// all 27 rows `verify_registry.py` reports as `otd_disagrees`).** None is a
+/// defect on either side; don't "fix" rows toward OTD on the strength of the
+/// audit verdict alone. The kernel agrees with this registry on all 27.
+///
+///   * **Pressure, 18 rows — OTD over-doubled; ours is right.** OTD reports
+///     exactly 2× our value everywhere it differs (2046 vs 1023, on Intuos
+///     1/2/3, Graphire, Cintiq 21UX). These devices are genuinely 10-bit:
+///     Wacom's own GD-series manual specifies 1024 levels, and an early draft
+///     of this project's notes was corrected for making the same "11-bit"
+///     mistake. The *extraction formula* spans 11 bits because it is shared
+///     across the family, which is why the decoders right-shift for
+///     `spec.maxPressure <= 1023` — see the matching lines in `Intuos3Decoder`,
+///     `IntuosV1Decoder`, and `CintiqV1Decoder`. OTD appears to have applied
+///     the same ×2 it correctly applies to these devices' *coordinates* to
+///     pressure as well. Raising our value without removing that shift would
+///     report half-scale pressure; see `KERNEL_HALF_SCALE_PIDS` in
+///     `tools/verify_registry.py`, whose header documents the coordinate half
+///     of this and the real bug (issue #5) it caused.
+///
+///   * **Dimensions, 9 rows — OTD's are back-computed, ours are measured.**
+///     OTD's `MaxX`/`MaxY` divide by its own `Width`/`Height` to a suspiciously
+///     round 100.0 units/mm on every consumer row that differs (CTE-460,
+///     CTE-660, CTL-671), i.e. derived from the millimetre figure rather than
+///     read off the device. Ours land on un-round values (99.73, 100.22,
+///     198.43) matching the kernel exactly. Same trap as the rounded-spec
+///     dimensions documented for the 13.3" pen displays below.
 /// Entries marked ⚠ are estimated from driver sources and unverified on
 /// hardware; the `⚠ recognition-only` variant additionally means the parser
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
