@@ -43,7 +43,14 @@ public struct WacomToolSpec: Codable, Identifiable, Equatable, Sendable {
     /// True if this tool supports rotation (twist) data.
     public let hasRotation: Bool
 
-    /// True if this tool has a scroll wheel (mice only).
+    /// True if this tool has a wheel *we can decode* — not whether the
+    /// hardware has one. `ButtonMappingView` offers a bindable wheel row on
+    /// this flag, so a `true` we can't deliver advertises a dead control.
+    ///
+    /// Cordless mice, plus the Intuos4/5 airbrush (0x0902/0x090A) since
+    /// `IntuosV1Decoder` gained the `0x0a` packet. The Intuos3 airbrushes
+    /// stay `false` — `Intuos3Decoder` and `CintiqV1Decoder` still skip that
+    /// packet. Flip a pair only alongside its decoder.
     public let hasWheel: Bool
 
     /// True if this tool has an eraser counterpart.

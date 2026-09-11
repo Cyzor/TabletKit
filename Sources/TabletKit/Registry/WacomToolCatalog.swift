@@ -462,7 +462,7 @@ public enum WacomToolCatalog: Sendable {
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,
-            hasWheel: true,
+            hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x000C,
             supportedFamilies: [.intuos3]
@@ -477,7 +477,7 @@ public enum WacomToolCatalog: Sendable {
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,
-            hasWheel: true,
+            hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
             supportedFamilies: [.intuos3]
@@ -710,7 +710,7 @@ public enum WacomToolCatalog: Sendable {
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,
-            hasWheel: true,
+            hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x091B,
             supportedFamilies: [.intuos3]
@@ -724,7 +724,7 @@ public enum WacomToolCatalog: Sendable {
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,
-            hasWheel: true,
+            hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
             supportedFamilies: [.intuos3]
