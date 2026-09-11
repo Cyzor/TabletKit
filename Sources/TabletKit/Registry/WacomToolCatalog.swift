@@ -839,6 +839,40 @@ public enum WacomToolCatalog: Sendable {
 
         // MARK: - Intuos3/4 Specialty Pens
 
+        // MARK: - Movink Pens
+
+        // Pro Pen 3E (Movink 13 bundled pen). Wire has no tool-identity field
+        // for this family (see IntuosV3Decoder) — WacomKnownDevice synthesizes
+        // this code on first proximity as the device's known default, not
+        // read from a report.
+        catalog[0x0202] = WacomToolSpec(
+            toolCode: 0x0202,
+            name: "Pro Pen 3E",
+            toolType: .stylus,
+            buttonCount: 3,
+            maxPressure: 8191,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0x020A,
+            supportedFamilies: [.intuosProGen3]
+        )
+
+        catalog[0x020A] = WacomToolSpec(
+            toolCode: 0x020A,
+            name: "Pro Pen 3E (Eraser)",
+            toolType: .eraser,
+            buttonCount: 3,
+            maxPressure: 8191,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: [.intuosProGen3]
+        )
+
         // MARK: - Xencelabs Pens (synthetic codes — no wire tool IDs)
 
         // Xencelabs ships two pens with the Pen Display 24 and Pen Tablets:
