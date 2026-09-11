@@ -100,6 +100,27 @@ def parse_otd(directory: str) -> dict:
     return rl.parse_otd(directory)
 
 
+def parse_canonical_pid_map(path: str) -> dict:
+    """Return `canonicalPIDMap` as {alias PID: canonical PID}.
+
+    A PID that appears only as an alias key is still fully supported — it folds
+    onto the canonical row's spec at connect time, which is how the Bluetooth
+    PIDs of USB-registered tablets are handled. Without consulting this map a
+    coverage audit reports those as missing, which understates support; four of
+    the 29 `missing_from_registry` verdicts were this artifact before it was
+    taken into account (checked 2026-09-11).
+    """
+    import re
+    src = open(path, encoding="utf-8").read()
+    m = re.search(r"canonicalPIDMap: \[Int: Int\] = \[(.*?)\n    \]", src, re.S)
+    if not m:
+        return {}
+    return {
+        int(a, 16): int(b, 16)
+        for a, b in re.findall(r"(0x[0-9A-Fa-f]+):\s*(0x[0-9A-Fa-f]+)", m.group(1))
+    }
+
+
 def parse_registry(path: str) -> list:
     """Return one row per registry entry, in file order."""
     return [
@@ -295,6 +316,7 @@ def main():
     args = p.parse_args()
 
     registry = parse_registry(args.registry)
+    canonical_map = parse_canonical_pid_map(args.registry)
     kernel = parse_kernel(args.kernel)
     otd = parse_otd(args.otd)
 
@@ -344,8 +366,10 @@ def main():
             "notes": notes,
         })
 
-    # PIDs in kernel/OTD that registry doesn't have
-    reg_pids = {r["pid"] for r in registry}
+    # PIDs in kernel/OTD that registry doesn't have. An alias in
+    # `canonicalPIDMap` counts as covered — it resolves to a real row at
+    # connect time, so reporting it as missing would understate support.
+    reg_pids = {r["pid"] for r in registry} | set(canonical_map)
     for pid in sorted((set(kernel) | set(otd)) - reg_pids):
         kern = kernel.get(pid)
         otd_e = otd.get(pid)
