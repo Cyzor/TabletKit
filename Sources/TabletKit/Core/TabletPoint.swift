@@ -60,6 +60,9 @@ public struct TabletPoint: Sendable {
     public var penButton3: Bool = false
     public var penButton4: Bool = false
     public var penButton5: Bool = false
+    /// Absolute airbrush fingerwheel position, 0–1023; nil for tools without
+    /// one. Separate from `mouseWheelDelta`, which is a relative ±1 step.
+    public var airbrushWheel: Int? = nil
 
     public init(
         x: Int,
@@ -80,7 +83,8 @@ public struct TabletPoint: Sendable {
         mouseWheelDelta: Int = 0,
         penButton3: Bool = false,
         penButton4: Bool = false,
-        penButton5: Bool = false
+        penButton5: Bool = false,
+        airbrushWheel: Int? = nil
     ) {
         self.x = x
         self.y = y
@@ -101,6 +105,7 @@ public struct TabletPoint: Sendable {
         self.penButton3 = penButton3
         self.penButton4 = penButton4
         self.penButton5 = penButton5
+        self.airbrushWheel = airbrushWheel
     }
 }
 

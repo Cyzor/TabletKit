@@ -169,4 +169,66 @@ final class IntuosV1DecoderTests: XCTestCase {
         var state = DecoderState()
         XCTAssertTrue(decode([0x04] + [UInt8](repeating: 0, count: 20), state: &state).isEmpty)
     }
+
+    // MARK: - Airbrush fingerwheel (kernel type 0x0a)
+    //
+    // Frames constructed, not captured — hardware unowned. Status 0x74 =
+    // subtype 0x0A, proximity + confidence set.
+
+    /// No pressure in this packet, so a `.pen` here would read as a tip release.
+    func testAirbrushWheelPacketEmitsNoPenPoint() {
+        var state = DecoderState()
+        _ = decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state)
+        let wheel = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
+        XCTAssertFalse(wheel.contains { if case .pen = $0 { return true }; return false })
+    }
+
+    /// Kernel: `(data[6] << 2) | ((data[7] >> 6) & 3)` — absolute 0...1023.
+    func testAirbrushWheelValueMatchesKernelFormula() {
+        var state = DecoderState()
+        _ = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
+        let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state))
+        XCTAssertEqual(p?.airbrushWheel, 1023)
+
+        _ = decode([0x02, 0x74, 0, 0, 0, 0, 0x00, 0x00, 0, 0], state: &state)
+        let zero = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state))
+        XCTAssertEqual(zero?.airbrushWheel, 0)
+
+        // 0x80 << 2 | (0x40 >> 6) == 512 | 1
+        _ = decode([0x02, 0x74, 0, 0, 0, 0, 0x80, 0x40, 0, 0], state: &state)
+        let mid = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state))
+        XCTAssertEqual(mid?.airbrushWheel, 513)
+    }
+
+    /// Wheel and pressure arrive in different packets; the cache must survive.
+    func testAirbrushWheelPersistsAcrossPenReports() {
+        var state = DecoderState()
+        _ = decode([0x02, 0x74, 0, 0, 0, 0, 0x40, 0x00, 0, 0], state: &state)
+        for _ in 0..<3 {
+            let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0x20, 0, 0, 0], state: &state))
+            XCTAssertEqual(p?.airbrushWheel, 256)
+        }
+    }
+
+    /// A wheel position must not follow the next tool into proximity.
+    func testAirbrushWheelClearsOnProximityExit() {
+        var state = DecoderState()
+        _ = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
+        _ = decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state)
+        _ = decode([0x02, 0x00, 0, 0, 0, 0, 0, 0, 0, 0], state: &state)  // exit
+        let after = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state))
+        XCTAssertNil(after?.airbrushWheel)
+    }
+
+    /// nil, not 0 — lets a consumer tell "no wheel" from "wheel at zero".
+    func testNonAirbrushToolsReportNilWheel() {
+        var state = DecoderState()
+        let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0x40, 0, 0, 0], state: &state))
+        XCTAssertNil(p?.airbrushWheel)
+    }
+
+    private func penPoint(_ results: [DecodeResult]) -> TabletPoint? {
+        for r in results { if case .pen(let p) = r { return p } }
+        return nil
+    }
 }

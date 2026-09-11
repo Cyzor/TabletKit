@@ -53,6 +53,10 @@ public struct DecoderState: Sendable {
     public var toolIsSupported: Bool = true
     /// Last valid rotation reading (Art Pen). Used to hold state during boundary-noise
     /// frames where !highConfidence (USB) or !inRange (BT). Reset to 0.0 on proximity exit.
+    /// Last airbrush fingerwheel value (0–1023). Held across reports because
+    /// the wheel and pressure arrive in different packets (`0x0a` vs 0x00–03);
+    /// without it every pen report would blank the wheel. Cleared on exit.
+    public var lastAirbrushWheel: Int?
     public var lastRotation: Double = 0.0
     /// True once at least one valid rotation frame has been decoded since tool-enter.
     /// Prevents emitting stale 0.0 during boundary oscillations at re-entry.

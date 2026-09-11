@@ -127,6 +127,8 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.toolIsMouse = false
+                // Don't let one tool's wheel position follow the next tool in.
+                state.lastAirbrushWheel = nil
                 return [
                     .pen(
                         TabletPoint(
@@ -165,6 +167,8 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.toolIsMouse = false
+                // Don't let one tool's wheel position follow the next tool in.
+                state.lastAirbrushWheel = nil
                 return [
                     .pen(
                         TabletPoint(
@@ -262,6 +266,19 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return results
         }
 
+        // Airbrush second packet (kernel `wacom_intuos_general()` type 0x0a):
+        // wheel + tilt, no pressure or buttons. Interleaved with normal pen
+        // packets, so cache and let the next one carry it — emitting a `.pen`
+        // here (pressure 0) would read as a tip release mid-stroke.
+        // Synthesized from kernel source; hardware discontinued and unowned.
+        if subtype == 0x0A {
+            state.lastAirbrushWheel = (Int(report[6]) << 2) | ((Int(report[7]) >> 6) & 0x03)
+            state.lastTiltX = Double((((Int(report[7]) << 1) & 0x7E) | (Int(report[8]) >> 7)) - 64) / 63.0
+            state.lastTiltY = Double((Int(report[8]) & 0x7F) - 64) / 63.0
+            state.hasValidTiltFrame = true
+            return results
+        }
+
         // Pen path.
         // Pressure: 11-bit formula per kernel wacom_intuos_general().
         // data[6]<<3 provides high 8 bits; data[7]>>5 provides low 2 bits of the 11-bit field.
@@ -287,7 +304,8 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                     penButton2: (status & 0x04) != 0,
                     eraser: state.isEraser,
                     inProximity: true,
-                    hoverDistance: (Int(report[9]) >> 2))))
+                    hoverDistance: (Int(report[9]) >> 2),
+                    airbrushWheel: state.lastAirbrushWheel)))
         return results
     }
 
