@@ -2552,6 +2552,19 @@ public enum WacomDeviceRegistry: Sendable {
         // verified.  Each one is `.experimental` and a candidate for promotion
         // once a real capture log (in-app or hid-recorder format) replays
         // cleanly through the assumed parser.
+        //
+        // Dimensions re-checked against libwacom in bulk 2026-09-11 (all 630
+        // .tablet files, matched by USB PID). 21 of the 27 modern pen-display
+        // rows agree exactly. The three 13.3" units below — 0x0325, 0x034D,
+        // 0x0398 — disagree, and **our values are the correct ones**:
+        //
+        //   ours      294.6 x 165.1 mm -> 13.30" diagonal, aspect 1.784
+        //   libwacom  305   x 178   mm -> 13.90" diagonal, aspect 1.713
+        //
+        // A 13.3" 16:9 active area computes to 294.4 x 165.6 mm (16:9 = 1.778),
+        // so libwacom's figures are rounded outer-case/marketing numbers, not
+        // the digitizer's extent — the same trap documented for Wacom's own
+        // printed specs. Do not "fix" these rows toward libwacom.
         .init(
             productID: 0x0325, name: "Wacom Cintiq Companion 2 (DTH-W1310)",  // ⚠ recognition-only (dims from kernel wacom_features_0x325)
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
@@ -2718,13 +2731,21 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
-        .init(
-            productID: 0x4900, name: "Wacom DTC121 (alt 2)",  // ⚠ recognition-only
-            parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 279, activeHeightMM: 152),
+        // ── 0x4900 — deliberately NOT a row (removed 2026-09-11) ──────────────
+        // Previously present as "Wacom DTC121 (alt 2)", recognition-only. It is
+        // neither a DTC121 nor a USB device. The sysinfo dump it came from is
+        // filed under "Wacom One 13", and its device path reads
+        //   /sys/.../i2c-WCOM4900:00/0018:056A:4900.0007
+        // where `0018` is BUS_I2C — an I²C-attached digitizer integrated into a
+        // laptop, versus `0003` (BUS_USB) on every genuine peripheral here (cf.
+        // 0003:056A:03ED for the real DTC121). The importer matched a bare PID
+        // string without checking bus type.
+        //
+        // A Mac cannot enumerate an internal I²C digitizer over USB, so the row
+        // could never match anything — and it duplicated 0x03ED's dimensions
+        // while claiming a different device. Same policy that excludes the
+        // ISDV4 Tablet-PC entries above: integrated-in-system digitizers are
+        // out of scope. Do not re-add from a PID-only sweep.
 
         // ── Kernel sweep 2026-06-09 ───────────────────────────────────────────
         // PIDs present in input-wacom's device table but previously absent
