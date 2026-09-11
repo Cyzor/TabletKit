@@ -10,6 +10,28 @@ Produces a Markdown audit table for Notes/Scratch/ — promotable entries,
 missing entries, and naming discrepancies.  Run via `gh` (no auth needed
 for the public repo).
 
+**"Promotable" means the PID and name line up — it does NOT mean the
+dimensions were checked, and you cannot check them from these descriptors.**
+Verified 2026-09-11 by decoding the corpus's `.hid.bin` report descriptors
+directly: what they expose is the device's standards-compliant HID digitizer
+collection, not the vendor report our decoders actually parse, and the two
+disagree in three distinct ways:
+
+    device     descriptor X   registry maxX   note
+    PTK-470          18700           37400    exactly half
+    PTK-670          26300           52600    exactly half
+    PTK-870          32767           69800    0x7FFF, a clamp, not an extent
+    DTC-133          29434           29434    agrees exactly
+
+Pressure is worse: the descriptors report 4095 (or 2047) for devices whose
+vendor path genuinely carries 8191.  Same half-scale trap as
+`KERNEL_HALF_SCALE_PIDS` in verify_registry.py, from a different source.
+
+So a promotion to `.crossReferenced` on the strength of this audit alone
+would be wrong for any device whose vendor collection differs — which is
+most of the modern line.  Treat the table below as "this device is real and
+we name it correctly", which is genuinely useful, and nothing more.
+
 Usage:
     python3 tools/audit_wacom_hid_descriptors.py \\
         > Notes/Scratch/Wacom-Descriptor-Audit-$(date +%Y-%m-%d).md
@@ -144,9 +166,17 @@ def main() -> int:
     print()
     print("These entries have PIDs that appear in real sysinfo dumps from")
     print("linuxwacom and whose names share at least one significant token")
-    print("with the device folder.  Safe candidates for `.experimental` →")
-    print("`.crossReferenced` promotion after a spot-check of the relevant")
-    print("`.hid.txt` to confirm `maxX`/`maxY`/`maxPressure` agree.")
+    print("with the device folder.  That confirms the device is real and")
+    print("that we name it correctly — it is **not** grounds on its own for")
+    print("an `.experimental` → `.crossReferenced` promotion.")
+    print()
+    print("The descriptors in this corpus describe each device's")
+    print("standards-compliant HID digitizer collection, not the vendor")
+    print("report the decoders parse.  Checked 2026-09-11: they read half the")
+    print("real extent on PTK-470/670, a clamped 32767 on PTK-870, and 4095")
+    print("pressure where the vendor path carries 8191.  Only DTC-133 agreed")
+    print("exactly.  Confirming dimensions needs a capture of the vendor")
+    print("report, not this corpus.  See the module docstring.")
     print()
     print("| PID | Our name | wacom-hid-descriptors folder |")
     print("|---|---|---|")
