@@ -274,7 +274,7 @@ public struct PrecisionTouchFrame: Equatable, Sendable {
 /// front is firmware behavior, not something HID guarantees, and a device that
 /// reports finger 3 while fingers 0–2 are up would lose the contact entirely
 /// under the contiguous assumption.
-public struct PrecisionTouchDecoder {
+public struct PrecisionTouchDecoder: Sendable {
 
     public let layout: PrecisionTouchLayout
 

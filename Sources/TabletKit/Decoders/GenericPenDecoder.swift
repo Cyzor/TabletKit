@@ -150,7 +150,7 @@ public struct GenericPenLayout: Equatable, Sendable {
 /// decoder in `WacomFallbackDevice` builds — rather than routing through
 /// `DecodeResult`, since the fallback driver calls `onTablet(TabletPoint)`
 /// per report and has no use for a result array here.
-public struct GenericPenDecoder {
+public struct GenericPenDecoder: Sendable {
 
     public let layout: GenericPenLayout
 
