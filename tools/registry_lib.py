@@ -294,6 +294,22 @@ def parse_otd(directory: Path | str = DEFAULT_OTD,
         max_p = int(cfg.get("MaxPressure") or pen.get("MaxPressure") or 0)
 
         # Current schema: DigitizerIdentifiers[].
+        #
+        # The VendorID filter drops exactly three PIDs from OTD's Wacom folder
+        # (checked 2026-09-11): CTC-4110WL 0x0100 and CTC-6110WL 0x0102/0x0103,
+        # which OTD files under vendor 0x531 rather than Wacom's 0x056A. They
+        # surface as `unknown` in verify_registry.py — no kernel entry either —
+        # so the registry rows for them rest on OTD's name alone.
+        #
+        # Deliberately still filtered. Neither libwacom nor the kernel has ever
+        # heard of vendor 0x531, and libwacom's only 0x0100 is the ISDv4
+        # tablet-PC digitizer (the PID collision the registry row for 0x0100
+        # already warns about). Widening the filter would import a single
+        # unsupported source's vendor claim into a table the driver keys by PID
+        # alone — and if 0x531 is real, the deeper problem is that
+        # `TabletManager.vendorGate` only admits 0x056A, so those tablets would
+        # be rejected before the registry is consulted at all. Needs a real
+        # device or a sysinfo dump to settle, not a parser change.
         for di in cfg.get("DigitizerIdentifiers", []) or []:
             if not isinstance(di, dict):
                 continue

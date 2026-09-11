@@ -1959,6 +1959,22 @@ public enum WacomDeviceRegistry: Sendable {
         // Confirmed from OTD Configurations/Wacom/CTC-4110WL.json and
         // CTC-6110WL.json (FeatureInitReport "AgI=" = [0x02, 0x02]).
         // No touch ring, no express keys, no eraser — pen-only AES devices.
+        //
+        // ⚠ These three rows may be unreachable, and nothing here can settle
+        // it (checked 2026-09-11). Both OTD configs declare **vendor 0x531**,
+        // not Wacom's 0x056A. If that is accurate, `TabletManager.vendorGate`
+        // rejects these tablets before this registry is ever consulted, since
+        // it admits 0x056A and then defers to the non-Wacom allowlist — which
+        // these are not on. No corroboration exists either way: neither the
+        // kernel nor libwacom has any record of vendor 0x531, and libwacom's
+        // only 0x0100 is the ISDv4 digitizer named in the collision note
+        // below. OTD is a single source here, and it is the *only* source.
+        //
+        // Left as-is rather than guessed at. Fixing it blind would mean either
+        // widening the vendor gate on one unsupported claim, or deleting rows
+        // that may be correct. A sysinfo dump or a real device settles it in
+        // one line; see `parse_otd`'s VendorID filter in tools/registry_lib.py,
+        // which drops exactly these three PIDs for the same reason.
         .init(
             // PID collision: kernel wacom_features_0x100 is "ISDv4 100", a
             // built-in tablet-PC digitizer that can never appear standalone on
