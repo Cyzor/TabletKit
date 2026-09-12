@@ -2425,24 +2425,28 @@ public enum WacomDeviceRegistry: Sendable {
             // the previous 178 x 102 gave 210.1 x 205.9, anisotropic and round in
             // neither axis.
             //
-            // hasTouchRing left false pending its own capture. Physical layout
-            // reconciled 2026-09-10 against Wacom's own spec/Help pages: this
-            // is 5 ExpressKeys (4 outer + 1 center) and 1 non-pressing
-            // mechanical dial, not "4 keys + a dial press" — the center key
-            // is an ordinary assignable ExpressKey, default-bound to "Dial
+            // Physical layout reconciled 2026-09-10 against Wacom's own
+            // spec/Help pages, then confirmed 2026-09-11 by direct visual
+            // inspection of a real PTK-470: this is 5 ExpressKeys (4 outer +
+            // 1 center) and 1 non-pressing mechanical dial on the upper
+            // bezel, not "4 keys + a dial press" — the center key is an
+            // ordinary assignable ExpressKey, default-bound to "Dial
             // toggle." M/L are the same shape doubled (2 clusters, 2 dials),
             // so libwacom's "8 + 2 dial-press" description is a semantic
             // relabeling of the same 10 buttons, not a different topology.
-            // Byte position of the S's center-key bit is still unconfirmed —
+            // hasTouchRing/hasMechanicalDial now match that physical
+            // confirmation.
+            //
+            // Still open: byte position of the S's center-key bit.
             // decodeAuxReport's byte 3 bit 0 (touchRingButtonDown) is only
-            // hardware-tested against M/L's PTK-870 capture, and family
-            // symmetry is a guess, not a substitute for a PTK-470 0x11
-            // capture. Known open bug, not fixed here — if this row's
-            // hasTouchRing is ever corrected to true, it should also get
-            // hasMechanicalDial: true, matching M/L below.
+            // hardware-tested against M/L's PTK-870 capture — family
+            // symmetry is a reasonable guess for the wire layout, not a
+            // substitute for a real PTK-470 0x11 capture. If a capture ever
+            // shows the S's aux report differs from M/L's, this is where
+            // that surfaces.
             productID: 0x03F5, name: "Intuos Pro S gen 3 (PTK-470)",  // cross-referenced: OTD + libwacom (2025 model)
             parser: .intuosV3, maxX: 37400, maxY: 21000, maxPressure: 8191,
-            buttonCount: 5, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 5, hasTouchRing: true, hasDualRings: false, hasMechanicalDial: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 187, activeHeightMM: 105),
         .init(
             // buttonCount/hasTouchRing/hasDualRings corrected 2026-07-28 from a
