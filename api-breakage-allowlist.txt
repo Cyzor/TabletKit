@@ -109,3 +109,10 @@ API breakage: func PressureSmoother.applySmoothing(rawPressure:strokeStarting:) 
 # the only consumer and was updated in the same change.
 API breakage: enumelement ReportParser.pl has been added as a new enum case
 API breakage: enumelement ReportParser.expressKeyRemote has been added as a new enum case
+
+# TabletPoint gained airbrushWheel, added to the memberwise initializer with
+# a default value rather than a new overload — same "defaulted parameter on
+# an existing initializer" shape as the earlier TouchContact break above.
+# Pre-1.0, changelog-documented; MockTab is the only consumer and doesn't
+# call the full initializer directly for this type.
+API breakage: constructor TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:tiltX:tiltY:rotation:penButton1:penButton2:eraser:inProximity:hoverDistance:mouseMiddleButton:mouseWheelDelta:penButton3:penButton4:penButton5:) has been removed
