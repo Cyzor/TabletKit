@@ -55,6 +55,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
                 deviceFamily: deviceFamily)
         case 0x11:
             return decodeAuxReport(report: report, length: length)
+        case 0x1A:
+            guard length >= 20 else { return [] }
+            return decodeBLEReport(report: report, length: length, spec: spec, state: &state)
         default:
             return []
         }
@@ -349,6 +352,166 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             let rightDelta = Int((Int8(bitPattern: report[5]) << 1) >> 1)
             if rightDelta != 0 { results.append(.wheel(index: 1, delta: rightDelta)) }
         }
+        return results
+    }
+
+    // MARK: - 0x1A Bluetooth LE report (pen + pad, single multiplexed interface)
+
+    /// PTK-470/670/870 over Bluetooth LE expose one HID interface (usage
+    /// page 0x01, usage 0x80 "System Control" — the whole descriptor is
+    /// reused as a vendor payload wrapper, not a real System Control
+    /// collection) instead of USB's separate pen/aux interfaces. All pen and
+    /// pad data multiplexes through this single report ID.
+    ///
+    /// Requires the device's DATAMODE feature report ([0x02, 0x02]) to have
+    /// been sent first — see `WacomDeviceRegistry`'s `.intuosV3` `initSteps`
+    /// and `WacomKnownDevice.open()`'s BLE exception for `.intuosV3`.
+    /// Without it the tablet emits report 0x06 instead (an inert, mostly-
+    /// zero idle report — not handled here, since MockTab now always
+    /// triggers data mode on connect).
+    ///
+    /// Layout confirmed 2026-09-17 against real PTK-870 BLE captures (raw
+    /// sequential HID logs via `tools/capture/hid_input_capture.c` — the
+    /// discovery-mode aggregate byteStats tool cannot reveal LE16 pairing or
+    /// monotonic ordering, only per-byte marginal min/max/distinct):
+    ///   [0]     = 0x1A  report ID
+    ///   [1]     packet-class + slot discriminator (see below)
+    ///   [4..5]  X coordinate, LE u16 — confirmed monotonic across a
+    ///           corner-to-corner horizontal sweep, flat during a vertical
+    ///           sweep
+    ///   [6]     tilt X, signed byte — confirmed via four held-static
+    ///           single-direction poses (left/right/up/down): sign flips
+    ///           between opposite directions, magnitude changes, perfectly
+    ///           constant when the angle itself is held fixed
+    ///   [7]     tilt Y, signed byte — same confirmation, opposite axis
+    ///   [8..9]  Y coordinate, LE u16 — confirmed monotonic across a
+    ///           vertical sweep, flat during a horizontal sweep
+    ///   [10]    pressure, single byte — confirmed via a dedicated
+    ///           press-harder capture showing a clean ramp-and-saturate
+    ///           curve (two press cycles, both topping out at the same
+    ///           value). Ceiling observed on the pens tested this session
+    ///           was ~31 (0x1F), far below `spec.maxPressure` (8191) — this
+    ///           is very likely the physical range of those specific,
+    ///           older pens rather than a report-format truncation (the
+    ///           curve saturates and holds flat under sustained force
+    ///           rather than wrapping/glitching, which is what a truncated
+    ///           high byte would look like). Scaled against
+    ///           `spec.maxPressure` as-is; a pen with a wider true range
+    ///           will simply report higher byte values, the same as any
+    ///           other 8-bit-vs-wider pressure field elsewhere in this
+    ///           decoder set.
+    ///   [18]    buttons — one-hot, bits 0-3 = left ExpressKeys (4 keys),
+    ///           bits 4-7 = right ExpressKeys (4 keys). Confirmed via
+    ///           isolated left-only and right-only key-press captures.
+    ///   [19]    dial + cluster-active flags — bit0 = left-key-cluster
+    ///           active, bit1 = right-key-cluster active, bit2 = left dial
+    ///           active, bit3 = left dial rotating CCW (clear = CW), bit4 =
+    ///           right dial active, bit5 = right dial rotating CCW (clear =
+    ///           CW). Confirmed via isolated left-dial/right-dial/CW/CCW
+    ///           captures — no bit overlap with the button bits. NOT
+    ///           confirmed: per-frame step magnitude. The one raw sequential
+    ///           dial capture on hand shows the active bit held across many
+    ///           consecutive reports at a steady ~10 Hz for the whole
+    ///           rotation gesture, not one report per physical detent —
+    ///           emitting `delta: ±1` on every such frame below is a
+    ///           placeholder that will over-report rotation speed if that
+    ///           reading is right. A capture of a single, deliberate,
+    ///           one-detent dial click (versus a multi-second continuous
+    ///           spin) is needed to confirm whether this field ticks once
+    ///           per detent or free-runs while held.
+    ///
+    /// NOT YET CONFIRMED, deliberately not decoded here rather than guessed:
+    /// pen barrel buttons, eraser, and tip/touch switch state for this
+    /// report — no capture isolated these bits. `inProximity` is inferred
+    /// from whether a live (non-idle, non-template) discriminator arrived,
+    /// not from an explicit proximity bit. Tool serial/tool-code
+    /// (`.toolEnter`) are also not emitted here: the legacy Intuos
+    /// enter-class discriminator (`(byte[1] & 0xfc) == 0xc0`) that would
+    /// carry them was never observed in ~18,000 samples across every
+    /// capture taken this session, including deliberate approach/withdraw
+    /// tests — see `Notes/Scratch/` PTK-870 BLE research notes. Bytes 2-3
+    /// and 11-17 are also unassigned; several showed mild, unexplained
+    /// drift in some captures but nothing triangulated to a specific
+    /// control.
+    ///
+    /// Discriminator byte [1] follows Wacom's legacy Intuos proximity
+    /// state-machine bit convention (`wacom_intuos_inout()` in the Linux
+    /// `input-wacom` driver): high bits are a packet-class field, the low
+    /// bit is a slot index. Every discriminator value actually observed
+    /// this session decomposes cleanly: `0x02` = idle, `0x21`/`0x22` =
+    /// in-range (class 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting
+    /// (class 0x40, slot 1/0). A handful of `0xC1`/`0xC2` (enter-class)
+    /// samples appeared in early discovery-mode captures but never in
+    /// enough volume to be usable, and the exit class
+    /// (`(byte[1] & 0xfe) == 0x80`) was never observed at all. Frames whose
+    /// class is `0x40` with a byte[3]/[4..9] payload that is bit-for-bit
+    /// IDENTICAL every time (a fixed template — `c0 81 90 80 24 04 08`
+    /// observed in both sweep captures) are a sync/keepalive marker, not
+    /// live pen data — filtered out here by requiring the frame to differ
+    /// from that exact template before treating [4..10] as position data.
+    private func decodeBLEReport(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex,
+        spec: DigitizerSpec,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        let discriminator = report[1]
+        let packetClass = discriminator & 0xfc
+
+        // Fixed sync/keepalive template — not live pen data. Bytes [3..9]
+        // match exactly across every occurrence observed in captured data.
+        let isTemplateFrame =
+            report[3] == 192 && report[4] == 129 && report[5] == 144
+            && report[6] == 128 && report[7] == 36 && report[8] == 4
+            && report[9] == 8
+
+        var results: [DecodeResult] = []
+
+        // Buttons/dial are multiplexed into every frame, including idle
+        // ones — decode unconditionally so a key/dial action fires even
+        // when the pen itself isn't in proximity.
+        let dialFlags = report[19]
+        let buttons: [Bool] = (0..<8).map { bit in (report[18] & (1 << bit)) != 0 }
+        results.append(
+            .aux(
+                AuxButtons(
+                    buttons: buttons, mechanicalMask: report[18],
+                    touchRingButtonDown: (dialFlags & 0x01) != 0,
+                    touchRing2ButtonDown: (dialFlags & 0x02) != 0)))
+        if (dialFlags & 0x04) != 0 {
+            results.append(.wheel(index: 0, delta: (dialFlags & 0x08) != 0 ? -1 : 1))
+        }
+        if (dialFlags & 0x10) != 0 {
+            results.append(.wheel(index: 1, delta: (dialFlags & 0x20) != 0 ? -1 : 1))
+        }
+
+        // packetClass 0x00 is the idle state — it still carries a live
+        // (if static) X/Y, but with no pen actually in range there is
+        // nothing meaningful to emit as a pen point.
+        guard packetClass != 0x00, !isTemplateFrame else { return results }
+
+        let x = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
+        let y = Int(UInt16(report[8]) | UInt16(report[9]) << 8)
+        let tiltDivisor = spec.tiltMaxDegrees ?? 64.0
+        let tiltX = Double(Int8(bitPattern: report[6])) / tiltDivisor
+        let tiltY = Double(Int8(bitPattern: report[7])) / tiltDivisor
+        let pressure = Int(report[10])
+
+        state.prevInProximity = true
+        state.lastX = x
+        state.lastY = y
+        state.lastTiltX = tiltX
+        state.lastTiltY = tiltY
+        state.hasValidTiltFrame = true
+
+        results.append(
+            .pen(
+                TabletPoint(
+                    x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                    pressure: pressure, maxPressure: spec.maxPressure,
+                    tiltX: tiltX, tiltY: tiltY, rotation: 0.0,
+                    penButton1: false, penButton2: false,
+                    eraser: false, inProximity: true, hoverDistance: 0)))
         return results
     }
 }

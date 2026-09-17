@@ -576,4 +576,106 @@ final class IntuosV3DecoderTests: XCTestCase {
         let r = decode([0x10, 0x00, 0x40] + [UInt8](repeating: 0, count: 20), state: &st)
         XCTAssertTrue(r.isEmpty)
     }
+
+    // MARK: - 0x1A Bluetooth LE report (PTK-870, real captures)
+    //
+    // Bytes taken verbatim from raw sequential HID logs captured 2026-09-17
+    // via `tools/capture/hid_input_capture.c` against a real PTK-870 over
+    // BLE (see IntuosV3Decoder.swift's decodeBLEReport doc comment for the
+    // full field-confirmation methodology).
+
+    func testShort0x1ARejected() {
+        var st = DecoderState()
+        let r = decode([0x1A, 0x42], state: &st)
+        XCTAssertTrue(r.isEmpty)
+    }
+
+    /// Real mid-sweep sample from `ptk-870-left-to-right.txt`, sample #100.
+    func testRealCaptureBLEPositionDecoded() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 66, 128, 196, 253, 4, 128, 203, 7, 0,
+            0, 0, 232, 135, 62, 103, 106, 69, 15, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertEqual(pens.count, 1)
+        let p = pens[0]
+        XCTAssertEqual(p.x, 253 + 256 * 4)  // bytes 4-5, LE16
+        XCTAssertEqual(p.y, 7 + 256 * 0)  // bytes 8-9, LE16
+        XCTAssertEqual(p.pressure, 0)  // byte 10
+        XCTAssertTrue(p.inProximity)
+    }
+
+    /// The fixed sync/keepalive template observed verbatim in every 0x41
+    /// discriminator frame across multiple real captures — must NOT be
+    /// treated as a live pen point.
+    func testRealCaptureBLETemplateFrameSuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 65, 128, 192, 129, 144, 128, 36, 4, 8,
+            17, 0, 4, 8, 224, 0, 0, 0, 0, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertTrue(pens.isEmpty)
+    }
+
+    /// Real idle-state frame (discriminator 0x02) from `ptk-870-left.txt`
+    /// with the first left ExpressKey (bit 0) pressed — buttons/dial must
+    /// still decode even though no pen is in proximity.
+    func testRealCaptureBLELeftExpressKeyOneDecoded() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
+        ]
+        let r = decode(b, state: &st)
+        let aux = r.compactMap { res -> AuxButtons? in
+            if case .aux(let a) = res { return a }; return nil
+        }
+        XCTAssertEqual(aux.count, 1)
+        XCTAssertEqual(aux[0].buttons[0], true)
+        XCTAssertTrue(aux[0].buttons[1...].allSatisfy { !$0 })
+        // No pen point — packetClass is idle (0x02 & 0xfc == 0x00).
+        XCTAssertTrue(r.allSatisfy { if case .pen = $0 { return false }; return true })
+    }
+
+    /// Real idle-state frame with the left dial active + clockwise
+    /// (byte19 == 4: bit2 set, bit3 clear).
+    func testRealCaptureBLELeftDialClockwiseEmitsWheel() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 16, 0, 0, 0, 0, 4,
+        ]
+        let r = decode(b, state: &st)
+        let wheels = r.compactMap { res -> (Int, Int)? in
+            if case .wheel(let i, let d) = res { return (i, d) }; return nil
+        }
+        XCTAssertEqual(wheels.count, 1)
+        XCTAssertEqual(wheels.first?.0, 0)
+        XCTAssertEqual(wheels.first?.1, 1)
+    }
+
+    /// Real idle-state frame with the left dial active + counter-clockwise
+    /// (byte19 == 12: bits 2 and 3 both set).
+    func testRealCaptureBLELeftDialCounterClockwiseEmitsWheel() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 48, 0, 0, 0, 0, 12,
+        ]
+        let r = decode(b, state: &st)
+        let wheels = r.compactMap { res -> (Int, Int)? in
+            if case .wheel(let i, let d) = res { return (i, d) }; return nil
+        }
+        XCTAssertEqual(wheels.count, 1)
+        XCTAssertEqual(wheels.first?.0, 0)
+        XCTAssertEqual(wheels.first?.1, -1)
+    }
 }
