@@ -590,12 +590,15 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(r.isEmpty)
     }
 
-    /// Real mid-sweep sample from `ptk-870-left-to-right.txt`, sample #100.
+    /// Real mid-sweep sample from `ptk-870-top-to-bottom.txt`, sample #100.
+    /// Y's field went through three wrong byte-mapping attempts before this
+    /// one (see the decoder's doc comment) — this fixture and the two below
+    /// guard the confirmed-correct 24-bit reading.
     func testRealCaptureBLEPositionDecoded() {
         var st = DecoderState()
         let b: [UInt8] = [
-            26, 66, 128, 196, 253, 4, 128, 203, 7, 0,
-            0, 0, 232, 135, 62, 103, 106, 69, 15, 0,
+            26, 66, 128, 193, 200, 157, 160, 12, 1, 180,
+            4, 41, 31, 17, 143, 20, 113, 113, 12, 0,
         ]
         let r = decode(b, state: &st)
         let pens = r.compactMap { res -> TabletPoint? in
@@ -603,10 +606,88 @@ final class IntuosV3DecoderTests: XCTestCase {
         }
         XCTAssertEqual(pens.count, 1)
         let p = pens[0]
-        XCTAssertEqual(p.x, 253 + 256 * 4)  // bytes 4-5, LE16
-        XCTAssertEqual(p.y, 7 + 256 * 0)  // bytes 8-9, LE16
-        XCTAssertEqual(p.pressure, 0)  // byte 10
+        XCTAssertEqual(p.x, 200 + 256 * 157)  // bytes 4-5, X low/high LE16
+        // bytes 6/7/8 (Y 24-bit LE): 160 | 12<<8 | 1<<16 = 68768 raw,
+        // scaled to spec.maxY (27940 for the ptk670 fixture) via the
+        // measured 624000 raw ceiling.
+        let rawY = 160 + 256 * 12 + 65536 * 1
+        XCTAssertEqual(p.y, Int((Double(rawY) * 27940.0 / 624000.0).rounded()))
+        XCTAssertEqual(p.pressure, 4)  // byte 10
         XCTAssertTrue(p.inProximity)
+    }
+
+    /// Real wrap-boundary sample pair from `ptk-870-top-to-bottom.txt`
+    /// (the confirmed genuine 16-bit-to-zero overflow of bytes [6..7],
+    /// with byte [8] incrementing by exactly 1 at the boundary — the
+    /// evidence that Y needs a third byte at all). Guards against
+    /// regressing to a 16-bit-only read of [6..7], which would make Y
+    /// snap back to a small value instead of continuing to climb past
+    /// this point.
+    func testRealCaptureBLEYAxisSpans24BitsAcrossAWrapBoundary() {
+        var st = DecoderState()
+        // Immediately before the wrap: bytes [6..7] = 0xd0f6-ish range,
+        // byte [8] = 6. Immediately after: [6..7] wraps low, byte [8] = 7.
+        let before: [UInt8] = [
+            26, 66, 128, 193, 20, 130, 48, 254, 6, 221,
+            11, 25, 28, 111, 254, 24, 151, 96, 8, 0,
+        ]
+        let after: [UInt8] = [
+            26, 66, 128, 193, 20, 130, 32, 2, 7, 221,
+            11, 25, 28, 111, 14, 25, 207, 96, 8, 0,
+        ]
+        let rBefore = decode(before, state: &st)
+        let rAfter = decode(after, state: &st)
+        let yBefore = rBefore.compactMap { r -> Int? in
+            if case .pen(let p) = r { return p.y }; return nil
+        }.first
+        let yAfter = rAfter.compactMap { r -> Int? in
+            if case .pen(let p) = r { return p.y }; return nil
+        }.first
+        XCTAssertNotNil(yBefore)
+        XCTAssertNotNil(yAfter)
+        // The 24-bit reconstruction must keep climbing across the byte
+        // [6..7] wrap, not drop back down — a 16-bit-only read of [6..7]
+        // would produce yAfter << yBefore instead.
+        XCTAssertGreaterThan(yAfter!, yBefore!)
+    }
+
+    /// Real sample from `ptk-870-tilt-hover-left-to-right.txt` — discriminator
+    /// 0x02, previously treated by this decoder as pure idle/no-pen and
+    /// discarded entirely. A dedicated hover-only sweep (pen moved across
+    /// the tablet without ever touching down) showed clean, live,
+    /// monotonic X motion exclusively under this discriminator — it must
+    /// decode as a real pen point, not be dropped.
+    func testRealCaptureBLEHoverFrameDecodesAsPosition() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 32, 192, 43, 78, 112, 187, 2, 0,
+            0, 9, 247, 0, 16, 54, 119, 65, 0, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertEqual(pens.count, 1)
+        XCTAssertEqual(pens[0].x, 43 + 256 * 78)
+        XCTAssertEqual(pens[0].pressure, 0)
+    }
+
+    /// Real sample from `ptk-870-left.txt` (ExpressKeys/dial exercised with
+    /// no pen anywhere near the tablet) — discriminator 0x02 with X=0, Y=0,
+    /// the genuine no-pen placeholder this decoder must still discard
+    /// (distinct from a hovering pen's 0x02 frames, which never happen to
+    /// read exactly zero on both axes in the captures on hand).
+    func testRealCaptureBLENoPenPlaceholderSuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertTrue(pens.isEmpty)
     }
 
     /// The fixed sync/keepalive template observed verbatim in every 0x41
