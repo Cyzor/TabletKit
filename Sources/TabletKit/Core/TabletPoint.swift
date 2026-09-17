@@ -138,6 +138,7 @@ public struct AuxButtons: Sendable {
         touchRingButtonDown: Bool = false,
         touchRingPosition: UInt8 = 0x7F,
         touchRing2Active: Bool = false,
+        touchRing2ButtonDown: Bool = false,
         touchRing2Position: UInt8 = 0x7F,
         touchStrip1Active: Bool = false,
         touchStrip1Position: UInt8 = 0xFF,
@@ -150,6 +151,7 @@ public struct AuxButtons: Sendable {
         self.touchRingButtonDown = touchRingButtonDown
         self.touchRingPosition = touchRingPosition
         self.touchRing2Active = touchRing2Active
+        self.touchRing2ButtonDown = touchRing2ButtonDown
         self.touchRing2Position = touchRing2Position
         self.touchStrip1Active = touchStrip1Active
         self.touchStrip1Position = touchStrip1Position
@@ -172,6 +174,13 @@ public struct AuxButtons: Sendable {
     public var touchRingPosition: UInt8 = 0x7F
     /// Second touch ring (DTK-2400 right bezel).  Same encoding as touchRingPosition.
     public var touchRing2Active: Bool = false
+    /// True while the second ring/dial's own center-cluster toggle button is
+    /// physically pressed. PTK-670/870 (Intuos Pro gen 3 M/L): each of the
+    /// two mechanical dials has its own toggle key (the center key of its
+    /// express-key cluster) — this is not the same signal as
+    /// `touchRing2Active` (finger presence on a capacitive ring), which this
+    /// hardware has no equivalent of. See `IntuosV3Decoder.decodeAuxReport`.
+    public var touchRing2ButtonDown: Bool = false
     public var touchRing2Position: UInt8 = 0x7F
     /// Intuos3 WS left touch strip.  0xFF = no contact; 0 = bottom zone, higher = up.
     public var touchStrip1Active: Bool = false
@@ -216,6 +225,9 @@ public struct LiveButtonState: Equatable, Sendable {
     public var touchRingButtonDown: Bool = false
     /// Second touch ring (DTK-2400 right bezel).
     public var touchRing2Active: Bool = false
+    /// True while the second dial's own toggle key is physically pressed
+    /// (PTK-670/870's right cluster center ExpressKey). Unused elsewhere.
+    public var touchRing2ButtonDown: Bool = false
     /// Intuos3 WS touch strip states (0xFF = no contact, otherwise 0–12 zone).
     public var touchStrip1Active: Bool = false
     public var touchStrip2Active: Bool = false
@@ -233,6 +245,7 @@ public struct LiveButtonState: Equatable, Sendable {
         touchRingActive: Bool = false,
         touchRingButtonDown: Bool = false,
         touchRing2Active: Bool = false,
+        touchRing2ButtonDown: Bool = false,
         touchStrip1Active: Bool = false,
         touchStrip2Active: Bool = false
     ) {
@@ -248,6 +261,7 @@ public struct LiveButtonState: Equatable, Sendable {
         self.touchRingActive = touchRingActive
         self.touchRingButtonDown = touchRingButtonDown
         self.touchRing2Active = touchRing2Active
+        self.touchRing2ButtonDown = touchRing2ButtonDown
         self.touchStrip1Active = touchStrip1Active
         self.touchStrip2Active = touchStrip2Active
     }

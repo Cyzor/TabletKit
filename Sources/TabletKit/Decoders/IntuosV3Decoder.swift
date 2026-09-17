@@ -262,14 +262,18 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///
     /// The left cluster-center key is surfaced via the existing
     /// `AuxButtons.touchRingButtonDown` field, the same one IntuosV1/IntuosV2/
-    /// Xencelabs already use for a single ring's center click. There is no
-    /// equivalent second-ring field yet (`touchRing2Active`/`touchRing2Position`
-    /// exist for the right dial's rotation, but no `touchRing2ButtonDown`), so
-    /// the right cluster-center bit is decoded but not yet surfaced
-    /// anywhere — a known, deliberate gap, not an oversight. Adding a second
-    /// field would mean threading a new binding through TabletManager,
-    /// InputInjector, and both button-mapping UI panes, which is a real
-    /// feature addition, not a bug fix, and shouldn't ride in on this one.
+    /// Xencelabs already use for a single ring's center click. The right
+    /// cluster-center key now has its own `touchRing2ButtonDown` field
+    /// (bit 0x02 of byte 3, confirmed against a real PTK-870 capture
+    /// 2026-09-16 — both bits independently observed toggling). Neither
+    /// field is actually how this hardware's mode-cycle toggle is used in
+    /// practice, though: real PTK-670/870 units have no physical center
+    /// press on either dial, so the toggle is assigned to an ordinary
+    /// ExpressKey instead (`ButtonBinding.Kind.ringCycle`/`.ringCycle2`),
+    /// which reads `touchRingActiveSlotIndex`/`touchRingActiveSlotIndex2`
+    /// directly rather than either of these button-down bits. Both fields
+    /// stay decoded for completeness and for any future hardware that does
+    /// wire a real center press to this bit position.
     ///
     /// Wheel deltas are emitted as .wheel(index:delta:) results so
     /// InputInjector can route them through touchRingSlots (scroll /
@@ -286,7 +290,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             .aux(
                 AuxButtons(
                     buttons: buttons, mechanicalMask: primary,
-                    touchRingButtonDown: (dialButtons & 0x01) != 0))
+                    touchRingButtonDown: (dialButtons & 0x01) != 0,
+                    touchRing2ButtonDown: (dialButtons & 0x02) != 0))
         ]
         // Sign-extend 7-bit values: shift the sign bit into bit 7, then
         // arithmetic-shift right to propagate it across the Int8 range.
