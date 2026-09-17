@@ -201,6 +201,51 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
 
+        var results: [DecodeResult] = []
+
+        // Pen serial (bytes 20-23 LE) and tool code (bytes 24-25 LE) —
+        // confirmed byte-for-byte 2026-09-16 against a real PTK-870 capture
+        // using a known-identity pen (Wacom Art Pen, tool code 0x0804,
+        // serial 0x038000CE): both fields decoded to the pen's real,
+        // documented values at exactly these offsets. Both read 0 while out
+        // of proximity. Byte 26 (high byte of the declared 32-bit tool-code
+        // usage 0x005C) carries some other flag/capability value, not part
+        // of the tool code itself — not read here. Same
+        // lastSerial/lastToolCode change-detection pattern as
+        // IntuosV2Decoder.decodeOffsetPenReport.
+        if length >= 26 {
+            let serial =
+                UInt32(report[20])
+                | UInt32(report[21]) << 8
+                | UInt32(report[22]) << 16
+                | UInt32(report[23]) << 24
+            let toolCode = UInt16(report[24]) | UInt16(report[25]) << 8
+            if toolCode != 0 {
+                state.currentToolCode = toolCode
+                let toolChanged =
+                    serial != 0
+                    ? serial != state.lastSerial
+                    : toolCode != state.lastToolCode
+                if toolChanged {
+                    state.lastSerial = serial
+                    state.lastToolCode = toolCode
+                    // Standard Wacom bit3 convention, excluding Art Pen
+                    // variants that happen to have bit3 set — same
+                    // exclusion IntuosV2Decoder applies.
+                    let artPen = toolCode == 0x0804 || toolCode == 0x1108
+                    results.append(
+                        .toolEnter(
+                            ToolIdentity(
+                                serial: serial, toolCode: toolCode,
+                                isEraser: !artPen && (toolCode & 0x0008) != 0,
+                                isMouse: false)))
+                    emitToolCompatibility(
+                        toolCode: toolCode, deviceFamily: deviceFamily,
+                        state: &state, results: &results)
+                }
+            }
+        }
+
         state.prevInProximity = true
         state.lastX = x
         state.lastY = y
@@ -220,7 +265,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // IntuosV3 extended reports carry a third pen barrel button at bit 3
         // of the status byte. The 0x1F standard report has no equivalent.
         point.penButton3 = (status & 0x08) != 0
-        return [.pen(point)]
+        results.append(.pen(point))
+        return results
     }
 
     // MARK: - 0x11 aux report (express keys + dial presses + two relative wheels)

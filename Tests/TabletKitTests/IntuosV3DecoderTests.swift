@@ -283,8 +283,12 @@ final class IntuosV3DecoderTests: XCTestCase {
             0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x90, 0xCA, 0xBA, 0x3A,
         ]
         let r = decode(b, state: &st)
-        XCTAssertEqual(r.count, 1)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        // Fresh DecoderState means this frame's real, nonzero serial/tool
+        // code (0x24c087aa / 0x0200) is a "new" tool by definition, so a
+        // .toolEnter precedes the .pen result — see IntuosV3Decoder's
+        // 2026-09-16 tool-identity fix.
+        XCTAssertEqual(r.count, 2)
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertTrue(pt.inProximity)
         XCTAssertEqual(pt.pressure, 0)
     }
@@ -298,12 +302,83 @@ final class IntuosV3DecoderTests: XCTestCase {
             0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
         ]
         let r = decode(b, state: &st)
-        XCTAssertEqual(r.count, 1)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        // Same reasoning as above — fresh state, real nonzero serial/tool
+        // code, so .toolEnter fires alongside .pen.
+        XCTAssertEqual(r.count, 2)
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertTrue(pt.inProximity)
         XCTAssertEqual(pt.pressure, 8191)
         XCTAssertEqual(pt.x, 33716)
         XCTAssertEqual(pt.y, 13941)
+    }
+
+    // MARK: - Tool identity (serial/tool code, bytes 20-25)
+    //
+    // Confirmed 2026-09-16 against a real PTK-870 capture using a
+    // known-identity pen (Wacom Art Pen, tool code 0x0804, serial
+    // 0x038000CE): bytes 20-23 decoded byte-for-byte to the real serial,
+    // bytes 24-25 to the real tool code. See
+    // Notes/Scratch/PTK-870-ToolID-Field-Survey-2026-09-16.md for the full
+    // derivation. The bytes below are synthesized from that confirmed
+    // offset/encoding (not a verbatim capture — the source JSON only
+    // stores aggregate byte statistics, not a raw in-proximity sample), but
+    // every other field (status/X/Y/pressure/tilt) is copied from an
+    // already-verified real-capture fixture above, so only bytes 20-25 are
+    // constructed rather than captured.
+
+    func testRealCaptureToolEnterFiresOnFirstProximityWithKnownArtPen() {
+        var st = DecoderState()
+        var b: [UInt8] = [
+            0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
+            0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
+        ]
+        // Art Pen ground truth: serial 0x038000CE (LE bytes 20-23),
+        // tool code 0x0804 (LE bytes 24-25).
+        b[20] = 0xCE
+        b[21] = 0x00
+        b[22] = 0x80
+        b[23] = 0x03
+        b[24] = 0x04
+        b[25] = 0x08
+        let r = decode(b, state: &st)
+        // 3, not 2: the classic Art Pen (0x0804)'s catalog entry lists
+        // supportedFamilies [.intuos4, .intuosProGen2], not
+        // .intuosProGen3 — so emitToolCompatibility correctly adds a
+        // .toolCompatibility warning here. That's accurate: this test only
+        // establishes that .toolEnter fires with the right identity, not a
+        // claim that the Art Pen is a supported PTK-870 accessory.
+        XCTAssertEqual(r.count, 3)
+        guard case .toolEnter(let identity) = r.first else { return XCTFail() }
+        XCTAssertEqual(identity.serial, 0x038000CE)
+        XCTAssertEqual(identity.toolCode, 0x0804)
+        XCTAssertFalse(identity.isEraser)  // 0x0804 is the Art-Pen bit3 exclusion
+        XCTAssertFalse(identity.isMouse)
+        guard case .pen = r.last else { return XCTFail() }
+    }
+
+    func testToolEnterDoesNotRefireForTheSameToolAcrossFrames() {
+        var st = DecoderState()
+        var b: [UInt8] = [
+            0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
+            0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
+        ]
+        b[20] = 0xCE
+        b[21] = 0x00
+        b[22] = 0x80
+        b[23] = 0x03
+        b[24] = 0x04
+        b[25] = 0x08
+        let first = decode(b, state: &st)
+        // 3: .toolEnter + .toolCompatibility (Art Pen isn't in
+        // .intuosProGen3's supportedFamilies — see the test above) + .pen.
+        XCTAssertEqual(first.count, 3)
+        let second = decode(b, state: &st)
+        // Same tool, same frame content — no repeat .toolEnter or
+        // .toolCompatibility, just the ordinary pen sample.
+        XCTAssertEqual(second.count, 1)
+        guard case .pen = second.first else { return XCTFail() }
     }
 
     func testRealCaptureExitFrameClearsProximity() {
@@ -344,7 +419,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xE0, 0xCE, 0x1E, 0xB8,
         ]
         let r = decode(b, state: &st)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertTrue(pt.penButton1)
         XCTAssertFalse(pt.penButton2)
         XCTAssertFalse(pt.penButton3)
@@ -358,7 +433,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xB7, 0x6B, 0xE3, 0xBB,
         ]
         let r = decode(b, state: &st)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertFalse(pt.penButton1)
         XCTAssertTrue(pt.penButton2)
         XCTAssertFalse(pt.penButton3)
@@ -372,7 +447,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x68, 0x1B, 0x1C, 0xC0,
         ]
         let r = decode(b, state: &st)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertFalse(pt.penButton1)
         XCTAssertFalse(pt.penButton2)
         XCTAssertTrue(pt.penButton3)
@@ -386,7 +461,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x50, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x83, 0x4A, 0xDA, 0x67,
         ]
         let r = decode(b, state: &st)
-        guard case .pen(let pt) = r[0] else { return XCTFail() }
+        guard case .pen(let pt) = r.last else { return XCTFail() }
         XCTAssertEqual(pt.tiltX, 0.0, accuracy: 0.001)
         XCTAssertEqual(pt.tiltY, 31.0 / 64.0, accuracy: 0.001)
     }

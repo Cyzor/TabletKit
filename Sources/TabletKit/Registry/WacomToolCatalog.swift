@@ -841,6 +841,31 @@ public enum WacomToolCatalog: Sendable {
 
         // MARK: - Movink Pens
 
+        // Pro Pen 3 (PTK-470/670/870 Intuos Pro gen 3, 2025). Confirmed
+        // 2026-09-16 from a real PTK-870 capture, decoded byte-for-byte
+        // against a known-identity pen (Wacom Art Pen, 0x0804) to pin down
+        // IntuosV3Decoder's serial/tool-code field offsets — see
+        // Notes/Scratch/PTK-870-ToolID-Field-Survey-2026-09-16.md. Distinct
+        // from 0x0842 (Pro Pen 3 via the older PTH-860/IntuosV2 report
+        // path — a different generation/report format) and from 0x0202
+        // (Pro Pen 3E, Movink 13's bundled pen — a different physical pen
+        // entirely). Per Wacom's own product page, this pen has no eraser
+        // end at all and ships with 3 configurable side-switch positions
+        // (buttonCount 3), not the traditional 2.
+        catalog[0x0200] = WacomToolSpec(
+            toolCode: 0x0200,
+            name: "Pro Pen 3",
+            toolType: .stylus,
+            buttonCount: 3,
+            maxPressure: 8191,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: [.intuosProGen3]
+        )
+
         // Pro Pen 3E (Movink 13 bundled pen). Wire has no tool-identity field
         // for this family (see IntuosV3Decoder) — WacomKnownDevice synthesizes
         // this code on first proximity as the device's known default, not
