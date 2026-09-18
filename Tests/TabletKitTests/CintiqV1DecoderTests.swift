@@ -456,4 +456,55 @@ final class CintiqV1DecoderTests: XCTestCase {
         let bytes: [UInt8] = [0x0C, 0x80, 0, 0, 0, 0]  // length 6, threshold is 7
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
+
+    // MARK: - Report 0x11: 27QHD onboard panel buttons
+    //
+    // Literal bytes from a real DTH-2700 capture (2026-09-17, see
+    // Notes/Scratch/Device-Diagnostics/Internal-Discovery-Data-Capture/
+    // Wacom-Cintiq-DTH-2700/). Byte[2] is the button bitmask; bytes 5/7/9
+    // drift as an unrelated slow sensor and are deliberately not asserted.
+
+    func testCintiqPadReportNoButtonsPressed() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        let bytes: [UInt8] = [0x11, 0x80, 0x00, 0x00, 0x04, 0x1E, 0x00, 0x04, 0xFF, 0x8C]
+        let results = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux.buttons, [false, false, false])
+    }
+
+    func testCintiqPadReportEachButtonBitDecodedIndependently() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+
+        var bytes: [UInt8] = [0x11, 0x80, 0x01, 0x00, 0x04, 0x1E, 0x00, 0x04, 0xFF, 0x8C]
+        var results = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux1)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux1.buttons, [true, false, false])
+
+        bytes[2] = 0x02
+        results = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux2)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux2.buttons, [false, true, false])
+
+        bytes[2] = 0x04
+        results = decode(bytes, decoder: &decoder, state: &state)
+        guard case .aux(let aux3)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertEqual(aux3.buttons, [false, false, true])
+    }
+
+    func testCintiqPadReportShortLengthRejected() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        let bytes: [UInt8] = [0x11, 0x80]  // length 2, threshold is 3
+        XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
+    }
 }

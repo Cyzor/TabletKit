@@ -6,26 +6,18 @@ import Foundation
 
 /// Decoder for the Wacom `WACOM_27QHDT` multitouch report family.
 ///
-/// Used by the touch sensor half of the Cintiq 27QHD Touch (DTH-2700): pen
-/// at `0x032B`, touch at `0x032C`. A structurally different protocol from
-/// the similarly-named `Wacom24HDTDecoder`/`WACOM_24HDT` despite both being
-/// dispatched through the kernel's single `wacom_24hdt_irq()` function —
-/// `WACOM_27QHDT` is an explicit branch inside that function with its own
-/// contact-count offset, packet capacity, and record size. Do not treat the
-/// two protocols as interchangeable; see `Wacom24HDTDecoder`'s own doc
-/// comment for why `0x032C` must not be routed there.
+/// Ported from the Linux kernel's `wacom_24hdt_irq()` (`WACOM_27QHDT`
+/// branch) — a structurally different protocol from the similarly-named
+/// `Wacom24HDTDecoder`/`WACOM_24HDT` despite sharing that dispatch function;
+/// see `Wacom24HDTDecoder`'s doc comment for why they aren't interchangeable.
 ///
-/// Byte layout below re-verified directly against `drivers/hid/wacom_wac.c`
-/// (torvalds/linux, function `wacom_24hdt_irq`, `WACOM_27QHDT` branch)
-/// 2026-09-08 — not taken on trust from the third-party research that
-/// prompted this decoder, since an adjacent claim from a related pass (the
-/// 27QHD's onboard bezel-key report) needed a real correction the same day.
-/// This byte layout, unlike that one, checked out exactly as described.
-/// **Still entirely unverified against a real capture from the device
-/// itself** — see `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md` for
-/// the shared design rationale and confidence-tier reasoning (same
-/// `.experimental` tier, same "do not wire without a call-site warning"
-/// requirement once a registry row is added).
+/// **Confirmed 2026-09-17 this is not the Cintiq 27QHD Touch's (DTH-2700)
+/// actual touch protocol** — its `0x032C` interface emits report `0x88`, a
+/// standard HID Digitizer Touch Screen collection, decoded generically by
+/// `PrecisionTouchLayout`/`PrecisionTouchDecoder` instead (see
+/// `WacomKnownDevice.deriveTouchDecoders`). Kept in case some other
+/// WACOM_27QHDT-family device genuinely emits report 0x05 — still
+/// unverified against real hardware for that case.
 ///
 /// Report 0x05, 64 bytes (simpler than WACOM_24HDT — fits all ten contacts
 /// in one packet, no multi-frame reassembly needed):

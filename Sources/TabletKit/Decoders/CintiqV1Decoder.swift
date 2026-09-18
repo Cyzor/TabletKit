@@ -83,14 +83,9 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         if id == 0x0C {
             return decodeExpressKeys(report: report, length: length, spec: spec)
         }
-        // Report 0x11 (`WACOM_REPORT_CINTIQPAD`) is the 27QHD pair's pad
-        // report, unhandled, so its three OSD keys are dead. Left that way
-        // deliberately: the layout shares nothing with 0x0C (kernel reads 3
-        // keys from byte 2 bits 0-2 plus a big-endian accelerometer at 4/6/8,
-        // no ring), no spec field names the family so the branch would key on
-        // `buttonCount == 0 && !hasTouchRing` — true today, meaningless as a
-        // rule — and no capture exists. See `wacom_intuos_pad()`'s
-        // `WACOM_27QHD` branch.
+        if id == 0x11 && length >= 3 {
+            return decodeCintiqPad(report: report)
+        }
         guard (id == 0x02 || id == 0x10) && length >= 10 else { return [] }
         return decodePen(
             report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
@@ -401,6 +396,17 @@ public struct CintiqV1Decoder: TabletReportDecoder {
                     touchRing2Active: rightRingActive,
                     touchRing2Position: rightRingPos))
         ]
+    }
+
+    // MARK: - Report 0x11: 27QHD onboard panel buttons (`WACOM_REPORT_CINTIQPAD`)
+    //
+    // Byte[2] bits 0-2 are the three panel buttons (capture-confirmed).
+    // Bytes 5/7/9 drift slowly, unrelated to buttons (likely an ambient
+    // sensor) — left undecoded.
+    private func decodeCintiqPad(report: UnsafePointer<UInt8>) -> [DecodeResult] {
+        let mask = report[2]
+        let buttons: [Bool] = (0..<3).map { bit in (mask & (1 << bit)) != 0 }
+        return [.aux(AuxButtons(buttons: buttons))]
     }
 
     // MARK: - State reset on proximity-out
