@@ -16,16 +16,38 @@ final class IntuosV3DecoderTests: XCTestCase {
         buttonCount: 8, hasTilt: true, hasDualRings: false,
         isPenDisplay: false, ringSlotCount: 4)
 
+    /// Every 0x1A BLE fixture below is a verbatim PTK-870 capture, and the
+    /// report carries raw device units — so those tests must assert against
+    /// the PTK-870's own registry extents, not the PTK-670 spec the rest of
+    /// this file uses.
+    private let ptk870 = DigitizerSpec(
+        maxX: 69800, maxY: 39000, maxPressure: 8191,
+        buttonCount: 8, hasTilt: true, hasDualRings: true,
+        isPenDisplay: false, ringSlotCount: 4, tiltMaxDegrees: 64.0)
+
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
         family: DeviceFamily = .intuosProGen3
     ) -> [DecodeResult] {
-        var decoder = IntuosV3Decoder()
+        let decoder = IntuosV3Decoder()
         return bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
                 spec: ptk670, state: &state, deviceFamily: family)
         }
+    }
+
+    private func decodeBLE(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
+        let decoder = IntuosV3Decoder()
+        return bytes.withUnsafeBufferPointer { buf in
+            decoder.decode(
+                report: buf.baseAddress!, length: bytes.count,
+                spec: ptk870, state: &state, deviceFamily: .intuosProGen3)
+        }
+    }
+
+    private func pens(_ results: [DecodeResult]) -> [TabletPoint] {
+        results.compactMap { if case .pen(let p) = $0 { return p } else { return nil } }
     }
 
     // MARK: - Helpers
@@ -590,192 +612,211 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(r.isEmpty)
     }
 
-    /// Real mid-sweep sample from `ptk-870-top-to-bottom.txt`, sample #100.
-    /// Y's field went through three wrong byte-mapping attempts before this
-    /// one (see the decoder's doc comment) — this fixture and the two below
-    /// guard the confirmed-correct 24-bit reading.
+    /// Real mid-stroke sample from `ptk-870-pressure-spiral.txt`, at the
+    /// moment pressure reaches its ceiling. Every field in the 0x1A report
+    /// is asserted here in raw device units — the report carries the same
+    /// units the USB registry entry declares, so nothing is rescaled.
     func testRealCaptureBLEPositionDecoded() {
         var st = DecoderState()
         let b: [UInt8] = [
-            26, 66, 128, 193, 200, 157, 160, 12, 1, 180,
-            4, 41, 31, 17, 143, 20, 113, 113, 12, 0,
+            26, 66, 128, 193, 84, 124, 144, 31, 6, 255,
+            31, 253, 223, 65, 173, 20, 112, 9, 0, 0,
         ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertEqual(pens.count, 1)
-        let p = pens[0]
-        // bytes 4-5 (X LE16): 200 | 157<<8 = 40392 raw, scaled to
-        // spec.maxX (44704 for the ptk670 fixture) via the measured 65535
-        // raw ceiling.
-        let rawX = 200 + 256 * 157
-        XCTAssertEqual(p.x, Int((Double(rawX) * 44704.0 / 65535.0).rounded()))
-        // bytes 6/7/8 (Y 24-bit LE): 160 | 12<<8 | 1<<16 = 68768 raw,
-        // scaled to spec.maxY (27940 for the ptk670 fixture) via the
-        // measured 624000 raw ceiling.
-        let rawY = 160 + 256 * 12 + 65536 * 1
-        XCTAssertEqual(p.y, Int((Double(rawY) * 27940.0 / 624000.0).rounded()))
-        XCTAssertEqual(p.pressure, 4)  // byte 10
-        XCTAssertTrue(p.inProximity)
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(p[0].x, 31828)  // [4..6] 20-bit
+        XCTAssertEqual(p[0].y, 25081)  // [6..8] 20-bit
+        XCTAssertEqual(p[0].pressure, 8191)  // [9..10] LE16, at spec.maxPressure
+        XCTAssertEqual(p[0].tiltX, -3.0 / 64.0, accuracy: 1e-9)  // [11] signed
+        XCTAssertEqual(p[0].tiltY, -33.0 / 64.0, accuracy: 1e-9)  // [12] signed
+        XCTAssertTrue(p[0].inProximity)
+        XCTAssertFalse(p[0].penButton1)
+        XCTAssertFalse(p[0].penButton2)
     }
 
-    /// Real wrap-boundary sample pair from `ptk-870-top-to-bottom.txt`
-    /// (the confirmed genuine 16-bit-to-zero overflow of bytes [6..7],
-    /// with byte [8] incrementing by exactly 1 at the boundary — the
-    /// evidence that Y needs a third byte at all). Guards against
-    /// regressing to a 16-bit-only read of [6..7], which would make Y
-    /// snap back to a small value instead of continuing to climb past
-    /// this point.
-    func testRealCaptureBLEYAxisSpans24BitsAcrossAWrapBoundary() {
+    /// The regression this whole BLE decoder existed to hit and kept
+    /// missing: X is 20 bits, not 16, and its high nibble shares byte [6]
+    /// with Y's low bits. These two samples are consecutive frames from
+    /// `ptk-870-bt-x-shape-edge.txt` at the moment a real stroke crosses
+    /// 65536 — raw [4..5] reads 65531 then 10, and the low nibble of [6]
+    /// goes 0 → 1. Read as 16 bits the cursor jumps the full width of the
+    /// tablet; read correctly it advances 15 units.
+    ///
+    /// A 16-bit read also made the pen's own tilt look like it was
+    /// corrupting position, because tilting shifts the reported coordinate
+    /// by enough to cross that boundary when the pen is already near the
+    /// right edge — which is why the symptom presented as "tilt confounds
+    /// the cursor" rather than as a plain coordinate bug.
+    func testRealCaptureBLEXSpans20BitsAcrossTheWrapBoundary() {
         var st = DecoderState()
-        // Immediately before the wrap: bytes [6..7] = 0xd0f6-ish range,
-        // byte [8] = 6. Immediately after: [6..7] wraps low, byte [8] = 7.
         let before: [UInt8] = [
-            26, 66, 128, 193, 20, 130, 48, 254, 6, 221,
-            11, 25, 28, 111, 254, 24, 151, 96, 8, 0,
+            26, 2, 32, 192, 251, 255, 0, 181, 8, 0,
+            0, 24, 35, 0, 160, 47, 202, 98, 0, 0,
         ]
         let after: [UInt8] = [
-            26, 66, 128, 193, 20, 130, 32, 2, 7, 221,
-            11, 25, 28, 111, 14, 25, 207, 96, 8, 0,
+            26, 2, 32, 192, 10, 0, 177, 181, 8, 0,
+            0, 24, 35, 0, 176, 46, 235, 98, 0, 0,
         ]
-        let rBefore = decode(before, state: &st)
-        let rAfter = decode(after, state: &st)
-        let yBefore = rBefore.compactMap { r -> Int? in
-            if case .pen(let p) = r { return p.y }; return nil
-        }.first
-        let yAfter = rAfter.compactMap { r -> Int? in
-            if case .pen(let p) = r { return p.y }; return nil
-        }.first
-        XCTAssertNotNil(yBefore)
-        XCTAssertNotNil(yAfter)
-        // The 24-bit reconstruction must keep climbing across the byte
-        // [6..7] wrap, not drop back down — a 16-bit-only read of [6..7]
-        // would produce yAfter << yBefore instead.
-        XCTAssertGreaterThan(yAfter!, yBefore!)
+        let xBefore = pens(decodeBLE(before, state: &st))[0].x
+        let xAfter = pens(decodeBLE(after, state: &st))[0].x
+        XCTAssertEqual(xBefore, 65531)
+        XCTAssertEqual(xAfter, 65546)
+        XCTAssertEqual(xAfter - xBefore, 15)
     }
 
-    /// Real sample sequence from `ptk-870-bt-x-shape-edge.txt` spanning X's
-    /// genuine 16-bit wraparound (confirmed 2026-09-18: X has no companion
-    /// high byte anywhere in the report, unlike Y — this is a real,
-    /// unrecoverable wrap, not a missing-byte bug). Raw X climbs
-    /// 65490→65504→65531 then wraps to 10→24 — a real capture reproducing
-    /// the reported "cursor wraps Pac-Man-style at the right edge" bug.
-    /// The decoder must PIN at the ceiling through the wrap rather than
-    /// reporting a small value, since the wrapped-low reading is not a
-    /// real return to the opposite edge — it's the pen still at (or just
-    /// past) the true physical right edge.
-    func testRealCaptureBLEXPinsAtCeilingThroughWraparound() {
+    /// Real sample from `ptk-870-bt-right-edge.txt`, where X rests at the
+    /// tablet's true right edge. The reconstructed value must land on
+    /// `spec.maxX` exactly — this is the independent check that 20 bits is
+    /// the right width and that no scale factor belongs anywhere near it.
+    /// The earlier "X freezes at 4264 near the right corners" report was
+    /// this same frame with bit 16 dropped: 69800 − 65536 = 4264.
+    func testRealCaptureBLEXReachesExactlyMaxAtRightEdge() {
         var st = DecoderState()
-        let approach: [UInt8] = [
-            26, 2, 32, 192, 224, 255, 128, 179, 8, 0, 0, 24, 35, 0, 144, 51, 136, 98, 0, 0,
+        let b: [UInt8] = [
+            26, 2, 0, 128, 168, 16, 1, 0, 0, 0,
+            0, 0, 0, 0, 16, 255, 246, 78, 32, 0,
         ]
-        let atCeiling: [UInt8] = [
-            26, 2, 32, 192, 251, 255, 0, 181, 8, 0, 0, 24, 35, 0, 160, 47, 202, 98, 0, 0,
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(p[0].x, 69800)
+        XCTAssertEqual(p[0].x, ptk870.maxX)
+        XCTAssertEqual(p[0].y, 0)  // top edge, and a real sample — not a placeholder
+    }
+
+    /// The four held-static tilt poses (`ptk-tilt-left/right/up/down.txt`),
+    /// each bit-identical frame to frame for every byte through [12], so
+    /// they isolate tilt from position exactly. Byte [11] flips sign between
+    /// left and right while [12] stays near zero, and vice versa — the
+    /// axis assignment falls straight out.
+    func testRealCaptureBLETiltAxesFromHeldPoses() {
+        let poses: [(String, [UInt8], Double, Double)] = [
+            (
+                "left",
+                [26, 66, 128, 192, 122, 34, 48, 90, 4, 0, 0, 60, 248, 209, 253, 43, 163, 235, 0, 0],
+                60, -8
+            ),
+            (
+                "right",
+                [
+                    26, 66, 128, 192, 160, 228, 240, 120, 5, 0, 0, 196, 249, 82, 189, 39, 73, 159,
+                    0, 0,
+                ], -60, -7
+            ),
+            (
+                "up",
+                [26, 66, 128, 192, 125, 127, 32, 22, 1, 0, 0, 2, 57, 82, 79, 20, 65, 168, 0, 0],
+                2, 57
+            ),
+            (
+                "down",
+                [
+                    26, 66, 128, 192, 215, 123, 112, 233, 6, 0, 0, 17, 197, 118, 32, 20, 224, 100,
+                    0, 0,
+                ], 17, -59
+            ),
         ]
-        let wrapped1: [UInt8] = [
-            26, 2, 32, 192, 10, 0, 177, 181, 8, 0, 0, 24, 35, 0, 176, 46, 235, 98, 0, 0,
-        ]
-        let wrapped2: [UInt8] = [
-            26, 2, 32, 192, 24, 0, 65, 182, 8, 0, 0, 24, 35, 0, 192, 46, 12, 99, 0, 0,
-        ]
-        func x(_ r: [DecodeResult]) -> Int? {
-            r.compactMap { res -> Int? in if case .pen(let p) = res { return p.x }; return nil }.first
+        for (name, bytes, wantTiltX, wantTiltY) in poses {
+            var st = DecoderState()
+            let p = pens(decodeBLE(bytes, state: &st))
+            XCTAssertEqual(p.count, 1, "pose \(name)")
+            XCTAssertEqual(p[0].tiltX, wantTiltX / 64.0, accuracy: 1e-9, "pose \(name) tiltX")
+            XCTAssertEqual(p[0].tiltY, wantTiltY / 64.0, accuracy: 1e-9, "pose \(name) tiltY")
         }
-        _ = decode(approach, state: &st)
-        let xAtCeiling = x(decode(atCeiling, state: &st))
-        XCTAssertNotNil(xAtCeiling)
-        XCTAssertGreaterThan(xAtCeiling!, 44000)  // near ptk670's maxX (44704)
+    }
 
-        // The wrap: raw X drops from ~65531 to 10. Must NOT read as a small
-        // value — pin at the ceiling instead.
-        let xWrapped1 = x(decode(wrapped1, state: &st))
-        XCTAssertNotNil(xWrapped1)
-        XCTAssertEqual(xWrapped1, 44704)  // pinned at spec.maxX for the ptk670 fixture
+    /// Real withdrawal from `ptk-870-pen-2-proximity.txt`. Status byte [3]
+    /// drops to 0x00 for exactly one frame per withdrawal — the proximity
+    /// exit this investigation spent two capture rounds looking for in the
+    /// [1] discriminator, where it does not exist. The exit frame still
+    /// carries the last tracked coordinates, so the emitted point must use
+    /// the remembered position and report `inProximity == false` rather than
+    /// treating those stale bytes as a fresh sample.
+    func testRealCaptureBLEProximityExitOnZeroStatus() {
+        var st = DecoderState()
+        let inRange: [UInt8] = [
+            26, 2, 0, 128, 12, 124, 48, 188, 4, 0,
+            0, 0, 0, 0, 144, 255, 215, 50, 0, 0,
+        ]
+        let exit: [UInt8] = [
+            26, 2, 0, 0, 240, 123, 112, 187, 4, 0,
+            0, 0, 0, 0, 176, 255, 252, 51, 0, 0,
+        ]
+        let entered = pens(decodeBLE(inRange, state: &st))
+        XCTAssertEqual(entered.count, 1)
+        XCTAssertTrue(entered[0].inProximity)
+        XCTAssertEqual(entered[0].x, 31756)
 
-        // Still past the wrap on the very next report — must stay pinned,
-        // not resume trusting the (still climbing, still wrapped-low) wire
-        // value as if it were a real return toward the tablet's center.
-        let xWrapped2 = x(decode(wrapped2, state: &st))
-        XCTAssertEqual(xWrapped2, 44704)
+        let left = pens(decodeBLE(exit, state: &st))
+        XCTAssertEqual(left.count, 1)
+        XCTAssertFalse(left[0].inProximity)
+        XCTAssertEqual(left[0].pressure, 0)
+        XCTAssertEqual(left[0].x, 31756, "exit must hold the last position, not the stale bytes")
+
+        // A second out-of-range frame must not emit a second exit.
+        XCTAssertTrue(pens(decodeBLE(exit, state: &st)).isEmpty)
+    }
+
+    /// Real sample from `ptk-870-left-to-right.txt` with a barrel button
+    /// held and the tip up (status 0xC4). Bit 2 is the only barrel bit any
+    /// capture ever set; bit 0 tracks the tip switch, and agrees with
+    /// pressure > 0 across every capture on hand.
+    func testRealCaptureBLEBarrelButtonDecoded() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 66, 128, 196, 191, 4, 96, 198, 7, 0,
+            0, 0, 234, 254, 253, 106, 140, 68, 15, 0,
+        ]
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertTrue(p[0].penButton2)
+        XCTAssertFalse(p[0].penButton1)
+        XCTAssertEqual(p[0].pressure, 0)
+        XCTAssertTrue(p[0].inProximity)
     }
 
     /// Real sample from `ptk-870-tilt-hover-left-to-right.txt` — discriminator
-    /// 0x02, previously treated by this decoder as pure idle/no-pen and
-    /// discarded entirely. A dedicated hover-only sweep (pen moved across
-    /// the tablet without ever touching down) showed clean, live,
-    /// monotonic X motion exclusively under this discriminator — it must
-    /// decode as a real pen point, not be dropped.
+    /// 0x02, which an early version of this decoder treated as pure
+    /// idle/no-pen and discarded entirely. A dedicated hover-only sweep (pen
+    /// moved across the tablet without ever touching down) showed clean,
+    /// live, monotonic X motion exclusively under this discriminator — it
+    /// must decode as a real pen point, not be dropped.
     func testRealCaptureBLEHoverFrameDecodesAsPosition() {
         var st = DecoderState()
         let b: [UInt8] = [
             26, 2, 32, 192, 43, 78, 112, 187, 2, 0,
             0, 9, 247, 0, 16, 54, 119, 65, 0, 0,
         ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertEqual(pens.count, 1)
-        let rawX = 43 + 256 * 78
-        XCTAssertEqual(pens[0].x, Int((Double(rawX) * 44704.0 / 65535.0).rounded()))
-        XCTAssertEqual(pens[0].pressure, 0)
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(p[0].x, 20011)
+        XCTAssertEqual(p[0].pressure, 0)
     }
 
     /// Real sample from `ptk-870-left.txt` (ExpressKeys/dial exercised with
-    /// no pen anywhere near the tablet) — discriminator 0x02 with X=0, Y=0,
-    /// the genuine no-pen placeholder this decoder must still discard
-    /// (distinct from a hovering pen's 0x02 frames, which never happen to
-    /// read exactly zero on both axes in the captures on hand).
+    /// no pen anywhere near the tablet). Status byte [3] is 0x00 — the pen
+    /// is not in range, so no position is emitted regardless of what the
+    /// coordinate bytes happen to hold.
     func testRealCaptureBLENoPenPlaceholderSuppressed() {
         var st = DecoderState()
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
         ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertTrue(pens.isEmpty)
+        XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
-    /// Real sample from `bt-sample-02.txt` (a live reproduction of a
-    /// reported "cursor teleports near the tablet's edges" bug) —
-    /// discriminator 0x02 with a real, nonzero X but Y's three bytes
-    /// collapsed to exactly zero. Distinct from the genuine no-pen
-    /// placeholder above (which zeroes X too): this is a degenerate Y-only
-    /// state that must also be discarded, since letting it through produced
-    /// a cursor that snapped between the true position and a fixed "Y=0,
-    /// real X" ghost point.
-    func testRealCaptureBLEDegenerateYOnlySuppressed() {
-        var st = DecoderState()
-        let b: [UInt8] = [
-            26, 2, 0, 128, 45, 126, 0, 0, 0, 0,
-            0, 0, 0, 0, 192, 255, 144, 87, 0, 0,
-        ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertTrue(pens.isEmpty)
-    }
-
-    /// Real sample from `bt-sample-02.txt` — discriminator 0x01, observed as
+    /// Real sample from a live bug capture — discriminator 0x01, observed as
     /// a fixed, byte-for-byte identical phantom point recurring several
-    /// times in the same capture (X=17244, Y=9752). Not part of the
-    /// confirmed 0x02/0x21/0x22/0x41/0x42 state set; excluded outright.
+    /// times. Not part of the confirmed 0x02/0x21/0x22/0x41/0x42 state set;
+    /// excluded outright. (It also sets bit 3 of byte [6], which no real
+    /// sample ever does, putting its X far past `spec.maxX`.)
     func testRealCaptureBLEDiscriminatorOneSuppressed() {
         var st = DecoderState()
         let b: [UInt8] = [
             26, 1, 32, 192, 92, 67, 24, 38, 0, 2,
             16, 0, 0, 2, 176, 0, 0, 0, 0, 0,
         ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertTrue(pens.isEmpty)
+        XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
     /// The fixed sync/keepalive template observed verbatim in every 0x41
@@ -787,11 +828,118 @@ final class IntuosV3DecoderTests: XCTestCase {
             26, 65, 128, 192, 129, 144, 128, 36, 4, 8,
             17, 0, 4, 8, 224, 0, 0, 0, 0, 0,
         ]
-        let r = decode(b, state: &st)
-        let pens = r.compactMap { res -> TabletPoint? in
-            if case .pen(let p) = res { return p }; return nil
-        }
-        XCTAssertTrue(pens.isEmpty)
+        XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
+    }
+
+    /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`, at
+    /// the moment the pen tip crosses the right edge during a see-saw. The
+    /// tip rails at `maxX`, then the tablet starts reporting the pen's
+    /// BARREL instead — 2951 units inward, then 2951 further off in Y — while
+    /// the tip is demonstrably off the surface. Both ghost frames must be
+    /// dropped so the cursor stays where the tip left.
+    func testRealCaptureBLEBarrelTakeoverSuppressedPastTheEdge() {
+        var st = DecoderState()
+        let railed: [UInt8] = [
+            26, 2, 0, 128, 168, 16, 145, 172, 3, 0,
+            0, 0, 0, 0, 96, 255, 160, 171, 0, 0,
+        ]
+        let barrel1: [UInt8] = [
+            26, 2, 0, 128, 34, 5, 145, 176, 3, 0,
+            0, 0, 0, 0, 112, 255, 210, 171, 0, 0,
+        ]
+        let barrel2: [UInt8] = [
+            26, 2, 0, 128, 16, 6, 161, 153, 2, 0,
+            0, 0, 0, 0, 128, 255, 3, 172, 0, 0,
+        ]
+        let tip = pens(decodeBLE(railed, state: &st))
+        XCTAssertEqual(tip.count, 1)
+        XCTAssertEqual(tip[0].x, ptk870.maxX, "tip is at the right edge")
+
+        XCTAssertTrue(
+            pens(decodeBLE(barrel1, state: &st)).isEmpty,
+            "first barrel sample must not move the cursor")
+        XCTAssertTrue(
+            pens(decodeBLE(barrel2, state: &st)).isEmpty,
+            "gate must stay armed for subsequent barrel samples")
+    }
+
+    /// The gate must not become a one-way door: a pen that genuinely comes
+    /// back onto the surface moves continuously (measured: at most 254 units
+    /// per frame across every real re-entry in the four see-saw captures), so
+    /// small steps inward from a railed position must be honored.
+    func testRealCaptureBLEGateReleasesOnContinuousReentry() {
+        var st = DecoderState()
+        let railed: [UInt8] = [
+            26, 2, 0, 128, 168, 16, 145, 172, 3, 0,
+            0, 0, 0, 0, 96, 255, 160, 171, 0, 0,
+        ]
+        XCTAssertEqual(pens(decodeBLE(railed, state: &st))[0].x, ptk870.maxX)
+
+        // Synthesised from the railed frame by stepping X back by 150 units,
+        // the scale of a real re-entry — the surrounding bytes are the real
+        // capture's. 69800 - 150 = 69650 = 0x11012 -> [4]=0x12 [5]=0x10 [6] bit0 set.
+        var reentry = railed
+        reentry[4] = 0x12
+        reentry[5] = 0x10
+        let back = pens(decodeBLE(reentry, state: &st))
+        XCTAssertEqual(back.count, 1, "a continuous step back inside must be honored")
+        XCTAssertEqual(back[0].x, 69650)
+
+        // And the gate is now disarmed: ordinary motion flows again.
+        var further = reentry
+        further[4] = 0x7A  // 69554
+        further[5] = 0x0F
+        XCTAssertEqual(pens(decodeBLE(further, state: &st)).count, 1)
+    }
+
+    /// The slot-1 (discriminator 0x21) sync template — the edge bounceback.
+    /// Taken verbatim from `ptk-870-bt-edge-bounce-right.txt`, where it is
+    /// emitted as the pen leaves the active surface. It decodes to a fixed
+    /// phantom point mid-tablet with a fixed phantom pressure, so letting it
+    /// through throws a cursor that is correctly pinned at the edge back into
+    /// view for one frame. Confirmed byte-identical (except [14]'s rolling
+    /// counter) across 64 occurrences at all four edges.
+    func testRealCaptureBLEEdgeBounceTemplateSuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 33, 128, 192, 136, 149, 128, 53, 2, 8,
+            17, 0, 2, 8, 112, 0, 0, 0, 0, 0,
+        ]
+        // Guard the premise: these bytes really do decode to the phantom
+        // point, so this test fails loudly if the field mapping ever moves.
+        let x = Int(b[4]) | Int(b[5]) << 8 | Int(b[6] & 0x0f) << 16
+        let y = Int(b[6] >> 4) | Int(b[7]) << 4 | Int(b[8]) << 12
+        XCTAssertEqual(x, 38280)
+        XCTAssertEqual(y, 9048)
+        XCTAssertEqual(Int(b[9]) | Int(b[10]) << 8, 4360)
+
+        XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
+    }
+
+    /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`: the
+    /// pen is off the right edge with X railed at `maxX`, the slot-1 template
+    /// lands between two railed frames, and the cursor must not move. Guards
+    /// the bounceback at the sequence level, not just the single frame.
+    func testRealCaptureBLEEdgeBounceDoesNotMoveCursor() {
+        var st = DecoderState()
+        let railed: [UInt8] = [
+            26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
+            0, 0, 0, 0, 16, 255, 246, 78, 0, 0,
+        ]
+        let bounce: [UInt8] = [
+            26, 33, 128, 192, 136, 149, 128, 53, 2, 8,
+            17, 0, 2, 8, 112, 0, 0, 0, 0, 0,
+        ]
+        let before = pens(decodeBLE(railed, state: &st))
+        XCTAssertEqual(before.count, 1)
+        XCTAssertEqual(before[0].x, ptk870.maxX)
+
+        XCTAssertTrue(pens(decodeBLE(bounce, state: &st)).isEmpty)
+
+        let after = pens(decodeBLE(railed, state: &st))
+        XCTAssertEqual(after.count, 1)
+        XCTAssertEqual(after[0].x, before[0].x, "cursor must stay pinned at the edge")
+        XCTAssertEqual(after[0].y, before[0].y)
     }
 
     /// Real idle-state frame (discriminator 0x02) from `ptk-870-left.txt`

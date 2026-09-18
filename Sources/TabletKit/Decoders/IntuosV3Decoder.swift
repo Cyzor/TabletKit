@@ -31,34 +31,18 @@ import Foundation
 /// synthesized from OTD source tables; no capture uses that report ID.
 public struct IntuosV3Decoder: TabletReportDecoder {
 
-    /// True raw ceiling of the BLE report's real 24-bit Y field (bytes
-    /// [6..8] — see `decodeBLEReport`'s doc comment for the byte-mapping
-    /// history). Measured 2026-09-17 from a single continuous top-to-bottom
-    /// stroke (`ptk-870-top-to-bottom.txt`) after confirming the field
-    /// neither wraps nor saturates within that stroke. Not a bit-width
-    /// constant (624000 is not 2^n − 1) — an empirically measured hardware
-    /// property of the PTK-870's BLE report, expected to hold for the
-    /// PTK-470/670 siblings too but not yet confirmed on those specific
-    /// models.
-    private static let bleRawYCeiling = 624000.0
+    /// Largest single-frame move, in device units, still treated as the pen
+    /// tip while the barrel-takeover gate is armed — see `decodeBLEReport`.
+    /// Sits inside a measured empty gap: genuine re-entries move at most 254
+    /// units per frame, barrel jumps at least 2648.
+    private static let bleBarrelJumpThreshold = 1000.0
 
-    /// True raw ceiling of the BLE report's X field (bytes [4..5], read as a
-    /// plain LE16 — see `decodeBLEReport`'s doc comment). Unlike Y, X has NO
-    /// missing high byte: a systematic search across 10 confirmed wrap
-    /// events in every capture on hand (2026-09-18) found no companion byte
-    /// anywhere in the report that increments at the wrap, and X's raw
-    /// value climbs cleanly to 65535 without an early saturation plateau —
-    /// so X is genuinely only a 16-bit field on this transport. The bug was
-    /// elsewhere: `spec.maxX` (69800) is the USB descriptor's logical
-    /// maximum, which BLE's real range doesn't reach — the opposite
-    /// mismatch from Y's (Y's true BLE range was LARGER than its USB spec
-    /// value; X's is SMALLER). Reading X as `min(x, spec.maxX)` therefore
-    /// let a wrapped-low value stand as if it were a real position near the
-    /// left edge instead of the true right edge, and let a value just under
-    /// the wrap point stand uncorrected instead of being recognized as
-    /// approaching this ceiling — both contributed to the reported
-    /// "frozen near a fixed value" and "wraps like Pac-Man" symptoms.
-    private static let bleRawXCeiling = 65535.0
+    /// True when a decoded point sits exactly on one of the sensing
+    /// surface's limits, meaning the tip is at (or past) the edge of what
+    /// the digitizer can resolve.
+    private static func isAtSurfaceLimit(x: Int, y: Int, spec: DigitizerSpec) -> Bool {
+        x == 0 || x == spec.maxX || y == 0 || y == spec.maxY
+    }
 
     public init() {}
 
@@ -399,173 +383,132 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// zero idle report — not handled here, since MockTab now always
     /// triggers data mode on connect).
     ///
-    /// Layout confirmed 2026-09-17 against real PTK-870 BLE captures (raw
-    /// sequential HID logs via `tools/capture/hid_input_capture.c` — the
-    /// discovery-mode aggregate byteStats tool cannot reveal LE16 pairing or
-    /// monotonic ordering, only per-byte marginal min/max/distinct):
-    ///   [0]     = 0x1A  report ID
-    ///   [1]     packet-class + slot discriminator (see below)
-    ///   [4..5]  X coordinate, LE u16 — confirmed monotonic across a
-    ///           corner-to-corner horizontal sweep, flat during a vertical
-    ///           sweep
-    ///   [6]     tilt X, signed byte — confirmed via four held-static
-    ///           single-direction poses (left/right/up/down): sign flips
-    ///           between opposite directions, magnitude changes, perfectly
-    ///           constant when the angle itself is held fixed
-    ///   [7]     tilt Y, signed byte — same confirmation, opposite axis
-    ///   [6..8]  Y coordinate, 24-bit LE (byte [6] low, [7] mid, [8]
-    ///           high) — three prior byte-mapping attempts for Y were each
-    ///           wrong; this is the one confirmed correct, after the
-    ///           mistake pattern from `[[project_xencelabs...]]`'s
-    ///           cursor-tracking bug repeated itself here almost exactly
-    ///           (see the postmortem quoted below).
+    /// This is Wacom's Intuos Pro 2 Bluetooth pen frame (Linux `input-wacom`
+    /// `wacom_intuos_pro2_bt_pen`) with the two coordinates widened from 16
+    /// to 20 bits each and bit-packed, which shifts every field after them by
+    /// one byte. Recognising that shape is what finally made the layout fall
+    /// out: the status byte at [3] matches that function's `frame[0]`
+    /// bit-for-bit, and every field below lands on exactly the maximum the
+    /// USB registry entry already declares for this device (X 69800, Y 39000,
+    /// pressure 8191, tilt ±64) — four independent agreements that no
+    /// coincidental byte mapping produces.
     ///
-    ///           Attempt 1 shipped `[9] low / [8] high` (chosen assuming Y
-    ///           mirrors X's byte order but reversed) — produced a Y axis
-    ///           frozen near one value on real hardware.
+    ///   [0]      = 0x1A  report ID
+    ///   [1]      packet-class + slot discriminator (see below)
+    ///   [3]      pen status, same bits as `wacom_intuos_pro2_bt_pen`'s
+    ///            `frame[0]`: bit7 = in range, bit6 = close enough for tilt
+    ///            and pressure to be valid, bit4 = eraser/inverted, bit2 =
+    ///            barrel button 2, bit1 = barrel button 1, bit0 = tip switch.
+    ///            Confirmed: bit0 agrees with pressure > 0 on 11,000+ samples
+    ///            across five captures with 2 disagreements (the contact
+    ///            transition frame itself); bit2 is the only barrel bit ever
+    ///            seen set, during a deliberate button hold in
+    ///            `ptk-870-left-to-right.txt`; bit7/bit6 gate exactly which
+    ///            fields the device bothers to fill in (see below). The whole
+    ///            observed value set is 0x00/0x80/0xC0/0xC1/0xC4/0xC5, which
+    ///            decomposes cleanly under this reading and under no other.
+    ///            bit1 and bit4 are assigned from the matching upstream
+    ///            layout, not from a capture — no capture pressed the other
+    ///            barrel button or inverted the pen.
     ///
-    ///           Attempt 2 kept that byte pair but added a scale factor
-    ///           derived from a measured raw ceiling of 2473 (from a
-    ///           dedicated full-height, five-pen sweep) — produced Y
-    ///           confined to a coarse, ~10-step grid near the top of the
-    ///           tablet. This looked well-supported (clean monotonic climb
-    ///           in the sweep data, cross-validated across five pens,
-    ///           density ratios that seemed internally consistent) but was
-    ///           still wrong, in the same way three different empirically
-    ///           "confirmed by a sweep" scale factors were each wrong in
-    ///           turn for Xencelabs's cursor bug — see
-    ///           `TabletKit/Sources/TabletKit/Decoders/XencelabsDecoder.swift`'s
-    ///           header and `VendorDeviceRegistry.swift`'s Xencelabs Pen
-    ///           Display comment for that history. In both cases, a field
-    ///           that merely correlated with true position over a long
-    ///           sweep (because it moved in roughly the right direction on
-    ///           average) was mistaken for the real, precise field —
-    ///           because the review that "confirmed" it used a strided or
-    ///           coarse-grained sample of the sweep, which averages out a
-    ///           wrong field's coarseness and hides a right field's fine
-    ///           detail. Bytes [8..9] (attempt 1/2's field) DO trend
-    ///           upward over a full sweep, which is exactly why every
-    ///           check up to that point passed.
+    ///            `[3] == 0x00` is the proximity-exit frame, and it is the
+    ///            answer to a question this investigation spent two capture
+    ///            rounds on: the exit event was being searched for as an
+    ///            `0x80`-class value of the [1] discriminator, following the
+    ///            legacy Intuos state machine, and it is not there. It is
+    ///            here. `ptk-870-pen-2-proximity.txt` (three deliberate
+    ///            approach/withdraw cycles) shows the sequence
+    ///            0x80 → 0xC0 → 0x80 → 0x00 exactly three times, one
+    ///            single-frame 0x00 per withdrawal.
+    ///   [4..6]   X coordinate, 20 bits: [4] low, [5] mid, low nibble of [6]
+    ///            high. **The high nibble is the whole story of this
+    ///            device's edge behavior.** X was read as a plain LE16 for
+    ///            two prior rounds, and 69800 does not fit in 16 bits: every
+    ///            stroke crossing 65536 (327.7mm from the left edge — the
+    ///            rightmost ~21mm of a 349mm surface) wrapped to a small
+    ///            value and the cursor jumped to the opposite edge. The
+    ///            earlier "X freezes at 4264 near the right corners" finding
+    ///            was this same bit: 4264 is 69800 − 65536, i.e. the pen
+    ///            resting at the true right edge with bit 16 discarded. A
+    ///            previous search for the missing byte correctly found that
+    ///            no whole byte increments at the wrap — because the carry
+    ///            lands in a nibble that shares byte [6] with Y's low bits,
+    ///            which a byte-granular search cannot see. Verified on the
+    ///            two wrap events in `ptk-870-bt-x-shape-edge.txt` (bit sets
+    ///            on the 65531 → 10 climb, clears on the 7 → 65526 descent)
+    ///            and across all 34 captures on hand: reconstructed X reaches
+    ///            exactly 69800 at the right edge and never once exceeds it.
+    ///   [6..8]   Y coordinate, 20 bits: high nibble of [6] low, then [7],
+    ///            then [8]. Same value the previous code produced — it read
+    ///            [6..8] as a 24-bit field and scaled by 39000/624000, which
+    ///            is exactly a shift of 4 — but written as the field the
+    ///            hardware actually sends, which is what frees [6]'s low
+    ///            nibble for X above. 624000 was never a hardware ceiling;
+    ///            it is 39000 × 16.
+    ///   [9..10]  pressure, LE u16, real range 0…8191 = `spec.maxPressure`.
+    ///            The previous code read byte [10] alone, whose observed
+    ///            0…31 ceiling was recorded as "probably these older pens'
+    ///            real mechanical range." It was not: [10] is the high byte,
+    ///            31 << 8 | 255 = 8191, and `ptk-870-pressure-spiral.txt`
+    ///            walks the full 13-bit range smoothly. Reading [10] alone
+    ///            reported every stroke at 1/256th of its true force.
+    ///   [11]     tilt X, signed byte, ±64 (`spec.tiltMaxDegrees`)
+    ///   [12]     tilt Y, signed byte, ±64
+    ///            Both confirmed against four held-static poses, which are
+    ///            bit-identical frame to frame for every byte up to [12] and
+    ///            so isolate tilt cleanly: lean left gives [11] = +60, lean
+    ///            right −60, with [12] ≈ 0; lean up gives [12] = +57, lean
+    ///            down −59, with [11] ≈ 0. `ptk-870-tilt.txt` walks [11]
+    ///            smoothly from 0 through −64 (flat left), back through 0 to
+    ///            +63 (flat right) and home, saturating at both rails.
+    ///            Sign is passed through unnegated, as every other decoder
+    ///            here does; checked against the USB path rather than
+    ///            assumed, by comparing the same natural-grip gesture on both
+    ///            transports (`ptk-870-usb-hover-left-to-right.txt` median
+    ///            tilt +13/−34, BLE +11/−8 — same signs, same axes).
+    ///   [18]     buttons — one-hot, bits 0-3 = left ExpressKeys (4 keys),
+    ///            bits 4-7 = right ExpressKeys (4 keys). Confirmed via
+    ///            isolated left-only and right-only key-press captures.
+    ///   [19]     dial + cluster-active flags — bit0 = left-key-cluster
+    ///            active, bit1 = right-key-cluster active, bit2 = left dial
+    ///            active, bit3 = left dial rotating CCW (clear = CW), bit4 =
+    ///            right dial active, bit5 = right dial rotating CCW (clear =
+    ///            CW). Confirmed via isolated left-dial/right-dial/CW/CCW
+    ///            captures — no bit overlap with the button bits. NOT
+    ///            confirmed: per-frame step magnitude. The one raw sequential
+    ///            dial capture on hand shows the active bit held across many
+    ///            consecutive reports at a steady ~10 Hz for the whole
+    ///            rotation gesture, not one report per physical detent —
+    ///            emitting `delta: ±1` on every such frame below is a
+    ///            placeholder that will over-report rotation speed if that
+    ///            reading is right. A capture of a single, deliberate,
+    ///            one-detent dial click (versus a multi-second continuous
+    ///            spin) is needed to confirm whether this field ticks once
+    ///            per detent or free-runs while held.
     ///
-    ///           Found live 2026-09-17, third round, only after printing
-    ///           every single consecutive raw sample in a short window
-    ///           (not a stride) from `ptk-870-top-to-bottom.txt`: bytes
-    ///           [6..7] read as LE16 climb with the SAME fine,
-    ///           single-unit granularity as X's low byte — the real
-    ///           precise field. Bytes [8..9] (the old guess) update only
-    ///           in coarse steps of 4 and far less often — a real but
-    ///           separate, lower-resolution field, still unidentified.
-    ///           [6..7] alone still wraps at 16 bits during a genuine
-    ///           full-height sweep (confirmed via
-    ///           `ptk-tilt-multiple-pens-top-to-bottom.txt`, which shows 9
-    ///           clean wraps, one per pen stroke, each a smooth
-    ///           continuation past 65535 back to a low value at a steady
-    ///           per-step rate — not a stroke break or glitch). Byte [8]
-    ///           increments by exactly 1 at every one of those 9 wraps and
-    ///           nowhere else, confirming it as the true third byte —
-    ///           `y = report[6] | report[7]<<8 | report[8]<<16`, a true
-    ///           24-bit field, the same width pattern (missing high byte)
-    ///           as the Xencelabs bug's actual root cause. Measured true
-    ///           ceiling for a single continuous top-to-bottom stroke:
-    ///           `624000` (`ptk-870-top-to-bottom.txt`). This does NOT
-    ///           match `spec.maxY` (39000, the USB-side calibration) in
-    ///           either scale or magnitude — BLE's Y units are genuinely
-    ///           different from USB's, so this raw 24-bit value is scaled
-    ///           to `spec.maxY` the same way the old (wrong) code did,
-    ///           just now against the right raw field and a value that
-    ///           has actually been checked for wraparound.
-    ///
-    ///           X (bytes [4..5]) was re-examined for the same class of
-    ///           bug given this history. Round 1 (2 wrap events) found no
-    ///           companion high byte and left X as a 16-bit read with the
-    ///           gap noted. Round 2 (2026-09-18, 10 confirmed wrap events
-    ///           across every capture on hand, triggered by tracing a
-    ///           reported "cursor freezes/teleports near the right edge,
-    ///           tilt-sensitive" symptom back to its source) confirmed the
-    ///           negative result with much more data — no byte anywhere in
-    ///           the report increments consistently at the wrap — but also
-    ///           found X's raw value climbs cleanly to 65535 with no early
-    ///           saturation, unlike a field secretly missing a high byte.
-    ///           **X genuinely has no third byte; the bug was `spec.maxX`
-    ///           itself.** `69800` is the USB descriptor's logical maximum,
-    ///           which BLE's raw 16-bit X never reaches — the opposite
-    ///           mismatch from Y's (Y's true BLE range was LARGER than its
-    ///           USB spec value). Clamping raw X against `spec.maxX`
-    ///           (69800) let a value approaching the true 65535 ceiling
-    ///           read as merely "large, not yet at the edge," and let the
-    ///           wrapped-low value after 65535→0 read as a real position
-    ///           near the opposite edge instead of the true right edge —
-    ///           this explains both the "frozen near a small fixed value"
-    ///           finding (the exact value observed, 4264, is `69800−65536`
-    ///           to the unit — not a coincidence) and the "cursor wraps
-    ///           Pac-Man-style" symptom. Fixed by scaling raw X against the
-    ///           measured true ceiling `bleRawXCeiling` (65535) up to
-    ///           `spec.maxX`, the same pattern as Y's fix, just with the
-    ///           correction running in the opposite direction (BLE's true
-    ///           range is smaller than spec here, not larger).
-    ///   [10]    pressure, single byte — confirmed via a dedicated
-    ///           press-harder capture showing a clean ramp-and-saturate
-    ///           curve (two press cycles, both topping out at the same
-    ///           value). Ceiling observed on the pens tested this session
-    ///           was ~31 (0x1F), far below `spec.maxPressure` (8191) — this
-    ///           is very likely the physical range of those specific,
-    ///           older pens rather than a report-format truncation (the
-    ///           curve saturates and holds flat under sustained force
-    ///           rather than wrapping/glitching, which is what a truncated
-    ///           high byte would look like). Scaled against
-    ///           `spec.maxPressure` as-is; a pen with a wider true range
-    ///           will simply report higher byte values, the same as any
-    ///           other 8-bit-vs-wider pressure field elsewhere in this
-    ///           decoder set.
-    ///   [18]    buttons — one-hot, bits 0-3 = left ExpressKeys (4 keys),
-    ///           bits 4-7 = right ExpressKeys (4 keys). Confirmed via
-    ///           isolated left-only and right-only key-press captures.
-    ///   [19]    dial + cluster-active flags — bit0 = left-key-cluster
-    ///           active, bit1 = right-key-cluster active, bit2 = left dial
-    ///           active, bit3 = left dial rotating CCW (clear = CW), bit4 =
-    ///           right dial active, bit5 = right dial rotating CCW (clear =
-    ///           CW). Confirmed via isolated left-dial/right-dial/CW/CCW
-    ///           captures — no bit overlap with the button bits. NOT
-    ///           confirmed: per-frame step magnitude. The one raw sequential
-    ///           dial capture on hand shows the active bit held across many
-    ///           consecutive reports at a steady ~10 Hz for the whole
-    ///           rotation gesture, not one report per physical detent —
-    ///           emitting `delta: ±1` on every such frame below is a
-    ///           placeholder that will over-report rotation speed if that
-    ///           reading is right. A capture of a single, deliberate,
-    ///           one-detent dial click (versus a multi-second continuous
-    ///           spin) is needed to confirm whether this field ticks once
-    ///           per detent or free-runs while held.
-    ///
-    /// NOT YET CONFIRMED, deliberately not decoded here rather than guessed:
-    /// pen barrel buttons, eraser, and tip/touch switch state for this
-    /// report — no capture isolated these bits. `inProximity` is inferred
-    /// from whether a live (non-idle, non-template) discriminator arrived,
-    /// not from an explicit proximity bit. Tool serial/tool-code
-    /// (`.toolEnter`) are also not emitted here: the legacy Intuos
-    /// enter-class discriminator (`(byte[1] & 0xfc) == 0xc0`) that would
-    /// carry them was never observed in ~18,000 samples across every
-    /// capture taken this session, including deliberate approach/withdraw
-    /// tests — see `Notes/Scratch/` PTK-870 BLE research notes. Bytes 2-3
-    /// and 11-17 are also unassigned; several showed mild, unexplained
-    /// drift in some captures but nothing triangulated to a specific
-    /// control.
+    /// Still unassigned: [2], and [13..17]. [2] tracks [3]'s upper bits
+    /// loosely (0x00 while out of range, 0x80 or 0x20 in range) and may be a
+    /// tool-type or slot field; [13] and [16..17] change every frame even
+    /// under a held-static pose, so they are timing or sequence data, and
+    /// [14]'s high nibble is a 16-step rolling frame counter. Upstream's
+    /// equivalent frame carries pen rotation and an Art Pen wheel in this
+    /// region; neither is exercisable with the pens on hand, so both are left
+    /// alone rather than guessed at.
     ///
     /// Discriminator byte [1] follows Wacom's legacy Intuos proximity
     /// state-machine bit convention (`wacom_intuos_inout()` in the Linux
     /// `input-wacom` driver): high bits are a packet-class field, the low
     /// bit is a slot index. Every discriminator value actually observed
-    /// this session decomposes cleanly: `0x02` = idle, `0x21`/`0x22` =
-    /// in-range (class 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting
-    /// (class 0x40, slot 1/0). A handful of `0xC1`/`0xC2` (enter-class)
-    /// samples appeared in early discovery-mode captures but never in
-    /// enough volume to be usable, and the exit class
-    /// (`(byte[1] & 0xfe) == 0x80`) was never observed at all. Frames whose
-    /// class is `0x40` with a byte[3]/[4..9] payload that is bit-for-bit
-    /// IDENTICAL every time (a fixed template — `c0 81 90 80 24 04 08`
-    /// observed in both sweep captures) are a sync/keepalive marker, not
-    /// live pen data — filtered out here by requiring the frame to differ
-    /// from that exact template before treating [4..10] as position data.
+    /// decomposes cleanly: `0x02` = idle, `0x21`/`0x22` = in-range (class
+    /// 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting (class 0x40, slot
+    /// 1/0). It is NOT the proximity signal — `0x02` carries live hover and
+    /// contact data throughout — and proximity is read from [3] instead, per
+    /// above. Discriminator `0x01` is a fixed phantom point observed in live
+    /// bug captures and is rejected outright. Frames whose [3..9] payload
+    /// matches one of the two bit-identical per-slot templates
+    /// (`c0 81 90 80 24 04 08` slot 0, `c0 88 95 80 35 02 08` slot 1) are
+    /// sync/keepalive markers, not pen data, and are filtered the same way —
+    /// the slot-1 one is the edge bounceback, see the filter's own comment.
     private func decodeBLEReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
@@ -573,14 +516,42 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         state: inout DecoderState
     ) -> [DecodeResult] {
         let discriminator = report[1]
-        let packetClass = discriminator & 0xfc
+        let status = report[3]
 
-        // Fixed sync/keepalive template — not live pen data. Bytes [3..9]
-        // match exactly across every occurrence observed in captured data.
+        // Fixed sync/keepalive templates — not live pen data. There is one
+        // per slot, and they are byte-identical across every occurrence in
+        // every capture on hand except byte [14]'s rolling frame counter:
+        //
+        //   slot 0 (discriminator 0x41): c0 81 90 80 24 04 08 11 00 04 08
+        //   slot 1 (discriminator 0x21): c0 88 95 80 35 02 08 11 00 02 08
+        //
+        // Only the 0x41 one was known until 2026-09-18, because no earlier
+        // capture exercised slot 1 meaningfully. The 0x21 template is the
+        // "edge bounceback": it is emitted as the pen leaves the active
+        // area, and it decodes to a fixed phantom point near the middle of
+        // the tablet (X 38280, Y 9048) carrying a fixed phantom pressure of
+        // 4360 — so a cursor correctly pinned at the edge gets thrown back
+        // into view for a single frame, then returns to the edge. Confirmed
+        // on four deliberate see-saw captures, one per edge
+        // (`ptk-870-bt-edge-bounce-{left,right,top,bottom}.txt`): 26 of these
+        // frames appear bracketed on both sides by a railed coordinate, at
+        // all four edges, always decoding to the same two values regardless
+        // of which edge the pen crossed or where it was.
+        //
+        // Both templates carry the same giveaway pressure bytes ([9..10] =
+        // 08 11) and differ only at [12], which tracks the slot — but they
+        // are matched here on their full literal [3..9] signature rather
+        // than on that shared pattern, since each signature occurs with
+        // exactly one [3..13] byte row and only ever alongside its own
+        // discriminator, making the literal match both unambiguous and
+        // narrower than a heuristic.
         let isTemplateFrame =
-            report[3] == 192 && report[4] == 129 && report[5] == 144
-            && report[6] == 128 && report[7] == 36 && report[8] == 4
-            && report[9] == 8
+            (report[3] == 192 && report[4] == 129 && report[5] == 144
+                && report[6] == 128 && report[7] == 36 && report[8] == 4
+                && report[9] == 8)
+            || (report[3] == 192 && report[4] == 136 && report[5] == 149
+                && report[6] == 128 && report[7] == 53 && report[8] == 2
+                && report[9] == 8)
 
         var results: [DecodeResult] = []
 
@@ -602,139 +573,116 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             results.append(.wheel(index: 1, delta: (dialFlags & 0x20) != 0 ? -1 : 1))
         }
 
-        // packetClass 0x00 (discriminator 0x02) is NOT a pure idle state —
-        // found live 2026-09-17, third round: a dedicated hover-only sweep
-        // (pen moved across the tablet without ever touching down,
-        // `ptk-870-tilt-hover-left-to-right.txt`) showed clean, live,
-        // monotonic X motion exclusively under discriminator 0x02 — the
-        // discriminator this decoder had been treating as "no pen, discard"
-        // ever since the original byte-mapping investigation. That
-        // investigation never captured a hover-only sweep, so this was
-        // never actually tested until now.
-        //
-        // The real distinguishing signal is X/Y both being exactly zero, a
-        // genuine placeholder confirmed in a capture with no pen anywhere
-        // near the tablet at all (only ExpressKeys and the dial were
-        // exercised): every 0x02 frame there reported X=0, Y=0, never
-        // anything else. A hovering pen's 0x02 frames never do — X/Y move
-        // continuously and never happen to land on exactly (0, 0) mid-sweep
-        // in the capture on hand. Filtering on "both zero" rather than on
-        // packetClass alone lets real hover position through while still
-        // suppressing the true no-pen-present case.
-        //
-        // Found live 2026-09-17, fourth round — the above guard was still
-        // too narrow: live captures reproducing a "cursor teleports near
-        // the tablet's edges/bezel" report (`bt-sample-01.txt`,
-        // `bt-sample-02.txt`) show discriminator 0x02 frames where ONLY Y's
-        // three bytes collapse to exactly zero while X keeps reporting a
-        // real, live, moving value — the pen genuinely still in range, just
-        // with Y degenerating independently of X. The old all-zero-only
-        // check let these through as real points, producing a cursor that
-        // snapped between the true position and a fixed "Y=0, real X"
-        // ghost. A real hovering/in-range Y essentially never rests at
-        // exactly zero continuously the way this degenerate state does, so
-        // reject on Y-alone being zero too, not just X-and-Y together.
-        // Discriminator 0x01 — also observed in these same captures as a
-        // fixed, byte-for-byte identical phantom point recurring several
-        // times (X=17244, Y=9752) — isn't part of the confirmed
-        // 0x02/0x21/0x22/0x41/0x42 state set and is excluded outright rather
-        // than trusted to the zero-Y heuristic, since a future phantom value
-        // might not happen to zero out.
-        let looksLikeDegenerateY =
-            packetClass == 0x00 && report[6] == 0 && report[7] == 0 && report[8] == 0
-        guard discriminator != 0x01, !looksLikeDegenerateY, !isTemplateFrame else {
+        guard discriminator != 0x01, !isTemplateFrame else { return results }
+
+        // Out of range. The coordinate bytes still hold the last tracked
+        // position in this frame, so ignore them and emit one synthetic exit
+        // rather than a final point at a stale location.
+        guard (status & 0x80) != 0 else {
+            // The pen genuinely left: whatever the barrel was doing stops
+            // mattering, so disarm the gate for the next approach.
+            state.bleOutsideSurface = false
+            guard state.prevInProximity else { return results }
+            state.prevInProximity = false
+            results.append(
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY,
+                        maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: state.lastTiltX, tiltY: state.lastTiltY,
+                        rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: false, inProximity: false, hoverDistance: 0)))
             return results
         }
 
-        // X's raw units are a different scale from spec.maxX on this
-        // report — see `bleRawXCeiling`'s doc comment above. Scale the
-        // measured true raw ceiling (65535, X's real 16-bit range) up to
-        // spec.maxX so downstream code can treat this the same as every
-        // other decoder's X, mirroring Y's own raw-ceiling scale below.
-        let wireRawX = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
-        var rawX = wireRawX
-        // X has no companion high byte (confirmed — see the doc comment
-        // above), so a real stroke that crosses the raw 65535 boundary
-        // while still physically on the tablet wraps to a small value with
-        // no bit left to reconstruct the true position from. Detect the
-        // wrap directly: a large negative jump in the raw WIRE value
-        // (`wireRawX`, always the report's own literal bytes, never the
-        // corrected value) while the previous wire value was already near
-        // the ceiling means the pen is still at (or just past) the true
-        // physical edge, not that it teleported to the opposite side — pin
-        // the reported position at the ceiling instead of trusting the
-        // wrapped-low reading. This is the decoder-level fix for the
-        // reported "cursor wraps Pac-Man-style at the right edge" symptom;
-        // without it, a genuine edge-crossing stroke still produces a
-        // single-frame ~spec.maxX-sized jump even after the ceiling
-        // correction above, since rescaling a wrapped value doesn't unwrap
-        // it.
+        let x = Int(report[4]) | Int(report[5]) << 8 | Int(report[6] & 0x0f) << 16
+        let y = Int(report[6] >> 4) | Int(report[7]) << 4 | Int(report[8]) << 12
+        // Both fields are wide enough to express values the sensor never
+        // reaches, so an out-of-range reading means a frame that isn't a
+        // position at all. Drop it rather than clamping it to an edge: a
+        // clamp would park the cursor at a border it was never near.
+        guard x <= spec.maxX, y <= spec.maxY else { return results }
+
+        // Barrel-takeover gate.
         //
-        // Deliberately compares against `state.bleLastWireRawX` (the raw
-        // wire value, updated unconditionally below) rather than feeding
-        // the CORRECTED value back into its own detection — comparing
-        // against a value already pinned at the ceiling would make every
-        // subsequent wrapped-low report look like "another wrap from
-        // near-ceiling" and pin forever, with no way to un-pin once the
-        // pen genuinely returns to the mapped area.
+        // Once the pen tip passes the edge of the sensing surface, this
+        // hardware keeps reporting a position — but it is no longer coming
+        // from the tip. It comes from the pen's barrel, and the cursor snaps
+        // inward to wherever the barrel is. Confirmed 2026-09-18 on four
+        // deliberate see-saw captures, one per edge: every large jump at a
+        // boundary points along the reported tilt vector, mean angular error
+        // 7.2° where unrelated vectors would average 90°, and `|tilt| >= 40`
+        // occurs in 49% of railed frames versus 0% of interior frames. It is
+        // not the eraser end taking over (the same thing happens on a Pro
+        // Pen 3, which has no eraser) and it is not a decode error — the
+        // bytes are a faithful reading of a measurement of the wrong end of
+        // the pen.
         //
-        // `blePastXWrap` makes this a small state machine rather than a
-        // single-frame check: once a wrap is detected, EVERY subsequent
-        // report stays pinned at the ceiling (regardless of how the
-        // wrapped-low wire value continues to evolve — a real capture
-        // shows it keeps climbing smoothly in wrapped-low space, e.g.
-        // 10→24→38→...→2288, which would otherwise read as real motion
-        // back toward the tablet's center) until the wire value itself
-        // climbs back up near the ceiling again, which un-pins and resumes
-        // trusting it directly.
-        if state.blePastXWrap {
-            if wireRawX > Int(Self.bleRawXCeiling) - 5000 {
-                state.blePastXWrap = false
-            } else {
-                rawX = Int(Self.bleRawXCeiling)
+        // There is no single-frame signal that separates this from ordinary
+        // behaviour: the ghost reports status 0x80 with zero tilt near a
+        // border, and so does legitimate high hover (570 of 571 frames in a
+        // capture the user described as tracking well) and so does
+        // deliberate edge tracing. Filtering on that signature costs both
+        // outright. What does separate them is continuity. Measured across
+        // all 59 transitions off a railed edge in those captures: a genuine
+        // re-entry moves at most 254 units in a frame (mean 60), while every
+        // barrel jump is at least 2648 — a 10x gap with nothing in it, so
+        // the threshold below sits in empty space rather than being tuned to
+        // a distribution's tail.
+        //
+        // Hence: reaching a boundary arms the gate, because that is the one
+        // moment we know the tip is at the limit of what the sensor can
+        // see. While armed, a discontinuous sample is the barrel and is
+        // dropped; a continuous one that lands back inside is the tip
+        // returning and disarms the gate. A proximity exit disarms it too.
+        // The continuity check deliberately applies to railed samples as
+        // well — an earlier version exempted them, and the ghost simply slid
+        // along the boundary instead, jumping thousands of units in Y while
+        // pinned at X = maxX.
+        //
+        // KNOWN LIMIT, measured, not glossed: this halves the bouncing
+        // (89 -> 28 jumps over 1500 units across the four captures) but does
+        // not remove the largest single jumps, because some ghosts appear
+        // without the reported position ever touching a limit first, so the
+        // gate never arms for them. Arming more eagerly (on status 0x80 near
+        // a border) was tried and rejected: it takes legitimate edge tracing
+        // to zero retention.
+        if state.bleOutsideSurface {
+            let dx = Double(x - state.lastX)
+            let dy = Double(y - state.lastY)
+            if (dx * dx + dy * dy).squareRoot() > Self.bleBarrelJumpThreshold { return results }
+            if !Self.isAtSurfaceLimit(x: x, y: y, spec: spec) {
+                state.bleOutsideSurface = false
             }
-        } else if let lastWireRawX = state.bleLastWireRawX,
-            lastWireRawX > Int(Self.bleRawXCeiling) - 5000, wireRawX < lastWireRawX - 30000
-        {
-            state.blePastXWrap = true
-            rawX = Int(Self.bleRawXCeiling)
         }
-        state.bleLastWireRawX = wireRawX
-        let x = min(Int((Double(rawX) * Double(spec.maxX) / Self.bleRawXCeiling).rounded()), spec.maxX)
-        // Y is a true 24-bit field: [6] low, [7] mid, [8] high. See the
-        // doc comment above for the byte-mapping history — bytes [8..9]
-        // were tried twice and were both wrong.
-        let rawY = Int(report[6]) | (Int(report[7]) << 8) | (Int(report[8]) << 16)
-        // Y's raw units are a different scale from X's on this report —
-        // see the doc comment above. Scale the measured true raw ceiling
-        // (624000, from one continuous full-height stroke) up to spec.maxY
-        // so downstream code can treat this the same as every other
-        // decoder's Y.
-        let y = min(Int((Double(rawY) * Double(spec.maxY) / Self.bleRawYCeiling).rounded()), spec.maxY)
-        let pressure = Int(report[10])
+        if Self.isAtSurfaceLimit(x: x, y: y, spec: spec) {
+            state.bleOutsideSurface = true
+        }
+
+        let pressure = Int(report[9]) | Int(report[10]) << 8
+        let tiltDivisor = spec.tiltMaxDegrees ?? 64.0
+        let tiltX = Double(Int8(bitPattern: report[11])) / tiltDivisor
+        let tiltY = Double(Int8(bitPattern: report[12])) / tiltDivisor
 
         state.prevInProximity = true
         state.lastX = x
         state.lastY = y
+        state.lastTiltX = tiltX
+        state.lastTiltY = tiltY
+        state.hasValidTiltFrame = true
 
-        // Tilt is not decoded here. Bytes [6..7], previously reported as
-        // tiltX/tiltY, were found 2026-09-17 to actually be the low/mid
-        // bytes of the real Y field (see the doc comment above) — the
-        // original "sign flips between opposite directions" finding that
-        // seemed to confirm them as tilt was a coincidence of the four
-        // held-static tilt-pose captures each being performed at a
-        // different, uncontrolled Y position on the tablet, not a real
-        // tilt signal. Tilt's real bytes are unidentified; per priority
-        // (coordinates, then barrel buttons, then pressure, then tilt),
-        // this is deliberately left at 0.0 rather than guessed.
         results.append(
             .pen(
                 TabletPoint(
                     x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
                     pressure: pressure, maxPressure: spec.maxPressure,
-                    tiltX: 0.0, tiltY: 0.0, rotation: 0.0,
-                    penButton1: false, penButton2: false,
-                    eraser: false, inProximity: true, hoverDistance: 0)))
+                    tiltX: tiltX, tiltY: tiltY, rotation: 0.0,
+                    penButton1: (status & 0x02) != 0,
+                    penButton2: (status & 0x04) != 0,
+                    eraser: (status & 0x10) != 0,
+                    inProximity: true, hoverDistance: 0)))
         return results
     }
 }
