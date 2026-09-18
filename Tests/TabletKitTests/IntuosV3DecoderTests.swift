@@ -606,7 +606,11 @@ final class IntuosV3DecoderTests: XCTestCase {
         }
         XCTAssertEqual(pens.count, 1)
         let p = pens[0]
-        XCTAssertEqual(p.x, 200 + 256 * 157)  // bytes 4-5, X low/high LE16
+        // bytes 4-5 (X LE16): 200 | 157<<8 = 40392 raw, scaled to
+        // spec.maxX (44704 for the ptk670 fixture) via the measured 65535
+        // raw ceiling.
+        let rawX = 200 + 256 * 157
+        XCTAssertEqual(p.x, Int((Double(rawX) * 44704.0 / 65535.0).rounded()))
         // bytes 6/7/8 (Y 24-bit LE): 160 | 12<<8 | 1<<16 = 68768 raw,
         // scaled to spec.maxY (27940 for the ptk670 fixture) via the
         // measured 624000 raw ceiling.
@@ -651,6 +655,51 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertGreaterThan(yAfter!, yBefore!)
     }
 
+    /// Real sample sequence from `ptk-870-bt-x-shape-edge.txt` spanning X's
+    /// genuine 16-bit wraparound (confirmed 2026-09-18: X has no companion
+    /// high byte anywhere in the report, unlike Y — this is a real,
+    /// unrecoverable wrap, not a missing-byte bug). Raw X climbs
+    /// 65490→65504→65531 then wraps to 10→24 — a real capture reproducing
+    /// the reported "cursor wraps Pac-Man-style at the right edge" bug.
+    /// The decoder must PIN at the ceiling through the wrap rather than
+    /// reporting a small value, since the wrapped-low reading is not a
+    /// real return to the opposite edge — it's the pen still at (or just
+    /// past) the true physical right edge.
+    func testRealCaptureBLEXPinsAtCeilingThroughWraparound() {
+        var st = DecoderState()
+        let approach: [UInt8] = [
+            26, 2, 32, 192, 224, 255, 128, 179, 8, 0, 0, 24, 35, 0, 144, 51, 136, 98, 0, 0,
+        ]
+        let atCeiling: [UInt8] = [
+            26, 2, 32, 192, 251, 255, 0, 181, 8, 0, 0, 24, 35, 0, 160, 47, 202, 98, 0, 0,
+        ]
+        let wrapped1: [UInt8] = [
+            26, 2, 32, 192, 10, 0, 177, 181, 8, 0, 0, 24, 35, 0, 176, 46, 235, 98, 0, 0,
+        ]
+        let wrapped2: [UInt8] = [
+            26, 2, 32, 192, 24, 0, 65, 182, 8, 0, 0, 24, 35, 0, 192, 46, 12, 99, 0, 0,
+        ]
+        func x(_ r: [DecodeResult]) -> Int? {
+            r.compactMap { res -> Int? in if case .pen(let p) = res { return p.x }; return nil }.first
+        }
+        _ = decode(approach, state: &st)
+        let xAtCeiling = x(decode(atCeiling, state: &st))
+        XCTAssertNotNil(xAtCeiling)
+        XCTAssertGreaterThan(xAtCeiling!, 44000)  // near ptk670's maxX (44704)
+
+        // The wrap: raw X drops from ~65531 to 10. Must NOT read as a small
+        // value — pin at the ceiling instead.
+        let xWrapped1 = x(decode(wrapped1, state: &st))
+        XCTAssertNotNil(xWrapped1)
+        XCTAssertEqual(xWrapped1, 44704)  // pinned at spec.maxX for the ptk670 fixture
+
+        // Still past the wrap on the very next report — must stay pinned,
+        // not resume trusting the (still climbing, still wrapped-low) wire
+        // value as if it were a real return toward the tablet's center.
+        let xWrapped2 = x(decode(wrapped2, state: &st))
+        XCTAssertEqual(xWrapped2, 44704)
+    }
+
     /// Real sample from `ptk-870-tilt-hover-left-to-right.txt` — discriminator
     /// 0x02, previously treated by this decoder as pure idle/no-pen and
     /// discarded entirely. A dedicated hover-only sweep (pen moved across
@@ -668,7 +717,8 @@ final class IntuosV3DecoderTests: XCTestCase {
             if case .pen(let p) = res { return p }; return nil
         }
         XCTAssertEqual(pens.count, 1)
-        XCTAssertEqual(pens[0].x, 43 + 256 * 78)
+        let rawX = 43 + 256 * 78
+        XCTAssertEqual(pens[0].x, Int((Double(rawX) * 44704.0 / 65535.0).rounded()))
         XCTAssertEqual(pens[0].pressure, 0)
     }
 
@@ -682,6 +732,44 @@ final class IntuosV3DecoderTests: XCTestCase {
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertTrue(pens.isEmpty)
+    }
+
+    /// Real sample from `bt-sample-02.txt` (a live reproduction of a
+    /// reported "cursor teleports near the tablet's edges" bug) —
+    /// discriminator 0x02 with a real, nonzero X but Y's three bytes
+    /// collapsed to exactly zero. Distinct from the genuine no-pen
+    /// placeholder above (which zeroes X too): this is a degenerate Y-only
+    /// state that must also be discarded, since letting it through produced
+    /// a cursor that snapped between the true position and a fixed "Y=0,
+    /// real X" ghost point.
+    func testRealCaptureBLEDegenerateYOnlySuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 0, 128, 45, 126, 0, 0, 0, 0,
+            0, 0, 0, 0, 192, 255, 144, 87, 0, 0,
+        ]
+        let r = decode(b, state: &st)
+        let pens = r.compactMap { res -> TabletPoint? in
+            if case .pen(let p) = res { return p }; return nil
+        }
+        XCTAssertTrue(pens.isEmpty)
+    }
+
+    /// Real sample from `bt-sample-02.txt` — discriminator 0x01, observed as
+    /// a fixed, byte-for-byte identical phantom point recurring several
+    /// times in the same capture (X=17244, Y=9752). Not part of the
+    /// confirmed 0x02/0x21/0x22/0x41/0x42 state set; excluded outright.
+    func testRealCaptureBLEDiscriminatorOneSuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 1, 32, 192, 92, 67, 24, 38, 0, 2,
+            16, 0, 0, 2, 176, 0, 0, 0, 0, 0,
         ]
         let r = decode(b, state: &st)
         let pens = r.compactMap { res -> TabletPoint? in

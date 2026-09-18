@@ -42,6 +42,24 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// models.
     private static let bleRawYCeiling = 624000.0
 
+    /// True raw ceiling of the BLE report's X field (bytes [4..5], read as a
+    /// plain LE16 — see `decodeBLEReport`'s doc comment). Unlike Y, X has NO
+    /// missing high byte: a systematic search across 10 confirmed wrap
+    /// events in every capture on hand (2026-09-18) found no companion byte
+    /// anywhere in the report that increments at the wrap, and X's raw
+    /// value climbs cleanly to 65535 without an early saturation plateau —
+    /// so X is genuinely only a 16-bit field on this transport. The bug was
+    /// elsewhere: `spec.maxX` (69800) is the USB descriptor's logical
+    /// maximum, which BLE's real range doesn't reach — the opposite
+    /// mismatch from Y's (Y's true BLE range was LARGER than its USB spec
+    /// value; X's is SMALLER). Reading X as `min(x, spec.maxX)` therefore
+    /// let a wrapped-low value stand as if it were a real position near the
+    /// left edge instead of the true right edge, and let a value just under
+    /// the wrap point stand uncorrected instead of being recognized as
+    /// approaching this ceiling — both contributed to the reported
+    /// "frozen near a fixed value" and "wraps like Pac-Man" symptoms.
+    private static let bleRawXCeiling = 65535.0
+
     public init() {}
 
     public func decode(
@@ -458,18 +476,33 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///           has actually been checked for wraparound.
     ///
     ///           X (bytes [4..5]) was re-examined for the same class of
-    ///           bug given this history and DOES occasionally wrap at 16
-    ///           bits too (2 confirmed instances across all captures on
-    ///           hand, both verified as genuine continuous-motion overflow
-    ///           via consistent per-step deltas before/after, not a
-    ///           stroke break) — but no companion high byte has been
-    ///           found for X yet despite a systematic per-byte delta scan
-    ///           at both wrap events (the two events don't agree on any
-    ///           single byte's delta). Left as X's current 16-bit read for
-    ///           now since it is correct across the overwhelming majority
-    ///           of the range and `spec.maxX` (69800) very nearly fits in
-    ///           16 bits anyway — flagged as a known, narrow, edge-only
-    ///           gap rather than silently left unmentioned.
+    ///           bug given this history. Round 1 (2 wrap events) found no
+    ///           companion high byte and left X as a 16-bit read with the
+    ///           gap noted. Round 2 (2026-09-18, 10 confirmed wrap events
+    ///           across every capture on hand, triggered by tracing a
+    ///           reported "cursor freezes/teleports near the right edge,
+    ///           tilt-sensitive" symptom back to its source) confirmed the
+    ///           negative result with much more data — no byte anywhere in
+    ///           the report increments consistently at the wrap — but also
+    ///           found X's raw value climbs cleanly to 65535 with no early
+    ///           saturation, unlike a field secretly missing a high byte.
+    ///           **X genuinely has no third byte; the bug was `spec.maxX`
+    ///           itself.** `69800` is the USB descriptor's logical maximum,
+    ///           which BLE's raw 16-bit X never reaches — the opposite
+    ///           mismatch from Y's (Y's true BLE range was LARGER than its
+    ///           USB spec value). Clamping raw X against `spec.maxX`
+    ///           (69800) let a value approaching the true 65535 ceiling
+    ///           read as merely "large, not yet at the edge," and let the
+    ///           wrapped-low value after 65535→0 read as a real position
+    ///           near the opposite edge instead of the true right edge —
+    ///           this explains both the "frozen near a small fixed value"
+    ///           finding (the exact value observed, 4264, is `69800−65536`
+    ///           to the unit — not a coincidence) and the "cursor wraps
+    ///           Pac-Man-style" symptom. Fixed by scaling raw X against the
+    ///           measured true ceiling `bleRawXCeiling` (65535) up to
+    ///           `spec.maxX`, the same pattern as Y's fix, just with the
+    ///           correction running in the opposite direction (BLE's true
+    ///           range is smaller than spec here, not larger).
     ///   [10]    pressure, single byte — confirmed via a dedicated
     ///           press-harder capture showing a clean ramp-and-saturate
     ///           curve (two press cycles, both topping out at the same
@@ -588,18 +621,86 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // in the capture on hand. Filtering on "both zero" rather than on
         // packetClass alone lets real hover position through while still
         // suppressing the true no-pen-present case.
-        let looksLikeNoPenPlaceholder =
-            packetClass == 0x00 && report[4] == 0 && report[5] == 0
-            && report[6] == 0 && report[7] == 0 && report[8] == 0
-        guard !looksLikeNoPenPlaceholder, !isTemplateFrame else { return results }
+        //
+        // Found live 2026-09-17, fourth round — the above guard was still
+        // too narrow: live captures reproducing a "cursor teleports near
+        // the tablet's edges/bezel" report (`bt-sample-01.txt`,
+        // `bt-sample-02.txt`) show discriminator 0x02 frames where ONLY Y's
+        // three bytes collapse to exactly zero while X keeps reporting a
+        // real, live, moving value — the pen genuinely still in range, just
+        // with Y degenerating independently of X. The old all-zero-only
+        // check let these through as real points, producing a cursor that
+        // snapped between the true position and a fixed "Y=0, real X"
+        // ghost. A real hovering/in-range Y essentially never rests at
+        // exactly zero continuously the way this degenerate state does, so
+        // reject on Y-alone being zero too, not just X-and-Y together.
+        // Discriminator 0x01 — also observed in these same captures as a
+        // fixed, byte-for-byte identical phantom point recurring several
+        // times (X=17244, Y=9752) — isn't part of the confirmed
+        // 0x02/0x21/0x22/0x41/0x42 state set and is excluded outright rather
+        // than trusted to the zero-Y heuristic, since a future phantom value
+        // might not happen to zero out.
+        let looksLikeDegenerateY =
+            packetClass == 0x00 && report[6] == 0 && report[7] == 0 && report[8] == 0
+        guard discriminator != 0x01, !looksLikeDegenerateY, !isTemplateFrame else {
+            return results
+        }
 
-        // Clamped to spec.maxX/maxY, matching the established pattern in
-        // XencelabsDecoder.swift's own 24-bit coordinate fix (`min(...,
-        // spec.maxX)`) — protects against a raw value at or slightly past
-        // the measured ceiling producing an out-of-range point, since the
-        // captures on hand were not deliberately edge/corner-anchored and
-        // may not have exercised the true physical extremes.
-        let x = min(Int(UInt16(report[4]) | UInt16(report[5]) << 8), spec.maxX)
+        // X's raw units are a different scale from spec.maxX on this
+        // report — see `bleRawXCeiling`'s doc comment above. Scale the
+        // measured true raw ceiling (65535, X's real 16-bit range) up to
+        // spec.maxX so downstream code can treat this the same as every
+        // other decoder's X, mirroring Y's own raw-ceiling scale below.
+        let wireRawX = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
+        var rawX = wireRawX
+        // X has no companion high byte (confirmed — see the doc comment
+        // above), so a real stroke that crosses the raw 65535 boundary
+        // while still physically on the tablet wraps to a small value with
+        // no bit left to reconstruct the true position from. Detect the
+        // wrap directly: a large negative jump in the raw WIRE value
+        // (`wireRawX`, always the report's own literal bytes, never the
+        // corrected value) while the previous wire value was already near
+        // the ceiling means the pen is still at (or just past) the true
+        // physical edge, not that it teleported to the opposite side — pin
+        // the reported position at the ceiling instead of trusting the
+        // wrapped-low reading. This is the decoder-level fix for the
+        // reported "cursor wraps Pac-Man-style at the right edge" symptom;
+        // without it, a genuine edge-crossing stroke still produces a
+        // single-frame ~spec.maxX-sized jump even after the ceiling
+        // correction above, since rescaling a wrapped value doesn't unwrap
+        // it.
+        //
+        // Deliberately compares against `state.bleLastWireRawX` (the raw
+        // wire value, updated unconditionally below) rather than feeding
+        // the CORRECTED value back into its own detection — comparing
+        // against a value already pinned at the ceiling would make every
+        // subsequent wrapped-low report look like "another wrap from
+        // near-ceiling" and pin forever, with no way to un-pin once the
+        // pen genuinely returns to the mapped area.
+        //
+        // `blePastXWrap` makes this a small state machine rather than a
+        // single-frame check: once a wrap is detected, EVERY subsequent
+        // report stays pinned at the ceiling (regardless of how the
+        // wrapped-low wire value continues to evolve — a real capture
+        // shows it keeps climbing smoothly in wrapped-low space, e.g.
+        // 10→24→38→...→2288, which would otherwise read as real motion
+        // back toward the tablet's center) until the wire value itself
+        // climbs back up near the ceiling again, which un-pins and resumes
+        // trusting it directly.
+        if state.blePastXWrap {
+            if wireRawX > Int(Self.bleRawXCeiling) - 5000 {
+                state.blePastXWrap = false
+            } else {
+                rawX = Int(Self.bleRawXCeiling)
+            }
+        } else if let lastWireRawX = state.bleLastWireRawX,
+            lastWireRawX > Int(Self.bleRawXCeiling) - 5000, wireRawX < lastWireRawX - 30000
+        {
+            state.blePastXWrap = true
+            rawX = Int(Self.bleRawXCeiling)
+        }
+        state.bleLastWireRawX = wireRawX
+        let x = min(Int((Double(rawX) * Double(spec.maxX) / Self.bleRawXCeiling).rounded()), spec.maxX)
         // Y is a true 24-bit field: [6] low, [7] mid, [8] high. See the
         // doc comment above for the byte-mapping history — bytes [8..9]
         // were tried twice and were both wrong.

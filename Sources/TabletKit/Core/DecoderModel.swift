@@ -102,6 +102,19 @@ public struct DecoderState: Sendable {
     /// Remaining contact records expected before `wacom24HDTPendingContacts`
     /// can be emitted as a completed touch frame.
     public var wacom24HDTRemainingContacts: Int = 0
+    /// Last raw WIRE (pre-scale, pre-wrap-correction) X value decoded from
+    /// an `IntuosV3Decoder` BLE report — always the report's own literal
+    /// bytes, never the corrected/pinned value — used to detect X's
+    /// genuine 16-bit wraparound (confirmed to have no companion high
+    /// byte — see `decodeBLEReport`'s doc comment). `nil` before the first
+    /// BLE position sample.
+    public var bleLastWireRawX: Int? = nil
+    /// True once `bleLastWireRawX` has wrapped low while off the mapped
+    /// surface — kept pinned at the ceiling until the wire value itself
+    /// climbs back near the ceiling again, confirming the pen returned
+    /// rather than continuing further past the true edge in wrapped-low
+    /// space. See `decodeBLEReport`'s wrap-handling doc comment.
+    public var blePastXWrap: Bool = false
     public init() {}
 }
 
