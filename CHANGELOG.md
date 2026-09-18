@@ -9,6 +9,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Battery reporting for Intuos Pro gen 3 tablets over Bluetooth. `IntuosV3Decoder`
+  now decodes report `0x1B`, a once-per-second status report carrying the battery
+  level and charging state, and emits `.battery` like the other decoders that
+  support it. Report layout confirmed against PTK-870 captures.
+
 - `ReportParser.pl` and `ReportParser.expressKeyRemote` — new cases routing the
   eight PL-series pen displays and the ExpressKey Remote to their own decoders.
 

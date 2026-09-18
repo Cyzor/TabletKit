@@ -124,9 +124,45 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         case 0x1A:
             guard length >= 20 else { return [] }
             return decodeBLEReport(report: report, length: length, spec: spec, state: &state)
+        case 0x1B:
+            // Only byte [1] is read, which the length >= 2 guard above covers.
+            return decodeBatteryReport(report: report, state: &state)
         default:
             return []
         }
+    }
+
+    // MARK: - 0x1B battery status
+
+    /// BLE status report, emitted once per second. Captures are 20 bytes,
+    /// but only byte [1] carries data — [2...19] are zero in every one on
+    /// hand — so the dispatch guard requires just that byte, not the full
+    /// declared length.
+    ///
+    ///   [1] bit7   = charging
+    ///   [1] bits6:0 = battery percentage (0–100, direct value)
+    ///
+    /// Same encoding as the kernel's `wacom_intuos_gen3_bt_battery()`
+    /// (`wacom_wac.c` ~line 1532), though that reads it at data[45] of the
+    /// BT Classic container rather than from a report of its own — the
+    /// kernel has no feature row for this PID at all, so the offset here
+    /// comes from captures, not from upstream.
+    ///
+    /// Confirmed across ~50 PTK-870 BT captures: values with bit7 clear span
+    /// 0x51–0x64 (81–100%) and never exceed 100 once masked, while the
+    /// charging captures read 0xCC (76%) and 0xE4 (100%) — impossible as raw
+    /// percentages, and both taken while plugged in.
+    ///
+    /// Only emit on change; at 1 Hz this is mostly about avoiding redundant
+    /// published-property churn downstream.
+    private func decodeBatteryReport(
+        report: UnsafePointer<UInt8>,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        let batByte = report[1]
+        guard batByte != state.lastBatteryByte else { return [] }
+        state.lastBatteryByte = batByte
+        return [.battery(percent: Int(batByte & 0x7F), charging: (batByte & 0x80) != 0)]
     }
 
     // MARK: - 0x1F standard pen report (16-bit XY)

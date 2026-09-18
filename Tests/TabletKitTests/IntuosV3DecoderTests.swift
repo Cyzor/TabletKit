@@ -1227,4 +1227,78 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(wheels.first?.0, 0)
         XCTAssertEqual(wheels.first?.1, -1)
     }
+
+    // MARK: - 0x1B battery status
+
+    private func batteries(_ results: [DecodeResult]) -> [(Int, Bool)] {
+        results.compactMap {
+            if case .battery(let pct, let charging) = $0 { return (pct, charging) }
+            return nil
+        }
+    }
+
+    /// 20-byte 0x1B report; only byte [1] carries data.
+    private func make0x1B(_ batByte: UInt8) -> [UInt8] {
+        var b = [UInt8](repeating: 0, count: 20)
+        b[0] = 0x1B
+        b[1] = batByte
+        return b
+    }
+
+    /// Real capture byte from `ptk-870-bt-edge-trace.txt`: 0x64, discharging.
+    func testRealCaptureBatteryFullNotCharging() {
+        var st = DecoderState()
+        let r = decode(make0x1B(0x64), state: &st)
+        XCTAssertEqual(batteries(r).count, 1)
+        XCTAssertEqual(batteries(r).first?.0, 100)
+        XCTAssertEqual(batteries(r).first?.1, false)
+    }
+
+    /// Real capture byte from the `ptk-870-bt-groove-*` set: 0xCC. Masking
+    /// bit7 is what makes this a valid percentage at all — unmasked it would
+    /// be 204 — and those captures were taken plugged in.
+    func testRealCaptureBatteryChargingMasksHighBit() {
+        var st = DecoderState()
+        let r = decode(make0x1B(0xCC), state: &st)
+        XCTAssertEqual(batteries(r).first?.0, 76)
+        XCTAssertEqual(batteries(r).first?.1, true)
+    }
+
+    /// Real capture byte from `top.txt` / `right.txt`: 0xE4 — topped off on
+    /// the cable, so 100% and charging simultaneously.
+    func testRealCaptureBatteryFullWhileCharging() {
+        var st = DecoderState()
+        let r = decode(make0x1B(0xE4), state: &st)
+        XCTAssertEqual(batteries(r).first?.0, 100)
+        XCTAssertEqual(batteries(r).first?.1, true)
+    }
+
+    /// The report repeats at 1 Hz whether or not the level moved, so an
+    /// unchanged byte must stay silent.
+    func testBatteryEmitsOnlyOnChange() {
+        var st = DecoderState()
+        XCTAssertEqual(batteries(decode(make0x1B(0x61), state: &st)).count, 1)
+        XCTAssertEqual(batteries(decode(make0x1B(0x61), state: &st)).count, 0)
+        XCTAssertEqual(batteries(decode(make0x1B(0x60), state: &st)).count, 1)
+    }
+
+    /// Unlike the pen reports, 0x1B needs only byte [1], so a report
+    /// truncated below the captured 20 bytes still decodes rather than
+    /// being rejected on length.
+    func testBatteryShortReportStillDecodes() {
+        var st = DecoderState()
+        let r = decode([0x1B, 0x64], state: &st)
+        XCTAssertEqual(batteries(r).first?.0, 100)
+    }
+
+    /// Plugging in changes only bit7; the dedupe keys off the whole byte, so
+    /// the charging transition must still surface at an unchanged level.
+    func testBatteryChargingTransitionAtSameLevelStillEmits() {
+        var st = DecoderState()
+        _ = decode(make0x1B(0x64), state: &st)
+        let r = decode(make0x1B(0xE4), state: &st)
+        XCTAssertEqual(batteries(r).count, 1)
+        XCTAssertEqual(batteries(r).first?.0, 100)
+        XCTAssertEqual(batteries(r).first?.1, true)
+    }
 }
