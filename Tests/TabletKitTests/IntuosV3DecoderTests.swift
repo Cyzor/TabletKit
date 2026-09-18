@@ -295,6 +295,96 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(pt.y, 4459)
     }
 
+    /// Real frame from `ptk-870-usb-groove-all.txt`, a four-edge trace of the
+    /// moulded groove over USB. The wired path has the same out-of-bounds
+    /// problem as Bluetooth — the pen keeps being reported from beyond the
+    /// drawable area — and states it plainly: hover distance railed at 255,
+    /// at the rim, with nothing touching. It must produce no position.
+    func testRealCaptureUSBGrooveSuppressed() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0x80, 0x86, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x47, 0x5C, 0x31,
+        ]
+        XCTAssertEqual(b[19], 255, "premise: hover distance railed")
+        XCTAssertTrue(
+            decode(b, state: &st).compactMap { if case .pen = $0 { return true } else { return nil } }
+                .isEmpty,
+            "a pen in the groove must produce no position over USB either")
+    }
+
+    /// Real consecutive pair from `ptk-870-usb-edge-bounce-right.txt`, a
+    /// see-saw across the right edge. USB leaps exactly as Bluetooth does:
+    /// 4340 units in one 2ms step, both endpoints ~2600 from an edge with
+    /// hover railed and nothing touching. That distance is outside the rim,
+    /// which is why the rule uses the wider border band.
+    func testRealCaptureUSBBarrelLeapSuppressed() {
+        var st = DecoderState()
+        let atEdge: [UInt8] = [
+            0x1E, 0x01, 0x80, 0xAF, 0xF2, 0x00, 0x20, 0x8E, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8E, 0x30, 0x33, 0x86,
+        ]
+        let barrel: [UInt8] = [
+            0x1E, 0x01, 0x80, 0xBB, 0xE1, 0x00, 0x44, 0x8E, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6A, 0x31, 0x34, 0x86,
+        ]
+        func pts(_ b: [UInt8]) -> [TabletPoint] {
+            decode(b, state: &st).compactMap {
+                if case .pen(let p) = $0 { return p } else { return nil }
+            }
+        }
+        XCTAssertTrue(pts(atEdge).isEmpty, "off-surface sample at the edge produces nothing")
+        XCTAssertTrue(pts(barrel).isEmpty, "and neither does the barrel leap that follows")
+    }
+
+    /// Guards the headroom the USB band has left. The reference hover frame
+    /// below sits 4459 units from an edge and survives the 4000-unit band by
+    /// 459 units; widening the band past that silences legitimate high hover
+    /// near an edge. If this fails, the band was widened too far.
+    func testUSBOutOfSurfaceBandLeavesHeadroomForEdgeHover() {
+        var st = DecoderState()
+        var b: [UInt8] = [
+            0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBA, 0xC8, 0xB3, 0x3A,
+        ]
+        // Move it to sit exactly 4200 units from the top — inside the
+        // reference frame's margin, still outside the band.
+        let y = 4200
+        b[6] = UInt8(y & 0xFF); b[7] = UInt8((y >> 8) & 0xFF); b[8] = 0
+        let pts = decode(b, state: &st).compactMap {
+            if case .pen(let p) = $0 { return p } else { return nil }
+        }
+        XCTAssertEqual(pts.count, 1, "hover just outside the band must still track")
+        XCTAssertEqual(pts[0].y, 4200)
+    }
+
+    /// The counterexample that shapes the rule above, and the reason it is not
+    /// simply "hover railed". This hover frame from the same reference
+    /// recording as the fixtures above reads 255 while the pen sits over the
+    /// MIDDLE of the tablet — 51% across, 11% down — so the rail means "at or
+    /// past the sensing limit", which a pen held high in open space reaches
+    /// just as one in the groove does. Only pairing it with the rim separates
+    /// them, and this frame must survive.
+    func testRealCaptureUSBHighHoverMidTabletSurvives() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBA, 0xC8, 0xB3, 0x3A,
+        ]
+        XCTAssertEqual(b[19], 255, "premise: same railed hover distance as the groove frame")
+        let pts = decode(b, state: &st).compactMap {
+            if case .pen(let p) = $0 { return p } else { return nil }
+        }
+        XCTAssertEqual(pts.count, 1, "high hover over open surface must still track")
+        XCTAssertEqual(pts[0].x, 35665)
+        XCTAssertEqual(pts[0].y, 4459)
+    }
+
     func testRealCaptureTouchdownFrameZeroPressureTransient() {
         var st = DecoderState()
         // Momentary zero-pressure frame right at touchdown (0xC0) — real

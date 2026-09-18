@@ -47,9 +47,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// which bounds a misfire to a brief stall instead of a dead pen.
     private static let bleBarrelMaxConsecutiveDrops = 32
 
-    /// Width of the border band, in device units, inside which the barrel
-    /// gate stays armed — see `decodeBLEReport`. 4000 units is 20mm at this
-    /// family's uniform 200 units/mm.
+    /// Width of the border band, in device units, within which a report is
+    /// treated as suspect. 4000 units is 20mm at this family's uniform 200
+    /// units/mm. Used by both transports: it arms the Bluetooth barrel gate,
+    /// and bounds the USB out-of-surface rule.
     ///
     /// An earlier version armed only when a coordinate sat exactly on a
     /// limit. That misses the case that matters most in practice: the pen
@@ -62,13 +63,13 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// the previous sample at Y >= 1500 — never at a limit. Widening the arm
     /// condition to this band takes all of them, plus the four edge-bounce
     /// and full-width see-saw captures, to zero.
-    private static let bleSurfaceBorderBand = 4000
+    private static let surfaceBorderBand = 4000
 
     /// True when a decoded point lies within the border band, meaning the
     /// tip is at, past, or hovering over the edge of the drawable area and
     /// the reported position may be coming from the pen's barrel instead.
     private static func isNearSurfaceLimit(x: Int, y: Int, spec: DigitizerSpec) -> Bool {
-        distanceToNearestEdge(x: x, y: y, spec: spec) <= bleSurfaceBorderBand
+        distanceToNearestEdge(x: x, y: y, spec: spec) <= surfaceBorderBand
     }
 
     /// Width of the rim, in device units, within which a report carrying no
@@ -90,7 +91,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// hover high enough to lose the tip fix within 8.5mm of an edge, which
     /// is the deliberate trade: on this hardware that signal is
     /// indistinguishable from a pen sitting in the groove.
-    private static let bleRimBand = 1700
+    private static let rimBand = 1700
 
     private static func distanceToNearestEdge(x: Int, y: Int, spec: DigitizerSpec) -> Int {
         Swift.min(x, spec.maxX - x, y, spec.maxY - y)
@@ -224,7 +225,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///   [9..10]   pressure, LE u16
     ///   [11..12]  tilt X, signed LE i16
     ///   [13..14]  tilt Y, signed LE i16
-    ///   [19]      hover distance
+    ///   [19]      hover distance — smallest with the tip down, rising as the
+    ///             pen lifts, railed at 255 once it is out of range. The BLE
+    ///             report carries the same field at its own byte [15].
     ///
     /// Same report ID as IntuosV2's "offset" report, but the byte layout is
     /// completely different. Per-decoder dispatch keeps the two separate.
@@ -268,6 +271,58 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltX = Double(rawTiltX) / tiltDivisor
         let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
+
+        // Off the drawable surface: the pen is in the moulded groove around
+        // the tablet, or over the bezel, and should produce nothing.
+        //
+        // Same underlying hardware behaviour the BLE path deals with — a pen
+        // past the edge keeps being reported, at a position that folds back
+        // INSIDE the rim rather than clamping to it (measured on USB at a
+        // median 791 units in, against ~850 over BLE, so this is the
+        // digitizer, not a transport quirk). Wired does not suppress it any
+        // more than wireless does.
+        //
+        // USB leaps exactly like BLE does, and for the same reason — an
+        // earlier version of this comment claimed it did not, on the strength
+        // of a groove trace that runs ALONG each edge and never crosses one.
+        // That data could not contain a leap. Captures that do cross
+        // (`ptk-870-usb-see-saw-top.txt`, `ptk-870-usb-edge-bounce-right.txt`)
+        // hold 129 and 26 leaps up to 4965 units, none explained by a gap or
+        // a proximity break, and 152 of those 155 carry a railed hover
+        // distance on BOTH endpoints. It is the same barrel takeover.
+        //
+        // USB needs none of the state the BLE gate grew, though, because it
+        // states the distance outright instead of implying it. One test on
+        // byte [19] covers both the groove and the leaps: the leap endpoints
+        // sit around 2266 units from an edge, so the band has to be the full
+        // border band rather than the narrower rim. At that width both leap
+        // captures go to zero and the groove trace drops to 2%, while
+        // in-bounds work holds 99.4% and 99.5%.
+        //
+        // Do not widen it further. The reference hover frame below survives
+        // by 459 units at 4000 and is cut at 5000.
+        //
+        // The rail alone is NOT enough, and a reference recording caught that
+        // before it shipped: `pen.pen-strong-vertical.hid` from
+        // whot/wacom-recordings contains a legitimate hover frame reading 255
+        // at X 51% / Y 11% of the surface — mid-tablet, nowhere near an edge.
+        // So 255 means "at or past the sensing limit", which a pen held high
+        // over the middle of the tablet reaches just as a pen in the groove
+        // does. Pairing it with the rim separates them: it keeps that frame,
+        // and every width tried from 1000 to 4000 units keeps it while still
+        // taking 98% of the groove. Reusing the BLE rim width so the two
+        // transports draw the same border rather than each carrying a number.
+        //
+        // Deliberately also requires no pressure and no tip switch, which
+        // changes nothing on the captures (identical numbers either way) but
+        // bounds the blast radius: this function is shared with the Movink 13,
+        // for which no groove capture exists. A device that left byte [19]
+        // pinned at 255 would lose hover near its edges rather than the pen.
+        if hoverDistance == 255, pressure == 0, (status & 0x40) == 0,
+            Self.distanceToNearestEdge(x: x, y: y, spec: spec) <= Self.surfaceBorderBand
+        {
+            return []
+        }
 
         var results: [DecodeResult] = []
 
@@ -518,6 +573,20 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            assumed, by comparing the same natural-grip gesture on both
     ///            transports (`ptk-870-usb-hover-left-to-right.txt` median
     ///            tilt +13/−34, BLE +11/−8 — same signs, same axes).
+    ///   [15]     hover distance — 20 with the tip down, rising as the pen
+    ///            lifts, railed at 255 once it is out of range. Confirmed
+    ///            2026-09-18 against pressure as ground truth (every
+    ///            tip-down sample in two pressure captures reads exactly 20)
+    ///            and cross-checked against USB, whose 0x1E report carries
+    ///            the same field at its own byte [19] with the same
+    ///            behaviour — railed at 255 in a groove trace, ~100-117 in
+    ///            bounds. NOT read by this decoder, deliberately: inside the
+    ///            rim it agrees with the status byte's close-fix bit on
+    ///            100.00% of 132,754 samples with zero disagreements in
+    ///            either direction, so the rule below is already a distance
+    ///            test and reading this would change nothing. Recorded
+    ///            because it explains WHY that rule works, and because a
+    ///            future question about hover height should start here.
     ///   [18]     buttons — one-hot, bits 0-3 = left ExpressKeys (4 keys),
     ///            bits 4-7 = right ExpressKeys (4 keys). Confirmed via
     ///            isolated left-only and right-only key-press captures.
@@ -538,7 +607,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            spin) is needed to confirm whether this field ticks once
     ///            per detent or free-runs while held.
     ///
-    /// Still unassigned: [2], and [13..17]. [2] tracks [3]'s upper bits
+    /// Still unassigned: [2], [13], [14] and [16..17]. [2] tracks [3]'s upper bits
     /// loosely (0x00 while out of range, 0x80 or 0x20 in range) and may be a
     /// tool-type or slot field; [13] and [16..17] change every frame even
     /// under a held-static pose, so they are timing or sequence data, and
@@ -698,7 +767,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // without arming would leave the gate asleep for the samples that
         // follow the pen back out of the groove.
         if (status & 0x40) == 0,
-            Self.distanceToNearestEdge(x: x, y: y, spec: spec) <= Self.bleRimBand
+            Self.distanceToNearestEdge(x: x, y: y, spec: spec) <= Self.rimBand
         {
             state.bleOutsideSurface = true
             state.bleBarrelDropCount = 0
