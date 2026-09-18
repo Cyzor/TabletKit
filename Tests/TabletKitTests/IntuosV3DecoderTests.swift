@@ -673,7 +673,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testRealCaptureBLEXReachesExactlyMaxAtRightEdge() {
         var st = DecoderState()
         let b: [UInt8] = [
-            26, 2, 0, 128, 168, 16, 1, 0, 0, 0,
+            26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
             0, 0, 0, 0, 16, 255, 246, 78, 32, 0,
         ]
         let p = pens(decodeBLE(b, state: &st))
@@ -833,15 +833,16 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`, at
     /// the moment the pen tip crosses the right edge during a see-saw. The
-    /// tip rails at `maxX`, then the tablet starts reporting the pen's
-    /// BARREL instead — 2951 units inward, then 2951 further off in Y — while
-    /// the tip is demonstrably off the surface. Both ghost frames must be
-    /// dropped so the cursor stays where the tip left.
+    /// first frame sits at maxX with NO close tip fix — the pen is already
+    /// off the surface — so the rim rule drops it and arms the gate, and the
+    /// two barrel samples that follow (well clear of the rim, so only the
+    /// gate can catch them) are dropped too. The cursor stays where the tip
+    /// was last genuinely seen.
     func testRealCaptureBLEBarrelTakeoverSuppressedPastTheEdge() {
         var st = DecoderState()
-        let railed: [UInt8] = [
-            26, 2, 0, 128, 168, 16, 145, 172, 3, 0,
-            0, 0, 0, 0, 96, 255, 160, 171, 0, 0,
+        let pastEdge: [UInt8] = [
+            26, 2, 0, 128, 168, 16, 1, 0, 0, 0,
+            0, 0, 0, 0, 16, 255, 246, 78, 0, 0,
         ]
         let barrel1: [UInt8] = [
             26, 2, 0, 128, 34, 5, 145, 176, 3, 0,
@@ -851,16 +852,157 @@ final class IntuosV3DecoderTests: XCTestCase {
             26, 2, 0, 128, 16, 6, 161, 153, 2, 0,
             0, 0, 0, 0, 128, 255, 3, 172, 0, 0,
         ]
-        let tip = pens(decodeBLE(railed, state: &st))
-        XCTAssertEqual(tip.count, 1)
-        XCTAssertEqual(tip[0].x, ptk870.maxX, "tip is at the right edge")
-
+        XCTAssertEqual(pastEdge[3] & 0x40, 0, "premise: at the edge with no close tip fix")
+        XCTAssertTrue(
+            pens(decodeBLE(pastEdge, state: &st)).isEmpty,
+            "a pen at the rim with no tip fix is off the surface, not a position")
         XCTAssertTrue(
             pens(decodeBLE(barrel1, state: &st)).isEmpty,
-            "first barrel sample must not move the cursor")
+            "the rim sample must have armed the gate for the barrel that follows")
         XCTAssertTrue(
             pens(decodeBLE(barrel2, state: &st)).isEmpty,
-            "gate must stay armed for subsequent barrel samples")
+            "gate stays armed for subsequent barrel samples")
+    }
+
+    /// The labelled pair that settles what "out of bounds" means on this
+    /// hardware, from two captures made to answer exactly that.
+    ///
+    /// `ptk-870-bt-top-border.txt` traces the real top border of the drawable
+    /// area — described as tracking flawlessly — and sits at Y = 0, ON the
+    /// limit. `ptk-870-bt-top-groove.txt` traces the moulded groove beyond
+    /// that border, half an inch further out where no cursor response should
+    /// be possible at all, and reports Y folded back about 850 units INSIDE
+    /// the limit. The out-of-bounds sample therefore reads as further inside
+    /// the surface than the in-bounds one, so no inset or matte can separate
+    /// them. The status byte can: the border carries a close tip fix, the
+    /// groove does not.
+    func testRealCaptureBLEGrooveSuppressedButBorderKept() {
+        var st = DecoderState()
+        let border: [UInt8] = [
+            26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
+            0, 248, 0, 0, 144, 112, 234, 80, 32, 0,
+        ]
+        let kept = pens(decodeBLE(border, state: &st))
+        XCTAssertEqual(kept.count, 1, "the real border must keep tracking")
+        XCTAssertEqual(kept[0].y, 0, "premise: the in-bounds border sits ON the limit")
+
+        var st2 = DecoderState()
+        let groove: [UInt8] = [
+            26, 2, 0, 128, 67, 77, 208, 53, 0, 0,
+            0, 0, 0, 0, 240, 255, 100, 64, 0, 0,
+        ]
+        let y = Int(groove[6] >> 4) | Int(groove[7]) << 4 | Int(groove[8]) << 12
+        XCTAssertGreaterThan(y, 0, "premise: the groove reads INSIDE the limit, not at it")
+        XCTAssertLessThan(y, 1000)
+        XCTAssertEqual(groove[3] & 0x40, 0, "premise: no close tip fix")
+
+        XCTAssertTrue(
+            pens(decodeBLE(groove, state: &st2)).isEmpty,
+            "a pen in the groove must produce no position at all")
+    }
+
+    /// Real pair from `ptk-870-bt-top-bermuda-triangle-01.txt`, a capture made
+    /// specifically to worry at the last spot still misbehaving. The pen is
+    /// hovering over the top bezel at Y = 2409 — physically off the drawable
+    /// area, but numerically 2409 units short of the limit, so nothing rails.
+    /// An earlier gate armed only ON a limit and so never engaged here; all 96
+    /// barrel jumps across the three bermuda captures looked exactly like
+    /// this. X hops 4124 units with Y essentially unchanged — the barrel
+    /// offset — and must be rejected.
+    func testRealCaptureBLEBarrelHopOverBezelSuppressedWithoutRailing() {
+        var st = DecoderState()
+        let hovering: [UInt8] = [
+            26, 2, 0, 128, 67, 77, 144, 150, 0, 0,
+            0, 0, 0, 0, 240, 255, 100, 64, 0, 0,
+        ]
+        let barrelHop: [UInt8] = [
+            26, 2, 0, 128, 39, 61, 32, 152, 0, 0,
+            0, 0, 0, 0, 0, 255, 130, 64, 0, 0,
+        ]
+        let p = pens(decodeBLE(hovering, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(p[0].x, 19779)
+        XCTAssertEqual(p[0].y, 2409)
+        XCTAssertNotEqual(p[0].y, 0, "premise: nothing is railed here")
+
+        XCTAssertTrue(
+            pens(decodeBLE(barrelHop, state: &st)).isEmpty,
+            "a barrel hop over the bezel must be rejected even though no coordinate railed")
+    }
+
+    /// The border band must not swallow the interior: a pen working in the
+    /// middle of the tablet is never gated, however it moves.
+    func testRealCaptureBLEInteriorMotionNeverGated() {
+        var st = DecoderState()
+        let a: [UInt8] = [
+            26, 66, 128, 193, 84, 124, 144, 31, 6, 255,
+            31, 253, 223, 65, 173, 20, 112, 9, 0, 0,
+        ]
+        XCTAssertEqual(pens(decodeBLE(a, state: &st)).count, 1)
+        var b = a
+        b[4] = 0x00
+        b[5] = 0x60  // X = 24576, a 7000-unit move
+        let moved = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(moved.count, 1, "interior motion is never subject to the gate")
+        XCTAssertEqual(moved[0].x, 24576)
+    }
+
+    /// Real sequence from `ptk-870-bt-top-see-saw-right.txt`. While the pen
+    /// ghosts along the top bezel the tablet emits a proximity exit of its
+    /// OWN accord, mid-ghost, and then carries straight on reporting the
+    /// barrel. An earlier version of the gate disarmed on that exit, which
+    /// let the very next barrel sample through as a fresh position and was
+    /// the single largest source of surviving cursor leaps — the gate must
+    /// survive it.
+    func testRealCaptureBLEBarrelGateSurvivesSpuriousProximityExit() {
+        var st = DecoderState()
+        let tipAtEdge: [UInt8] = [
+            26, 2, 32, 192, 23, 4, 0, 0, 0, 0,
+            0, 48, 0, 0, 0, 127, 195, 156, 0, 0,
+        ]
+        let exit: [UInt8] = [
+            26, 2, 0, 0, 0, 174, 32, 86, 0, 0,
+            0, 0, 0, 0, 224, 255, 106, 220, 0, 0,
+        ]
+        let barrel: [UInt8] = [
+            26, 2, 0, 128, 27, 20, 80, 144, 0, 0,
+            0, 0, 0, 0, 80, 255, 98, 157, 0, 0,
+        ]
+        let tip = pens(decodeBLE(tipAtEdge, state: &st))
+        XCTAssertEqual(tip.count, 1)
+        XCTAssertEqual(tip[0].y, 0)
+
+        let left = pens(decodeBLE(exit, state: &st))
+        XCTAssertEqual(left.count, 1)
+        XCTAssertFalse(left[0].inProximity)
+
+        XCTAssertTrue(
+            pens(decodeBLE(barrel, state: &st)).isEmpty,
+            "gate must stay armed across the exit and reject the barrel")
+    }
+
+    /// The gate bounds its own rejections. A rejected sample deliberately
+    /// does not update the reference position, so without a cap a pen that
+    /// leaves the edge and keeps going would never satisfy the continuity
+    /// test again and the cursor would be dead until the next proximity
+    /// cycle. After the cap the gate yields.
+    func testRealCaptureBLEBarrelGateCannotLatchForever() {
+        var st = DecoderState()
+        let tipAtEdge: [UInt8] = [
+            26, 2, 32, 192, 23, 4, 0, 0, 0, 0,
+            0, 48, 0, 0, 0, 127, 195, 156, 0, 0,
+        ]
+        let farAway: [UInt8] = [
+            26, 2, 0, 128, 27, 20, 80, 144, 0, 0,
+            0, 0, 0, 0, 80, 255, 98, 157, 0, 0,
+        ]
+        XCTAssertEqual(pens(decodeBLE(tipAtEdge, state: &st)).count, 1)
+
+        var emitted = 0
+        for _ in 0..<64 where !pens(decodeBLE(farAway, state: &st)).isEmpty {
+            emitted += 1
+        }
+        XCTAssertGreaterThan(emitted, 0, "gate must eventually yield, not latch forever")
     }
 
     /// The gate must not become a one-way door: a pen that genuinely comes
@@ -870,7 +1012,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testRealCaptureBLEGateReleasesOnContinuousReentry() {
         var st = DecoderState()
         let railed: [UInt8] = [
-            26, 2, 0, 128, 168, 16, 145, 172, 3, 0,
+            26, 2, 32, 192, 168, 16, 145, 172, 3, 0,
             0, 0, 0, 0, 96, 255, 160, 171, 0, 0,
         ]
         XCTAssertEqual(pens(decodeBLE(railed, state: &st))[0].x, ptk870.maxX)

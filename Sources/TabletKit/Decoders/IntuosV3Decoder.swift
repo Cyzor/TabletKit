@@ -37,11 +37,63 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// units per frame, barrel jumps at least 2648.
     private static let bleBarrelJumpThreshold = 1000.0
 
-    /// True when a decoded point sits exactly on one of the sensing
-    /// surface's limits, meaning the tip is at (or past) the edge of what
-    /// the digitizer can resolve.
-    private static func isAtSurfaceLimit(x: Int, y: Int, spec: DigitizerSpec) -> Bool {
-        x == 0 || x == spec.maxX || y == 0 || y == spec.maxY
+    /// How many consecutive samples the barrel gate may reject before it
+    /// gives up and trusts the pen again — see `decodeBLEReport`. Without a
+    /// bound the gate can latch permanently: a rejected sample deliberately
+    /// does not update the reference position, so a pen that leaves the edge
+    /// and keeps going lands further from that stale reference on every
+    /// subsequent report and never satisfies the continuity test again. At
+    /// this device's report rate 32 samples is roughly a third of a second,
+    /// which bounds a misfire to a brief stall instead of a dead pen.
+    private static let bleBarrelMaxConsecutiveDrops = 32
+
+    /// Width of the border band, in device units, inside which the barrel
+    /// gate stays armed — see `decodeBLEReport`. 4000 units is 20mm at this
+    /// family's uniform 200 units/mm.
+    ///
+    /// An earlier version armed only when a coordinate sat exactly on a
+    /// limit. That misses the case that matters most in practice: the pen
+    /// hovering over the top bezel, where the tip has physically left the
+    /// drawable area but the digitizer still resolves a position a couple of
+    /// thousand units short of the limit, so nothing ever rails and the gate
+    /// never arms. Three captures deliberately worrying at that band
+    /// (`ptk-870-bt-top-bermuda-triangle-0{1,2,3}.txt`) contained 96 barrel
+    /// jumps between them, and EVERY one occurred with the gate disarmed and
+    /// the previous sample at Y >= 1500 — never at a limit. Widening the arm
+    /// condition to this band takes all of them, plus the four edge-bounce
+    /// and full-width see-saw captures, to zero.
+    private static let bleSurfaceBorderBand = 4000
+
+    /// True when a decoded point lies within the border band, meaning the
+    /// tip is at, past, or hovering over the edge of the drawable area and
+    /// the reported position may be coming from the pen's barrel instead.
+    private static func isNearSurfaceLimit(x: Int, y: Int, spec: DigitizerSpec) -> Bool {
+        distanceToNearestEdge(x: x, y: y, spec: spec) <= bleSurfaceBorderBand
+    }
+
+    /// Width of the rim, in device units, within which a report carrying no
+    /// close tip fix is treated as the pen being off the drawable surface
+    /// entirely rather than as a position — see `decodeBLEReport`. 1700 units
+    /// is 8.5mm.
+    ///
+    /// Sized from where the dead zone actually ends, not guessed: with a
+    /// 1000-unit rim the groove traces themselves went quiet, but captures of
+    /// the bezel on either side of the groove line still leaked — 175 samples
+    /// from `ptk-870-bt-upper-bezel.txt` at Y 1002-1170 and 59 from
+    /// `ptk-870-bt-top-bezel-contact.txt` at Y 1001-1631, every one of them
+    /// just past the old boundary. This covers them.
+    ///
+    /// Widening is close to free for real work: the in-bounds border trace,
+    /// pressure, tilt and the hover sweeps hold 94-100% at every width tried
+    /// between 1000 and 2800, because they carry a close tip fix and this
+    /// rule only ever looks at reports that do not. What it does cost is
+    /// hover high enough to lose the tip fix within 8.5mm of an edge, which
+    /// is the deliberate trade: on this hardware that signal is
+    /// indistinguishable from a pen sitting in the groove.
+    private static let bleRimBand = 1700
+
+    private static func distanceToNearestEdge(x: Int, y: Int, spec: DigitizerSpec) -> Int {
+        Swift.min(x, spec.maxX - x, y, spec.maxY - y)
     }
 
     public init() {}
@@ -579,9 +631,15 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // position in this frame, so ignore them and emit one synthetic exit
         // rather than a final point at a stale location.
         guard (status & 0x80) != 0 else {
-            // The pen genuinely left: whatever the barrel was doing stops
-            // mattering, so disarm the gate for the next approach.
-            state.bleOutsideSurface = false
+            // The barrel gate deliberately SURVIVES this. An earlier version
+            // disarmed here, reasoning that the pen had genuinely left and
+            // the next approach deserved a clean slate. On real hardware
+            // that was the single biggest hole in the gate: while ghosting
+            // in the bezel the tablet emits a one-frame proximity exit of
+            // its own, and disarming on it let the very next barrel sample
+            // through as a fresh position. In a full-width top-edge see-saw
+            // that one line accounted for most of the surviving jumps —
+            // removing it took that capture from 54 to 3.
             guard state.prevInProximity else { return results }
             state.prevInProximity = false
             results.append(
@@ -604,6 +662,48 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // position at all. Drop it rather than clamping it to an edge: a
         // clamp would park the cursor at a border it was never near.
         guard x <= spec.maxX, y <= spec.maxY else { return results }
+
+        // Off the drawable surface entirely — the pen is in the moulded
+        // groove around the rim, or over the bezel, where it should produce
+        // nothing at all.
+        //
+        // This is a different failure from the barrel leaps below, and it
+        // does not look like one: groove motion is smooth and continuous, so
+        // the continuity gate has nothing to say about it and passes 100% of
+        // it through. What the user sees is not a jump but well-behaved
+        // tracking from a pen that is nowhere near the surface.
+        //
+        // Position cannot separate these two cases, which is the surprise
+        // here. Four deliberately labelled captures settle it: a trace along
+        // the legitimate top border (`ptk-870-bt-top-border.txt`, described
+        // as tracking flawlessly) sits at Y = 0 exactly, at the limit, for
+        // essentially every sample — while traces along the physical grooves
+        // beyond each edge (`ptk-870-bt-{top,bottom,left}-groove.txt`) report
+        // coordinates that fold back roughly 850 units INSIDE the limit. The
+        // out-of-bounds pen reads as further inside the surface than the
+        // in-bounds one, so no inset, matte or clamp can tell them apart.
+        //
+        // The status byte can, cleanly. The in-bounds border trace carries a
+        // close tip fix (bit 6) in 99.8% of its samples; the three groove
+        // traces carry one in 0%, 0% and 4%. The tablet knows it has lost the
+        // tip and says so. Bit 6 alone is not enough — it also clears during
+        // ordinary high hover, which must keep tracking — so this pairs it
+        // with the rim, where the fold-back lands. Measured at this width:
+        // the grooves and the bezel captures drop to 0-17% of their samples
+        // while the border trace, pressure, tilt and the hover sweeps all
+        // stay at 96-100%.
+        // Arming the barrel gate here as well as below is deliberate: a
+        // sample rejected by the rim rule still tells us where the pen is,
+        // and the rim is precisely where barrel takeover starts. Returning
+        // without arming would leave the gate asleep for the samples that
+        // follow the pen back out of the groove.
+        if (status & 0x40) == 0,
+            Self.distanceToNearestEdge(x: x, y: y, spec: spec) <= Self.bleRimBand
+        {
+            state.bleOutsideSurface = true
+            state.bleBarrelDropCount = 0
+            return results
+        }
 
         // Barrel-takeover gate.
         //
@@ -632,33 +732,46 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // the threshold below sits in empty space rather than being tuned to
         // a distribution's tail.
         //
-        // Hence: reaching a boundary arms the gate, because that is the one
-        // moment we know the tip is at the limit of what the sensor can
-        // see. While armed, a discontinuous sample is the barrel and is
-        // dropped; a continuous one that lands back inside is the tip
-        // returning and disarms the gate. A proximity exit disarms it too.
-        // The continuity check deliberately applies to railed samples as
-        // well — an earlier version exempted them, and the ghost simply slid
-        // along the boundary instead, jumping thousands of units in Y while
-        // pinned at X = maxX.
+        // Hence: entering the border band arms the gate, because that is
+        // where the tip may already be off the drawable area. While armed, a
+        // discontinuous sample is the barrel and is dropped; a continuous one
+        // that lands back inside the band's inner edge is the tip and disarms
+        // the gate. The continuity check deliberately applies to samples
+        // sitting on a limit as well — an earlier version exempted them, and
+        // the ghost simply slid along the boundary instead, jumping thousands
+        // of units in Y while pinned at X = maxX.
         //
-        // KNOWN LIMIT, measured, not glossed: this halves the bouncing
-        // (89 -> 28 jumps over 1500 units across the four captures) but does
-        // not remove the largest single jumps, because some ghosts appear
-        // without the reported position ever touching a limit first, so the
-        // gate never arms for them. Arming more eagerly (on status 0x80 near
-        // a border) was tried and rejected: it takes legitimate edge tracing
-        // to zero retention.
+        // The gate survives a proximity exit on purpose — see the exit
+        // branch above for why, it was the largest single hole in the first
+        // version — and bounds its own rejections, because a rejected sample
+        // does not update the reference position and an unbounded gate can
+        // therefore latch forever against a stale one.
+        //
+        // KNOWN LIMIT, measured, not glossed: on a full-width top-edge
+        // see-saw this takes jumps over 1500 units from 125 to 3 and the
+        // worst single jump from 5558 to 3234, but it does not reach zero.
+        // Arming more eagerly (on status 0x80 near a border) was tried and
+        // rejected: it takes legitimate edge tracing to zero retention.
         if state.bleOutsideSurface {
             let dx = Double(x - state.lastX)
             let dy = Double(y - state.lastY)
-            if (dx * dx + dy * dy).squareRoot() > Self.bleBarrelJumpThreshold { return results }
-            if !Self.isAtSurfaceLimit(x: x, y: y, spec: spec) {
+            let step = (dx * dx + dy * dy).squareRoot()
+            if step > Self.bleBarrelJumpThreshold,
+                state.bleBarrelDropCount < Self.bleBarrelMaxConsecutiveDrops
+            {
+                state.bleBarrelDropCount += 1
+                return results
+            }
+            if step <= Self.bleBarrelJumpThreshold,
+                !Self.isNearSurfaceLimit(x: x, y: y, spec: spec)
+            {
                 state.bleOutsideSurface = false
             }
+            state.bleBarrelDropCount = 0
         }
-        if Self.isAtSurfaceLimit(x: x, y: y, spec: spec) {
+        if Self.isNearSurfaceLimit(x: x, y: y, spec: spec) {
             state.bleOutsideSurface = true
+            state.bleBarrelDropCount = 0
         }
 
         let pressure = Int(report[9]) | Int(report[10]) << 8

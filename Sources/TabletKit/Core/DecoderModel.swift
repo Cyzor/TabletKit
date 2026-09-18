@@ -108,6 +108,10 @@ public struct DecoderState: Sendable {
     /// tip. Cleared by a continuous sample landing back inside the surface,
     /// or by a proximity exit. See `decodeBLEReport`'s barrel-takeover gate.
     public var bleOutsideSurface: Bool = false
+    /// Consecutive samples the barrel gate has rejected. Bounds the gate so
+    /// it cannot latch permanently against a stale reference position — see
+    /// `IntuosV3Decoder`'s `bleBarrelMaxConsecutiveDrops`.
+    public var bleBarrelDropCount: Int = 0
     public init() {}
 }
 
