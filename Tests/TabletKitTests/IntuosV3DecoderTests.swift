@@ -843,6 +843,45 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(exit, state: &st)).isEmpty)
     }
 
+    /// Real hover-only frame from the labelled stand capture
+    /// (`ptk-870-bt-wacom-stand-art-pen.txt`, "0°" section) — the pen sat in
+    /// a fixed stand with no tip contact at all, confirming rotation isn't
+    /// tip-switch-gated on BLE the way it is on USB. Bytes [13..14] pack a
+    /// 12-bit signed count into byte [13] plus [14]'s low nibble; [14]'s high
+    /// nibble is a frame counter (0xb, 0xc, 0xd... here) that must NOT bleed
+    /// into the rotation value.
+    func testRealCaptureBLERotationDecodedForArtPen() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 66, 128, 192, 85, 143, 176, 102, 3, 0,
+            0, 0, 254, 65, 190, 81, 144, 240, 0, 0,
+        ]
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        // packed = 0x41 | ((0xbe & 0x0F) << 8) = 0xE41 -> sign-extend -> -447
+        // (900 - (-447)) / 5 = 269.4
+        XCTAssertEqual(p[0].rotation, 269.4, accuracy: 1e-9)
+    }
+
+    /// Real interior in-range frame from `ptk-870-bt-top-see-saw-right.txt`
+    /// — an ordinary tracing pass with no rotation gesture involved.
+    /// Confirms the field decodes to a fixed neutral 180° (raw count 0)
+    /// rather than noise when nothing is twisting the barrel: this is what
+    /// let rotation be decoded unconditionally instead of gated on tool
+    /// identity (see the decoder's header comment — BLE's tool-enter frame
+    /// is one-shot and often never arrives, so tool identity can't gate this
+    /// reliably).
+    func testRealCaptureBLERotationRestsAtNeutralWithoutTwist() {
+        var st = DecoderState()
+        let b: [UInt8] = [
+            26, 2, 32, 192, 245, 68, 64, 190, 0, 0,
+            0, 41, 252, 0, 64, 81, 98, 169, 0, 0,
+        ]
+        let p = pens(decodeBLE(b, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(p[0].rotation, 180.0, accuracy: 1e-9)
+    }
+
     /// Real sample from `ptk-870-left-to-right.txt` with a barrel button
     /// held and the tip up (status 0xC4). Bit 2 is the only barrel bit any
     /// capture ever set; bit 0 tracks the tip switch, and agrees with

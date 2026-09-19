@@ -673,14 +673,23 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            spin) is needed to confirm whether this field ticks once
     ///            per detent or free-runs while held.
     ///
-    /// Still unassigned: [2], [13], [14] and [16..17]. [2] tracks [3]'s upper bits
+    /// Still unassigned: [2] and [16..17]. [2] tracks [3]'s upper bits
     /// loosely (0x00 while out of range, 0x80 or 0x20 in range) and may be a
-    /// tool-type or slot field; [13] and [16..17] change every frame even
-    /// under a held-static pose, so they are timing or sequence data, and
-    /// [14]'s high nibble is a 16-step rolling frame counter. Upstream's
-    /// equivalent frame carries pen rotation and an Art Pen wheel in this
-    /// region; neither is exercisable with the pens on hand, so both are left
-    /// alone rather than guessed at.
+    /// tool-type or slot field; [16..17] change every frame even under a
+    /// held-static pose, so they're timing or sequence data.
+    ///
+    /// [13..14] is Art Pen barrel rotation, confirmed 2026-09-19 against two
+    /// labelled stand captures (`ptk-870-bt-wacom-stand-art-pen.txt`, `-02`):
+    /// a signed 12-bit count at byte [13] plus [14]'s low nibble, same
+    /// -900..899/5-counts-per-degree convention as USB, just narrower and
+    /// packed differently. [14]'s high nibble is a separate 16-step rolling
+    /// frame counter — it must be masked off, not folded into the rotation
+    /// value, or the counter aliases as rotation noise. Decoded
+    /// unconditionally, not gated on tip switch or tool identity — see
+    /// `decodeBLEReport`'s rotation comment for why gating on tool code
+    /// doesn't work here and why decoding unconditionally is still safe. The
+    /// Art Pen wheel upstream also carries in this region is not decoded
+    /// here.
     ///
     /// Discriminator byte [1] follows Wacom's legacy Intuos proximity
     /// state-machine bit convention (`wacom_intuos_inout()` in the Linux
@@ -976,6 +985,32 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltX = Double(Int8(bitPattern: report[11])) / tiltDivisor
         let tiltY = Double(Int8(bitPattern: report[12])) / tiltDivisor
 
+        // Art Pen barrel rotation: same signed-count convention as USB
+        // (-900..899, 5 counts/degree), but packed into 12 bits here instead
+        // of 16 — bytes [13..14], with [14]'s high nibble reused as a
+        // free-running frame counter. Sign-extend from bit 11, not bit 15.
+        // Confirmed against two labelled stand captures that hold the pen at
+        // known angles and twist it through several turns
+        // (`ptk-870-bt-wacom-stand-art-pen.txt`, `-02.txt`): decoded values
+        // track every labelled pose to within 2° and unwrap cleanly across
+        // multi-revolution twists.
+        //
+        // Not gated on tool identity: BLE's tool-enter announcement (`0x01`)
+        // is one-shot and often never arrives in a session (confirmed: zero
+        // `0x01` frames across an entire capture where the pen was already
+        // in proximity when capture started), so `currentToolCode` can't be
+        // trusted to gate this per-session. Decoding unconditionally is
+        // safe — checked across every non-Art-Pen BT capture on hand
+        // (thousands of real position frames: edge traces, grooves, bezel
+        // work, tilt tests), this field sits pinned at 179.6–180.0° (raw
+        // count 0, i.e. inert) the entire time. A pen with no rotation
+        // sensor reports a fixed neutral value here, not noise.
+        let packed = UInt16(report[13]) | (UInt16(report[14] & 0x0F) << 8)
+        let rawRotation = Int16(bitPattern: packed << 4) >> 4
+        var rotation = (900.0 - Double(rawRotation)) / 5.0
+        if rotation < 0 { rotation += 360.0 }
+        if rotation >= 360 { rotation -= 360.0 }
+
         state.prevInProximity = true
         state.lastX = x
         state.lastY = y
@@ -988,7 +1023,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
                 TabletPoint(
                     x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
                     pressure: pressure, maxPressure: spec.maxPressure,
-                    tiltX: tiltX, tiltY: tiltY, rotation: 0.0,
+                    tiltX: tiltX, tiltY: tiltY, rotation: rotation,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
                     eraser: (status & 0x10) != 0,
@@ -1088,9 +1123,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// `decodeExtendedPenReport` on whatever device or mode combination
     /// triggers this report. Even the rotation candidate at [3] is not
     /// emitted: its gating rule and field width/scale are both unconfirmed
-    /// (see the survey above), and this decoder has no rotation-only
-    /// `DecodeResult` case to carry it without also faking a position via
-    /// `TabletPoint`.
+    /// (see the survey above). This is a different field from the one
+    /// `decodeBLEReport` now decodes at [13..14] on the normal `0x1A`
+    /// report — that one's confirmed; this one still isn't.
     ///
     /// So for now this function only records that the report exists and
     /// returns no results — better than silently dropping it through
