@@ -129,6 +129,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         case 0x1B:
             // Only byte [1] is read, which the length >= 2 guard above covers.
             return decodeBatteryReport(report: report, state: &state)
+        case 0x06:
+            guard length >= 20 else { return [] }
+            return decodeAltBLEReport(report: report, length: length)
         default:
             return []
         }
@@ -552,9 +555,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Requires the device's DATAMODE feature report ([0x02, 0x02]) to have
     /// been sent first — see `WacomDeviceRegistry`'s `.intuosV3` `initSteps`
     /// and `WacomKnownDevice.open()`'s BLE exception for `.intuosV3`.
-    /// Without it the tablet emits report 0x06 instead (an inert, mostly-
-    /// zero idle report — not handled here, since MockTab now always
-    /// triggers data mode on connect).
+    /// Without it the tablet emits report 0x06 instead. That report is NOT
+    /// inert — see `decodeAltBLEReport` below, which corrects an earlier
+    /// comment here that assumed it was and never routed it.
     ///
     /// This is Wacom's Intuos Pro 2 Bluetooth pen frame (Linux `input-wacom`
     /// `wacom_intuos_pro2_bt_pen`) with the two coordinates widened from 16
@@ -994,5 +997,118 @@ public struct IntuosV3Decoder: TabletReportDecoder {
                     eraser: (status & 0x10) != 0,
                     inProximity: true, hoverDistance: 0)))
         return results
+    }
+
+    // MARK: - 0x06 alternate BLE report (unrouted until now — see caveats below)
+
+    /// Surfaced by exactly one capture on hand
+    /// (`ptk-870-bt-art-pen-pressure+rotation.txt`, a deliberate Art Pen
+    /// rotation test, ~1060 frames), and not previously handled at all — an
+    /// earlier comment on `decodeBLEReport` assumed this report ID was an
+    /// inert, mostly-zero idle frame sent before DATAMODE is armed. It is
+    /// not: this capture's data-mode init already ran (the device is also
+    /// emitting normal `0x1A` battery/pen activity implied by the session),
+    /// and 0x06 carries what looks like live pen data throughout, changing
+    /// on nearly every frame. Whether it is a genuine alternate pen-motion
+    /// report on some connection/firmware state, or something specific to
+    /// this one gesture, is unknown — this is the only capture that has it.
+    ///
+    /// Byte-by-byte survey of all 1060 frames in that capture:
+    ///   [0]      = 0x06  report ID
+    ///   [1]      = 0x01  constant in every frame — unexplained
+    ///   [2]      status-like: 0x41 in 1038/1060 frames, 0x40 in 22, 0x00 in
+    ///             the single last frame (proximity exit?). Consistent with
+    ///             the bit0=tip-switch convention used elsewhere in this
+    ///             file (0x41 = 0x40 | 0x01), but that is pattern-matching,
+    ///             not confirmation — no capture exists with the tip
+    ///             deliberately lifted mid-stream to check bit0 toggles
+    ///             independently of bit6.
+    ///   [3]      strongest rotation candidate. Full 0-255 range, wraps
+    ///             cleanly at multiple points (e.g. 255→2, 0→254), and
+    ///             changes during both status=0x40 and status=0x41 frames —
+    ///             i.e. NOT gated on the tip switch the way
+    ///             `decodeExtendedPenReport`'s byte [15] rotation is gated.
+    ///             Polarity is NOT established: the value wobbles up and
+    ///             down through the capture rather than sweeping in one
+    ///             direction, consistent with a hand naturally overshooting
+    ///             and correcting during a manual rotation test, but that
+    ///             can't be told apart from a byte that isn't rotation at
+    ///             all from this one trace.
+    ///   [4]      constant 0x3c/0x3d (60/61) — plausible high byte of a
+    ///             stationary X, but with only two adjacent values seen
+    ///             across the whole capture there is no way to derive a bit
+    ///             width or scale factor from this alone.
+    ///   [5]      varies smoothly 0-254 — plausible X or Y low byte, again
+    ///             unconfirmed: the pen was held roughly stationary while
+    ///             rotating in place, so small smooth drift is equally
+    ///             consistent with hand tremor as with a real position
+    ///             field, and there is no second capture to cross-check
+    ///             against.
+    ///   [6]      constant 0x29/0x2a/0x2b (41-43) — same caveat as [4].
+    ///   [7..8]   LE u16, mixed with [6]'s low range in a way that doesn't
+    ///            resolve cleanly to either X or Y against this decoder's
+    ///            existing 20-bit BLE coordinate packing (`decodeBLEReport`
+    ///            unpacks X from [4..6] and Y from [6..8] sharing a
+    ///            nibble of [6] — this report's [4..8] span doesn't fit
+    ///            that shape, since [4] and [6] are each observed constant
+    ///            while [7..8] move together). Left unassigned.
+    ///   [9..10]  LE i16 (signed), NOT pressure. A prior quick pass guessed
+    ///            pressure here; checking it against this capture rules
+    ///            that out: read as signed, the value sweeps smoothly
+    ///            400 → 300 → ... → 0 → -100 → -200 and back over the
+    ///            course of the capture, tracking in step with the [3]
+    ///            rotation candidate's wobble, and pressure cannot go
+    ///            negative on any decoder in this file. Quantized in exact
+    ///            steps of 100 the entire time — never an intermediate
+    ///            value — which also doesn't match this device's smooth
+    ///            13-bit pressure curve seen on `decodeBLEReport`/
+    ///            `decodeExtendedPenReport`. Most likely a second rotation-
+    ///            adjacent signed field (sub-count? a coarser companion to
+    ///            [3]?) but not confidently identified.
+    ///   [11..12] mostly 0, occasionally (0x9c, 0xff) = -100 read as LE i16,
+    ///            correlated with the same stretches [9..10] go negative.
+    ///            Unassigned; likely related to whatever [9..10] is.
+    ///   [13]     varies 27-255, moves opposite in trend to [3] over long
+    ///            stretches — possibly a second angle representation, not
+    ///            confirmed.
+    ///   [14]     changes on every single frame, full 0-255 range — a
+    ///            rolling counter or sub-frame timestamp, matching the
+    ///            pattern `decodeBLEReport`'s own header documents for its
+    ///            byte [14] high nibble.
+    ///   [15..16] together span the full 0-255 range and increment roughly
+    ///            monotonically across the capture (only local wobble) —
+    ///            almost certainly a 16-bit frame counter or device
+    ///            timestamp, same role as `decodeBLEReport`'s [13]/[16..17].
+    ///   [17]     constant 100 (0x64) — unassigned, possibly a fixed
+    ///            capability/slot marker.
+    ///   [18..19] constant 0x00 — unassigned/padding.
+    ///
+    /// Given how much of this layout is genuinely unverified — X/Y bit
+    /// width and scale cannot be derived from two adjacent stationary
+    /// samples, the pressure-shaped field turned out not to be pressure,
+    /// and the whole report has appeared in exactly one capture — this
+    /// deliberately does NOT attempt a full pen-motion decode. Emitting
+    /// `.pen` from a guessed coordinate packing risks a wrong position
+    /// silently overwriting good state from `decodeBLEReport`/
+    /// `decodeExtendedPenReport` on whatever device or mode combination
+    /// triggers this report. Even the rotation candidate at [3], the
+    /// strongest signal here, is not emitted: its gating rule and polarity
+    /// are unconfirmed, and this decoder has no rotation-only
+    /// `DecodeResult` case to carry it without also asserting a (fabricated)
+    /// position via `TabletPoint`.
+    ///
+    /// So for now this function only records that the report exists and
+    /// returns no results — strictly better than the previous behaviour of
+    /// silently dropping it through `default` with no trace it was ever
+    /// seen. If a future capture confirms the gating rule and polarity for
+    /// byte [3], and either pins down [4..8] as real coordinates or
+    /// confirms they should stay ignored, promote this to build and return
+    /// an actual `.pen`/rotation update rather than adding fields here
+    /// speculatively.
+    private func decodeAltBLEReport(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex
+    ) -> [DecodeResult] {
+        []
     }
 }
