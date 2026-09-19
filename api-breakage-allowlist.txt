@@ -116,3 +116,12 @@ API breakage: enumelement ReportParser.expressKeyRemote has been added as a new 
 # Pre-1.0, changelog-documented; MockTab is the only consumer and doesn't
 # call the full initializer directly for this type.
 API breakage: constructor TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:tiltX:tiltY:rotation:penButton1:penButton2:eraser:inProximity:hoverDistance:mouseMiddleButton:mouseWheelDelta:penButton3:penButton4:penButton5:) has been removed
+
+# AuxButtons and LiveButtonState both gained touchRing2ButtonDown (the
+# PTK-670/870 second dial's own toggle key, distinct from touchRing2Active)
+# with a default value — same "defaulted parameter on an existing
+# initializer" shape as the breaks above. Pre-1.0, changelog-documented;
+# MockTab is the only consumer and doesn't call either full initializer
+# directly.
+API breakage: constructor AuxButtons.init(buttons:mechanicalMask:touchRingActive:touchRingButtonDown:touchRingPosition:touchRing2Active:touchRing2Position:touchStrip1Active:touchStrip1Position:touchStrip2Active:touchStrip2Position:) has been removed
+API breakage: constructor LiveButtonState.init(tipDown:eraserDown:button1Down:button2Down:button3Down:button4Down:button5Down:expressKeys:bezelButtons:touchRingActive:touchRingButtonDown:touchRing2Active:touchStrip1Active:touchStrip2Active:) has been removed
