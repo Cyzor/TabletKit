@@ -121,25 +121,17 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// physical ring family.
     func testRingPositionDecodesWhenTouched() {
         var state = DecoderState()
-        // 0x8D = touched, position (0x0D & 0x7F) = 13.
+        // 0x8D = touched, raw low 7 bits = 0x0D = 13; kernel's
+        // `(data[12] & 0x7f) - 1` (wire is 1-indexed) gives position 12.
         let a = auxButtons(decode(makeRemote(ringByte: 0x8D), state: &state))
         XCTAssertEqual(a?.touchRingActive, true)
-        XCTAssertEqual(a?.touchRingPosition, 13)
+        XCTAssertEqual(a?.touchRingPosition, 12)
 
-        // 0xC8 = touched, raw low 7 bits = 0x48 = 72 — one past the
-        // documented 0-71 span. Linux subtracts 1 here (`(data[12] &
-        // 0x7f) - 1`, since the wire is 1-indexed) before exposing
-        // ABS_WHEEL, but no other ring-bearing decoder in this codebase
-        // applies that offset (see `IntuosV1Decoder.decodeIntuos4PadReport`,
-        // `ringPosition = ringByte & 0x7F`) — `AuxButtons.touchRingPosition`
-        // is documented as the raw masked byte throughout. This decoder
-        // follows that existing convention for consistency rather than
-        // special-casing EKR-100, so raw 72 passes through unmodified; a
-        // caller diffing ring position for delta motion never sees the
-        // top value repeat, since 71 and 72 are still numerically distinct.
+        // 0xC8 = touched, raw low 7 bits = 0x48 = 72 → position 71, the
+        // top of the documented 0-71 span (72 positions, 5° resolution).
         let b = auxButtons(decode(makeRemote(ringByte: 0xC8), state: &state))
         XCTAssertEqual(b?.touchRingActive, true)
-        XCTAssertEqual(b?.touchRingPosition, 0x48)
+        XCTAssertEqual(b?.touchRingPosition, 71)
     }
 
     func testRingPositionIsIdleSentinelWhenNotTouched() {
