@@ -266,22 +266,13 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///   [9..10]   pressure, LE u16
     ///   [11..12]  tilt X, signed LE i16
     ///   [13..14]  tilt Y, signed LE i16
-    ///   [15]      Art Pen barrel rotation, raw byte, one full 0-255 sweep per
-    ///             360° turn. Confirmed 2026-09-18 against a real PTK-870
-    ///             capture (`ptk-870-usb-art-pen-pressure+rotation.txt`,
-    ///             Art Pen, tool code 0x0804): live and changing on every
-    ///             frame with the tip switch (status bit6, 0x40) set, even at
-    ///             pressure 0, and pinned at 0x00 whenever the tip switch is
-    ///             clear (hover), regardless of proximity — so this is gated
-    ///             on the tip switch, not on pressure. Wraps cleanly through
-    ///             multiple full turns over a slow full-rotation capture.
-    ///             Polarity (does an increasing byte mean clockwise or
-    ///             counterclockwise) is NOT confirmed — the capture's own
-    ///             description of a clockwise turn could not be independently
-    ///             verified against the byte trend here. The raw value is
-    ///             passed straight to degrees below with no sign flip, so a
-    ///             future capture that pins down the direction needs only to
-    ///             negate here, not untangle an existing wrong guess.
+    ///   [15..16]  Art Pen barrel rotation, signed LE16, -900..899 range,
+    ///             1800 counts per revolution — same convention as
+    ///             IntuosV2Decoder's rotation field (see there for the
+    ///             kernel citation), just at a different offset. Gated on
+    ///             the tip switch (status bit6, 0x40), not on pressure.
+    ///             Previously misread as a single byte at [15]; that was
+    ///             just the low byte of this wider field (see call site).
     ///   [19]      hover distance — smallest with the tip down, rising as the
     ///             pen lifts, railed at 255 once it is out of range. The BLE
     ///             report carries the same field at its own byte [15].
@@ -329,17 +320,23 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
 
-        // Rotation (Art Pen barrel twist): byte [15], gated on the tip
-        // switch (status bit6), not on pressure — see the byte-layout doc
-        // above. Only meaningful for Art Pen variants (0x0804, 0x1108); other
-        // pens leave this byte at 0 or garbage, same exclusion
-        // IntuosV2Decoder applies to its own rotation field. One byte spans a
-        // full 360° turn, so 255 counts is one revolution. Passed straight
-        // through with no sign flip — polarity is unconfirmed, see above.
+        // Rotation (Art Pen barrel twist): signed LE16 at bytes [15..16],
+        // gated on the tip switch, not on pressure. Only meaningful for Art
+        // Pen variants (0x0804, 0x1108); other pens leave this at 0/garbage.
+        //
+        // CORRECTED 2026-09-19: previously read as a single byte at [15]
+        // (255 counts/revolution). That was really just the low byte of
+        // this wider field — the old decode ran ~7x too fast and backwards,
+        // matching the user's live report of rotation being "about 4x too
+        // fast, spinning the opposite direction" in both MockTab and
+        // Rebelle. Confirmed against `ptk-870-usb-art-pen-pressure+rotation.txt`:
+        // a deliberate ~1-turn gesture now unwraps to exactly -1.00 laps.
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
         let tipSwitch = (status & 0x40) != 0
-        let rotation: Double =
-            isArtPen && tipSwitch ? Double(report[15]) / 255.0 * 360.0 : 0.0
+        let rawRotation = Int16(bitPattern: UInt16(report[15]) | UInt16(report[16]) << 8)
+        var rotation = isArtPen && tipSwitch ? (900.0 - Double(rawRotation)) / 5.0 : 0.0
+        if rotation < 0 { rotation += 360.0 }
+        if rotation >= 360 { rotation -= 360.0 }
 
         // Off the drawable surface: the pen is in the moulded groove around
         // the tablet, or over the bezel, and should produce nothing.
@@ -1024,16 +1021,14 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///             deliberately lifted mid-stream to check bit0 toggles
     ///             independently of bit6.
     ///   [3]      strongest rotation candidate. Full 0-255 range, wraps
-    ///             cleanly at multiple points (e.g. 255→2, 0→254), and
-    ///             changes during both status=0x40 and status=0x41 frames —
-    ///             i.e. NOT gated on the tip switch the way
-    ///             `decodeExtendedPenReport`'s byte [15] rotation is gated.
-    ///             Polarity is NOT established: the value wobbles up and
-    ///             down through the capture rather than sweeping in one
-    ///             direction, consistent with a hand naturally overshooting
-    ///             and correcting during a manual rotation test, but that
-    ///             can't be told apart from a byte that isn't rotation at
-    ///             all from this one trace.
+    ///             cleanly, not gated on the tip switch the way
+    ///             `decodeExtendedPenReport`'s rotation field is. That other
+    ///             field turned out to be a signed LE16, not a single byte,
+    ///             so this one may have the same problem — but no adjacent
+    ///             byte here varies enough to pair with it as an LE16 half
+    ///             ([4] and [6] barely move; [3], [5], [7] are each
+    ///             independently full-range). Don't copy that formula here
+    ///             without new evidence pinning down the real field.
     ///   [4]      constant 0x3c/0x3d (60/61) — plausible high byte of a
     ///             stationary X, but with only two adjacent values seen
     ///             across the whole capture there is no way to derive a bit
@@ -1057,7 +1052,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            that out: read as signed, the value sweeps smoothly
     ///            400 → 300 → ... → 0 → -100 → -200 and back over the
     ///            course of the capture, tracking in step with the [3]
-    ///            rotation candidate's wobble, and pressure cannot go
+    ///            rotation candidate's movement, and pressure cannot go
     ///            negative on any decoder in this file. Quantized in exact
     ///            steps of 100 the entire time — never an intermediate
     ///            value — which also doesn't match this device's smooth
@@ -1091,20 +1086,18 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// `.pen` from a guessed coordinate packing risks a wrong position
     /// silently overwriting good state from `decodeBLEReport`/
     /// `decodeExtendedPenReport` on whatever device or mode combination
-    /// triggers this report. Even the rotation candidate at [3], the
-    /// strongest signal here, is not emitted: its gating rule and polarity
-    /// are unconfirmed, and this decoder has no rotation-only
-    /// `DecodeResult` case to carry it without also asserting a (fabricated)
-    /// position via `TabletPoint`.
+    /// triggers this report. Even the rotation candidate at [3] is not
+    /// emitted: its gating rule and field width/scale are both unconfirmed
+    /// (see the survey above), and this decoder has no rotation-only
+    /// `DecodeResult` case to carry it without also faking a position via
+    /// `TabletPoint`.
     ///
     /// So for now this function only records that the report exists and
-    /// returns no results — strictly better than the previous behaviour of
-    /// silently dropping it through `default` with no trace it was ever
-    /// seen. If a future capture confirms the gating rule and polarity for
-    /// byte [3], and either pins down [4..8] as real coordinates or
-    /// confirms they should stay ignored, promote this to build and return
-    /// an actual `.pen`/rotation update rather than adding fields here
-    /// speculatively.
+    /// returns no results — better than silently dropping it through
+    /// `default` with no trace it was ever seen. If a future capture
+    /// confirms byte [3]'s gating rule and either pins down [4..8] as real
+    /// coordinates or confirms they should stay ignored, promote this to
+    /// return an actual `.pen`/rotation update.
     private func decodeAltBLEReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex
