@@ -454,13 +454,10 @@ final class IntuosV3DecoderTests: XCTestCase {
         b[24] = 0x04
         b[25] = 0x08
         let r = decode(b, state: &st)
-        // 3, not 2: the classic Art Pen (0x0804)'s catalog entry lists
-        // supportedFamilies [.intuos4, .intuosProGen2], not
-        // .intuosProGen3 — so emitToolCompatibility correctly adds a
-        // .toolCompatibility warning here. That's accurate: this test only
-        // establishes that .toolEnter fires with the right identity, not a
-        // claim that the Art Pen is a supported PTK-870 accessory.
-        XCTAssertEqual(r.count, 3)
+        // 2: .toolEnter + .pen. The classic Art Pen (0x0804) is confirmed
+        // compatible with .intuosProGen3 (2026-09-18 three-pen PTK-870
+        // capture), so no .toolCompatibility warning fires here.
+        XCTAssertEqual(r.count, 2)
         guard case .toolEnter(let identity) = r.first else { return XCTFail() }
         XCTAssertEqual(identity.serial, 0x038000CE)
         XCTAssertEqual(identity.toolCode, 0x0804)
@@ -483,9 +480,9 @@ final class IntuosV3DecoderTests: XCTestCase {
         b[24] = 0x04
         b[25] = 0x08
         let first = decode(b, state: &st)
-        // 3: .toolEnter + .toolCompatibility (Art Pen isn't in
-        // .intuosProGen3's supportedFamilies — see the test above) + .pen.
-        XCTAssertEqual(first.count, 3)
+        // 2: .toolEnter + .pen — see the test above for why no
+        // .toolCompatibility warning fires for this tool on gen3.
+        XCTAssertEqual(first.count, 2)
         let second = decode(b, state: &st)
         // Same tool, same frame content — no repeat .toolEnter or
         // .toolCompatibility, just the ordinary pen sample.

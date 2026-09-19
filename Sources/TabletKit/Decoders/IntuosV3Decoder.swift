@@ -123,7 +123,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             return decodeAuxReport(report: report, length: length)
         case 0x1A:
             guard length >= 20 else { return [] }
-            return decodeBLEReport(report: report, length: length, spec: spec, state: &state)
+            return decodeBLEReport(
+                report: report, length: length, spec: spec, state: &state,
+                deviceFamily: deviceFamily)
         case 0x1B:
             // Only byte [1] is read, which the length >= 2 guard above covers.
             return decodeBatteryReport(report: report, state: &state)
@@ -261,6 +263,22 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///   [9..10]   pressure, LE u16
     ///   [11..12]  tilt X, signed LE i16
     ///   [13..14]  tilt Y, signed LE i16
+    ///   [15]      Art Pen barrel rotation, raw byte, one full 0-255 sweep per
+    ///             360° turn. Confirmed 2026-09-18 against a real PTK-870
+    ///             capture (`ptk-870-usb-art-pen-pressure+rotation.txt`,
+    ///             Art Pen, tool code 0x0804): live and changing on every
+    ///             frame with the tip switch (status bit6, 0x40) set, even at
+    ///             pressure 0, and pinned at 0x00 whenever the tip switch is
+    ///             clear (hover), regardless of proximity — so this is gated
+    ///             on the tip switch, not on pressure. Wraps cleanly through
+    ///             multiple full turns over a slow full-rotation capture.
+    ///             Polarity (does an increasing byte mean clockwise or
+    ///             counterclockwise) is NOT confirmed — the capture's own
+    ///             description of a clockwise turn could not be independently
+    ///             verified against the byte trend here. The raw value is
+    ///             passed straight to degrees below with no sign flip, so a
+    ///             future capture that pins down the direction needs only to
+    ///             negate here, not untangle an existing wrong guess.
     ///   [19]      hover distance — smallest with the tip down, rising as the
     ///             pen lifts, railed at 255 once it is out of range. The BLE
     ///             report carries the same field at its own byte [15].
@@ -307,6 +325,18 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltX = Double(rawTiltX) / tiltDivisor
         let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
+
+        // Rotation (Art Pen barrel twist): byte [15], gated on the tip
+        // switch (status bit6), not on pressure — see the byte-layout doc
+        // above. Only meaningful for Art Pen variants (0x0804, 0x1108); other
+        // pens leave this byte at 0 or garbage, same exclusion
+        // IntuosV2Decoder applies to its own rotation field. One byte spans a
+        // full 360° turn, so 255 counts is one revolution. Passed straight
+        // through with no sign flip — polarity is unconfirmed, see above.
+        let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
+        let tipSwitch = (status & 0x40) != 0
+        let rotation: Double =
+            isArtPen && tipSwitch ? Double(report[15]) / 255.0 * 360.0 : 0.0
 
         // Off the drawable surface: the pen is in the moulded groove around
         // the tablet, or over the bezel, and should produce nothing.
@@ -415,7 +445,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         var point = TabletPoint(
             x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
             pressure: pressure, maxPressure: spec.maxPressure,
-            tiltX: tiltX, tiltY: tiltY, rotation: 0.0,
+            tiltX: tiltX, tiltY: tiltY, rotation: rotation,
             penButton1: (status & 0x02) != 0,
             penButton2: (status & 0x04) != 0,
             eraser: (status & 0x20) != 0,
@@ -660,20 +690,77 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting (class 0x40, slot
     /// 1/0). It is NOT the proximity signal — `0x02` carries live hover and
     /// contact data throughout — and proximity is read from [3] instead, per
-    /// above. Discriminator `0x01` is a fixed phantom point observed in live
-    /// bug captures and is rejected outright. Frames whose [3..9] payload
-    /// matches one of the two bit-identical per-slot templates
-    /// (`c0 81 90 80 24 04 08` slot 0, `c0 88 95 80 35 02 08` slot 1) are
-    /// sync/keepalive markers, not pen data, and are filtered the same way —
-    /// the slot-1 one is the edge bounceback, see the filter's own comment.
+    /// above. Frames whose [3..9] payload matches one of the two
+    /// bit-identical per-slot templates (`c0 81 90 80 24 04 08` slot 0,
+    /// `c0 88 95 80 35 02 08` slot 1) are sync/keepalive markers, not pen
+    /// data, and are filtered out — the slot-1 one is the edge bounceback,
+    /// see the filter's own comment.
+    ///
+    /// Discriminator `0x01` is dual-purpose. Most `0x01` frames are a fixed
+    /// phantom point (X 17244, Y 9752, recurring byte-for-byte in live bug
+    /// captures) and are rejected outright below. But the very first `0x01`
+    /// frame after a pen enters proximity is different: a one-shot
+    /// announcement carrying the pen's real serial and tool code at
+    /// [4..9] — byte-for-byte identical to the extended USB report's
+    /// [20..25] field (see `decodeExtendedPenReport`), confirmed
+    /// 2026-09-18 on a deliberate two-pen swap capture
+    /// (`ptk-870-bt-tool-swap.txt`): Pen 1's announcement carried serial
+    /// 0x2618435c/toolCode 0x0200 (Pro Pen 3), Pen 2's carried a different
+    /// serial and toolCode 0x0802, and both matched that same pen's
+    /// USB-decoded identity exactly. Byte [10] in this frame has no USB
+    /// counterpart and is left undecoded. This is why identity is read
+    /// before, not after, the phantom-point rejection below — the
+    /// announcement is real data, just not a position.
+    ///
+    /// This is also the fix for the PTK-870 misreporting its pen as an Art
+    /// Pen over Bluetooth: USB already decoded tool identity correctly, but
+    /// nothing here did, so `state.lastToolCode` simply never left whatever
+    /// it was last set to.
     private func decodeBLEReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let discriminator = report[1]
         let status = report[3]
+
+        // Tool-enter announcement — see the discriminator note above. Read
+        // before the phantom-point/template rejection below so this one real
+        // 0x01 frame isn't thrown out with the rest of them; the frame is
+        // still identity-only and never reaches position decode.
+        if discriminator == 0x01, length >= 10 {
+            let serial =
+                UInt32(report[4])
+                | UInt32(report[5]) << 8
+                | UInt32(report[6]) << 16
+                | UInt32(report[7]) << 24
+            let toolCode = UInt16(report[8]) | UInt16(report[9]) << 8
+            if toolCode != 0 {
+                state.currentToolCode = toolCode
+                let toolChanged =
+                    serial != 0
+                    ? serial != state.lastSerial
+                    : toolCode != state.lastToolCode
+                if toolChanged {
+                    state.lastSerial = serial
+                    state.lastToolCode = toolCode
+                    let artPen = toolCode == 0x0804 || toolCode == 0x1108
+                    var announceResults: [DecodeResult] = [
+                        .toolEnter(
+                            ToolIdentity(
+                                serial: serial, toolCode: toolCode,
+                                isEraser: !artPen && (toolCode & 0x0008) != 0,
+                                isMouse: false))
+                    ]
+                    emitToolCompatibility(
+                        toolCode: toolCode, deviceFamily: deviceFamily,
+                        state: &state, results: &announceResults)
+                    return announceResults
+                }
+            }
+        }
 
         // Fixed sync/keepalive templates — not live pen data. There is one
         // per slot, and they are byte-identical across every occurrence in
@@ -747,6 +834,11 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             // removing it took that capture from 54 to 3.
             guard state.prevInProximity else { return results }
             state.prevInProximity = false
+            // Force re-latch on the next approach — the announcement frame
+            // may belong to a different pen next time, and there's no other
+            // signal that says so.
+            state.lastSerial = 0
+            state.lastToolCode = 0
             results.append(
                 .pen(
                     TabletPoint(

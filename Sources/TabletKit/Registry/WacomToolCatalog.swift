@@ -16,7 +16,10 @@ public enum WacomToolCatalog: Sendable {
 
         // MARK: - Intuos Pro / Intuos5 Series (0x08xx family)
 
-        // Grip Pen (standard Intuos Pro pen)
+        // Grip Pen (standard Intuos Pro pen). Confirmed 2026-09-18 to also
+        // decode correctly (real pressure/tilt) on a PTK-870 gen3 — see the
+        // 0x0842 Pro Pen 3 comment below for the capture this and its eraser
+        // variant were confirmed alongside.
         catalog[0x0802] = WacomToolSpec(
             toolCode: 0x0802,
             name: "Grip Pen",
@@ -28,7 +31,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x080A,
-            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1]
+            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3]
         )
 
         // Grip Pen Eraser
@@ -43,11 +46,22 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1]
+            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3]
         )
 
         // Marker Pen (Intuos4 — rotation-capable; listed in kernel is_art_pen for 0x804.
         // Likely an OEM or limited-market variant; the primary Intuos4 Art Pen is 0x10804.)
+        //
+        // Confirmed 2026-09-18 to also decode correctly (real pressure/tilt)
+        // on a PTK-870 gen3, alongside the Grip Pen and older Pro Pen 3 (see
+        // 0x0802/0x0842) — same three-pen capture. `hasRotation` stays
+        // unread on gen3: the same capture shows report 0x1e byte [15]
+        // moving (0x00-0x5c) only during this pen's segment, pinned at 0x00
+        // for the other two, so the tablet is sending something rotation-shaped
+        // — but nothing in the capture deliberately rotates the pen, so the
+        // byte's zero point, polarity and units aren't known yet.
+        // IntuosV3Decoder still hardcodes rotation to 0.0; decoding this byte
+        // needs a capture with a deliberate rotation gesture first.
         catalog[0x0804] = WacomToolSpec(
             toolCode: 0x0804,
             name: "Art Pen",
@@ -59,7 +73,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x080C,
-            supportedFamilies: [.intuos4, .intuosProGen2]
+            supportedFamilies: [.intuos4, .intuosProGen2, .intuosProGen3]
         )
 
         // Marker Pen Eraser
@@ -74,7 +88,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos4]
+            supportedFamilies: [.intuos4, .intuosProGen3]
         )
 
         // Art Pen variant (toolCode 0x1108 — confirmed from live BT capture 2026-04-02).
@@ -203,7 +217,12 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pro Pen 3 (PTH-860)
+        // Pro Pen 3 (PTH-860). Confirmed 2026-09-18, alongside the Grip Pen
+        // and Art Pen, to also decode correctly (real pressure/tilt) on a
+        // PTK-870 gen3 — a three-pen sweep capture with each pen used in
+        // turn, all three read correct position/pressure/tilt through
+        // IntuosV3Decoder's existing gen3 report path. Not the same physical
+        // pen as 0x0200 (Pro Pen 3 native to gen3 hardware, see below).
         catalog[0x0842] = WacomToolSpec(
             toolCode: 0x0842,
             name: "Pro Pen 3",
@@ -215,7 +234,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x084A,
-            supportedFamilies: [.intuosProGen2]
+            supportedFamilies: [.intuosProGen2, .intuosProGen3]
         )
 
         // Pro Pen 3 Eraser
@@ -230,7 +249,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuosProGen2]
+            supportedFamilies: [.intuosProGen2, .intuosProGen3]
         )
 
         // Pen 4K (CTL-4100, CTL-6100 series)
