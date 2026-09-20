@@ -1018,16 +1018,18 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         state.lastTiltY = tiltY
         state.hasValidTiltFrame = true
 
-        results.append(
-            .pen(
-                TabletPoint(
-                    x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
-                    pressure: pressure, maxPressure: spec.maxPressure,
-                    tiltX: tiltX, tiltY: tiltY, rotation: rotation,
-                    penButton1: (status & 0x02) != 0,
-                    penButton2: (status & 0x04) != 0,
-                    eraser: (status & 0x10) != 0,
-                    inProximity: true, hoverDistance: 0)))
+        var blePoint = TabletPoint(
+            x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+            pressure: pressure, maxPressure: spec.maxPressure,
+            tiltX: tiltX, tiltY: tiltY, rotation: rotation,
+            penButton1: (status & 0x02) != 0,
+            penButton2: (status & 0x04) != 0,
+            eraser: (status & 0x10) != 0,
+            inProximity: true, hoverDistance: 0)
+        // Same third barrel button as the USB extended report — see the
+        // comment on decodeExtendedPenReport's equivalent assignment.
+        blePoint.penButton3 = (status & 0x08) != 0
+        results.append(.pen(blePoint))
         return results
     }
 
