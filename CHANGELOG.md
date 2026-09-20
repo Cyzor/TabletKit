@@ -5,7 +5,13 @@ The MockTab app tracks its own version in `MockTab/Info.plist` and maintains sep
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
-## [Unreleased]
+## [0.4.0] — 2026-09-20
+
+Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
+device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and
+Cintiq 27QHD panel support, an `ExpressKey Remote`/`pl`-series routing
+addition, and a large pass of active-area/coordinate-range corrections
+across the registry.
 
 ### Added
 
