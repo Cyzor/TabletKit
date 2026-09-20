@@ -1960,39 +1960,56 @@ public enum WacomDeviceRegistry: Sendable {
         // CTC-6110WL.json (FeatureInitReport "AgI=" = [0x02, 0x02]).
         // No touch ring, no express keys, no eraser — pen-only AES devices.
         //
-        // ⚠ These three rows may be unreachable, and nothing here can settle
-        // it (checked 2026-09-11). Both OTD configs declare **vendor 0x531**,
-        // not Wacom's 0x056A. If that is accurate, `TabletManager.vendorGate`
-        // rejects these tablets before this registry is ever consulted, since
-        // it admits 0x056A and then defers to the non-Wacom allowlist — which
-        // these are not on. No corroboration exists either way: neither the
-        // kernel nor libwacom has any record of vendor 0x531, and libwacom's
-        // only 0x0100 is the ISDv4 digitizer named in the collision note
-        // below. OTD is a single source here, and it is the *only* source.
+        // Vendor gate settled 2026-09-20: VID 0x0531 (Wacom Technology Corp.)
+        // is real, not an OTD-only artifact — confirmed independently via
+        // Linux's linuxwacom/input-wacom device-ID table and libwacom, which
+        // both list 0x0531:0x0100/0x0101/0x0104 for the CTC-4110WL. All three
+        // rows below (USB PC, BLE, USB Android) are on that VID.
+        // `TabletManager.start()`/`vendorGate` now match and admit 0x0531
+        // alongside 0x056A.
         //
-        // Left as-is rather than guessed at. Fixing it blind would mean either
-        // widening the vendor gate on one unsupported claim, or deleting rows
-        // that may be correct. A sysinfo dump or a real device settles it in
-        // one line; see `parse_otd`'s VendorID filter in tools/registry_lib.py,
-        // which drops exactly these three PIDs for the same reason.
+        // The pen (CP92303B2Z) has no physical tail eraser, but its upper
+        // side switch reports as a logical eraser tool (byte 2 bit 5 on both
+        // the 0x1F vendor report and the 0x06 HID-standard report) — hence
+        // hasEraser: true despite the device having no rear-eraser hardware.
+        // buttonCount is 0 because that field tracks tablet/pad buttons, not
+        // pen side switches (the pen has 2, decoded independent of this).
         .init(
             // PID collision: kernel wacom_features_0x100 is "ISDv4 100", a
             // built-in tablet-PC digitizer that can never appear standalone on
-            // macOS — the modern CTC-4110WL (Wacom One S, per OTD) reuses the
-            // PID and is the only device this entry can match in practice.
-            productID: 0x0100, name: "Wacom CTC-4110WL",  // ⚠ from OTD
+            // macOS — the modern CTC-4110WL (Wacom One S) reuses the PID and
+            // is the only device this entry can match in practice.
+            productID: 0x0100, name: "Wacom One S (CTC-4110WL)",
             parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])]),
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 152, activeHeightMM: 95),
+        .init(
+            // Bluetooth LE personality. Raw vendor report 0x1F is 19 bytes
+            // here (one trailing vendor byte) vs. 18 on USB — same parser,
+            // decoder must branch on transport for that byte, not just PID.
+            productID: 0x0101, name: "Wacom One S (CTC-4110WL, Bluetooth)",
+            parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 152, activeHeightMM: 95),
+        .init(
+            // USB Android-mode personality: shorter descriptor, no 0xAC
+            // container, but same 18-byte 0x06/0x1F pen reports as USB PC.
+            productID: 0x0104, name: "Wacom One S (CTC-4110WL, Android)",
+            parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            activeWidthMM: 152, activeHeightMM: 95),
         .init(
             productID: 0x0102, name: "Wacom CTC-6110WL",  // ⚠ from OTD
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x0103, name: "Wacom CTC-6110WL",  // ⚠ from OTD
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
 
         // ── Cintiq pen-display additional models ──────────────────────────────

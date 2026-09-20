@@ -295,25 +295,16 @@ def parse_otd(directory: Path | str = DEFAULT_OTD,
 
         # Current schema: DigitizerIdentifiers[].
         #
-        # The VendorID filter drops exactly three PIDs from OTD's Wacom folder
-        # (checked 2026-09-11): CTC-4110WL 0x0100 and CTC-6110WL 0x0102/0x0103,
-        # which OTD files under vendor 0x531 rather than Wacom's 0x056A. They
-        # surface as `unknown` in verify_registry.py — no kernel entry either —
-        # so the registry rows for them rest on OTD's name alone.
-        #
-        # Deliberately still filtered. Neither libwacom nor the kernel has ever
-        # heard of vendor 0x531, and libwacom's only 0x0100 is the ISDv4
-        # tablet-PC digitizer (the PID collision the registry row for 0x0100
-        # already warns about). Widening the filter would import a single
-        # unsupported source's vendor claim into a table the driver keys by PID
-        # alone — and if 0x531 is real, the deeper problem is that
-        # `TabletManager.vendorGate` only admits 0x056A, so those tablets would
-        # be rejected before the registry is consulted at all. Needs a real
-        # device or a sysinfo dump to settle, not a parser change.
+        # Settled 2026-09-20: vendor 0x531 (Wacom Technology Corp.) is real,
+        # not an OTD-only artifact — confirmed via Linux's linuxwacom/
+        # input-wacom device-ID table and libwacom, which both list
+        # 0x531:0x0100/0x0101/0x0104 for the CTC-4110WL (Wacom One S).
+        # `TabletManager.vendorGate` now admits 0x531 alongside 0x056A, so
+        # accept both here too.
         for di in cfg.get("DigitizerIdentifiers", []) or []:
             if not isinstance(di, dict):
                 continue
-            if int(di.get("VendorID", 0)) != vendor_id:
+            if int(di.get("VendorID", 0)) not in (vendor_id, 0x0531):
                 continue
             pid = parse_pid(di.get("ProductID"))
             if pid is None:
@@ -325,7 +316,7 @@ def parse_otd(directory: Path | str = DEFAULT_OTD,
             }
 
         # Legacy schema: top-level VID/PID.
-        if int(cfg.get("VendorID", 0)) == vendor_id:
+        if int(cfg.get("VendorID", 0)) in (vendor_id, 0x0531):
             pid = parse_pid(cfg.get("ProductID"))
             if pid is not None and pid not in out:
                 out[pid] = {
