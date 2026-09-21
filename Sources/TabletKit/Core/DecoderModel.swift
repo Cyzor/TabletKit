@@ -27,6 +27,14 @@ public struct DecoderState: Sendable {
     /// Absolute scroll-position counter for mouse-tool reports (V2).
     public var lastScrollPos: UInt8 = 0
     public var prevInProximity: Bool = false
+    /// Frames decoded since the current proximity-enter, saturating at a
+    /// small cap rather than counting indefinitely. Not touched by any
+    /// decoder itself — exists purely so app-side code (WacomKnownDevice's
+    /// synthesized-.toolEnter fallback) can give a one-shot announcement
+    /// frame a short grace window to arrive before falling back to a
+    /// generic identity, rather than synthesizing on literally the first
+    /// frame after re-entry and risking a race it usually wins.
+    public var framesSinceProximityEnter: Int = 0
     public var isEraser: Bool = false
     public var toolIsMouse: Bool = false
     /// Active finger contacts for the BPT3 touch container (IntuosV1 path,
