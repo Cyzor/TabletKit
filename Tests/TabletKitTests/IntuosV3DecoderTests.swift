@@ -957,6 +957,29 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
+    /// Same template bytes as `testRealCaptureBLETemplateFrameSuppressed`,
+    /// mistagged with discriminator 0x01 (announcement) instead of 0x41/0x21
+    /// — hardware-observed decoding to fake but syntactically valid
+    /// serial/toolCode values. Must not fire `.toolEnter`.
+    func testRealCaptureBLEMistaggedTemplateDoesNotFireFakeToolEnter() {
+        var st = DecoderState()
+        let slot0: [UInt8] = [
+            26, 1, 128, 192, 129, 144, 128, 36, 4, 8,
+            17, 0, 4, 8, 224, 0, 0, 0, 0, 0,
+        ]
+        let slot1: [UInt8] = [
+            26, 1, 128, 192, 136, 149, 128, 53, 2, 8,
+            17, 0, 2, 8, 224, 0, 0, 0, 0, 0,
+        ]
+        for b in [slot0, slot1] {
+            let results = decodeBLE(b, state: &st)
+            let toolEnters = results.filter {
+                if case .toolEnter = $0 { return true } else { return false }
+            }
+            XCTAssertTrue(toolEnters.isEmpty, "mistagged template frame must not fire a fake .toolEnter")
+        }
+    }
+
     /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`, at
     /// the moment the pen tip crosses the right edge during a see-saw. The
     /// first frame sits at maxX with NO close tip fix — the pen is already

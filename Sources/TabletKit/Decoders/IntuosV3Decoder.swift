@@ -735,11 +735,26 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let discriminator = report[1]
         let status = report[3]
 
+        // Fixed sync/keepalive templates — not live pen data, one per slot.
+        // Computed here (not just below) because they've been observed
+        // arriving mistagged as discriminator 0x01: their constant bytes
+        // then decode to a syntactically valid but fake serial+toolCode,
+        // trusted as a permanent new pen. See the fuller template comment
+        // below this function's serial/toolCode read.
+        let isTemplateFrame =
+            (report[3] == 192 && report[4] == 129 && report[5] == 144
+                && report[6] == 128 && report[7] == 36 && report[8] == 4
+                && report[9] == 8)
+            || (report[3] == 192 && report[4] == 136 && report[5] == 149
+                && report[6] == 128 && report[7] == 53 && report[8] == 2
+                && report[9] == 8)
+
         // Tool-enter announcement — see the discriminator note above. Read
         // before the phantom-point/template rejection below so this one real
         // 0x01 frame isn't thrown out with the rest of them; the frame is
         // still identity-only and never reaches position decode.
-        if discriminator == 0x01, length >= 10 {
+        // `!isTemplateFrame` guards the mistagged-template case above.
+        if discriminator == 0x01, length >= 10, !isTemplateFrame {
             let serial =
                 UInt32(report[4])
                 | UInt32(report[5]) << 8
@@ -797,14 +812,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // than on that shared pattern, since each signature occurs with
         // exactly one [3..13] byte row and only ever alongside its own
         // discriminator, making the literal match both unambiguous and
-        // narrower than a heuristic.
-        let isTemplateFrame =
-            (report[3] == 192 && report[4] == 129 && report[5] == 144
-                && report[6] == 128 && report[7] == 36 && report[8] == 4
-                && report[9] == 8)
-            || (report[3] == 192 && report[4] == 136 && report[5] == 149
-                && report[6] == 128 && report[7] == 53 && report[8] == 2
-                && report[9] == 8)
+        // narrower than a heuristic. (`isTemplateFrame` itself is computed
+        // above, before the announcement branch, so both position decode and
+        // identity share one check.)
 
         var results: [DecodeResult] = []
 
