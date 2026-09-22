@@ -25,15 +25,18 @@ final class IntuosV3DecoderTests: XCTestCase {
         buttonCount: 8, hasTilt: true, hasDualRings: true,
         isPenDisplay: false, ringSlotCount: 4, tiltMaxDegrees: 64.0)
 
+    /// CTC-4110WL (Wacom One S). Registry extents — see `WacomDeviceRegistry`.
+    private let ctc4110wl = DigitizerSpec(maxX: 15200, maxY: 9500, maxPressure: 4095)
+
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        family: DeviceFamily = .intuosProGen3
+        family: DeviceFamily = .intuosProGen3, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
         let decoder = IntuosV3Decoder()
         return bytes.withUnsafeBufferPointer { buf in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: ptk670, state: &state, deviceFamily: family)
+                spec: spec ?? ptk670, state: &state, deviceFamily: family)
         }
     }
 
@@ -1359,5 +1362,107 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(batteries(r).count, 1)
         XCTAssertEqual(batteries(r).first?.0, 100)
         XCTAssertEqual(batteries(r).first?.1, true)
+    }
+
+    // MARK: - 0x06 standard HID Digitizer report (CTC-4110WL)
+
+    /// 18-byte 0x06 report, byte layout per `decodeStandardDigitizerReport`.
+    /// `status` bit6=in-range, bit1=button1, bit5=eraser, bit0=tip.
+    private func make0x06(
+        status: UInt8, x: UInt16 = 3231, y: UInt16 = 2380, pressure: UInt16 = 0
+    ) -> [UInt8] {
+        var r = [UInt8](repeating: 0, count: 18)
+        r[0] = 0x06
+        r[1] = 0x01
+        r[2] = status
+        r[3] = UInt8(x & 0xFF)
+        r[4] = UInt8(x >> 8)
+        r[5] = UInt8(y & 0xFF)
+        r[6] = UInt8(y >> 8)
+        r[7] = UInt8(pressure & 0xFF)
+        r[8] = UInt8(pressure >> 8)
+        return r
+    }
+
+    /// Real device values from `Cyzor/tablet-driver` issue #16's discovery
+    /// captures: byte 2 only ever took {0, 64, 65, 66, 96} across two
+    /// sessions — 66 (0x42) is in-range | button1.
+    func testRealCaptureButton1DecodedFromByte2Bit1() {
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x42), state: &st, spec: ctc4110wl)
+        XCTAssertEqual(pens(r).first?.penButton1, true)
+    }
+
+    func testRealCaptureEraserDecodedFromByte2Bit5() {
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x60), state: &st, spec: ctc4110wl)
+        XCTAssertEqual(pens(r).first?.eraser, true)
+    }
+
+    /// This report's own descriptor declares no second-barrel-switch usage
+    /// (see the decoder's doc comment) — bit2 must stay unassigned by
+    /// default, not silently read as button2.
+    func testButton2NotDecodedByDefault() {
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x46), state: &st, spec: ctc4110wl)
+        XCTAssertEqual(pens(r).first?.penButton2, false)
+    }
+
+    /// `debugButton2Source` lets a diagnostic UI point at any byte/bit; here
+    /// it's pointed at the same bit2 the previous test proves is otherwise
+    /// ignored, confirming the override actually takes effect.
+    func testDebugButton2SourceOverridesDecodedBit() {
+        var spec = ctc4110wl
+        spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 2)
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x46), state: &st, spec: spec)
+        XCTAssertEqual(pens(r).first?.penButton2, true)
+    }
+
+    /// A candidate the reporter picks that isn't actually set this frame
+    /// must read false, not just "some value" — proves the bit read, not
+    /// just the presence of an override, drives the result.
+    func testDebugButton2SourceReadsFalseWhenBitClear() {
+        var spec = ctc4110wl
+        spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 2)
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
+        XCTAssertEqual(pens(r).first?.penButton2, false)
+    }
+
+    /// An out-of-range pick (past this frame's actual length) must not trap
+    /// — a reporter clicking through candidates live shouldn't be able to
+    /// crash the app on a bad guess.
+    func testDebugButton2SourceOutOfRangeByteIsFalseNotATrap() {
+        var spec = ctc4110wl
+        spec.debugButton2Source = .init(byteIndex: 99, bitIndex: 0)
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
+        XCTAssertEqual(pens(r).first?.penButton2, false)
+    }
+
+    func testDebugButton2SourceOutOfRangeBitIsFalseNotATrap() {
+        var spec = ctc4110wl
+        spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 9)
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
+        XCTAssertEqual(pens(r).first?.penButton2, false)
+    }
+
+    func testRealCapturePositionAndPressureDecoded() {
+        var st = DecoderState()
+        let r = decode(make0x06(status: 0x41, x: 3277, y: 2391, pressure: 4), state: &st, spec: ctc4110wl)
+        let p = pens(r).first
+        XCTAssertEqual(p?.x, 3277)
+        XCTAssertEqual(p?.y, 2391)
+        XCTAssertEqual(p?.pressure, 4)
+        XCTAssertEqual(p?.inProximity, true)
+    }
+
+    func testOutOfRangeSynthesizesProximityExit() {
+        var st = DecoderState()
+        _ = decode(make0x06(status: 0x42), state: &st, spec: ctc4110wl)
+        let r = decode(make0x06(status: 0x00), state: &st, spec: ctc4110wl)
+        XCTAssertEqual(pens(r).first?.inProximity, false)
     }
 }

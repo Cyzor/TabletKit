@@ -130,8 +130,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             // Only byte [1] is read, which the length >= 2 guard above covers.
             return decodeBatteryReport(report: report, state: &state)
         case 0x06:
-            guard length >= 20 else { return [] }
-            return decodeAltBLEReport(report: report, length: length)
+            guard length >= 13 else { return [] }
+            return decodeStandardDigitizerReport(
+                report: report, length: length, spec: spec, state: &state,
+                deviceFamily: deviceFamily)
         default:
             return []
         }
@@ -1043,112 +1045,179 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         return results
     }
 
-    // MARK: - 0x06 alternate BLE report (unrouted until now — see caveats below)
+    // MARK: - 0x06 standard USB HID Digitizer report (CTC-4110WL / Wacom One S)
 
-    /// Surfaced by exactly one capture on hand
-    /// (`ptk-870-bt-art-pen-pressure+rotation.txt`, a deliberate Art Pen
-    /// rotation test, ~1060 frames), and not previously handled at all — an
-    /// earlier comment on `decodeBLEReport` assumed this report ID was an
-    /// inert, mostly-zero idle frame sent before DATAMODE is armed. It is
-    /// not: this capture's data-mode init already ran (the device is also
-    /// emitting normal `0x1A` battery/pen activity implied by the session),
-    /// and 0x06 carries what looks like live pen data throughout, changing
-    /// on nearly every frame. Whether it is a genuine alternate pen-motion
-    /// report on some connection/firmware state, or something specific to
-    /// this one gesture, is unknown — this is the only capture that has it.
+    /// Confirmed 2026-09-22 against two real CTC-4110WL (Wacom One S,
+    /// `0x0531:0x0100`) discovery captures (Cyzor/tablet-driver issue #16).
+    /// This report ID was previously treated as an unrouted alternate-BLE
+    /// frame based on a single unrelated PTK-870 capture (see git history for
+    /// that survey). That was the wrong device family: report `0x06` on the
+    /// CTC-4110WL is this device's actual standard HID Digitizer main input
+    /// report (descriptor usage page 0x0D, no vendor bit-packing),
+    /// byte-compatible with `decodePenReport`'s `0x1F` layout apart from
+    /// widening both tilt fields from a signed byte to a signed LE16, and
+    /// having no separate declared hover-distance field.
     ///
-    /// Byte-by-byte survey of all 1060 frames in that capture:
+    /// Layout, derived from the device's own HID report descriptor and
+    /// cross-checked against both captures' raw samples and aggregate byte
+    /// statistics:
     ///   [0]      = 0x06  report ID
-    ///   [1]      = 0x01  constant in every frame — unexplained
-    ///   [2]      status-like: 0x41 in 1038/1060 frames, 0x40 in 22, 0x00 in
-    ///             the single last frame (proximity exit?). Consistent with
-    ///             the bit0=tip-switch convention used elsewhere in this
-    ///             file (0x41 = 0x40 | 0x01), but that is pattern-matching,
-    ///             not confirmation — no capture exists with the tip
-    ///             deliberately lifted mid-stream to check bit0 toggles
-    ///             independently of bit6.
-    ///   [3]      strongest rotation candidate. Full 0-255 range, wraps
-    ///             cleanly, not gated on the tip switch the way
-    ///             `decodeExtendedPenReport`'s rotation field is. That other
-    ///             field turned out to be a signed LE16, not a single byte,
-    ///             so this one may have the same problem — but no adjacent
-    ///             byte here varies enough to pair with it as an LE16 half
-    ///             ([4] and [6] barely move; [3], [5], [7] are each
-    ///             independently full-range). Don't copy that formula here
-    ///             without new evidence pinning down the real field.
-    ///   [4]      constant 0x3c/0x3d (60/61) — plausible high byte of a
-    ///             stationary X, but with only two adjacent values seen
-    ///             across the whole capture there is no way to derive a bit
-    ///             width or scale factor from this alone.
-    ///   [5]      varies smoothly 0-254 — plausible X or Y low byte, again
-    ///             unconfirmed: the pen was held roughly stationary while
-    ///             rotating in place, so small smooth drift is equally
-    ///             consistent with hand tremor as with a real position
-    ///             field, and there is no second capture to cross-check
-    ///             against.
-    ///   [6]      constant 0x29/0x2a/0x2b (41-43) — same caveat as [4].
-    ///   [7..8]   LE u16, mixed with [6]'s low range in a way that doesn't
-    ///            resolve cleanly to either X or Y against this decoder's
-    ///            existing 20-bit BLE coordinate packing (`decodeBLEReport`
-    ///            unpacks X from [4..6] and Y from [6..8] sharing a
-    ///            nibble of [6] — this report's [4..8] span doesn't fit
-    ///            that shape, since [4] and [6] are each observed constant
-    ///            while [7..8] move together). Left unassigned.
-    ///   [9..10]  LE i16 (signed), NOT pressure. A prior quick pass guessed
-    ///            pressure here; checking it against this capture rules
-    ///            that out: read as signed, the value sweeps smoothly
-    ///            400 → 300 → ... → 0 → -100 → -200 and back over the
-    ///            course of the capture, tracking in step with the [3]
-    ///            rotation candidate's movement, and pressure cannot go
-    ///            negative on any decoder in this file. Quantized in exact
-    ///            steps of 100 the entire time — never an intermediate
-    ///            value — which also doesn't match this device's smooth
-    ///            13-bit pressure curve seen on `decodeBLEReport`/
-    ///            `decodeExtendedPenReport`. Most likely a second rotation-
-    ///            adjacent signed field (sub-count? a coarser companion to
-    ///            [3]?) but not confidently identified.
-    ///   [11..12] mostly 0, occasionally (0x9c, 0xff) = -100 read as LE i16,
-    ///            correlated with the same stretches [9..10] go negative.
-    ///            Unassigned; likely related to whatever [9..10] is.
-    ///   [13]     varies 27-255, moves opposite in trend to [3] over long
-    ///            stretches — possibly a second angle representation, not
-    ///            confirmed.
-    ///   [14]     changes on every single frame, full 0-255 range — a
-    ///            rolling counter or sub-frame timestamp, matching the
-    ///            pattern `decodeBLEReport`'s own header documents for its
-    ///            byte [14] high nibble.
-    ///   [15..16] together span the full 0-255 range and increment roughly
-    ///            monotonically across the capture (only local wobble) —
-    ///            almost certainly a 16-bit frame counter or device
-    ///            timestamp, same role as `decodeBLEReport`'s [13]/[16..17].
-    ///   [17]     constant 100 (0x64) — unassigned, possibly a fixed
-    ///            capability/slot marker.
-    ///   [18..19] constant 0x00 — unassigned/padding.
+    ///   [1]      constant `0x01` in every sample seen — likely a
+    ///             sub-collection/report-count artifact of this descriptor's
+    ///             nested collection structure, not decoded.
+    ///   [2]      status, same bit convention as every other Wacom decoder in
+    ///             this file (`decodePenReport`/`decodeExtendedPenReport`/
+    ///             `decodeBLEReport`), not the descriptor's own declared
+    ///             field order — see below: bit0 = tip switch, bit1 = pen
+    ///             button 1, bit2 = pen button 2, bit5 = eraser (this pen's
+    ///             upper side switch reports as a logical eraser per
+    ///             `WacomDeviceRegistry`'s `hasEraser: true` comment), bit6 =
+    ///             in-range/proximity.
     ///
-    /// Given how much of this layout is genuinely unverified — X/Y bit
-    /// width and scale cannot be derived from two adjacent stationary
-    /// samples, the pressure-shaped field turned out not to be pressure,
-    /// and the whole report has appeared in exactly one capture — this
-    /// deliberately does NOT attempt a full pen-motion decode. Emitting
-    /// `.pen` from a guessed coordinate packing risks a wrong position
-    /// silently overwriting good state from `decodeBLEReport`/
-    /// `decodeExtendedPenReport` on whatever device or mode combination
-    /// triggers this report. Even the rotation candidate at [3] is not
-    /// emitted: its gating rule and field width/scale are both unconfirmed
-    /// (see the survey above). This is a different field from the one
-    /// `decodeBLEReport` now decodes at [13..14] on the normal `0x1A`
-    /// report — that one's confirmed; this one still isn't.
+    ///             The descriptor declares a *different* bit order for this
+    ///             report (`TipSwitch`, `BarrelSwitch`, reserved, `Eraser`,
+    ///             `Invert`, `InRange`, reserved — i.e. only one barrel-switch
+    ///             bit at bit1, `InRange` at bit5, not bit6). That reading
+    ///             does NOT fit the two discovery captures on hand: their
+    ///             aggregate byte-2 value sets are `{0, 64, 65, 66, 96}` in
+    ///             both sessions, and under the descriptor's literal order
+    ///             `96` (`0x60`) would mean `InRange` (bit5) *and* the
+    ///             adjacent reserved bit6 both set simultaneously — no clean
+    ///             single-flag story. Under this file's established
+    ///             cross-device convention instead, `96` decomposes cleanly
+    ///             as eraser(0x20) | prox(0x40), `66` as button1(0x02) |
+    ///             prox(0x40), `65` as tip(0x01) | prox(0x40), `64` as prox
+    ///             alone — every value a single clean combination, and
+    ///             consistent with `decodePenReport`'s identical bit
+    ///             assignment for the same vendor's `0x1F` report. Treated as
+    ///             the correct reading on that strength, not the descriptor's
+    ///             literal declaration.
     ///
-    /// So for now this function only records that the report exists and
-    /// returns no results — better than silently dropping it through
-    /// `default` with no trace it was ever seen. If a future capture
-    /// confirms byte [3]'s gating rule and either pins down [4..8] as real
-    /// coordinates or confirms they should stay ignored, promote this to
-    /// return an actual `.pen`/rotation update.
-    private func decodeAltBLEReport(
+    ///             **Button 2 is NOT decoded from this report — deliberately.**
+    ///             Bit2 (`0x04`) never appears in either capture's aggregate
+    ///             byte-2 value set, and unlike bit1/bit5/bit6 above, that
+    ///             absence is not explained away as "no capture happened to
+    ///             press it": this report's own descriptor field list (see
+    ///             the survey table above) declares exactly Tip Switch
+    ///             (0x42), Barrel Switch (0x44), Eraser (0x45), Invert
+    ///             (0x3C), and In Range (0x32) on the Digitizer page — three
+    ///             single-bit reserved slots and no second/"Secondary Barrel
+    ///             Switch" usage anywhere in the collection. The vendor
+    ///             report `0x1F` (per OTD's `IntuosV3Report` and the public
+    ///             CTC-4110WL Bluetooth descriptor) declares Tip, Barrel,
+    ///             AND Secondary Barrel as three consecutive usages — that
+    ///             third usage is simply absent from this report's
+    ///             collection. Reading bit2 here as button2 would be
+    ///             assigning meaning to a bit the device's own descriptor
+    ///             does not claim, on the strength of a convention borrowed
+    ///             from a *different* report (0x1F) that has a field this one
+    ///             doesn't. The second barrel switch's state may only be
+    ///             reachable via `decodePenReport`'s `0x1F` path, which
+    ///             requires the DATAMODE-2 feature write to actually take —
+    ///             confirmed NOT happening on this reporter's unit (both
+    ///             captures show only `0x06` ever streaming, never `0x1F`).
+    ///             That is a separate, still-open bug from this report's
+    ///             decode. Since we can't be certain the descriptor is
+    ///             exhaustive of what the firmware actually toggles,
+    ///             `spec.debugButton2Source` (set from a hidden diagnostic
+    ///             picker, `InfoView`'s Option-revealed capture section) lets
+    ///             a reporter try any byte/bit in the live report and see
+    ///             whether it lights up when they press — see `debugBit`
+    ///             below.
+    ///   [3..4]   X coordinate, LE u16 — confirmed in range against this
+    ///            device's registered `maxX: 15200`.
+    ///   [5..6]   Y coordinate, LE u16 — confirmed in range against
+    ///            `maxY: 9500`.
+    ///   [7..8]   pressure, LE u16 — near-zero while hovering (tip switch
+    ///            clear), small nonzero once the tip switch sets, matching
+    ///            this device's registered `maxPressure: 4095`.
+    ///   [9..10]  X tilt, signed LE16. Descriptor declares this usage with
+    ///            `logicalMin/Max: ±9000`, matching the observed ~3300-3600
+    ///            range; scale (likely centidegrees) not yet pinned down
+    ///            from only two roughly-stationary samples, so this is
+    ///            divided by `spec.tiltMaxDegrees` if set, else the
+    ///            descriptor's own logical max, rather than guessing a fixed
+    ///            divisor.
+    ///   [11..12] Y tilt, signed LE16, same caveat as X tilt.
+    ///   [13]     vendor byte (descriptor usage 0x132 on the vendor page) —
+    ///            not decoded.
+    ///   [14..15] descriptor usage 0x56 (Digitizer page) — not decoded, no
+    ///            evidence yet of what it carries.
+    ///   [16..17] vendor LE16 (descriptor usage 0x220) — not decoded.
+    ///
+    /// Hover distance has no declared field in this report the way `0x1F`'s
+    /// byte [13] or `0x1A`'s byte [15] do, so `TabletPoint.hoverDistance` is
+    /// emitted as 0 rather than guessed from an unassigned byte.
+    private func decodeStandardDigitizerReport(
         report: UnsafePointer<UInt8>,
-        length: CFIndex
+        length: CFIndex,
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        []
+        let status = report[2]
+        let inRange = (status & 0x40) != 0
+
+        if !inRange {
+            guard state.prevInProximity else { return [] }
+            state.prevInProximity = false
+            return [
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY,
+                        maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: state.lastTiltX, tiltY: state.lastTiltY,
+                        rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: false, inProximity: false, hoverDistance: 0))
+            ]
+        }
+
+        let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8)
+        let y = Int(UInt16(report[5]) | UInt16(report[6]) << 8)
+        let pressure = Int(UInt16(report[7]) | UInt16(report[8]) << 8)
+        let tiltDivisor = spec.tiltMaxDegrees ?? 9000.0
+        let rawTiltX = Int16(bitPattern: UInt16(report[9]) | UInt16(report[10]) << 8)
+        let rawTiltY = Int16(bitPattern: UInt16(report[11]) | UInt16(report[12]) << 8)
+        let tiltX = Double(rawTiltX) / tiltDivisor
+        let tiltY = Double(rawTiltY) / tiltDivisor
+
+        state.prevInProximity = true
+        state.lastX = x
+        state.lastY = y
+        state.lastTiltX = tiltX
+        state.lastTiltY = tiltY
+        state.hasValidTiltFrame = true
+
+        return [
+            .pen(
+                TabletPoint(
+                    x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                    pressure: pressure, maxPressure: spec.maxPressure,
+                    tiltX: tiltX, tiltY: tiltY, rotation: 0.0,
+                    penButton1: (status & 0x02) != 0,
+                    // No second barrel-switch usage exists in this report's
+                    // descriptor — see the doc comment above. Left false
+                    // unless a diagnostic override names a specific bit to
+                    // try instead (see `DigitizerSpec.debugButton2Source`).
+                    penButton2: Self.debugBit(
+                        spec.debugButton2Source, report: report, length: length),
+                    eraser: (status & 0x20) != 0,
+                    inProximity: true,
+                    hoverDistance: 0))
+        ]
+    }
+
+    /// Reads `source`'s bit from `report`, or `false` if `source` is `nil` or
+    /// its `byteIndex` falls outside `report`'s actual length this frame —
+    /// never traps on an out-of-range diagnostic pick.
+    static func debugBit(
+        _ source: DigitizerSpec.DebugBitSource?, report: UnsafePointer<UInt8>, length: CFIndex
+    ) -> Bool {
+        guard let source, source.byteIndex >= 0, source.byteIndex < length,
+            source.bitIndex >= 0, source.bitIndex < 8
+        else { return false }
+        return (report[source.byteIndex] & (1 << source.bitIndex)) != 0
     }
 }

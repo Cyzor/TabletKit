@@ -61,6 +61,13 @@ public protocol TabletDevice: AnyObject {
     /// sends once at `open()`). Safe to call on a device that's already
     /// correctly initialized — it's the same idempotent write.
     func reawaken()
+    /// Set or clear the diagnostic override consulted by decoders that
+    /// explicitly support it (currently `IntuosV3Decoder`'s `0x06` path —
+    /// see `DigitizerSpec.debugButton2Source`). No-op on devices whose
+    /// decoder doesn't consult it. Exists so `TabletManager` can push a
+    /// live change from the hidden raw-bit picker without needing to know
+    /// which concrete `TabletDevice` type it's talking to.
+    func setDebugButton2Source(_ source: DigitizerSpec.DebugBitSource?)
 }
 
 public extension TabletDevice {
@@ -78,4 +85,5 @@ public extension TabletDevice {
     func setQuickKeysSleepMinutes(_ minutes: Int) {}
     func setQuickKeysOledBrightness(_ level: Int) {}
     func reawaken() {}
+    func setDebugButton2Source(_ source: DigitizerSpec.DebugBitSource?) {}
 }

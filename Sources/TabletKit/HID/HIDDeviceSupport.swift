@@ -47,6 +47,27 @@ public struct DigitizerSpec: Sendable {
     /// `nil` means unknown: decoders must not substitute a guessed constant, and
     /// should keep the fraction unverified rather than silently claim an angle.
     public var tiltMaxDegrees: Double? = nil
+    /// Debug-only override for `penButton2`'s source bit, set from a
+    /// diagnostic UI when a device's real button-2 wire position is unknown
+    /// (see `IntuosV3Decoder.decodeStandardDigitizerReport`, built for the
+    /// CTC-4110WL — `Cyzor/tablet-driver` issue #16). `nil` means "use each
+    /// decoder's normal, hardcoded bit." Not read by any decoder other than
+    /// the one(s) explicitly wired to consult it — adding this field does
+    /// not by itself change behavior anywhere.
+    public var debugButton2Source: DebugBitSource? = nil
+
+    /// A raw byte index + bit index into a device's live report, for
+    /// `debugButton2Source`. Out-of-range `byteIndex` (past the report's
+    /// actual length) is handled by the consuming decoder, not here — this
+    /// is just a coordinate pair.
+    public struct DebugBitSource: Sendable, Equatable, Codable {
+        public var byteIndex: Int
+        public var bitIndex: Int
+        public init(byteIndex: Int, bitIndex: Int) {
+            self.byteIndex = byteIndex
+            self.bitIndex = bitIndex
+        }
+    }
 
     public init(
         maxX: Int,
@@ -60,7 +81,8 @@ public struct DigitizerSpec: Sendable {
         ringSlotCount: Int = 4,
         hasFingerTouch: Bool = false,
         maxTouchContacts: Int = 0,
-        tiltMaxDegrees: Double? = nil
+        tiltMaxDegrees: Double? = nil,
+        debugButton2Source: DebugBitSource? = nil
     ) {
         self.maxX = maxX
         self.maxY = maxY
@@ -74,6 +96,7 @@ public struct DigitizerSpec: Sendable {
         self.hasFingerTouch = hasFingerTouch
         self.maxTouchContacts = maxTouchContacts
         self.tiltMaxDegrees = tiltMaxDegrees
+        self.debugButton2Source = debugButton2Source
     }
 }
 
