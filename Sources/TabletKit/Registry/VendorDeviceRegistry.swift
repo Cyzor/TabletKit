@@ -145,20 +145,37 @@ public enum VendorDeviceRegistry: Sendable {
     }
 
     /// Transport priority among simultaneously-connected raw PIDs that fold
-    /// to the same `canonicalProductID` — currently just the Quick Keys
-    /// puck's three faces. Higher wins. Policy (2026-07-31): USB wins, so a
+    /// to the same `canonicalProductID`. Higher wins. Unranked PIDs return 0,
+    /// so a lone connection is always installed and promoted regardless of
+    /// what this returns — a rank only matters when two slots are live at
+    /// once, which is the case this exists for.
+    ///
+    /// Xencelabs Quick Keys puck (policy 2026-07-31): USB wins, so a
     /// direct-wired puck always owns the live context over the wireless
     /// dongle. 0x520D is the Pen Display tunneling the dongle's own traffic
     /// (not a third physical path), so it ranks alongside the dongle rather
     /// than above or below it — the two are not expected to compete in
     /// practice, but a decidable order avoids surprises if they ever do.
-    /// Unranked PIDs return 0, so a lone connection is always installed and
-    /// promoted regardless of what this returns.
+    ///
+    /// Wacom Bluetooth/dongle PIDs (any key of
+    /// `WacomDeviceRegistry.canonicalPIDMap`): rank below their canonical USB
+    /// PID, for the same reason — USB's electrically solid signal is more
+    /// reliable than Bluetooth's on every axis this project has traced
+    /// (mode-switch init timing, proximity signal cleanliness, tool-identity
+    /// announcement reliability). Before this, a Wacom BT-then-USB hotplug
+    /// (e.g. PTK-870 live over BLE, then the cable is plugged in) tied at 0
+    /// for both slots, and `driverSlots.max` picked one via undefined
+    /// dictionary iteration order rather than deterministically preferring
+    /// the newly-arrived, more reliable USB transport.
     public static func transportPriority(forRawProductID rawProductID: Int) -> Int {
         switch rawProductID {
         case 0x5202: return 2  // wired puck
         case 0x5203, 0x520D: return 1  // wireless dongle / display-relayed
-        default: return 0
+        default:
+            // A Wacom BT/dongle-variant PID ranks below its canonical USB
+            // sibling; the canonical PID itself (and anything not in the
+            // map at all) stays at the 0 default.
+            return WacomDeviceRegistry.canonicalPIDMap[rawProductID] != nil ? -1 : 0
         }
     }
 

@@ -167,4 +167,28 @@ final class VendorDeviceRegistryTests: XCTestCase {
     func testUnrankedRawProductIDReturnsZero() {
         XCTAssertEqual(VendorDeviceRegistry.transportPriority(forRawProductID: 0x0316), 0)
     }
+
+    func testWacomUSBOutranksItsBluetoothSibling() {
+        // PTK-870 (Intuos Pro L gen 3): 0x03F9 USB, 0x03FA Bluetooth.
+        let usb = VendorDeviceRegistry.transportPriority(forRawProductID: 0x03F9)
+        let bluetooth = VendorDeviceRegistry.transportPriority(forRawProductID: 0x03FA)
+        XCTAssertGreaterThan(usb, bluetooth)
+    }
+
+    func testWacomCanonicalUSBPIDStaysAtDefaultPriority() {
+        // The canonical PID itself is not a key in canonicalPIDMap, so it
+        // must fall through to the unranked default rather than being
+        // treated as if it were its own Bluetooth variant.
+        XCTAssertEqual(VendorDeviceRegistry.transportPriority(forRawProductID: 0x03F9), 0)
+    }
+
+    func testAllWacomCanonicalPIDMapKeysRankBelowDefault() {
+        for (btPID, usbPID) in WacomDeviceRegistry.canonicalPIDMap {
+            let btPriority = VendorDeviceRegistry.transportPriority(forRawProductID: btPID)
+            let usbPriority = VendorDeviceRegistry.transportPriority(forRawProductID: usbPID)
+            XCTAssertLessThan(
+                btPriority, usbPriority,
+                "0x\(String(btPID, radix: 16)) should rank below its canonical 0x\(String(usbPID, radix: 16))")
+        }
+    }
 }
