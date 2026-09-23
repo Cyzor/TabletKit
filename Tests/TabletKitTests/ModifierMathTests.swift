@@ -223,6 +223,32 @@ final class ModifierMathTests: XCTestCase {
                 reportTimestampNs: 5_000, cacheUpdatedAtNs: 0))
     }
 
+    /// The tap delivers each `flagsChanged` more than once — three times, ~90µs
+    /// apart, in the 2026-09-22 measurement. Stamping with the event's own time
+    /// makes those duplicates write the same value, so a report that fell between
+    /// two deliveries is judged against when the key moved rather than against
+    /// whichever delivery happened to land last.
+    func testRepeatedDeliveriesOfOneEventJudgeAReportIdentically() {
+        let keyChangedAtNs: UInt64 = 1_000
+        let reportAfterKeyNs: UInt64 = 1_500
+        for _ in 0..<3 {
+            XCTAssertTrue(
+                ModifierMath.physicalCacheIsCurrent(
+                    reportTimestampNs: reportAfterKeyNs,
+                    cacheUpdatedAtNs: keyChangedAtNs + 2_000),
+                "a cache written after the report vouches for it")
+        }
+        // A report predating the key change is never vouched for, however many
+        // times the event is delivered.
+        for _ in 0..<3 {
+            XCTAssertFalse(
+                ModifierMath.physicalCacheIsCurrent(
+                    reportTimestampNs: reportAfterKeyNs,
+                    cacheUpdatedAtNs: keyChangedAtNs),
+                "a cache describing the keyboard before the report cannot vouch")
+        }
+    }
+
     // MARK: - moveEventFlags
 
     func testMoveEventFlagsIncludesPhysicalWhenCacheIsCurrent() {
