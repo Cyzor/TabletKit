@@ -294,6 +294,21 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         if !prox {
             guard state.prevInProximity else { return [] }
             state.prevInProximity = false
+            // The held rotation belongs to the pen that just left. Clearing it
+            // here stops the next tool that enters from inheriting it — the
+            // same reason IntuosV2Decoder clears on its own exit paths.
+            state.lastRotation = 0.0
+            state.hasValidRotationFrame = false
+            // Force a fresh `.toolEnter` on the next approach. `toolChanged`
+            // below compares the incoming serial against `lastSerial`, so
+            // leaving it set means lifting the same pen and returning it emits
+            // nothing — and `TabletManager` learns the tool code only from a
+            // `.toolEnter`. The identity was in bytes 20-25 all along; we just
+            // never announced it, leaving `activeToolCode` at its 0x0802
+            // default so apps were told the pen has no rotation. The BLE and
+            // IntuosV2 paths already did this; USB was the holdout.
+            state.lastSerial = 0
+            state.lastToolCode = 0
             return [
                 .pen(
                     TabletPoint(
