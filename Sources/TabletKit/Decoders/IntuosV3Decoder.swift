@@ -337,6 +337,20 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let tiltY = Double(rawTiltY) / tiltDivisor
         let hoverDistance = Int(report[19])
 
+        // Stub frame: the tablet interleaves position-only reports among full
+        // ones, carrying coordinates with tilt, rotation and hover zeroed or
+        // railed rather than measured. Status separates them — stubs arrive as
+        // 0x80 (proximity only), full frames as 0xC0 and up. The split was
+        // absolute across 178 in-proximity frames of a PTK-870 USB capture:
+        // all 104 railed-hover frames had zero tilt and rotation, all 71 with
+        // real tilt had unrailed hover.
+        //
+        // A stub's 255 is the absence of a hover reading, not a measurement,
+        // which is why rotation below replays its last value instead of
+        // resetting. The off-surface gate further down does NOT exempt stubs;
+        // see the note there.
+        let tipSwitch = (status & 0x40) != 0
+
         // Rotation (Art Pen barrel twist): signed LE16 at bytes [15..16],
         // gated on the tip switch, not on pressure. Only meaningful for Art
         // Pen variants (0x0804, 0x1108); other pens leave this at 0/garbage.
@@ -349,11 +363,29 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // Rebelle. Confirmed against `ptk-870-usb-art-pen-pressure+rotation.txt`:
         // a deliberate ~1-turn gesture now unwraps to exactly -1.00 laps.
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
-        let tipSwitch = (status & 0x40) != 0
         let rawRotation = Int16(bitPattern: UInt16(report[15]) | UInt16(report[16]) << 8)
-        var rotation = isArtPen && tipSwitch ? (900.0 - Double(rawRotation)) / 5.0 : 0.0
-        if rotation < 0 { rotation += 360.0 }
-        if rotation >= 360 { rotation -= 360.0 }
+        // A raw count of exactly 0 is the tablet's "no reading this frame"
+        // filler, not a real angle, and mapping it to 180° is what made
+        // rotation flip between extremes. In genuine Art Pen sessions raw 0 is
+        // 0.3-0.9% of tip-set frames and never persists (longest run 10),
+        // while real values sweep the full ±900; with no Art Pen twisting it
+        // is 95% of frames in one 1346-frame run.
+        //
+        // Rotation therefore updates only on a frame carrying a count, and
+        // every other frame — stub or filler — replays the last real reading.
+        // Wacom's CGD16ArtPen caches and replays it the same way.
+        var rotation: Double
+        if isArtPen && tipSwitch && rawRotation != 0 {
+            rotation = (900.0 - Double(rawRotation)) / 5.0
+            if rotation < 0 { rotation += 360.0 }
+            if rotation >= 360 { rotation -= 360.0 }
+            state.lastRotation = rotation
+            state.hasValidRotationFrame = true
+        } else if isArtPen && state.hasValidRotationFrame {
+            rotation = state.lastRotation
+        } else {
+            rotation = 0.0
+        }
 
         // Off the drawable surface: the pen is in the moulded groove around
         // the tablet, or over the bezel, and should produce nothing.
@@ -401,6 +433,14 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // bounds the blast radius: this function is shared with the Movink 13,
         // for which no groove capture exists. A device that left byte [19]
         // pinned at 255 would lose hover near its edges rather than the pen.
+        //
+        // A stub frame meets all three conditions by construction, so this
+        // gate does drop in-bounds stubs near an edge (188 across three
+        // reference captures). Exempting them was tried and rejected: the
+        // groove captures are themselves 18-98% stubs, so the exemption
+        // dropped off-surface suppression from ~11.4k frames to zero. Only
+        // distance separates "in the groove" from "hovering in-bounds"; the
+        // two populations overlap at the edge.
         if hoverDistance == 255, pressure == 0, (status & 0x40) == 0,
             Self.distanceToNearestEdge(x: x, y: y, spec: spec) <= Self.surfaceBorderBand
         {

@@ -91,6 +91,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         pressure: UInt16 = 0,
         tiltX: Int16 = 0,
         tiltY: Int16 = 0,
+        rotation: Int16 = 0,
         hover: UInt8 = 0
     ) -> [UInt8] {
         var b = [UInt8](repeating: 0, count: 20)
@@ -103,6 +104,8 @@ final class IntuosV3DecoderTests: XCTestCase {
         b[12] = UInt8(UInt16(bitPattern: tiltX) >> 8)
         b[13] = UInt8(UInt16(bitPattern: tiltY) & 0xFF)
         b[14] = UInt8(UInt16(bitPattern: tiltY) >> 8)
+        b[15] = UInt8(UInt16(bitPattern: rotation) & 0xFF)
+        b[16] = UInt8(UInt16(bitPattern: rotation) >> 8)
         b[19] = hover
         return b
     }
@@ -1464,5 +1467,141 @@ final class IntuosV3DecoderTests: XCTestCase {
         _ = decode(make0x06(status: 0x42), state: &st, spec: ctc4110wl)
         let r = decode(make0x06(status: 0x00), state: &st, spec: ctc4110wl)
         XCTAssertEqual(pens(r).first?.inProximity, false)
+    }
+
+    // MARK: - 0x1E stub frames hold rotation
+
+    // The PTK-870 interleaves position-only "stub" frames (status 0x80, hover
+    // railed at 255, tilt and rotation zeroed) among full ones. Captures on
+    // 2026-09-23 ran 61.7% stubs and one September capture ran 100%, so
+    // resetting rotation to 0 on each stub collapsed the barrel angle to
+    // neutral between every pair of real readings. Replaying the last real
+    // value across a stub is what Wacom's own driver does (CGD16ArtPen caches
+    // rotation on its transducer). See project_ptk870_stub_frame_discovery.
+
+    /// Puts the decoder in Art Pen identity, then returns a full frame
+    /// carrying `rotation`, so the tests below start from a known angle.
+    private func artPenState(rotation: Int16) -> (DecoderState, Double) {
+        var st = DecoderState()
+        st.currentToolCode = 0x0804
+        let full = make0x1E(status: 0xC0, x: 30000, y: 20000, tiltX: 20, rotation: rotation)
+        let p = pens(decode(full, state: &st))
+        return (st, p[0].rotation)
+    }
+
+    func test0x1EStubFrameHoldsLastRotationForArtPen() {
+        var (st, first) = artPenState(rotation: -252)
+        XCTAssertEqual(first, 230.4, accuracy: 1e-9, "(900 - (-252)) / 5 = 230.4")
+
+        // Stub: proximity only, hover railed, tilt and rotation zeroed.
+        let stub = make0x1E(status: 0x80, x: 30010, y: 20010, hover: 255)
+        let p = pens(decode(stub, state: &st))
+        XCTAssertEqual(p.count, 1)
+        XCTAssertEqual(
+            p[0].rotation, 230.4, accuracy: 1e-9,
+            "a stub carries no rotation, so the last real angle must persist rather than snapping to 0")
+    }
+
+    func test0x1EStubRotationIsNotHeldBeforeAnyRealReading() {
+        var st = DecoderState()
+        st.currentToolCode = 0x0804
+        // Mid-surface: a stub near an edge is swallowed by the off-surface
+        // gate, which is a separate behavior from the rotation hold.
+        let stub = make0x1E(status: 0x80, x: 30000, y: 20000, hover: 255)
+        let p = pens(decode(stub, state: &st))
+        XCTAssertEqual(
+            p[0].rotation, 0.0,
+            "with no real reading yet there is nothing to hold; 0 is the honest answer")
+    }
+
+    func test0x1ERotationHoldDoesNotSurviveProximityExit() {
+        var (st, _) = artPenState(rotation: -252)
+        // Leave proximity, then re-enter and send a stub before any real frame.
+        _ = decode(make0x1E(status: 0x00, x: 30000, y: 20000), state: &st)
+        let stub = make0x1E(status: 0x80, x: 30000, y: 20000, hover: 255)
+        let p = pens(decode(stub, state: &st))
+        XCTAssertEqual(
+            p[0].rotation, 0.0,
+            "the held angle belonged to the pen that left; a new tool must not inherit it")
+    }
+
+    func test0x1EStubRotationNotHeldForNonArtPen() {
+        var st = DecoderState()
+        st.currentToolCode = 0x0802  // Pro Pen — no barrel sensor
+        _ = decode(make0x1E(status: 0xC0, x: 30000, y: 20000, rotation: -252), state: &st)
+        let stub = make0x1E(status: 0x80, x: 30010, y: 20010, hover: 255)
+        XCTAssertEqual(
+            pens(decode(stub, state: &st))[0].rotation, 0.0,
+            "a pen with no rotation sensor must stay at 0 rather than holding a decoded value")
+    }
+
+    /// Raw 0 is the tablet's "no reading this frame" filler, not a real 180°.
+    /// Decoding it as an angle is what made rotation flip between extremes:
+    /// every filler frame wrote a fake 180° into the cache, which then
+    /// replayed across the stubs around it. Real sessions carry raw 0 on
+    /// 0.3-0.9% of tip-set frames and never dwell there; a session with no
+    /// Art Pen twisting at all is 95% raw 0 with a single 1346-frame run.
+    func test0x1ERawZeroRotationIsFillerNotNeutral() {
+        var (st, first) = artPenState(rotation: -252)
+        XCTAssertEqual(first, 230.4, accuracy: 1e-9)
+
+        let filler = make0x1E(status: 0xC0, x: 30020, y: 20020, tiltX: 20, rotation: 0)
+        XCTAssertEqual(
+            pens(decode(filler, state: &st))[0].rotation, 230.4, accuracy: 1e-9,
+            "raw 0 carries no angle, so the last real reading must persist rather than snapping to 180°")
+    }
+
+    /// Lifting the pen and bringing the *same* one back must re-announce it.
+    ///
+    /// `toolChanged` compares the incoming serial against `lastSerial`, and
+    /// `TabletManager` only learns the tool code from a `.toolEnter`. Leaving
+    /// the serial latched across an exit meant a re-entry emitted nothing, so
+    /// `activeToolCode` stayed at its 0x0802 default and apps were told an Art
+    /// Pen had no rotation. Two real captures minutes apart showed exactly
+    /// this: one observed 0x0804, the next observed no tool codes at all while
+    /// still carrying 0x0804 in its raw frames.
+    func test0x1EReEntryWithSameToolReAnnouncesIt() {
+        var st = DecoderState()
+        // Identity lives at bytes 20-25, past make0x1E's 20-byte frame, so
+        // widen to the real 34-byte report length before writing it.
+        func frame(_ status: UInt8) -> [UInt8] {
+            var b = make0x1E(status: status, x: 30000, y: 20000)
+            b.append(contentsOf: [UInt8](repeating: 0, count: 34 - b.count))
+            b[20] = 0xCE; b[21] = 0x00; b[22] = 0x80; b[23] = 0x03  // serial 0x038000CE
+            b[24] = 0x04; b[25] = 0x08  // tool code 0x0804
+            return b
+        }
+        func toolEnters(_ r: [DecodeResult]) -> [ToolIdentity] {
+            r.compactMap { if case .toolEnter(let t) = $0 { return t } else { return nil } }
+        }
+
+        let first = toolEnters(decode(frame(0xC0), state: &st))
+        XCTAssertEqual(first.count, 1, "first approach must announce the tool")
+        XCTAssertEqual(first.first?.toolCode, 0x0804)
+
+        // Same pen, still in range: must not re-announce on every frame.
+        XCTAssertTrue(
+            toolEnters(decode(frame(0xC0), state: &st)).isEmpty,
+            "a tool already in range must not re-announce per frame")
+
+        // Lift out of proximity, then bring the same pen back.
+        _ = decode(make0x1E(status: 0x00, x: 30000, y: 20000), state: &st)
+        let second = toolEnters(decode(frame(0xC0), state: &st))
+        XCTAssertEqual(
+            second.count, 1,
+            "re-entry must re-announce, or the injector never learns the tool code again")
+        XCTAssertEqual(second.first?.toolCode, 0x0804)
+        XCTAssertEqual(second.first?.serial, 0x038000CE)
+    }
+
+    /// The counterpart: a nonzero count always wins, including one that
+    /// decodes near neutral, so a genuinely centred barrel still reports.
+    func test0x1ENonZeroRotationOverwritesHeldValue() {
+        var (st, _) = artPenState(rotation: -252)
+        // raw 1 -> (900 - 1) / 5 = 179.8, a real reading just off neutral.
+        let real = make0x1E(status: 0xC0, x: 30020, y: 20020, tiltX: 20, rotation: 1)
+        XCTAssertEqual(
+            pens(decode(real, state: &st))[0].rotation, 179.8, accuracy: 1e-9,
+            "a frame that carries a count must replace the held angle")
     }
 }
