@@ -187,4 +187,99 @@ final class ModifierMathTests: XCTestCase {
         XCTAssertFalse(ModifierMath.shouldUpdatePhysicalCache(sourceStateID: -1))
         XCTAssertFalse(ModifierMath.shouldUpdatePhysicalCache(sourceStateID: 999))
     }
+
+    // MARK: - physicalCacheIsCurrent
+
+    func testCacheIsCurrentWhenUpdatedAfterReport() {
+        XCTAssertTrue(
+            ModifierMath.physicalCacheIsCurrent(
+                reportTimestampNs: 1_000, cacheUpdatedAtNs: 2_000))
+    }
+
+    func testCacheIsStaleWhenReportIsNewerThanCache() {
+        // Report postdates the last keyboard update we saw, so a flagsChanged
+        // may be queued behind it — the window behind issue #18.
+        XCTAssertFalse(
+            ModifierMath.physicalCacheIsCurrent(
+                reportTimestampNs: 2_000, cacheUpdatedAtNs: 1_000))
+    }
+
+    func testCacheIsCurrentOnExactTie() {
+        // A tie means the cache was written for this very report; treating it
+        // as stale would drop bits whenever both land in the same nanosecond.
+        XCTAssertTrue(
+            ModifierMath.physicalCacheIsCurrent(
+                reportTimestampNs: 1_000, cacheUpdatedAtNs: 1_000))
+    }
+
+    func testCacheIsAssumedCurrentWhenEitherTimestampMissing() {
+        // Timer-fired posts carry no report stamp, and the cache has none before
+        // the first keyboard event. Neither is evidence of staleness.
+        XCTAssertTrue(
+            ModifierMath.physicalCacheIsCurrent(
+                reportTimestampNs: 0, cacheUpdatedAtNs: 5_000))
+        XCTAssertTrue(
+            ModifierMath.physicalCacheIsCurrent(
+                reportTimestampNs: 5_000, cacheUpdatedAtNs: 0))
+    }
+
+    // MARK: - moveEventFlags
+
+    func testMoveEventFlagsIncludesPhysicalWhenCacheIsCurrent() {
+        let result = ModifierMath.moveEventFlags(
+            tapPhysicalManaged: CGEventFlags.maskCommand.rawValue,
+            syntheticFlags: 0,
+            physicalCacheIsCurrent: true)
+        XCTAssertEqual(
+            result & CGEventFlags.maskCommand.rawValue,
+            CGEventFlags.maskCommand.rawValue)
+    }
+
+    func testMoveEventFlagsDropsPhysicalWhenCacheIsStale() {
+        // Never assert a stale physical bit: omitting it lets the next report
+        // correct the record, asserting it wrongly does not.
+        let result = ModifierMath.moveEventFlags(
+            tapPhysicalManaged: CGEventFlags.maskCommand.rawValue,
+            syntheticFlags: 0,
+            physicalCacheIsCurrent: false)
+        XCTAssertEqual(result, 0)
+    }
+
+    func testMoveEventFlagsKeepsSyntheticBitsWhenCacheIsStale() {
+        // Synthetic bits are our own state, not a cached observation, so a held
+        // barrel-button modifier must survive a stale physical cache.
+        let result = ModifierMath.moveEventFlags(
+            tapPhysicalManaged: CGEventFlags.maskCommand.rawValue,
+            syntheticFlags: CGEventFlags.maskAlternate.rawValue,
+            physicalCacheIsCurrent: false)
+        XCTAssertEqual(
+            result & CGEventFlags.maskAlternate.rawValue,
+            CGEventFlags.maskAlternate.rawValue)
+        XCTAssertEqual(
+            result & ModifierMath.deviceLeftOption, ModifierMath.deviceLeftOption)
+        XCTAssertEqual(result & CGEventFlags.maskCommand.rawValue, 0)
+    }
+
+    func testMoveEventFlagsMatchesLegacyCompositionWhenCurrent() {
+        // No-regression guard: a current cache must equal what the
+        // pre-staleness-gate expression produced.
+        let phys = CGEventFlags.maskShift.rawValue
+        let synth = CGEventFlags.maskCommand.rawValue
+        let legacy = (phys & ModifierMath.managedMask)
+            | synth
+            | ModifierMath.leftDeviceBits(for: synth)
+        let result = ModifierMath.moveEventFlags(
+            tapPhysicalManaged: phys,
+            syntheticFlags: synth,
+            physicalCacheIsCurrent: true)
+        XCTAssertEqual(result, legacy)
+    }
+
+    func testMoveEventFlagsNeverEmitsBitsOutsideManagedMask() {
+        let result = ModifierMath.moveEventFlags(
+            tapPhysicalManaged: ~0,
+            syntheticFlags: ~0,
+            physicalCacheIsCurrent: true)
+        XCTAssertEqual(result & ~ModifierMath.managedMask, 0)
+    }
 }

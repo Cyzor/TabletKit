@@ -113,4 +113,42 @@ public enum ModifierMath: Sendable {
     public static func shouldUpdatePhysicalCache(sourceStateID: Int32) -> Bool {
         sourceStateID == CGEventSourceStateID.hidSystemState.rawValue
     }
+
+    /// Whether `tapLastPhysicalFlags` can be trusted for the report being stamped.
+    ///
+    /// The tap and `inject()` are separate sources on one run loop, so a pen
+    /// report can be stamped while a `flagsChanged` waits behind it — leaving
+    /// the cache describing the keyboard from before that change.
+    ///
+    /// Both stamps are mach-absolute ns (`LatencyProbe.timebaseFactor`). A cache
+    /// older than the report means a keyboard change is unaccounted for; absent
+    /// stamps (timer-fired posts) return `true` to preserve prior behavior.
+    public static func physicalCacheIsCurrent(
+        reportTimestampNs: UInt64,
+        cacheUpdatedAtNs: UInt64
+    ) -> Bool {
+        guard reportTimestampNs != 0, cacheUpdatedAtNs != 0 else { return true }
+        return cacheUpdatedAtNs >= reportTimestampNs
+    }
+
+    /// Flags for a high-frequency move/drag event. Mirrors `moveSafeEventFlags`.
+    ///
+    /// Synthetic bits always ride along — this driver owns them. Physical bits
+    /// need `physicalCacheIsCurrent` to vouch for them: omitting one the user
+    /// holds self-corrects on the next report, but asserting a modifier is up
+    /// while it is held has no correction path (the OS sends no `flagsChanged`
+    /// for an unchanged key), which is Cyzor/tablet-driver#18.
+    ///
+    /// Narrower than `34cdf46`, which dropped physical bits from *every* move
+    /// event and cost constraint-snapping in Illustrator, Keynote, and Pages.
+    public static func moveEventFlags(
+        tapPhysicalManaged: UInt64,
+        syntheticFlags: UInt64,
+        physicalCacheIsCurrent: Bool
+    ) -> UInt64 {
+        let synth = syntheticFlags & managedMask
+        let synthManaged = synth | leftDeviceBits(for: synth)
+        guard physicalCacheIsCurrent else { return synthManaged }
+        return (tapPhysicalManaged & managedMask) | synthManaged
+    }
 }

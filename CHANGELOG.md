@@ -9,6 +9,23 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `ModifierMath.physicalCacheIsCurrent` and `ModifierMath.moveEventFlags` —
+  freshness check for the cached physical-modifier state, and the move-event
+  flag composition that depends on it.
+
+  The injector caches the keyboard's modifier state from a listen-only tap and
+  stamps it onto every pen move event. The tap and the injection path are
+  separate sources on one run loop, so a pen report can be stamped while a
+  `flagsChanged` waits behind it, and the cache then describes the keyboard
+  from before that change. Asserting it there is unrecoverable: the OS sends
+  no further `flagsChanged` for an unchanged key, so an app told a held
+  modifier is up stays wrong until the user releases and presses it again.
+
+  Comparing the cache's write stamp against the report's kernel-receipt stamp
+  says whether it can be vouched for; when it can't, physical bits are dropped
+  from that one event instead. Omitting a bit self-corrects on the next
+  report. Additive — no existing behavior changes when the cache is current.
+
 - `DecodeResult.remotePairing` and `RemotePairingSlot` — the ExpressKey
   Remote receiver's pairing table (report 0x10), five slots of serial and
   occupancy, decoded from the kernel's `wacom_remote_status_irq`. Diagnostic
