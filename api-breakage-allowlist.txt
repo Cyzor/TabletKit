@@ -150,3 +150,12 @@ API breakage: enumelement DeviceFamily.intuos1And2 has been added as a new enum 
 # Pre-1.0, changelog-documented; MockTab and both Samples were updated in
 # the same change.
 API breakage: enumelement DecodeResult.remotePairing has been added as a new enum case
+
+# DigitizerSpec gained `tiltMaxDegrees`, the pen's physical tilt range, which
+# re-synthesized its memberwise initializer — the same shape as the
+# bezelButtonCount break above, and for the same reason: the struct declares no
+# explicit init. The earlier entry is still needed; it names the pre-bezel
+# signature, and each added field yields a distinct removed-initializer message.
+# Pre-1.0, changelog-documented; MockTab is the only consumer and doesn't call
+# the full initializer directly.
+API breakage: constructor DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:bezelButtonCount:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:tiltMaxDegrees:) has been removed
