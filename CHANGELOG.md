@@ -9,6 +9,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `WacomDeviceRegistry.vendorIDs` — the set of USB vendor IDs this registry is
+  keyed on. Wacom ships under two: 0x056A for the main line, and 0x0531 for the
+  consumer Wacom One CTC line. Callers deciding whether to consult `spec(for:)`
+  should test membership here rather than comparing against 0x056A, which
+  silently skips the CTC rows.
+
 - `ModifierMath.physicalCacheIsCurrent` and `ModifierMath.moveEventFlags` —
   freshness check for the cached physical-modifier state, and the move-event
   flag composition that depends on it.

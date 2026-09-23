@@ -256,4 +256,29 @@ final class WacomDeviceRegistryTests: XCTestCase {
                                + "should not carry a dead zone")
         }
     }
+
+    /// The CTC line ships on a second VID. A caller testing `== 0x056A`
+    /// instead of this set skips the registry entirely for those PIDs, which
+    /// is how the Wacom One S lost its `initSteps` (Cyzor/tablet-driver#16).
+    func testVendorIDsCoverBothWacomVendors() {
+        XCTAssertTrue(WacomDeviceRegistry.vendorIDs.contains(0x056A))
+        XCTAssertTrue(WacomDeviceRegistry.vendorIDs.contains(0x0531))
+    }
+
+    /// The four CTC rows are reachable and carry the DATAMODE-2 write that
+    /// promotes the tablet out of reduced HID-standard mode — without it the
+    /// device streams only report 0x06, which has no second barrel switch.
+    func testWacomOneCTCRowsCarryDataModeInit() {
+        for pid in [0x0100, 0x0101, 0x0102, 0x0104] {
+            guard let spec = WacomDeviceRegistry.spec(for: pid) else {
+                return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
+            }
+            XCTAssertTrue(
+                spec.initSteps.contains { step in
+                    if case .featureReport(let bytes) = step { return bytes == [0x02, 0x02] }
+                    return false
+                },
+                "0x\(String(pid, radix: 16)) \(spec.name) must send DATAMODE-2")
+        }
+    }
 }

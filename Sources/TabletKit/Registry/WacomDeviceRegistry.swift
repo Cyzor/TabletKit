@@ -610,6 +610,18 @@ public struct WacomDeviceSpec: Sendable {
 
 public enum WacomDeviceRegistry: Sendable {
 
+    /// Every USB vendor ID whose PIDs this registry is keyed on.
+    ///
+    /// Wacom ships under two VIDs: 0x056A for the main line, and 0x0531
+    /// (Wacom Technology Corp.) for the consumer Wacom One CTC line. Callers
+    /// deciding whether to consult `spec(for:)` must test membership here
+    /// rather than comparing against 0x056A — a second literal drifts from
+    /// this one silently, and did: the 0x0531 rows were unreachable from
+    /// `DeviceRouter` for two days because its own vendor test still read
+    /// `== 0x056A`, so those tablets were discovered but never got their
+    /// `initSteps` (Cyzor/tablet-driver#16).
+    public static let vendorIDs: Set<Int> = [0x056A, 0x0531]
+
     // MARK: Known devices
 
     public static let knownDevices: [WacomDeviceSpec] = [
