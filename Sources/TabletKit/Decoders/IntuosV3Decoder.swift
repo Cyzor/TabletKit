@@ -811,7 +811,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // 0x01 frame isn't thrown out with the rest of them; the frame is
         // still identity-only and never reaches position decode.
         // `!isTemplateFrame` guards the mistagged-template case above.
-        if discriminator == 0x01, length >= 10, !isTemplateFrame {
+        // Low nibble only, as in the position guard below: the high bits are a
+        // rolling counter, so an announcement arriving as `0x41` was skipped
+        // here and rejected there, losing the pen's identity entirely.
+        if (discriminator & 0x0F) == 0x01, length >= 10, !isTemplateFrame {
             let serial =
                 UInt32(report[4])
                 | UInt32(report[5]) << 8
@@ -893,7 +896,23 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             results.append(.wheel(index: 1, delta: (dialFlags & 0x20) != 0 ? -1 : 1))
         }
 
-        guard discriminator != 0x01, !isTemplateFrame else { return results }
+        // Class-1 frames never carry a position. The low nibble of [1] is the
+        // packet class and the high bits are a rolling counter, so testing the
+        // whole byte caught only a bare `0x01` and let `0x41`/`0x21`/`0xc1`
+        // through to be decoded as coordinates.
+        //
+        // That is the BT "zap": a class-1 frame's fixed bytes decode to a
+        // constant phantom point with a tip-down pressure, so the cursor
+        // springs to one screen spot and clicks. Rapid re-entry emits bursts
+        // of them, which is why a slow approach looked clean. Six distinct
+        // class-1 signatures appear across 160,408 BT frames, but
+        // `isTemplateFrame` matches two by literal bytes — the Art Pen's was
+        // never among them. Each pen brings its own, so a literal whitelist
+        // cannot hold; the class nibble is the invariant.
+        //
+        // Identity is unaffected: the tool-enter announcement is also class 1
+        // and is read above, before position decode runs.
+        guard (discriminator & 0x0F) != 0x01, !isTemplateFrame else { return results }
 
         // Out of range. The coordinate bytes still hold the last tracked
         // position in this frame, so ignore them and emit one synthetic exit

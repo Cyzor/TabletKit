@@ -986,6 +986,80 @@ final class IntuosV3DecoderTests: XCTestCase {
         }
     }
 
+    /// Verbatim from `bt-zap-0x03FA-20260923-152226`: the Art Pen's class-1
+    /// frame, which the literal `isTemplateFrame` whitelist never matched.
+    /// Decoded as a position it yields a fixed x=206 (hard against the left
+    /// edge) with pressure 4360 — the cursor springs to one screen spot and
+    /// clicks. Rapid proximity re-entry emits a burst of these, which is why
+    /// a slow approach looked clean.
+    ///
+    /// Class, not literal bytes, is the invariant: across 160,408 BT frames
+    /// in 56 captures there are six distinct class-1 `[3..9]` signatures, one
+    /// per pen, and a whitelist of two could never cover them.
+    func testRealCaptureBLEArtPenClassOneFrameEmitsNoPosition() {
+        var st = DecoderState()
+        let zap: [UInt8] = [
+            0x1A, 0x41, 0x80, 0xC0, 0xCE, 0x00, 0x80, 0x03, 0x04, 0x08,
+            0x11, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ]
+        XCTAssertTrue(
+            pens(decodeBLE(zap, state: &st)).isEmpty,
+            "a class-1 frame must never decode to a pen point — this is the BT zap")
+    }
+
+    /// The other four class-1 signatures found in the capture corpus, each a
+    /// different pen. None may produce a position. Guards against a future
+    /// literal-matching regression: every one of these was falling through
+    /// before the guard moved to the discriminator's low nibble.
+    func testRealCaptureBLEEveryObservedClassOneSignatureEmitsNoPosition() {
+        let signatures: [(String, [UInt8])] = [
+            ("Pro Pen 0x0200", [0xC0, 0x5C, 0x43, 0x18, 0x26, 0x00, 0x02]),
+            ("Grip Pen 0x0802", [0xC0, 0x4E, 0x1D, 0x80, 0x21, 0x02, 0x08]),
+            ("0x0842", [0xC0, 0x98, 0x44, 0x80, 0x87, 0x42, 0x08]),
+            ("Art Pen 0x0804", [0xC0, 0xCE, 0x00, 0x80, 0x03, 0x04, 0x08]),
+        ]
+        // Every class value whose low nibble is 1; the high bits are a
+        // rolling counter, so all of these must behave identically.
+        for discriminator: UInt8 in [0x01, 0x21, 0x41, 0xC1] {
+            for (label, payload) in signatures {
+                var st = DecoderState()
+                var b: [UInt8] = [0x1A, discriminator, 0x80]
+                b.append(contentsOf: payload)
+                b.append(contentsOf: [UInt8](repeating: 0, count: 20 - b.count))
+                XCTAssertTrue(
+                    pens(decodeBLE(b, state: &st)).isEmpty,
+                    "\(label) at discriminator \(String(format: "0x%02X", discriminator)) must emit no position")
+            }
+        }
+    }
+
+    /// The counterpart guarantee: suppressing class-1 positions must not cost
+    /// us the tool identity those same frames carry. An announcement arriving
+    /// as 0x41 rather than a bare 0x01 was previously skipped by the identity
+    /// branch *and* rejected by the position branch, so the pen went
+    /// unrecognized — the generic-pen symptom, over Bluetooth.
+    func testRealCaptureBLEClassOneAnnouncementStillYieldsToolIdentity() {
+        var st = DecoderState()
+        // Pro Pen announcement (serial 0x2618435C, toolCode 0x0200), verbatim
+        // payload, carried on discriminator 0x41.
+        let announce: [UInt8] = [
+            0x1A, 0x41, 0x20, 0xC0, 0x5C, 0x43, 0x18, 0x26, 0x00, 0x02,
+            0x10, 0x00, 0x00, 0x02, 0xB0, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ]
+        let results = decodeBLE(announce, state: &st)
+        let toolEnters = results.compactMap { result -> (UInt32, UInt16)? in
+            if case .toolEnter(let id) = result { return (id.serial, id.toolCode) }
+            return nil
+        }
+        XCTAssertEqual(
+            toolEnters.count, 1,
+            "a class-1 announcement must still announce the tool")
+        XCTAssertEqual(toolEnters.first?.1, 0x0200, "tool code must survive the class-1 position guard")
+        XCTAssertTrue(
+            pens(results).isEmpty,
+            "the announcement frame carries identity only, never a position")
+    }
+
     /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`, at
     /// the moment the pen tip crosses the right edge during a see-saw. The
     /// first frame sits at maxX with NO close tip fix — the pen is already
