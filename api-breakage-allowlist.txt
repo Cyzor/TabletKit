@@ -140,3 +140,13 @@ API breakage: constructor LiveButtonState.init(tipDown:eraserDown:button1Down:bu
 # selects no decoder and changes no coordinate, pressure, tilt or button
 # handling. Pre-1.0, changelog-documented; MockTab is the only consumer.
 API breakage: enumelement DeviceFamily.intuos1And2 has been added as a new enum case
+
+# DecodeResult gained `remotePairing` and the RemotePairingSlot it carries,
+# for the ExpressKey Remote receiver's pairing table (report 0x10). Same
+# "added enum case" break as ReportParser.pl and DeviceFamily.intuos1And2
+# above — and the case the API design doc names when it calls for a frozen
+# DecodeResult core, since this enum is switched over by consumers rather
+# than just passed around. Diagnostic only: nothing acts on the payload.
+# Pre-1.0, changelog-documented; MockTab and both Samples were updated in
+# the same change.
+API breakage: enumelement DecodeResult.remotePairing has been added as a new enum case

@@ -195,6 +195,7 @@ func replay(_ parser: ReportParser) -> Outcome {
             case .battery:     out.decodedCounts["battery", default: 0] += 1
             case .mouseButton: out.decodedCounts["mouseButton", default: 0] += 1
             case .wheel:       out.decodedCounts["wheel", default: 0] += 1
+            case .remotePairing: out.decodedCounts["remotePairing", default: 0] += 1
             case .none:        out.decodedCounts["none", default: 0] += 1
             case .toolCompatibility(let msg):
                 out.decodedCounts["toolCompatibility(\(msg))", default: 0] += 1

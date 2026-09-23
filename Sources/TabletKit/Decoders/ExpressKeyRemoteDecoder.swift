@@ -38,17 +38,31 @@ import Foundation
 ///          sentinel is `0x7F`, matching every other ring decoder in this
 ///          codebase and what `InputInjector+AuxInput.swift` expects.
 ///
-/// Report 0x10 (receiver/pairing status — up to 5 paired remotes' serials)
-/// and output report 0x20 (pairing removal) are not decoded here: MockTab
-/// has no concept of multiple simultaneously paired accessories on one
-/// connection today, and building that is a separate, larger task than this
-/// decoder. The 0x11 frame's own embedded serial (bytes 3–5) and active
-/// ring mode (byte 11 bits 6–7) aren't surfaced either — nothing downstream
-/// consumes per-remote identity or a read-only mode indicator yet; add them
-/// when a caller actually needs to.
+/// Report 0x10 (receiver pairing table), diagnostics only. Five 6-byte slots,
+/// layout from the kernel's `wacom_remote_status_irq` (`wacom_sys.c`). Slot
+/// `i` at `j = i * 6`:
+///   [j+2]      slot occupied / paired
+///   [j+4...6]  that remote's serial, 24-bit LE
+/// Five slots reach byte 31 — exactly the 32-byte frame. Bytes j+1 and j+3
+/// are untouched by the kernel and stay unnamed here.
+///
+/// Worth decoding because a receiver that is paired but hearing nothing looks
+/// identical on the wire to one that is not paired at all. A 2026-09-17
+/// capture decodes as one remote in slot 0, occupied, while report 0x11 never
+/// fired — pairing was never the problem.
+///
+/// Not implemented: output report 0x20 (unpair — `[0x20, slot]`, `0xFF` for
+/// all), destructive and nothing drives it. Nor the 0x11 frame's embedded
+/// serial (bytes 3–5) or active ring mode (byte 11 bits 6–7) — add when a
+/// caller needs them.
 public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
 
     static let remoteReportID: UInt8 = 0x11
+    static let deviceListReportID: UInt8 = 0x10
+
+    /// From the kernel: `WACOM_MAX_REMOTES`, and its `j = i * 6`.
+    static let maxRemotes = 5
+    static let pairingSlotStride = 6
 
     public init() {}
 
@@ -59,6 +73,12 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
+        guard length >= 1 else { return [] }
+
+        if report[0] == Self.deviceListReportID {
+            return Self.decodePairingTable(report: report, length: length)
+        }
+
         guard length >= 13, report[0] == Self.remoteReportID else { return [] }
 
         let batteryByte = report[7]
@@ -92,5 +112,33 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         }
 
         return results
+    }
+
+    /// Emits every slot, occupied or not, so a reader can tell "slot 3 is
+    /// empty" from "the frame was short" — slots the frame can't hold are
+    /// omitted rather than guessed.
+    static func decodePairingTable(
+        report: UnsafePointer<UInt8>, length: CFIndex
+    ) -> [DecodeResult] {
+        var slots: [RemotePairingSlot] = []
+        slots.reserveCapacity(maxRemotes)
+
+        for index in 0..<maxRemotes {
+            let base = index * pairingSlotStride
+            // Highest byte this slot reads is base+6; need it within the frame.
+            guard base + 6 < length else { break }
+
+            let serial =
+                UInt32(report[base + 4])
+                | UInt32(report[base + 5]) << 8
+                | UInt32(report[base + 6]) << 16
+
+            slots.append(RemotePairingSlot(
+                index: index,
+                serial: serial,
+                connected: report[base + 2] != 0))
+        }
+
+        return slots.isEmpty ? [] : [.remotePairing(slots)]
     }
 }

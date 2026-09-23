@@ -123,6 +123,24 @@ public struct DecoderState: Sendable {
     public init() {}
 }
 
+/// One slot of a wireless receiver's pairing table. `serial` is the remote's
+/// own 24-bit identifier, the same one its event frames carry.
+///
+/// `connected` is stored pairing state, not a live radio heartbeat: it stays
+/// set for a remote that is paired but asleep, so it answers "is this slot
+/// claimed" rather than "is this remote awake".
+public struct RemotePairingSlot: Sendable, Equatable {
+    public let index: Int
+    public let serial: UInt32
+    public let connected: Bool
+
+    public init(index: Int, serial: UInt32, connected: Bool) {
+        self.index = index
+        self.serial = serial
+        self.connected = connected
+    }
+}
+
 public enum DecodeResult: Sendable {
     case none
     case pen(TabletPoint)
@@ -132,6 +150,10 @@ public enum DecodeResult: Sendable {
     /// Battery status from a BT device report.
     /// `percent` is 0–100 (direct, no lookup table). `charging` is true when the device is plugged in.
     case battery(percent: Int, charging: Bool)
+    /// A wireless receiver's full pairing table, one entry per slot.
+    /// Diagnostic only — nothing downstream acts on it; it lets a capture
+    /// answer "is a remote actually paired here".
+    case remotePairing([RemotePairingSlot])
     /// Tool compatibility warning: tool is present but not fully supported on this device.
     /// The associated string describes the limitation (e.g., "Rotation not supported").
     case toolCompatibility(String)

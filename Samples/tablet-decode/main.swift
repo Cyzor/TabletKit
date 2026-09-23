@@ -133,6 +133,11 @@ for (label, bytes) in reports {
         case .battery(let percent, let charging):
             print("[\(label)] battery     \(percent)%\(charging ? " (charging)" : "")")
 
+        case .remotePairing(let slots):
+            let paired = slots.filter { $0.connected }
+                .map { "\($0.index):\($0.serial)" }.joined(separator: ",")
+            print("[\(label)] pairing     \(paired.isEmpty ? "none" : paired)")
+
         case .mouseButton(let mask):
             print("[\(label)] mouse-btn   mask=\(String(format: "0x%02X", mask))")
 

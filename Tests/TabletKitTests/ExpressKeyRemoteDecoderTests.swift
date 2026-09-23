@@ -170,7 +170,80 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     func testWrongReportIDIsIgnored() {
         var state = DecoderState()
         var wrong = makeRemote()
-        wrong[0] = 0x10  // receiver/pairing status report, not decoded here
+        wrong[0] = 0x7F  // neither 0x10 nor 0x11
         XCTAssertTrue(decode(wrong, state: &state).isEmpty)
+    }
+
+    // MARK: - Report 0x10 — receiver pairing table
+
+    private func pairing(_ results: [DecodeResult]) -> [RemotePairingSlot]? {
+        results.compactMap {
+            if case .remotePairing(let slots) = $0 { return slots } else { return nil }
+        }.first
+    }
+
+    /// The exact 32 bytes from `DTH-2700-0x0331_20260917_155547.json` — all 34
+    /// samples in that capture were byte-for-byte identical. One remote paired
+    /// in slot 0 with serial 23547, which is the evidence that this user's
+    /// pairing was healthy while report 0x11 never fired.
+    func testCapturedFrameDecodesOnePairedRemote() {
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 32)
+        bytes[0] = 0x10
+        bytes[2] = 0x01
+        bytes[4] = 0xFB
+        bytes[5] = 0x5B
+
+        let slots = pairing(decode(bytes, state: &state))
+        XCTAssertEqual(slots?.count, 5)
+        XCTAssertEqual(slots?[0].serial, 23547)
+        XCTAssertEqual(slots?[0].connected, true)
+        // Every other slot empty — the receiver reports all five regardless.
+        XCTAssertEqual(slots?.dropFirst().filter { $0.connected }.count, 0)
+        XCTAssertEqual(slots?.dropFirst().filter { $0.serial != 0 }.count, 0)
+    }
+
+    /// Slot stride is 6 bytes, so slot N's serial sits at 6N+4...6N+6.
+    func testAllFiveSlotsDecodeIndependently() {
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 32)
+        bytes[0] = 0x10
+        for index in 0..<5 {
+            let base = index * 6
+            bytes[base + 2] = 1
+            bytes[base + 4] = UInt8(index + 1)
+            bytes[base + 5] = 0x02
+            bytes[base + 6] = 0x03
+        }
+
+        let slots = pairing(decode(bytes, state: &state))
+        XCTAssertEqual(slots?.count, 5)
+        for index in 0..<5 {
+            XCTAssertEqual(slots?[index].index, index)
+            XCTAssertEqual(slots?[index].connected, true)
+            XCTAssertEqual(slots?[index].serial, 0x030200 + UInt32(index + 1))
+        }
+    }
+
+    /// A frame too short for all five slots yields only the slots it can hold,
+    /// rather than reading past the end or inventing empty ones.
+    func testShortPairingFrameTruncatesRatherThanGuessing() {
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 15)
+        bytes[0] = 0x10
+        bytes[2] = 0x01
+        bytes[4] = 0x09
+
+        let slots = pairing(decode(bytes, state: &state))
+        // Slot 2 would need byte 18; slot 1 needs byte 12. So slots 0 and 1.
+        XCTAssertEqual(slots?.count, 2)
+        XCTAssertEqual(slots?[0].serial, 9)
+        XCTAssertEqual(slots?[0].connected, true)
+        XCTAssertEqual(slots?[1].connected, false)
+    }
+
+    func testPairingFrameTooShortForAnySlotEmitsNothing() {
+        var state = DecoderState()
+        XCTAssertTrue(decode([0x10, 0x00, 0x01], state: &state).isEmpty)
     }
 }

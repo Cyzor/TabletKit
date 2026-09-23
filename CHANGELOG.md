@@ -9,6 +9,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `DecodeResult.remotePairing` and `RemotePairingSlot` — the ExpressKey
+  Remote receiver's pairing table (report 0x10), five slots of serial and
+  occupancy, decoded from the kernel's `wacom_remote_status_irq`. Diagnostic
+  only; nothing downstream acts on it.
+
+  Worth decoding because a receiver that is paired but hearing nothing looks
+  identical on the wire to one that is not paired at all. `connected` is
+  stored pairing state, not a live heartbeat — it stays set for a remote that
+  is paired but asleep.
+
+  **Source-breaking for external consumers**, same class as the enum-case
+  additions below. `DecodeResult` is switched over by consumers rather than
+  just passed around, which is the case the API design doc has in mind when
+  it calls for a frozen core.
+
 - `DeviceFamily.intuos1And2` — Intuos 1 (GD-series) and Intuos 2 (XD-series)
   now have a family of their own. `WacomDeviceSpec.family` derives the family
   by sniffing the device name, and these nine rows match none of its tokens,
