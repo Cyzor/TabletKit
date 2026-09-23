@@ -158,4 +158,102 @@ final class WacomDeviceRegistryTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - DeviceFamily classification
+
+    /// Intuos 1/2 get their own family. Until 2026-09-22 `family` sniffed the
+    /// name string, and these nine names match none of its tokens, so they
+    /// fell through to `.intuosProGen1` — hardware two generations later.
+    func testIntuos1And2ClassifyAsOwnFamily() {
+        for pid in Array(0x0020...0x0024) + Array(0x0041...0x0045) {
+            let spec = WacomDeviceRegistry.spec(for: pid)!
+            XCTAssertEqual(spec.family, .intuos1And2,
+                           "0x\(String(pid, radix: 16)) \(spec.name) misfiled")
+        }
+    }
+
+    /// `IntuosV1Decoder` synthesizes a tool code when a device enters
+    /// proximity without a 0xC2 tool-change packet, and those codes hit
+    /// `emitToolCompatibility` like real ones. Each must therefore be
+    /// compatible with every family that can synthesize it, or working
+    /// hardware logs "not fully supported" on every pen entry — the way
+    /// adding a family case without updating these lists regresses.
+    func testSynthesizedFallbackToolCodesAreSupportedOnTheirFamilies() {
+        // The intuosV1 parser's fallback codes, from decodeUSBPen.
+        let fallbackCodes: [UInt16] = [0x0802, 0x080A, 0x0016, 0x0806]
+        let intuosV1Families = Set(
+            WacomDeviceRegistry.knownDevices
+                .filter { $0.parser == .intuosV1 }
+                .map(\.family))
+
+        for code in fallbackCodes {
+            guard let spec = WacomToolCatalog.spec(forToolCodeRaw: code) else {
+                XCTFail("fallback code 0x\(String(code, radix: 16)) is not catalogued")
+                continue
+            }
+            // Pen codes are synthesized for every device the parser serves,
+            // so they must cover all of its families. The mouse codes are
+            // narrower: 0x0016 comes from subtype 0x08 (the "Intuos 1–3
+            // cursor" path, so the Intuos 1/2 puck lands there), while
+            // 0x0806 is subtype 0x06 — the KC-100 cordless mouse, an
+            // Intuos 3-and-later accessory that no Intuos 1/2 ever shipped
+            // with. Asserting 0x0806 on `.intuos1And2` would be asserting
+            // hardware that doesn't exist.
+            let required: Set<DeviceFamily>
+            switch code {
+            case 0x0802, 0x080A: required = intuosV1Families
+            case 0x0016: required = [.intuos1And2, .intuos3]
+            default: required = []
+            }
+            for family in required {
+                XCTAssertTrue(
+                    spec.isSupported(onFamily: family),
+                    "0x\(String(code, radix: 16)) \(spec.name) is synthesized on "
+                        + "\(family.rawValue) but reports unsupported there")
+            }
+        }
+    }
+
+    // MARK: - defaultPressureThreshold
+
+    /// The Intuos 1/2 family carries a non-zero factory dead zone because its
+    /// hover baseline sits above the shared hardware-noise floor. Values are
+    /// from a GD-0608-U capture 2026-09-22 (Cyzor/tablet-driver#4).
+    func testIntuos1And2CarryPressureDeadZone() {
+        let family = Array(0x0020...0x0024) + Array(0x0041...0x0045)
+        for pid in family {
+            guard let spec = WacomDeviceRegistry.spec(for: pid) else {
+                XCTFail("0x\(String(pid, radix: 16)) missing from registry")
+                continue
+            }
+            XCTAssertEqual(spec.defaultPressureThreshold, 0.015, accuracy: 1e-9,
+                           "\(spec.name) should carry the family dead zone")
+        }
+    }
+
+    /// The dead zone has to clear the measured hover noise (10/1023) while
+    /// staying well under a deliberate light touch — a threshold that swallowed
+    /// real strokes would trade one bug for a worse one.
+    func testIntuos1DeadZoneClearsMeasuredHoverNoise() {
+        let spec = WacomDeviceRegistry.spec(for: 0x0021)!
+        let measuredHoverNoise = 10.0 / 1023.0  // ≈ 0.0098, capture maximum
+        XCTAssertGreaterThan(spec.defaultPressureThreshold, measuredHoverNoise,
+                             "dead zone must sit above the noise it exists to reject")
+        XCTAssertLessThan(spec.defaultPressureThreshold, 0.05,
+                          "dead zone must stay far below a deliberate touch")
+    }
+
+    /// Every other device keeps 0 — the shared floor already covers them, and
+    /// a blanket dead zone would quietly reduce everyone's pressure range.
+    func testOtherDevicesHaveNoPressureDeadZone() {
+        for spec in WacomDeviceRegistry.knownDevices {
+            let isIntuos1Or2 =
+                (0x0020...0x0024).contains(spec.productID)
+                || (0x0041...0x0045).contains(spec.productID)
+            guard !isIntuos1Or2 else { continue }
+            XCTAssertEqual(spec.defaultPressureThreshold, 0.0,
+                           "0x\(String(spec.productID, radix: 16)) \(spec.name) "
+                               + "should not carry a dead zone")
+        }
+    }
 }

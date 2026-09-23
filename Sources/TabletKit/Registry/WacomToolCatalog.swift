@@ -20,6 +20,15 @@ public enum WacomToolCatalog: Sendable {
         // decode correctly (real pressure/tilt) on a PTK-870 gen3 — see the
         // 0x0842 Pro Pen 3 comment below for the capture this and its eraser
         // variant were confirmed alongside.
+        //
+        // `.intuos1And2` and `.cintiq` because this code is also
+        // `IntuosV1Decoder`'s synthesized fallback when a device enters
+        // proximity without a 0xC2 tool-change packet — reached by Intuos 1/2
+        // (real codes 0x8822/0x882A below) and the Cintiq 13HD Touch
+        // (0x0333). Both ship a pen this spec describes, so listing them is
+        // factual; without them the fallback logs a spurious "not supported"
+        // on working hardware. Guarded by
+        // `testSynthesizedFallbackToolCodesAreSupportedOnTheirFamilies`.
         catalog[0x0802] = WacomToolSpec(
             toolCode: 0x0802,
             name: "Grip Pen",
@@ -31,10 +40,14 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x080A,
-            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3]
+            supportedFamilies: [
+                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3,
+                .cintiq,
+            ]
         )
 
-        // Grip Pen Eraser
+        // Grip Pen Eraser. `.intuos1And2` for the same fallback reason as
+        // 0x0802 above.
         catalog[0x080A] = WacomToolSpec(
             toolCode: 0x080A,
             name: "Grip Pen (Eraser)",
@@ -46,7 +59,10 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3]
+            supportedFamilies: [
+                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3,
+                .cintiq,
+            ]
         )
 
         // Marker Pen (Intuos4 — rotation-capable; listed in kernel is_art_pen for 0x804.
@@ -565,6 +581,9 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Mouse fallback (code from subtype-0x08 path — actual Intuos3 mouse sends 0x0017)
+        // `.intuos1And2` because subtype 0x08 is the "Intuos 1–3 cursor"
+        // path, so those tablets' 4D Mouse and Lens Cursor land here too.
+        // Same spurious-warning reasoning as 0x0802.
         catalog[0x0016] = WacomToolSpec(
             toolCode: 0x0016,
             name: "Mouse",
@@ -576,7 +595,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos3]
+            supportedFamilies: [.intuos1And2, .intuos3]
         )
 
         // Lens Cursor (Intuos3 — large tablets only: PTZ-930/1231)
@@ -953,6 +972,42 @@ public enum WacomToolCatalog: Sendable {
             hasEraserVariant: false,
             eraserToolCode: nil,
             supportedFamilies: [.xencelabs]
+        )
+
+        // MARK: - Intuos 1 / Intuos 2 (GD/XD-series, 0x88xx family)
+
+        // GD-series Grip Pen and its eraser end, both from one GD-0608-U
+        // capture 2026-09-22 (same serial 0x998005E5 — two ends of one pen).
+        // Neither resolved before: `spec(forToolCodeRaw:)` masks only the
+        // eraser bit, so 0x882A fell back to 0x8822, itself absent. The
+        // decoder's unknown-tool path kept input working, but the pen showed
+        // unnamed and the eraser was indistinguishable from the tip.
+        catalog[0x8822] = WacomToolSpec(
+            toolCode: 0x8822,
+            name: "Grip Pen",
+            toolType: .stylus,
+            buttonCount: 2,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0x882A,
+            supportedFamilies: [.intuos1And2]
+        )
+
+        catalog[0x882A] = WacomToolSpec(
+            toolCode: 0x882A,
+            name: "Grip Pen (Eraser)",
+            toolType: .eraser,
+            buttonCount: 2,
+            maxPressure: 1023,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: [.intuos1And2]
         )
 
         // Inking Pen (Intuos3 ZP-130 — ink cartridge, no eraser end, pressure only)

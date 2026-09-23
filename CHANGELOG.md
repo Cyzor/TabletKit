@@ -5,7 +5,46 @@ The MockTab app tracks its own version in `MockTab/Info.plist` and maintains sep
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
-## [0.4.0] — 2026-09-20
+## [Unreleased]
+
+### Added
+
+- `DeviceFamily.intuos1And2` — Intuos 1 (GD-series) and Intuos 2 (XD-series)
+  now have a family of their own. `WacomDeviceSpec.family` derives the family
+  by sniffing the device name, and these nine rows match none of its tokens,
+  so they previously fell through to `.intuosProGen1` — hardware two
+  generations later. They are now matched by product ID, which the name
+  sniffing can't get wrong.
+
+  **Source-breaking for external consumers**, same class as `ReportParser.pl`
+  in 0.4.0: adding a case to a public non-frozen enum stops an exhaustive
+  `switch` from compiling. Nothing in-tree switches over `DeviceFamily`, so
+  this needed no call-site changes.
+
+  Behaviorally contained. This value reaches tool-compatibility checking only
+  — it selects no decoder and changes no coordinate, pressure, tilt, or button
+  handling.
+
+- Tool codes `0x8822` (Grip Pen) and `0x882A` (its eraser) for the Intuos 1/2
+  family, read off a GD-0608-U capture. Neither resolved before, so the pen
+  showed as unnamed and the eraser end was indistinguishable from the tip.
+
+- `WacomDeviceSpec.defaultPressureThreshold` — a per-device factory value for
+  the pen-pressure dead zone. Zero everywhere except Intuos 1/2, whose hover
+  baseline sits above the shared hardware-noise floor.
+
+### Fixed
+
+- Intuos 1/2 tablets drew a faint line while the pen hovered, without touching
+  the surface. The per-tool dead zone that corrects this already existed but
+  defaulted to zero, so a fresh install still drew until the setting was found
+  by hand; it now defaults to a value clearing the measured sensor noise.
+
+- The Grip Pen, its eraser, and the Intuos 1–3 cursor logged a spurious "not
+  fully supported" line on the Cintiq 13HD Touch (DTH-1300) and on Intuos 1/2
+  tablets. `IntuosV1Decoder` synthesizes these tool codes when a device enters
+  proximity without first announcing its tool, and the catalog didn't list
+  those families as supported. Log-only; no input behavior was affected.
 
 Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
 device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and

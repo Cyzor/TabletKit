@@ -169,6 +169,17 @@ public enum ConfidenceTier: Sendable {
 /// for logs and for the `Codable` round-trip on ``WacomToolSpec``.
 public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case graphire
+
+    /// Intuos 1 (GD-series) and Intuos 2 (XD-series). One case for both: same
+    /// digitizer generation, same 10-byte report, same 1023-level pressure
+    /// channel, and nothing observed distinguishes them for tool
+    /// compatibility. Split them if a tool ever works on one and not the
+    /// other.
+    ///
+    /// Added 2026-09-22; these nine rows previously fell through to
+    /// `.intuosProGen1`, two generations later.
+    case intuos1And2
+
     case intuos3
     case intuos4
     case intuos5
@@ -495,11 +506,46 @@ public struct WacomDeviceSpec: Sendable {
         return (Double(maxX) / w * 25.4, Double(maxY) / h * 25.4)
     }
 
+    /// Factory value for the per-tool pressure dead zone (`ToolSettings`'
+    /// `pressureThreshold`), as a fraction of `maxPressure`. Zero wherever
+    /// the shared noise floor (`InputInjector.tipPressureThreshold`, 0.004)
+    /// already covers the device's hover baseline — everything but Intuos 1/2.
+    ///
+    /// A GD-0608-U capture 2026-09-22 puts that family's hover noise at up to
+    /// 10/1023 ≈ 0.0098, ~2.4× the shared floor, which is the
+    /// hairline-on-hover in Cyzor/tablet-driver#4. The dial that fixes it
+    /// shipped but defaulted to 0, so a fresh install still drew. 0.015
+    /// clears the measured noise while staying below a deliberate touch.
+    ///
+    /// Computed, not a stored `init` parameter: the family is one contiguous
+    /// PID range, so this avoids an argument on ~173 rows that reads 0 on all
+    /// but nine. Store it when a second family needs a different value.
+    public var defaultPressureThreshold: Double {
+        // Intuos 1 (GD-series, 0x20-0x24) and Intuos 2 (XD-series, 0x41-0x45).
+        // Same digitizer generation and the same 1023-level pressure channel;
+        // only the 6×8 (0x0021) is measured, and the value is applied
+        // family-wide on the strength of that shared channel. A capture from
+        // any other row that shows a quieter baseline should narrow this.
+        switch productID {
+        case 0x0020...0x0024, 0x0041...0x0045: return 0.015
+        default: return 0.0
+        }
+    }
+
     /// Derives the device family from parser and name.
     /// Used to check tool compatibility against `WacomToolSpec.supportedFamilies`.
     ///
     /// The `.intuosV1` branch still sniffs `name` to split one parser across
-    /// four families; replacing that with structured data is a separate task.
+    /// five families; replacing that with structured data is a separate task.
+    /// Intuos 1/2 is matched by PID and so is immune to that weakness — the
+    /// other four aren't, which is why `WacomKnownDevice`'s
+    /// `intuos5PackedLEDProductIDs` exists.
+    ///
+    /// Reaches tool-compatibility checks only: it selects no decoder and
+    /// changes no coordinate, pressure, tilt or button handling. Outputs are
+    /// a `logger.info` line and `KnownTool.isSupported`, persisted but read
+    /// nowhere (traced 2026-09-22) — re-check before wiring `isSupported` to
+    /// anything user-visible.
     public var family: DeviceFamily {
         switch parser {
         case .graphire:
@@ -521,6 +567,15 @@ public struct WacomDeviceSpec: Sendable {
             return .cintiq
         case .intuosV1:
             // Intuos 1-5 and any non-Cintiq pen displays that haven't been migrated.
+            //
+            // Intuos 1/2 are matched by PID, before any name sniffing: their
+            // names ("Intuos 6×8", "Intuos 2 (6×8)") contain no token the
+            // checks below look for, so they used to fall all the way through
+            // to the `.intuosProGen1` default. Two contiguous ranges, same as
+            // `defaultPressureThreshold` keys off.
+            if (0x0020...0x0024).contains(productID) || (0x0041...0x0045).contains(productID) {
+                return .intuos1And2
+            }
             if name.contains("Cintiq") || name.contains("DTK") || name.contains("DTH") {
                 return .cintiq
             }

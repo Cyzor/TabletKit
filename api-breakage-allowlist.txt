@@ -125,3 +125,18 @@ API breakage: constructor TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:ti
 # directly.
 API breakage: constructor AuxButtons.init(buttons:mechanicalMask:touchRingActive:touchRingButtonDown:touchRingPosition:touchRing2Active:touchRing2Position:touchStrip1Active:touchStrip1Position:touchStrip2Active:touchStrip2Position:) has been removed
 API breakage: constructor LiveButtonState.init(tipDown:eraserDown:button1Down:button2Down:button3Down:button4Down:button5Down:expressKeys:bezelButtons:touchRingActive:touchRingButtonDown:touchRing2Active:touchStrip1Active:touchStrip2Active:) has been removed
+
+# DeviceFamily gained `intuos1And2`. Intuos 1 (GD-series) and Intuos 2
+# (XD-series) had no case of their own: `WacomDeviceSpec.family` derives the
+# family by sniffing the name string, and these nine rows match none of its
+# tokens, so they fell through to `.intuosProGen1` — hardware two generations
+# later. Same "added enum case" break as ReportParser.pl above, and the same
+# reason the enum is shaped this way: a switch that doesn't handle the new
+# family should fail to compile. Nothing in-tree switches over DeviceFamily,
+# so this cost no call-site changes.
+#
+# Behaviorally contained: the value reaches only tool-compatibility checking
+# (a logger.info line and the persisted-but-unread KnownTool.isSupported). It
+# selects no decoder and changes no coordinate, pressure, tilt or button
+# handling. Pre-1.0, changelog-documented; MockTab is the only consumer.
+API breakage: enumelement DeviceFamily.intuos1And2 has been added as a new enum case
