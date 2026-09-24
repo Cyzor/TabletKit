@@ -871,13 +871,17 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     /// Real interior in-range frame from `ptk-870-bt-top-see-saw-right.txt`
     /// — an ordinary tracing pass with no rotation gesture involved.
-    /// Confirms the field decodes to a fixed neutral 180° (raw count 0)
-    /// rather than noise when nothing is twisting the barrel: this is what
-    /// let rotation be decoded unconditionally instead of gated on tool
-    /// identity (see the decoder's header comment — BLE's tool-enter frame
-    /// is one-shot and often never arrives, so tool identity can't gate this
-    /// reliably).
-    func testRealCaptureBLERotationRestsAtNeutralWithoutTwist() {
+    ///
+    /// Its raw count is 0, which is the tablet's "no reading this frame"
+    /// filler, not a measured neutral angle. With no earlier reading to
+    /// replay there is no rotation to report, so this must be 0 — mapping
+    /// the filler to 180° is what made rotation flip between extremes, since
+    /// 85% of BLE position frames carry it.
+    ///
+    /// Rotation still decodes without a tool-identity gate: BLE's tool-enter
+    /// frame is one-shot and often never arrives, and a pen with no rotation
+    /// sensor only ever reports this filler.
+    func testRealCaptureBLERotationFillerReportsNoRotation() {
         var st = DecoderState()
         let b: [UInt8] = [
             26, 2, 32, 192, 245, 68, 64, 190, 0, 0,
@@ -885,7 +889,32 @@ final class IntuosV3DecoderTests: XCTestCase {
         ]
         let p = pens(decodeBLE(b, state: &st))
         XCTAssertEqual(p.count, 1)
-        XCTAssertEqual(p[0].rotation, 180.0, accuracy: 1e-9)
+        XCTAssertEqual(p[0].rotation, 0.0, accuracy: 1e-9)
+    }
+
+    /// The filler replays the last real reading rather than snapping to a
+    /// fixed angle. Verbatim frames from `870-bt-0x03FA-20260923-213956`: a
+    /// twist frame carrying a count, then the filler frame that follows it.
+    func testRealCaptureBLERotationFillerReplaysLastReading() {
+        var st = DecoderState()
+        let twist: [UInt8] = [
+            0x1A, 0x42, 0x80, 0xC0, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
+            0x00, 0x1B, 0x13, 0x0F, 0x7F, 0x6B, 0xC0, 0x24, 0x00, 0x00,
+        ]
+        let filler: [UInt8] = [
+            0x1A, 0x02, 0x00, 0x80, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x20, 0xFF, 0x58, 0x23, 0x00, 0x00,
+        ]
+        let twisted = pens(decodeBLE(twist, state: &st))
+        XCTAssertEqual(twisted.count, 1)
+        let held = twisted[0].rotation
+        XCTAssertNotEqual(held, 180.0, accuracy: 0.5, "twist frame must carry a real angle")
+
+        let replayed = pens(decodeBLE(filler, state: &st))
+        XCTAssertEqual(replayed.count, 1)
+        XCTAssertEqual(
+            replayed[0].rotation, held, accuracy: 1e-9,
+            "filler must replay the last reading, not snap to neutral")
     }
 
     /// Real sample from `ptk-870-left-to-right.txt` with a barrel button

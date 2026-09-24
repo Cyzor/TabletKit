@@ -1061,11 +1061,37 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // work, tilt tests), this field sits pinned at 179.6–180.0° (raw
         // count 0, i.e. inert) the entire time. A pen with no rotation
         // sensor reports a fixed neutral value here, not noise.
+        // As on USB, a raw count of exactly 0 is the tablet's "no reading this
+        // frame" filler rather than a real angle, and mapping it to 180° is
+        // what makes rotation flip between extremes. BLE interleaves the two
+        // kinds of frame far more heavily than USB does: in
+        // `870-bt-0x03FA-20260923-213956` 85% of position frames carry the
+        // filler, in runs of up to 18, so the flipping is near-continuous.
+        //
+        // The interleave is visible in the frame's own class — the high
+        // nibble of [1] — which the low-nibble class check deliberately
+        // ignores. Frames with high nibble 0 carry no tilt at all (0 of 51
+        // in that capture) and are the filler; 0x4-/0x2-/0xC- frames carry
+        // real tilt and rotation together (34 of 35). Rotation is keyed on
+        // the count rather than that nibble because the count is what USB
+        // already uses, and it needs no new frame taxonomy to be correct.
+        //
+        // Every other frame replays the last real reading, exactly as the
+        // USB path and Wacom's own CGD16ArtPen do.
         let packed = UInt16(report[13]) | (UInt16(report[14] & 0x0F) << 8)
         let rawRotation = Int16(bitPattern: packed << 4) >> 4
-        var rotation = (900.0 - Double(rawRotation)) / 5.0
-        if rotation < 0 { rotation += 360.0 }
-        if rotation >= 360 { rotation -= 360.0 }
+        var rotation: Double
+        if rawRotation != 0 {
+            rotation = (900.0 - Double(rawRotation)) / 5.0
+            if rotation < 0 { rotation += 360.0 }
+            if rotation >= 360 { rotation -= 360.0 }
+            state.lastRotation = rotation
+            state.hasValidRotationFrame = true
+        } else if state.hasValidRotationFrame {
+            rotation = state.lastRotation
+        } else {
+            rotation = 0.0
+        }
 
         state.prevInProximity = true
         state.lastX = x
