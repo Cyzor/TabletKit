@@ -159,3 +159,14 @@ API breakage: enumelement DecodeResult.remotePairing has been added as a new enu
 # Pre-1.0, changelog-documented; MockTab is the only consumer and doesn't call
 # the full initializer directly.
 API breakage: constructor DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:bezelButtonCount:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:tiltMaxDegrees:) has been removed
+
+# WacomDeviceSpec gained `touchCompanionPID` and `touchCompanionInitSteps` —
+# the PID a tablet's finger sensor enumerates under when it is a separate USB
+# product rather than a second interface (Cintiq 27QHD Touch: pen 0x032B,
+# sensor 0x032C), and the init sequence to address to that sensor. Both new
+# parameters are defaulted, so every existing call site still compiles; the
+# digester reports the re-synthesized signature regardless, same as the
+# DigitizerSpec.tiltMaxDegrees entry above. One entry covers both fields: the
+# message names the pre-change signature, which is unchanged between them.
+# Pre-1.0, changelog-documented.
+API breakage: constructor WacomDeviceSpec.init(productID:name:parser:maxX:maxY:maxPressure:buttonCount:bezelButtonCount:hasTouchRing:hasDualRings:hasMechanicalDial:hasKeyOLEDs:hasTouchStrips:ringSlotCount:hasEraser:hasTilt:tiltMaxDegrees:hasFingerTouch:maxTouchContacts:touchMaxX:touchMaxY:isPenDisplay:seizeUSB:initSteps:ledCompanionPID:confidence:productStringMatch:activeWidthMM:activeHeightMM:) has been removed

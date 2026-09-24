@@ -408,6 +408,28 @@ public struct WacomDeviceSpec: Sendable {
     /// rather than attaching a fallback driver or skipping it entirely.
     /// nil = LED control uses the main digitizer interface (single-interface devices).
     public let ledCompanionPID: Int?
+    /// Product ID of a companion USB interface carrying this tablet's finger
+    /// touch, when the sensor enumerates under its own PID rather than as a
+    /// second interface of this one (Cintiq 27QHD Touch: pen 0x032B, sensor
+    /// 0x032C). Routed to this device's `WacomKnownDevice` so the sensor's
+    /// descriptor is read by the same driver, whose spec carries
+    /// `hasFingerTouch` — the gate `deriveTouchDecoders` checks. Without it
+    /// the sensor's own name-only registry row (maxX/buttonCount both 0)
+    /// fails `DeviceRouter`'s digitizer gate and lands on the observe-only
+    /// fallback, which decodes nothing.
+    /// nil = touch arrives on this PID's own interfaces, or not at all.
+    public let touchCompanionPID: Int?
+    /// Init sequence for the `touchCompanionPID` interface, sent to that
+    /// interface rather than to this one — `initSteps` above always targets the
+    /// tablet's own primary/feature-capable interface, which is the wrong
+    /// endpoint for a sensor that is a separate USB product.
+    ///
+    /// Empty when the sensor needs no init. A sensor can stream without one and
+    /// still want this: a standard HID digitizer powers up in a reduced
+    /// single-contact mode and only reports every contact once its Device Mode
+    /// feature has been set, so an empty list here means "basic touch, no
+    /// gestures" on hardware that supports more.
+    public let touchCompanionInitSteps: [InitStep]
     /// How well-vetted this entry is (see `ConfidenceTier`).
     /// Defaults to `.experimental` — promote explicitly when verified.
     public let confidence: ConfidenceTier
@@ -467,6 +489,8 @@ public struct WacomDeviceSpec: Sendable {
         seizeUSB: Bool,
         initSteps: [InitStep] = [],
         ledCompanionPID: Int? = nil,
+        touchCompanionPID: Int? = nil,
+        touchCompanionInitSteps: [InitStep] = [],
         confidence: ConfidenceTier = .experimental,
         productStringMatch: String? = nil,
         activeWidthMM: Double? = nil,
@@ -497,6 +521,8 @@ public struct WacomDeviceSpec: Sendable {
         self.seizeUSB = seizeUSB
         self.initSteps = initSteps
         self.ledCompanionPID = ledCompanionPID
+        self.touchCompanionPID = touchCompanionPID
+        self.touchCompanionInitSteps = touchCompanionInitSteps
         self.confidence = confidence
         self.productStringMatch = productStringMatch
         self.activeWidthMM = activeWidthMM
@@ -2990,18 +3016,50 @@ public enum WacomDeviceRegistry: Sendable {
             // path instead of a hand-written fixed decoder. hasFingerTouch
             // stays true so the app's touch UI (Touch/Scratchpad panes)
             // appears for this device and so `deriveTouchDecoders` runs for
-            // the 0x032C interface (gated on this row's `hasFingerTouch`,
-            // since both interfaces share one `WacomKnownDevice` instance
-            // rooted at this PID's spec); maxTouchContacts stays 10 as an
-            // upper bound even though the real report only ever carries one
-            // contact. activeWidthMM/Height added — same source and
-            // figure as 0x032A above. Confirmed 2026-08-03.
+            // the 0x032C interface; maxTouchContacts stays 10 as an upper
+            // bound even though report 0x88 carries one contact — the same
+            // descriptor also declares a 10-contact report 0x81.
+            // activeWidthMM/Height added — same source and figure as 0x032A
+            // above. Confirmed 2026-08-03.
+            //
+            // `touchCompanionPID` added 2026-09-24: the note above assumed
+            // both interfaces shared one `WacomKnownDevice` rooted at this
+            // spec, which was never true. 0x032C is a distinct PID, so it
+            // built its own context against its own name-only row and never
+            // reached this spec's `hasFingerTouch` gate — it fell through
+            // `DeviceRouter` to the observe-only fallback, which is why a
+            // reporter saw touch reports in diagnostics but no OS events.
+            // touchMaxX/Y confirmed 2026-09-24 from the 0x032C sensor's own
+            // report descriptor (Logical Maximum on Generic Desktop X/Y in
+            // both the 0x81 and 0x88 collections) in a submitted capture.
+            // Exactly 16:9, matching the panel. Until now the row left them 0,
+            // which `InputInjector+Touch` turns into a divisor of 1 — every
+            // contact would have collapsed into one corner even once frames
+            // started arriving. See that file's `cachedTouchMaxX` comment.
             productID: 0x032B, name: "Cintiq 27QHD Touch (DTH-2700)",  // ⚠ from kernel
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 3, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
+            touchMaxX: 15360, touchMaxY: 8640,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            touchCompanionPID: 0x032C,
+            // Standard HID digitizer Device Mode write: report 0x83 declares
+            // Inputmode (Digitizer usage 0x52) then Device Index (0x53), so
+            // this is Inputmode = 2, index 0. Matches Linux's dedicated
+            // WACOM_27QHDT branch in `wacom_query_tablet_data`, which calls
+            // `wacom_set_device_mode(hdev, 131, 3, 2)` — report 131 = 0x83,
+            // 3-byte buffer, mode 2.
+            //
+            // Not required to make the sensor talk: a 2026-09-17 capture with
+            // `initReports: null` still collected 2186 single-contact 0x88
+            // frames. What it buys is the 10-contact 0x81 report the same
+            // descriptor declares — i.e. everything past one finger. Wacom's
+            // own manual describes the split from the user's side: without
+            // the driver, "basic touch movement will be recognized, but other
+            // actions and gestures will not".
+            touchCompanionInitSteps: [.featureReport([0x83, 0x02, 0x00])],
+            activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface; finger touch arrives on the separate 0x0335
             // interface, decoded by `Wacom24HDTDecoder` as of 2026-09-08 —
@@ -3332,6 +3390,13 @@ public enum WacomDeviceRegistry: Sendable {
     /// identical to the previous linear scans.
     private static let specsByPID: [Int: [WacomDeviceSpec]] =
         Dictionary(grouping: knownDevices, by: \.productID)
+
+    /// PIDs some other row claims as its touch sensor (`touchCompanionPID`).
+    /// Lets the routing layer recognise a sensor interface before the tablet
+    /// that claims it has enumerated — arrival order between the two is not
+    /// guaranteed.
+    public static let touchCompanionPIDs: Set<Int> =
+        Set(knownDevices.compactMap(\.touchCompanionPID))
 
     /// Returns the spec for `productID`, or nil if unrecognised.
     public static func spec(for productID: Int) -> WacomDeviceSpec? {

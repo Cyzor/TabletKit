@@ -281,4 +281,71 @@ final class WacomDeviceRegistryTests: XCTestCase {
                 "0x\(String(pid, radix: 16)) \(spec.name) must send DATAMODE-2")
         }
     }
+
+    /// The Cintiq 27QHD Touch's finger sensor enumerates as its own product
+    /// (0x032C), not as a second interface of the pen (0x032B). Its own row is
+    /// name-only — maxX and buttonCount both 0 — so routing can only reach it
+    /// through the pen row's claim. A reporter saw touch reports land in
+    /// diagnostics while macOS got no touch events at all
+    /// (Cyzor/tablet-driver#14); the sensor was falling through to the
+    /// observe-only fallback because nothing tied the two PIDs together.
+    func testCintiq27QHDTouchClaimsItsSensorPID() {
+        guard let pen = WacomDeviceRegistry.spec(for: 0x032B) else {
+            return XCTFail("0x032B missing from registry")
+        }
+        XCTAssertEqual(pen.touchCompanionPID, 0x032C)
+        XCTAssertTrue(pen.hasFingerTouch,
+                      "the claim is only useful if the claiming spec gates touch decode on")
+    }
+
+    /// `touchCompanionPIDs` is what routing consults before the claiming
+    /// tablet has enumerated — arrival order between sensor and pen is not
+    /// guaranteed, and a sensor that arrives first must be held rather than
+    /// handed to the fallback.
+    func testTouchCompanionPIDsIndexesEveryClaim() {
+        for spec in WacomDeviceRegistry.knownDevices {
+            guard let companion = spec.touchCompanionPID else { continue }
+            XCTAssertTrue(
+                WacomDeviceRegistry.touchCompanionPIDs.contains(companion),
+                "0x\(String(companion, radix: 16)) claimed by \(spec.name) but not indexed")
+        }
+    }
+
+    /// The sensor streams a single-contact report with no init at all (a
+    /// 2026-09-17 capture collected 2186 frames with `initReports: null`), so
+    /// this write is what buys the 10-contact report the same descriptor
+    /// declares. Report 0x83 is the standard HID digitizer Device Mode control
+    /// — Inputmode then Device Index — and Linux sends exactly this for
+    /// WACOM_27QHDT via `wacom_set_device_mode(hdev, 131, 3, 2)`.
+    func testCintiq27QHDTouchSensorGetsMultitouchDeviceModeInit() {
+        guard let pen = WacomDeviceRegistry.spec(for: 0x032B) else {
+            return XCTFail("0x032B missing from registry")
+        }
+        XCTAssertEqual(pen.touchCompanionInitSteps, [.featureReport([0x83, 0x02, 0x00])])
+    }
+
+    /// Init steps aimed at a sensor are useless without a sensor to aim them
+    /// at, and would silently be sent nowhere.
+    func testTouchCompanionInitStepsRequireACompanion() {
+        for spec in WacomDeviceRegistry.knownDevices where !spec.touchCompanionInitSteps.isEmpty {
+            XCTAssertNotNil(
+                spec.touchCompanionPID,
+                "\(spec.name) declares touch-sensor init steps but names no sensor")
+        }
+    }
+
+    /// A claimed sensor must not also be a drivable tablet in its own right:
+    /// routing checks the companion claim first, so a PID that was both would
+    /// lose its own driver.
+    func testClaimedTouchSensorsAreNotDrivableThemselves() {
+        for pid in WacomDeviceRegistry.touchCompanionPIDs {
+            guard let spec = WacomDeviceRegistry.spec(for: pid) else { continue }
+            XCTAssertEqual(spec.maxX, 0,
+                           "0x\(String(pid, radix: 16)) \(spec.name) is claimed as a touch "
+                               + "sensor but also declares a digitizer")
+            XCTAssertEqual(spec.buttonCount, 0,
+                           "0x\(String(pid, radix: 16)) \(spec.name) is claimed as a touch "
+                               + "sensor but also declares buttons")
+        }
+    }
 }

@@ -9,6 +9,34 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `WacomDeviceSpec.touchCompanionPID`, `WacomDeviceSpec.touchCompanionInitSteps`,
+  and `WacomDeviceRegistry.touchCompanionPIDs` — the product ID a tablet's
+  finger sensor enumerates under when it is a separate USB product rather than
+  a second interface of the pen, the init sequence to address to that sensor
+  rather than to the pen, and the set of every PID claimed that way.
+
+  The Cintiq 27QHD Touch is the first row to use it: pen 0x032B, sensor 0x032C.
+  The sensor's own registry row is name-only (`maxX` and `buttonCount` both 0),
+  so it fails a digitizer gate and never reaches a driver whose spec declares
+  `hasFingerTouch` — the gate touch decoding is derived behind. The result was
+  a device whose touch reports reached diagnostics while the OS saw no touch
+  events at all. Naming the relationship lets the routing layer hand the sensor
+  to the pen's driver instead.
+
+  The 0x032B row also gained `touchMaxX`/`touchMaxY` (15360 x 8640, read from
+  the sensor's own descriptor). They had been left at 0, which the injector
+  turns into a divisor of 1 — every contact would have collapsed into one
+  corner even once frames started arriving.
+
+  `touchCompanionInitSteps` carries the sensor's Device Mode write
+  (`[0x83, 0x02, 0x00]`, matching Linux's WACOM_27QHDT branch). The sensor
+  streams a single-contact report without it; the write is what enables the
+  10-contact report, and so everything past one finger.
+
+  Adding the parameters re-synthesized `WacomDeviceSpec`'s initializer. They are
+  defaulted, so existing call sites still compile; the signature change is
+  recorded in `api-breakage-allowlist.txt`.
+
 - `WacomDeviceRegistry.vendorIDs` — the set of USB vendor IDs this registry is
   keyed on. Wacom ships under two: 0x056A for the main line, and 0x0531 for the
   consumer Wacom One CTC line. Callers deciding whether to consult `spec(for:)`
