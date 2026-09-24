@@ -758,28 +758,15 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// contact data throughout — and proximity is read from [3] instead, per
     /// above.
     ///
-    /// The class field also says whether a frame carries tilt and rotation:
-    /// class-0 frames (`0x02`) never do, while `0x2-`/`0x4-`/`0xC-` ones
-    /// carry both. Rotation keys on its own count rather than this nibble —
-    /// see `decodeBLEReport`'s rotation comment.
+    /// The class also says whether a frame carries tilt and rotation: class-0
+    /// (`0x02`) never does, `0x2-`/`0x4-`/`0xC-` carry both.
     ///
-    /// Class 1 is identity, never a position: every such frame is a pen
-    /// announcing its serial and tool code at
-    /// [4..9] — byte-for-byte identical to the extended USB report's
-    /// [20..25] field (see `decodeExtendedPenReport`), confirmed
-    /// 2026-09-18 on a deliberate two-pen swap capture
-    /// (`ptk-870-bt-tool-swap.txt`): Pen 1's announcement carried serial
-    /// 0x2618435c/toolCode 0x0200 (Pro Pen 3), Pen 2's carried a different
-    /// serial and toolCode 0x0802, and both matched that same pen's
-    /// USB-decoded identity exactly. Byte [10] in this frame has no USB
-    /// counterpart and is left undecoded. Identity is read before the
-    /// position guard rejects this class — the announcement is real data,
-    /// just not a position.
-    ///
-    /// This is also the fix for the PTK-870 misreporting its pen as an Art
-    /// Pen over Bluetooth: USB already decoded tool identity correctly, but
-    /// nothing here did, so `state.lastToolCode` simply never left whatever
-    /// it was last set to.
+    /// Class 1 is identity, never a position — a pen announcing its serial
+    /// and tool code at [4..9], byte-identical to the extended USB report's
+    /// [20..25] (confirmed 2026-09-18 on `ptk-870-bt-tool-swap.txt`, both
+    /// pens matching their USB identity exactly). Byte [10] has no USB
+    /// counterpart and is undecoded. Read before the position guard rejects
+    /// the class.
     private func decodeBLEReport(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
@@ -829,24 +816,16 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             }
         }
 
-        // The two byte rows once whitelisted here as "sync/keepalive
-        // templates" were never templates — each is one pen's own identity
-        // payload, read above:
+        // Two byte rows were once whitelisted here as "sync/keepalive
+        // templates". They are announcements — each is one pen's own serial,
+        // repeated verbatim every time it announces itself:
         //
         //   c0 81 90 80 24 04 08 11 00 04 08  serial 0x24809081, 0x0804
         //   c0 88 95 80 35 02 08 11 00 02 08  serial 0x35809588, 0x0802
         //
-        // They look fixed because a pen repeats its serial verbatim on every
-        // announcement, and they appear at proximity edges because that is
-        // when a pen announces itself. Matching them by literal bytes
-        // suppressed those two pens' identity outright: `lastToolCode` never
-        // advanced, so a later class-2 position frame's coordinate bytes were
-        // trusted as a tool code (0x1002 — no such tool). Confirmed against a
-        // USB capture of the same pen, where identity bytes [20..29] are
-        // byte-identical to this frame's [4..13].
-        //
-        // Class, not literal bytes, is the invariant — see the position guard
-        // below.
+        // Matching them literally cost those two pens their identity, after
+        // which a class-2 frame's coordinate bytes read as toolCode 0x1002 —
+        // no such tool. Class, not bytes, is the invariant.
 
         var results: [DecodeResult] = []
 
@@ -1061,23 +1040,14 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // work, tilt tests), this field sits pinned at 179.6–180.0° (raw
         // count 0, i.e. inert) the entire time. A pen with no rotation
         // sensor reports a fixed neutral value here, not noise.
-        // As on USB, a raw count of exactly 0 is the tablet's "no reading this
-        // frame" filler rather than a real angle, and mapping it to 180° is
-        // what makes rotation flip between extremes. BLE interleaves the two
-        // kinds of frame far more heavily than USB does: in
-        // `870-bt-0x03FA-20260923-213956` 85% of position frames carry the
-        // filler, in runs of up to 18, so the flipping is near-continuous.
+        // Raw count 0 is the tablet's "no reading" filler, as on USB, and
+        // mapping it to 180° is what made rotation flip between extremes —
+        // 85% of BLE position frames carry it, in runs up to 18. Every other
+        // frame replays the last real reading, as USB and Wacom's own
+        // CGD16ArtPen do.
         //
-        // The interleave is visible in the frame's own class — the high
-        // nibble of [1] — which the low-nibble class check deliberately
-        // ignores. Frames with high nibble 0 carry no tilt at all (0 of 51
-        // in that capture) and are the filler; 0x4-/0x2-/0xC- frames carry
-        // real tilt and rotation together (34 of 35). Rotation is keyed on
-        // the count rather than that nibble because the count is what USB
-        // already uses, and it needs no new frame taxonomy to be correct.
-        //
-        // Every other frame replays the last real reading, exactly as the
-        // USB path and Wacom's own CGD16ArtPen do.
+        // Keyed on the count, not on the high nibble of [1] that marks the
+        // filler frames, so this needs no second frame taxonomy.
         let packed = UInt16(report[13]) | (UInt16(report[14] & 0x0F) << 8)
         let rawRotation = Int16(bitPattern: packed << 4) >> 4
         var rotation: Double

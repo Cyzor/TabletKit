@@ -10,16 +10,11 @@
 // import/backfill tools exist specifically to keep entries traceable back to
 // their source rather than presenting them as uniformly hand-derived.
 //
-// SCOPE: Wacom's ISDv4/ISDv5 PIDs are deliberately absent. Those are built-in
-// tablet-PC and convertible-laptop digitizers, not drawing tablets, and the
-// kernel's own dimensions for them are largely one repeated fallback
-// (26202x16325 across a dozen PIDs) rather than per-model measurements. They
-// are also owned by the machine's own digitizer stack, so claiming them would
-// mean seizing a device the user did not plug in. `registry_audit.csv` reports
-// roughly two dozen of them as `missing_from_registry`; that verdict is
-// expected and is not a gap to close. The single exception, 0x009A, is carried
-// only because an earlier entry misidentified it as a wireless receiver — it
-// has maxX 0 so it stays name-only and is never routed to a driver.
+// SCOPE: ISDv4/ISDv5 PIDs are deliberately absent — built-in tablet-PC
+// digitizers owned by the machine's own stack, so claiming one would seize a
+// device the user never plugged in. Their `missing_from_registry` verdicts in
+// `registry_audit.csv` are expected, not a gap. 0x009A is carried only to
+// correct an earlier misidentification; maxX 0 keeps it name-only.
 
 import Foundation
 
