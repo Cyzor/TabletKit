@@ -269,11 +269,15 @@ public func emitToolCompatibility(
     let caps = WacomToolCatalog.capabilities(forToolCode: toolCode, family: deviceFamily)
     state.toolIsSupported = caps.isSupported
     if !caps.isSupported {
-        var limitations: [String] = []
-        if !caps.hasPressure { limitations.append("pressure") }
-        if !caps.hasTilt { limitations.append("tilt") }
-        if !caps.hasRotation { limitations.append("rotation") }
-        let msg = "Tool 0x\(String(format: "%04X", toolCode)) not fully supported on \(deviceFamily.rawValue). Limited to: \(limitations.joined(separator: ", "))"
+        // These are the capabilities the tool lacks, not the ones it keeps.
+        var missing: [String] = []
+        if !caps.hasPressure { missing.append("pressure") }
+        if !caps.hasTilt { missing.append("tilt") }
+        if !caps.hasRotation { missing.append("rotation") }
+        var msg = "Tool 0x\(String(format: "%04X", toolCode)) not fully supported on \(deviceFamily.rawValue)."
+        if !missing.isEmpty {
+            msg += " Missing: \(missing.joined(separator: ", "))"
+        }
         results.append(.toolCompatibility(msg))
     }
 }
