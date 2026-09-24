@@ -951,10 +951,9 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
-    /// The fixed sync/keepalive template observed verbatim in every 0x41
-    /// discriminator frame across multiple real captures — must NOT be
-    /// treated as a live pen point.
-    func testRealCaptureBLETemplateFrameSuppressed() {
+    /// An announcement carries identity, never a position — suppressed here
+    /// by its class nibble rather than by matching its bytes.
+    func testRealCaptureBLEAnnouncementEmitsNoPosition() {
         var st = DecoderState()
         let b: [UInt8] = [
             26, 65, 128, 192, 129, 144, 128, 36, 4, 8,
@@ -963,31 +962,39 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
-    /// Same template bytes as `testRealCaptureBLETemplateFrameSuppressed`,
-    /// mistagged with discriminator 0x01 (announcement) instead of 0x41/0x21
-    /// — hardware-observed decoding to fake but syntactically valid
-    /// serial/toolCode values. Must not fire `.toolEnter`.
-    func testRealCaptureBLEMistaggedTemplateDoesNotFireFakeToolEnter() {
-        var st = DecoderState()
-        let slot0: [UInt8] = [
-            26, 1, 128, 192, 129, 144, 128, 36, 4, 8,
-            17, 0, 4, 8, 224, 0, 0, 0, 0, 0,
+    /// The two byte rows once whitelisted as "mistagged templates" are real
+    /// announcements, one per pen, and must yield that pen's identity.
+    ///
+    /// Verified against `870-usb-healthier-art-pen-0x0084-20260923-210819`:
+    /// over USB the same physical pen reports serial 612405377 / toolCode
+    /// 0x0804, and its USB identity bytes [20..29] are byte-identical to this
+    /// BLE frame's [4..13]. Suppressing these cost both pens their identity,
+    /// after which a class-2 position frame's coordinate bytes were trusted
+    /// as toolCode 0x1002 — a tool code that does not exist.
+    func testRealCaptureBLEFormerlyWhitelistedRowsYieldToolIdentity() {
+        let expected: [(name: String, frame: [UInt8], serial: UInt32, code: UInt16)] = [
+            (
+                "Art Pen", [26, 1, 128, 192, 129, 144, 128, 36, 4, 8, 17, 0, 4, 8, 224, 0, 0, 0, 0, 0],
+                612_405_377, 0x0804
+            ),
+            (
+                "Grip Pen", [26, 1, 128, 192, 136, 149, 128, 53, 2, 8, 17, 0, 2, 8, 224, 0, 0, 0, 0, 0],
+                897_619_336, 0x0802
+            ),
         ]
-        let slot1: [UInt8] = [
-            26, 1, 128, 192, 136, 149, 128, 53, 2, 8,
-            17, 0, 2, 8, 224, 0, 0, 0, 0, 0,
-        ]
-        for b in [slot0, slot1] {
-            let results = decodeBLE(b, state: &st)
-            let toolEnters = results.filter {
-                if case .toolEnter = $0 { return true } else { return false }
+        for (name, frame, serial, code) in expected {
+            var st = DecoderState()
+            let identities = decodeBLE(frame, state: &st).compactMap { result -> ToolIdentity? in
+                if case .toolEnter(let identity) = result { return identity } else { return nil }
             }
-            XCTAssertTrue(toolEnters.isEmpty, "mistagged template frame must not fire a fake .toolEnter")
+            XCTAssertEqual(identities.count, 1, "\(name) must announce exactly one tool")
+            XCTAssertEqual(identities.first?.serial, serial, "\(name) serial")
+            XCTAssertEqual(identities.first?.toolCode, code, "\(name) toolCode")
         }
     }
 
     /// Verbatim from `bt-zap-0x03FA-20260923-152226`: the Art Pen's class-1
-    /// frame, which the literal `isTemplateFrame` whitelist never matched.
+    /// frame, which the since-removed literal whitelist never matched.
     /// Decoded as a position it yields a fixed x=206 (hard against the left
     /// edge) with pressure 4360 — the cursor springs to one screen spot and
     /// clicks. Rapid proximity re-entry emits a burst of these, which is why

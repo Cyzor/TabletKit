@@ -756,17 +756,15 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting (class 0x40, slot
     /// 1/0). It is NOT the proximity signal — `0x02` carries live hover and
     /// contact data throughout — and proximity is read from [3] instead, per
-    /// above. Frames whose [3..9] payload matches one of the two
-    /// bit-identical per-slot templates (`c0 81 90 80 24 04 08` slot 0,
-    /// `c0 88 95 80 35 02 08` slot 1) are sync/keepalive markers, not pen
-    /// data, and are filtered out — the slot-1 one is the edge bounceback,
-    /// see the filter's own comment.
+    /// above.
     ///
-    /// Discriminator `0x01` is dual-purpose. Most `0x01` frames are a fixed
-    /// phantom point (X 17244, Y 9752, recurring byte-for-byte in live bug
-    /// captures) and are rejected outright below. But the very first `0x01`
-    /// frame after a pen enters proximity is different: a one-shot
-    /// announcement carrying the pen's real serial and tool code at
+    /// The class field also says whether a frame carries tilt and rotation:
+    /// class-0 frames (`0x02`) never do, while `0x2-`/`0x4-`/`0xC-` ones
+    /// carry both. Rotation keys on its own count rather than this nibble —
+    /// see `decodeBLEReport`'s rotation comment.
+    ///
+    /// Class 1 is identity, never a position: every such frame is a pen
+    /// announcing its serial and tool code at
     /// [4..9] — byte-for-byte identical to the extended USB report's
     /// [20..25] field (see `decodeExtendedPenReport`), confirmed
     /// 2026-09-18 on a deliberate two-pen swap capture
@@ -774,9 +772,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// 0x2618435c/toolCode 0x0200 (Pro Pen 3), Pen 2's carried a different
     /// serial and toolCode 0x0802, and both matched that same pen's
     /// USB-decoded identity exactly. Byte [10] in this frame has no USB
-    /// counterpart and is left undecoded. This is why identity is read
-    /// before, not after, the phantom-point rejection below — the
-    /// announcement is real data, just not a position.
+    /// counterpart and is left undecoded. Identity is read before the
+    /// position guard rejects this class — the announcement is real data,
+    /// just not a position.
     ///
     /// This is also the fix for the PTK-870 misreporting its pen as an Art
     /// Pen over Bluetooth: USB already decoded tool identity correctly, but
@@ -792,29 +790,14 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         let discriminator = report[1]
         let status = report[3]
 
-        // Fixed sync/keepalive templates — not live pen data, one per slot.
-        // Computed here (not just below) because they've been observed
-        // arriving mistagged as discriminator 0x01: their constant bytes
-        // then decode to a syntactically valid but fake serial+toolCode,
-        // trusted as a permanent new pen. See the fuller template comment
-        // below this function's serial/toolCode read.
-        let isTemplateFrame =
-            (report[3] == 192 && report[4] == 129 && report[5] == 144
-                && report[6] == 128 && report[7] == 36 && report[8] == 4
-                && report[9] == 8)
-            || (report[3] == 192 && report[4] == 136 && report[5] == 149
-                && report[6] == 128 && report[7] == 53 && report[8] == 2
-                && report[9] == 8)
-
-        // Tool-enter announcement — see the discriminator note above. Read
-        // before the phantom-point/template rejection below so this one real
-        // 0x01 frame isn't thrown out with the rest of them; the frame is
-        // still identity-only and never reaches position decode.
-        // `!isTemplateFrame` guards the mistagged-template case above.
+        // Tool-enter announcement. Read before position decode below, which
+        // rejects this whole class — the frame is identity-only and carries
+        // no coordinates.
+        //
         // Low nibble only, as in the position guard below: the high bits are a
         // rolling counter, so an announcement arriving as `0x41` was skipped
         // here and rejected there, losing the pen's identity entirely.
-        if (discriminator & 0x0F) == 0x01, length >= 10, !isTemplateFrame {
+        if (discriminator & 0x0F) == 0x01, length >= 10 {
             let serial =
                 UInt32(report[4])
                 | UInt32(report[5]) << 8
@@ -846,35 +829,24 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             }
         }
 
-        // Fixed sync/keepalive templates — not live pen data. There is one
-        // per slot, and they are byte-identical across every occurrence in
-        // every capture on hand except byte [14]'s rolling frame counter:
+        // The two byte rows once whitelisted here as "sync/keepalive
+        // templates" were never templates — each is one pen's own identity
+        // payload, read above:
         //
-        //   slot 0 (discriminator 0x41): c0 81 90 80 24 04 08 11 00 04 08
-        //   slot 1 (discriminator 0x21): c0 88 95 80 35 02 08 11 00 02 08
+        //   c0 81 90 80 24 04 08 11 00 04 08  serial 0x24809081, 0x0804
+        //   c0 88 95 80 35 02 08 11 00 02 08  serial 0x35809588, 0x0802
         //
-        // Only the 0x41 one was known until 2026-09-18, because no earlier
-        // capture exercised slot 1 meaningfully. The 0x21 template is the
-        // "edge bounceback": it is emitted as the pen leaves the active
-        // area, and it decodes to a fixed phantom point near the middle of
-        // the tablet (X 38280, Y 9048) carrying a fixed phantom pressure of
-        // 4360 — so a cursor correctly pinned at the edge gets thrown back
-        // into view for a single frame, then returns to the edge. Confirmed
-        // on four deliberate see-saw captures, one per edge
-        // (`ptk-870-bt-edge-bounce-{left,right,top,bottom}.txt`): 26 of these
-        // frames appear bracketed on both sides by a railed coordinate, at
-        // all four edges, always decoding to the same two values regardless
-        // of which edge the pen crossed or where it was.
+        // They look fixed because a pen repeats its serial verbatim on every
+        // announcement, and they appear at proximity edges because that is
+        // when a pen announces itself. Matching them by literal bytes
+        // suppressed those two pens' identity outright: `lastToolCode` never
+        // advanced, so a later class-2 position frame's coordinate bytes were
+        // trusted as a tool code (0x1002 — no such tool). Confirmed against a
+        // USB capture of the same pen, where identity bytes [20..29] are
+        // byte-identical to this frame's [4..13].
         //
-        // Both templates carry the same giveaway pressure bytes ([9..10] =
-        // 08 11) and differ only at [12], which tracks the slot — but they
-        // are matched here on their full literal [3..9] signature rather
-        // than on that shared pattern, since each signature occurs with
-        // exactly one [3..13] byte row and only ever alongside its own
-        // discriminator, making the literal match both unambiguous and
-        // narrower than a heuristic. (`isTemplateFrame` itself is computed
-        // above, before the announcement branch, so both position decode and
-        // identity share one check.)
+        // Class, not literal bytes, is the invariant — see the position guard
+        // below.
 
         var results: [DecodeResult] = []
 
@@ -905,14 +877,12 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // constant phantom point with a tip-down pressure, so the cursor
         // springs to one screen spot and clicks. Rapid re-entry emits bursts
         // of them, which is why a slow approach looked clean. Six distinct
-        // class-1 signatures appear across 160,408 BT frames, but
-        // `isTemplateFrame` matches two by literal bytes — the Art Pen's was
-        // never among them. Each pen brings its own, so a literal whitelist
-        // cannot hold; the class nibble is the invariant.
+        // class-1 signatures appear across 160,408 BT frames, one per pen, so
+        // a literal whitelist cannot hold; the class nibble is the invariant.
         //
         // Identity is unaffected: the tool-enter announcement is also class 1
         // and is read above, before position decode runs.
-        guard (discriminator & 0x0F) != 0x01, !isTemplateFrame else { return results }
+        guard (discriminator & 0x0F) != 0x01 else { return results }
 
         // Out of range. The coordinate bytes still hold the last tracked
         // position in this frame, so ignore them and emit one synthetic exit
