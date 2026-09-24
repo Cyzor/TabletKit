@@ -39,17 +39,28 @@ import Foundation
 ///          codebase and what `InputInjector+AuxInput.swift` expects.
 ///
 /// Report 0x10 (receiver pairing table), diagnostics only. Five 6-byte slots,
-/// layout from the kernel's `wacom_remote_status_irq` (`wacom_sys.c`). Slot
+/// layout from the kernel's `wacom_remote_status_irq` (`wacom_wac.c`). Slot
 /// `i` at `j = i * 6`:
-///   [j+2]      slot occupied / paired
 ///   [j+4...6]  that remote's serial, 24-bit LE
-/// Five slots reach byte 31 — exactly the 32-byte frame. Bytes j+1 and j+3
-/// are untouched by the kernel and stay unnamed here.
+/// Five slots reach byte 31 — exactly the 32-byte frame.
+///
+/// **A slot is occupied iff its serial is nonzero.** The kernel reads nothing
+/// else: `wacom_remote_status_irq` extracts only the serial per slot, and
+/// every later decision (`remotes[i].serial == serial`, registering and
+/// tearing down a remote's input device) keys off that. Bytes j+1, j+2 and
+/// j+3 are never examined. Re-checked against mainline 2026-09-24 after this
+/// header had claimed j+2 was an occupancy flag "from the kernel" — it is
+/// not, and treating a zero-serial slot with a nonzero j+2 as paired would be
+/// a fiction this decoder invented.
 ///
 /// Worth decoding because a receiver that is paired but hearing nothing looks
 /// identical on the wire to one that is not paired at all. A 2026-09-17
-/// capture decodes as one remote in slot 0, occupied, while report 0x11 never
-/// fired — pairing was never the problem.
+/// capture decodes as one remote in slot 0 with serial 0x005BFB, while report
+/// 0x11 never fired — enrollment was never the problem.
+///
+/// Note this says nothing about whether the radio link is *live*: the table is
+/// the receiver's stored enrollment list, and the kernel ages remotes out by
+/// `active_time` from real 0x11 traffic, not from anything in this report.
 ///
 /// Not implemented: output report 0x20 (unpair — `[0x20, slot]`, `0xFF` for
 /// all), destructive and nothing drives it. Nor the 0x11 frame's embedded
@@ -136,7 +147,7 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
             slots.append(RemotePairingSlot(
                 index: index,
                 serial: serial,
-                connected: report[base + 2] != 0))
+                connected: serial != 0))
         }
 
         return slots.isEmpty ? [] : [.remotePairing(slots)]

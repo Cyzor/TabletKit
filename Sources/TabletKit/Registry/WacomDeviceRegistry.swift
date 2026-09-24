@@ -2998,6 +2998,15 @@ public enum WacomDeviceRegistry: Sendable {
             // booklet (archived at Notes/Scratch/manuals/IPI-0x032A.pdf,
             // gitignored), same figure for both the pen and touch active
             // area. Confirmed 2026-08-03.
+            //
+            // Two upstreams disagree and both are wrong; do not "fix" toward
+            // either (checked 2026-09-24 against libwacom 2.20.0 and OTD
+            // cadb51a). libwacom's wacom-cintiq-27hd/27hdt say 610x305, an
+            // aspect of 2.00 — impossible for a 27" 16:9 panel and
+            // irreconcilable with maxX/maxY's own 1.769. OTD's config says
+            // 600.7x339, but OTD's *runtime* log on real hardware reports the
+            // area as 596.7x335.6, which is this row's 597x336. Same rounded
+            // spec-sheet trap as the 13.3" rows below.
             productID: 0x032A, name: "Cintiq 27QHD (DTK-2700)",  // ⚠ from kernel (WACOM_27QHD type)
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 3, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,

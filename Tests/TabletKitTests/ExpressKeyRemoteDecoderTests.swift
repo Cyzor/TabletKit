@@ -182,6 +182,24 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
         }.first
     }
 
+    /// Occupancy is the serial being nonzero, nothing else. The kernel's
+    /// `wacom_remote_status_irq` reads only the serial out of each 6-byte slot
+    /// and keys every later decision off it; bytes j+1..j+3 are never
+    /// examined. This decoder once treated j+2 as an occupancy flag and
+    /// credited the kernel for it, so pin the real rule: a slot carrying a
+    /// nonzero j+2 but no serial is empty.
+    func testSlotOccupancyFollowsSerialNotByteTwo() {
+        var state = DecoderState()
+        var bytes = [UInt8](repeating: 0, count: 32)
+        bytes[0] = 0x10
+        bytes[2] = 0x01  // would have read as "occupied" under the old rule
+        guard let slots = pairing(decode(bytes, state: &state)) else {
+            return XCTFail("expected a pairing table")
+        }
+        XCTAssertFalse(slots[0].connected, "no serial means the slot is empty")
+        XCTAssertEqual(slots[0].serial, 0)
+    }
+
     /// The exact 32 bytes from `DTH-2700-0x0331_20260917_155547.json` — all 34
     /// samples in that capture were byte-for-byte identical. One remote paired
     /// in slot 0 with serial 23547, which is the evidence that this user's
