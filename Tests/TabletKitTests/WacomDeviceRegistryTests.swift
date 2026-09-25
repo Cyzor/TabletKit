@@ -214,6 +214,47 @@ final class WacomDeviceRegistryTests: XCTestCase {
         }
     }
 
+    /// The Intuos4/5 accessory line carries forward to every Intuos Pro
+    /// generation — a PTH-850 ships with the 0x1802 Grip Pen. These codes
+    /// arrive in a real 0xC2 tool-change packet rather than being synthesized,
+    /// so the fallback test above never covered them: a stock pen reported
+    /// "not fully supported on intuosProGen1. Missing: pressure, tilt" in
+    /// every capture, and `capabilities` zeroed its maxPressure.
+    func testIntuos4AccessoriesAreSupportedOnIntuosProGenerations() {
+        let accessories: [UInt16] = [
+            0x1802, 0x180A,  // Grip Pen + eraser
+            0x1804, 0x180C,  // Art Pen + eraser
+            0x0812, 0x081A,  // Inking Pen + eraser
+            0x0902, 0x090A,  // Airbrush + eraser
+            0x0806,  // Intuos Mouse
+        ]
+        let proFamilies: [DeviceFamily] = [.intuosProGen1, .intuosProGen2, .intuosProGen3]
+        for code in accessories {
+            guard let spec = WacomToolCatalog.spec(forToolCodeRaw: code) else {
+                XCTFail("0x\(String(code, radix: 16)) is not catalogued")
+                continue
+            }
+            for family in proFamilies {
+                XCTAssertTrue(
+                    spec.isSupported(onFamily: family),
+                    "0x\(String(code, radix: 16)) \(spec.name) reports unsupported on "
+                        + family.rawValue)
+                // Unsupported clears every capability flag, which is the
+                // damaging part — the warning string is only the symptom.
+                let caps = spec.capabilities(forFamily: family)
+                XCTAssertEqual(
+                    caps.hasTilt, spec.hasTilt,
+                    "0x\(String(code, radix: 16)) \(spec.name) loses tilt on " + family.rawValue)
+                if let declared = spec.maxPressure {
+                    XCTAssertEqual(
+                        caps.maxPressure, declared,
+                        "0x\(String(code, radix: 16)) \(spec.name) loses pressure on "
+                            + family.rawValue)
+                }
+            }
+        }
+    }
+
     // MARK: - defaultPressureThreshold
 
     /// The Intuos 1/2 family carries a non-zero factory dead zone because its

@@ -126,6 +126,12 @@ public enum WacomToolCatalog: Sendable {
 
         // Standard pen for Cintiq 24HD (DTK-2400) - toolCode 0x1802
         // This is the default pen that ships with the DTK-2400
+        //
+        // The Intuos Pro generations carry the Intuos4/5 accessory line
+        // forward — the PTH-850 ships with this pen. Omitting them made a
+        // stock pen report "not fully supported" with pressure and tilt
+        // listed missing, and zeroed maxPressure for anything reading
+        // capabilities. Same for the eight sibling tools below.
         catalog[0x1802] = WacomToolSpec(
             toolCode: 0x1802,
             name: "Intuos4 Grip Pen",
@@ -137,7 +143,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x180A,
-            supportedFamilies: [.cintiq, .intuos4, .intuos5]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // Intuos4 Grip Pen Eraser (0x180A)
@@ -152,7 +158,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.cintiq, .intuos4, .intuos5]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // Art Pen extended ID (0x1804) - appears on Cintiq 24HD (DTK-2400)
@@ -168,7 +174,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x180C,
-            supportedFamilies: [.cintiq, .intuos4, .intuos5]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // Art Pen 0x1804 eraser
@@ -183,7 +189,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.cintiq, .intuos4, .intuos5]
+            supportedFamilies: [.cintiq, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // Intuos Mouse (cordless)
@@ -198,7 +204,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos4, .intuos5]
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // MARK: - Intuos Pro Gen2 / IntuosV2 Series (0x08xx extended)
@@ -408,7 +414,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: true,
             eraserToolCode: 0x081A,
-            supportedFamilies: [.intuos4, .intuos5]
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // Inking Pen Eraser
@@ -423,7 +429,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos4, .intuos5]
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // MARK: - Intuos3 / Graphire Era (0x00xx family)
@@ -853,7 +859,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: true,
             hasEraserVariant: true,
             eraserToolCode: 0x090A,
-            supportedFamilies: [.intuos4, .intuos5]
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         catalog[0x090A] = WacomToolSpec(
@@ -867,7 +873,7 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos4, .intuos5]
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
         // NOTE: Intuos4 Airbrush KP-400E-2 extended ID (0x10902), Inking Pen KP-130E (0x12802),
