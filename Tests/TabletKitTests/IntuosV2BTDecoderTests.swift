@@ -89,7 +89,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testToolEnterEmittedOnFirstSightOfToolCode() {
         var state = DecoderState()
-        // 0x0842 = Pro Pen 3 (non-eraser, non-mouse).
+        // 0x0842 = Pro Pen 2 (non-eraser, non-mouse).
         var bytes = make361(toolCode: 0x0842)
         // Coordinate bytes so the .pen result has decodable point data.
         bytes[2] = 0xD0; bytes[3] = 0x07   // x = 2000

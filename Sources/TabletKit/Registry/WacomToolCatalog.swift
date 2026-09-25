@@ -18,7 +18,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Grip Pen (standard Intuos Pro pen). Confirmed 2026-09-18 to also
         // decode correctly (real pressure/tilt) on a PTK-870 gen3 — see the
-        // 0x0842 Pro Pen 3 comment below for the capture this and its eraser
+        // 0x0842 Pro Pen 2 comment below for the capture this and its eraser
         // variant were confirmed alongside.
         //
         // `.intuos1And2` and `.cintiq` because this code is also
@@ -69,7 +69,7 @@ public enum WacomToolCatalog: Sendable {
         // Likely an OEM or limited-market variant; the primary Intuos4 Art Pen is 0x10804.)
         //
         // Confirmed 2026-09-18 to also decode correctly (real pressure/tilt)
-        // on a PTK-870 gen3, alongside the Grip Pen and older Pro Pen 3 (see
+        // on a PTK-870 gen3, alongside the Grip Pen and older Pro Pen 2 (see
         // 0x0802/0x0842) — same three-pen capture. `hasRotation` stays
         // unread on gen3: the same capture shows report 0x1e byte [15]
         // moving (0x00-0x5c) only during this pen's segment, pinned at 0x00
@@ -239,7 +239,9 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pro Pen 3 (PTH-860). Confirmed 2026-09-18, alongside the Grip Pen
+        // Pro Pen 2 (KP-504E, bundled with the PTH-660), per libwacom and
+        // the user's own pen (serial 0x87804498); was misnamed Pro Pen 3,
+        // which is 0x0200. Confirmed 2026-09-18, alongside the Grip Pen
         // and Art Pen, to also decode correctly (real pressure/tilt) on a
         // PTK-870 gen3 — a three-pen sweep capture with each pen used in
         // turn, all three read correct position/pressure/tilt through
@@ -247,7 +249,7 @@ public enum WacomToolCatalog: Sendable {
         // pen as 0x0200 (Pro Pen 3 native to gen3 hardware, see below).
         catalog[0x0842] = WacomToolSpec(
             toolCode: 0x0842,
-            name: "Pro Pen 3",
+            name: "Pro Pen 2",
             toolType: .stylus,
             buttonCount: 2,
             maxPressure: 8191,
@@ -259,10 +261,10 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2, .intuosProGen3]
         )
 
-        // Pro Pen 3 Eraser
+        // Pro Pen 2 Eraser
         catalog[0x084A] = WacomToolSpec(
             toolCode: 0x084A,
-            name: "Pro Pen 3 (Eraser)",
+            name: "Pro Pen 2 (Eraser)",
             toolType: .eraser,
             buttonCount: 2,
             maxPressure: 8191,
@@ -890,8 +892,7 @@ public enum WacomToolCatalog: Sendable {
         // against a known-identity pen (Wacom Art Pen, 0x0804) to pin down
         // IntuosV3Decoder's serial/tool-code field offsets — see
         // Notes/Scratch/PTK-870-ToolID-Field-Survey-2026-09-16.md. Distinct
-        // from 0x0842 (Pro Pen 3 via the older PTH-860/IntuosV2 report
-        // path — a different generation/report format) and from 0x0202
+        // from 0x0842 (Pro Pen 2, an older pen) and from 0x0202
         // (Pro Pen 3E, Movink 13's bundled pen — a different physical pen
         // entirely). Per Wacom's own product page, this pen has no eraser
         // end at all and ships with 3 configurable side-switch positions

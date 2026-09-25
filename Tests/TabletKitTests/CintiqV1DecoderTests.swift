@@ -59,7 +59,7 @@ final class CintiqV1DecoderTests: XCTestCase {
     /// `!state.toolIsSupported` guard in the pen-emit line.
     private func seededState() -> DecoderState {
         var state = DecoderState()
-        state.currentToolCode = 0x0842  // Pro Pen 3 — fully supported on DTK-2400
+        state.currentToolCode = 0x0842  // Pro Pen 2 — fully supported on DTK-2400
         state.toolIsSupported = true
         return state
     }
