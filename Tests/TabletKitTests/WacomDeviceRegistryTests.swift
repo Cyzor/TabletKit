@@ -375,6 +375,71 @@ final class WacomDeviceRegistryTests: XCTestCase {
         }
     }
 
+    /// The Cintiq Pro 16 (DTH-167) splits the same way the 27QHD does: pen on
+    /// 0x03B2, finger sensor on 0x03B3, and an internal hub on 0x03B4 that must
+    /// stay out of the registry. Reported 2026-09-25 as working as a display
+    /// only, with 0x03B3 the sole product the capture ever saw.
+    ///
+    /// Touch dimensions come from the sensor's own descriptor rather than
+    /// libwacom, whose 356 x 203 mm is an outer-body figure. Leaving
+    /// touchMaxX/Y at 0 would collapse every contact into one corner, as the
+    /// 0x032B row's comment records.
+    func testCintiqPro16DTH167ClaimsItsSensorPID() {
+        guard let pen = WacomDeviceRegistry.spec(for: 0x03B2) else {
+            return XCTFail("0x03B2 missing from registry")
+        }
+        XCTAssertEqual(pen.touchCompanionPID, 0x03B3)
+        XCTAssertTrue(pen.hasFingerTouch)
+        XCTAssertEqual(pen.touchMaxX, 13768)
+        XCTAssertEqual(pen.touchMaxY, 7744)
+        // Device Mode sits on report 0x0E here, not the 0x032B row's 0x83:
+        // 0x0C carries Contact Count Maximum and is read-only.
+        XCTAssertEqual(pen.touchCompanionInitSteps, [.featureReport([0x0E, 0x02, 0x00])])
+        XCTAssertNil(WacomDeviceRegistry.spec(for: 0x03B4),
+                     "0x03B4 is this unit's USB hub, not a digitizer")
+    }
+
+    /// "Cintiq Pro 16" names two generations — the 2016/2017 DTH-1620 and the
+    /// 2021 DTH-167 — with the same 15.6" 16:9 panel, the same touch report ID
+    /// and the same 5-slot layout. Physical size cannot tell them apart; the
+    /// touch maxima are the only discriminator, so a well-meaning cleanup that
+    /// unified them would silently misplace every contact on one of the two.
+    func testCintiqPro16GenerationsKeepDistinctTouchMaxima() {
+        guard let old = WacomDeviceRegistry.spec(for: 0x0354),
+            let new = WacomDeviceRegistry.spec(for: 0x03B2)
+        else { return XCTFail("a Cintiq Pro 16 generation is missing") }
+        XCTAssertEqual(old.touchMaxX, 13824)
+        XCTAssertEqual(old.touchMaxY, 7776)
+        XCTAssertEqual(new.touchMaxX, 13768)
+        XCTAssertEqual(new.touchMaxY, 7744)
+        XCTAssertNotEqual(old.touchMaxX, new.touchMaxX,
+                          "the generations are distinguished by touch maxima alone")
+    }
+
+    /// `WacomKnownDevice.declaresInitFeatureReports` requires an interface to
+    /// declare *every* report ID in `initSteps` before it will be used as the
+    /// init target, so an init step for a report the hardware doesn't declare
+    /// doesn't merely fail — it disqualifies the interface and the device loses
+    /// its whole init.
+    ///
+    /// Both Cintiq Pro pen displays below were nearly given a pen-scan enable
+    /// (feature 0x0D) recovered from Wacom's driver. The 27QHD's pen interface
+    /// declares 0x0D but not two other reports in that same sequence, which is
+    /// what ruled the sequence out for it; the DTH-167's pen interface has
+    /// never been captured at all. Until a capture settles it, these rows stay
+    /// on DATAMODE alone — see Wacom-GD16-GD20-Startup-Findings.md.
+    func testCintiqProPenDisplaysSendDataModeOnly() {
+        for pid in [0x032B, 0x03B2] {
+            guard let spec = WacomDeviceRegistry.spec(for: pid) else {
+                return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
+            }
+            XCTAssertEqual(
+                spec.initSteps, [.featureReport([0x02, 0x02])],
+                "0x\(String(pid, radix: 16)) gained an init step; confirm the pen "
+                    + "interface declares that report or it loses init entirely")
+        }
+    }
+
     /// A claimed sensor must not also be a drivable tablet in its own right:
     /// routing checks the companion claim first, so a PID that was both would
     /// lose its own driver.

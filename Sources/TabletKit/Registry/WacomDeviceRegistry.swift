@@ -2248,14 +2248,86 @@ public enum WacomDeviceRegistry: Sendable {
         // (mm) × 200 units/mm, the same round factor the 0x0352 entry uses;
         // actual native resolution may differ per model.
         .init(
-            // libwacom wacom-cintiq-pro-16-2.tablet: Width=356 Height=203mm,
-            // Touch=true, Buttons Left=A;B;C;D Right=E;F;G;H (8 express keys).
-            productID: 0x03B2, name: "Cintiq Pro 16 (DTH/DTK-1662)",  // ⚠ groundwork only
-            parser: .intuosV2, maxX: 71200, maxY: 40600, maxPressure: 8191,
+            // Cintiq Pro 16 (2021), DTH-167. Pen interface; finger touch
+            // arrives on the separate 0x03B3 product (0x03B4 is this unit's
+            // internal USB hub, not a digitizer — no row needed). Reported
+            // 2026-09-25 as display-only with no pen and no express keys.
+            //
+            // Renamed from "DTH/DTK-1662". "Cintiq Pro 16" is ambiguous by
+            // itself: Wacom sells it as the name of both the 2016/2017 DTH-1620
+            // and this 2021 DTH-167, and the reporter used the bare marketing
+            // name. Wacom's driver 6.4.14 carries that ambiguity in its own
+            // model table, which lists `DTH-1620`, `Cintiq Pro 16`, `DTH167`
+            // consecutively — one marketing name over two internal codes.
+            //
+            // What distinguishes them here is the touch maxima, not the panel
+            // size: every Cintiq Pro 16 of every generation is 15.6" 16:9 at
+            // 344.2 x 193.6 mm, so physical dimensions cannot tell the
+            // generations apart. The DTH-1620's sensor reports report 0x0C at
+            // 13824 x 7776 (see the 0x0354 row); this capture reports the same
+            // report ID at 13768 x 7744. Different maxima, and the aspect
+            // ratios differ past rounding, so this is the later revision.
+            //
+            // The old libwacom 356 x 203 mm came from
+            // `wacom-cintiq-pro-16-2.tablet` and is an outer-body figure;
+            // 344.2 x 193.6 is the descriptor's own Physical Maximum on Generic
+            // Desktop X/Y (0.01 mm units). maxX/maxY keep this block's
+            // 200 units/mm convention against the corrected width.
+            //
+            // Wacom's driver also gives DTH-167 a dedicated
+            // `CDTH167GraphicsTablet` (DTH-1620 has no such class), and its
+            // `GetEnableOEMTouchDefault` puts it in the same standard-HID-touch
+            // cohort as `CDTH271GraphicsTablet` (our DTH-2700) — which is why
+            // the 0x032B row's companion approach is reused here.
+            //
+            // PID split corroborated by linuxwacom's device-ID database, which
+            // lists 0x03B2 as the DTH167 pen sensor and 0x03B3 as its touch
+            // sensor; 0x03B4 is this unit's internal USB hub and is
+            // deliberately absent. Linux support landed in kernel 4.11 /
+            // input-wacom 3.7 / libwacom 1.13. Agrees with both things checked
+            // locally: Wacom's own driver gives DTH-167 a dedicated class, and
+            // the touch maxima separate it from the DTH-1620.
+            //
+            // ⚠ Still unverified is the *pen* side of this row — maxPressure,
+            // buttonCount and the parser remain this block's by-similarity
+            // guesses, and no 0x03B2 descriptor has ever been captured. Touch
+            // is the part with descriptor evidence.
+            productID: 0x03B2, name: "Cintiq Pro 16 (DTH-167)",  // ⚠ pen side unverified
+            parser: .intuosV2, maxX: 68840, maxY: 38720, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 5,
+            touchMaxX: 13768, touchMaxY: 7744,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 356, activeHeightMM: 203),
+            // DATAMODE only, deliberately. Wacom's driver makes this a
+            // GD16-family device (`CDTH167GraphicsTablet` tail-calls
+            // `CGD16GraphicsTablet::CreateTabletMenuArea`), and that family's
+            // `DeviceStart` enables a pen scan (feature 0x0D, payload inverted
+            // so enable == 0x00) before DATAMODE. The 0x03B3 touch interface
+            // declares 0x0D and 0x0E, so the sequence plausibly applies here —
+            // but this row's init targets the *pen* interface, 0x03B2, whose
+            // descriptor nobody has captured.
+            //
+            // Not added on that guess: `declaresInitFeatureReports` requires
+            // every init report ID to be declared, so if 0x03B2 does not
+            // declare 0x0D the interface is rejected and the device loses its
+            // init entirely — strictly worse than DATAMODE alone. Add the scan
+            // step once a 0x03B2 capture confirms 0x0D. Recovered bytes in
+            // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            touchCompanionPID: 0x03B3,
+            // Standard HID Device Mode write, same shape and rationale as the
+            // 0x032B row: Inputmode = 2, index 0. The report ID differs from
+            // that row's 0x83 — this descriptor puts Inputmode (Digitizer
+            // usage 0x52) and Device Index (0x53) on `feature:0x0E`, one 8-bit
+            // field each. Not 0x0C, which carries usage 0x55 (Contact Count
+            // Maximum) and is read-only.
+            //
+            // Unverified: the reporter's capture collected zero input reports,
+            // so nothing yet shows whether the sensor needs this to stream or
+            // only to leave single-contact mode. Report 0x0C already declares
+            // all five slots, so the 0x032B precedent suggests the latter.
+            touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])],
+            activeWidthMM: 344.2, activeHeightMM: 193.6),
         .init(
             // libwacom wacom-cintiq-pro-24-p.tablet: Width=508 Height=305mm,
             // Touch=false, no [Buttons] section (pen-only variant, no keys).
@@ -2809,6 +2881,12 @@ public enum WacomDeviceRegistry: Sendable {
             // touchMaxX/Y confirmed directly from this PID's own touch report
             // descriptor (linuxwacom/wacom-hid-descriptors, 2026-08-06):
             // Logical Maximum 13824 x 7776 on report 0x0C.
+            //
+            // These maxima are the only thing separating this model from the
+            // 2021 DTH-167 (0x03B2/0x03B3), which shares the "Cintiq Pro 16"
+            // marketing name, the 15.6" 16:9 panel, the report ID and the
+            // 5-slot layout, but reports 13768 x 7744. Don't "tidy" the two
+            // rows toward a common value.
             touchMaxX: 13824, touchMaxY: 7776,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
@@ -3074,6 +3152,14 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 15360, touchMaxY: 8640,
             isPenDisplay: true,
+            // Pen report 0x10 is declared here and has never once arrived, in
+            // any of seven captures, while report 0x11 (express keys) decodes
+            // fine and DATAMODE itself reports success. The cause is still
+            // unknown. A startup sequence recovered from Wacom's driver was
+            // investigated and *ruled out* for this device: its pen interface
+            // declares neither of two feature reports that sequence requires.
+            // Do not add scan enables here without new evidence — see
+            // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x032C,
             // Standard HID digitizer Device Mode write: report 0x83 declares
@@ -3305,6 +3391,22 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x032C, name: "Cintiq 27QHD Touch sensor (pairs 0x032B)",  // ⚠ name-only, decoder routed generically from its own descriptor
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
+            seizeUSB: false),
+        .init(
+            // Emits report 0x0C: a Digitizer Touch Screen collection with five
+            // finger slots, each carrying Contact Identifier, Tip Switch, X/Y,
+            // Width and Height, plus a per-frame Contact Count and Scan Time.
+            // Decoded generically via `deriveTouchDecoders` — confirmed by
+            // running this capture's own descriptor through
+            // `PrecisionTouchLayout.derive`, which yields the 5-slot 0x0C
+            // layout at 13768 x 7744. The same descriptor's report 0x1F is
+            // correctly rejected as single-contact and cannot shadow it.
+            //
+            // 0x03B4, the third product this unit exposes, is its internal USB
+            // hub and is deliberately absent.
+            productID: 0x03B3, name: "Cintiq Pro 16 Touch sensor (pairs 0x03B2)",  // ⚠ name-only, decoder routed generically from its own descriptor
+            parser: .intuosV2, maxX: 0, maxY: 0, maxPressure: 0,
+            buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false),
         .init(
             productID: 0x005D, name: "Cintiq 22 Touch sensor (pairs 0x0059)",  // ⚠ name-only, decoder routed by PID, unverified
