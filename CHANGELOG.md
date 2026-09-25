@@ -127,6 +127,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   proximity without first announcing its tool, and the catalog didn't list
   those families as supported. Log-only; no input behavior was affected.
 
+- Over Bluetooth, an Intuos Pro gen 3 pen with no barrel sensor could inherit
+  the previous pen's rotation after a swap, and be relabeled as an Art Pen.
+  `IntuosV3Decoder` now drops the held angle on proximity exit, as USB did.
+
+### Changed
+
+- Tool code `0x0842` (and eraser `0x084A`) is now named Pro Pen 2, the pen
+  bundled with the PTH-660. It was listed as Pro Pen 3, which is `0x0200`.
+
 Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
 device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and
 Cintiq 27QHD panel support, an `ExpressKey Remote`/`pl`-series routing
