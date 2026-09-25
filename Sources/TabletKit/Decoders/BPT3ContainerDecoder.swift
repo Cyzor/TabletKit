@@ -63,14 +63,39 @@ enum BPT3ContainerDecoder {
     /// Length of the container report. Callers dispatch on this.
     static let reportLength: CFIndex = 64
 
+    /// Slot keys are wire message IDs, 2...17 — the mask's bit 0 is slot 2.
+    private static func slotIsDown(_ slot: Int, in mask: UInt16) -> Bool {
+        let bit = slot - 2
+        guard (0..<16).contains(bit) else { return false }
+        return (mask >> UInt16(bit)) & 1 == 1
+    }
+
     static func decode(
         report: UnsafePointer<UInt8>,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
-        let messageCount = min(Int(report[1] & 0x07), 7)
         var results: [DecodeResult] = []
         var touchChanged = false
+
+        // Liftoff bitmap: message ID 0x81 means bytes [3..4] are a 16-bit
+        // mask of the slots still down, not a contact list. Without it a
+        // contact's end can go unheard and stay latched for the session.
+        // Matches OpenTabletDriver's `WacomTouchReport`.
+        if report[2] == 0x81 {
+            guard spec.hasFingerTouch else { return [] }
+            let mask = UInt16(report[3]) | (UInt16(report[4]) << 8)
+            // Collect first — can't remove while iterating.
+            let ended = state.bpt3TouchSlots.keys.filter { !slotIsDown($0, in: mask) }
+            for slot in ended {
+                state.bpt3TouchSlots.removeValue(forKey: slot)
+                touchChanged = true
+            }
+            guard touchChanged else { return [] }
+            return [.touch(state.bpt3TouchSlots.values.sorted { $0.id < $1.id })]
+        }
+
+        let messageCount = min(Int(report[1] & 0x07), 7)
 
         for i in 0..<messageCount {
             let base = 2 + i * 8

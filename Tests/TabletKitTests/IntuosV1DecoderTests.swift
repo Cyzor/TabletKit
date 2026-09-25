@@ -329,4 +329,47 @@ final class IntuosV1DecoderTests: XCTestCase {
         for r in results { if case .pen(let p) = r { return p } }
         return nil
     }
+
+    // MARK: - In-range state (status 0x20)
+
+    /// In-range frames carry zeroed tilt/hover bytes; decoding them produced
+    /// tilt -1.02 and hover 63 — the PTH-850 wireless chatter.
+    func testInRangeFrameDoesNotDecodeItsZeroedFields() {
+        var state = DecoderState()
+        // Enter proximity with a real frame first, so there's a position to hold.
+        _ = decode([0x02, 0xE0, 0x57, 0xF3, 0x1E, 0xAF, 0x00, 0x17, 0xCB, 0xA1], state: &state)
+        let held = penPoint(
+            decode([0x02, 0xE0, 0x57, 0xF3, 0x1E, 0xAF, 0x00, 0x17, 0xCB, 0xA1], state: &state))
+
+        // Verbatim in-range frame from that capture: note the 00 00 00 tail.
+        let inRange = penPoint(
+            decode([0x02, 0x20, 0x51, 0xA9, 0x20, 0x06, 0x00, 0x00, 0x00, 0xFC], state: &state))
+
+        XCTAssertNotNil(inRange, "mid-stroke in-range frames still flush")
+        XCTAssertEqual(inRange?.tiltX, 0, "must not decode the zeroed tilt bytes")
+        XCTAssertEqual(inRange?.tiltY, 0, "must not decode the zeroed tilt bytes")
+        XCTAssertEqual(inRange?.pressure, 0, "tip is lifted for the flush")
+        XCTAssertEqual(inRange?.inProximity, true, "the tool has not left proximity")
+        XCTAssertEqual(inRange?.x, held?.x, "position holds — X is absent from the flush")
+        XCTAssertEqual(inRange?.y, held?.y, "position holds — Y is absent from the flush")
+    }
+
+    /// Before proximity entry, nothing to flush — the kernel's `return 1`.
+    func testInRangeFrameWithNoPriorProximityReportsNothing() {
+        var state = DecoderState()
+        let results = decode(
+            [0x02, 0x20, 0x51, 0xA9, 0x20, 0x06, 0x00, 0x00, 0x00, 0xFC], state: &state)
+        XCTAssertNil(penPoint(results), "no stroke in progress, nothing to flush")
+    }
+
+    /// 0xA0 is also proximity-set/confidence-clear but carries real data —
+    /// only bit 7 separates it from in-range.
+    func testOrdinaryHoverIsNotTreatedAsInRange() {
+        var state = DecoderState()
+        let hover = penPoint(
+            decode([0x02, 0xA0, 0x57, 0xF3, 0x1E, 0xAF, 0x02, 0xAE, 0x00, 0xA1], state: &state))
+        XCTAssertNotNil(hover, "0xA0 still decodes normally")
+        XCTAssertNotEqual(
+            hover?.pressure, 0, "0xA0 carries real pressure — see the GD-0608 hover-noise test")
+    }
 }

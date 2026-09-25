@@ -223,4 +223,62 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         XCTAssertEqual(point.pressure, 0)
         XCTAssertTrue(point.inProximity)
     }
+    // MARK: - Liftoff bitmap (message ID 0x81)
+
+    /// Idle frame shape: [3..4] is the still-down mask.
+    private func liftoffFrame(mask: UInt16) -> [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: 64)
+        bytes[0] = 0x02
+        bytes[1] = 0x01
+        bytes[2] = 0x81
+        bytes[3] = UInt8(mask & 0xFF)
+        bytes[4] = UInt8(mask >> 8)
+        return bytes
+    }
+
+    func testLiftoffMaskEndsContactsNotInTheMask() {
+        var s = DecoderState()
+        _ = decode(
+            makeContainer([touchMsg(slot: 2, down: true, x: 1785, y: 2021)]), state: &s)
+        XCTAssertEqual(s.bpt3TouchSlots.count, 1, "contact is latched")
+
+        let results = decode(liftoffFrame(mask: 0), state: &s)
+        XCTAssertTrue(s.bpt3TouchSlots.isEmpty, "an all-clear mask ends every contact")
+        guard case .touch(let contacts)? = results.last else {
+            return XCTFail("expected .touch, got \(results)")
+        }
+        XCTAssertTrue(contacts.isEmpty, "the liftoff is reported, not merely dropped")
+    }
+
+    func testLiftoffMaskKeepsContactsStillDown() {
+        var s = DecoderState()
+        _ = decode(
+            makeContainer([
+                touchMsg(slot: 2, down: true, x: 100, y: 200),
+                touchMsg(slot: 3, down: true, x: 300, y: 400),
+            ]), state: &s)
+        XCTAssertEqual(s.bpt3TouchSlots.count, 2)
+
+        // Bit 0 = slot 2. Keep slot 2 down, end slot 3.
+        let results = decode(liftoffFrame(mask: 0b0000_0001), state: &s)
+        XCTAssertEqual(Array(s.bpt3TouchSlots.keys), [2], "only the masked-out slot ends")
+        guard case .touch(let contacts)? = results.last else {
+            return XCTFail("expected .touch, got \(results)")
+        }
+        XCTAssertEqual(contacts.map(\.id), [2])
+    }
+
+    /// Nothing latched: stay silent rather than emit empty updates forever.
+    func testRepeatedLiftoffFramesWithNothingDownEmitNothing() {
+        var s = DecoderState()
+        XCTAssertTrue(decode(liftoffFrame(mask: 0), state: &s).isEmpty)
+        XCTAssertTrue(decode(liftoffFrame(mask: 0), state: &s).isEmpty)
+    }
+
+    /// 0x81 is not a slot key; its bytes would decode to nonsense.
+    func testLiftoffFrameIsNotDecodedAsAContact() {
+        var s = DecoderState()
+        _ = decode(liftoffFrame(mask: 0xFFFF), state: &s)
+        XCTAssertTrue(s.bpt3TouchSlots.isEmpty, "0x81 never creates a contact")
+    }
 }

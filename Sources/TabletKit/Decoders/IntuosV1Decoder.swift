@@ -40,6 +40,10 @@ public struct IntuosV1Decoder: TabletReportDecoder {
 
     public init() {}
 
+    /// Hover field is `report[9] >> 2`, six bits — the kernel's
+    /// `distance_max` equivalent.
+    private static let maxHoverDistance = 63
+
     public func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
@@ -120,6 +124,10 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         let inProximity = (status & 0x20) != 0
         let highConfidence = (status & 0x40) != 0
         let isExitSignal = !inProximity && !highConfidence
+        // Matches 0x20/0x21 only, not every confidence-clear status: 0xA0
+        // is also proximity-set/confidence-clear but an ordinary hover with
+        // real pressure (GD-0608, Cyzor/tablet-driver#4).
+        let isInRangeOnly = (status & 0xFE) == 0x20
 
         // Genuine exit: both proximity and confidence lost.
         if isExitSignal {
@@ -142,22 +150,19 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return []
         }
 
-        // Confidence bit clear, proximity bit still set (status 0x20). Two
-        // different things wear this shape:
-        //   • Art Pen / Marker Pen: the rotation sensor makes the confidence
-        //     bit oscillate at the tracking boundary. A sustained run really
-        //     does mean the pen is leaving, so bridge exitThreshold frames and
-        //     then synthesize the exit.
-        //   • Plain stylus (Grip Pen &c.): this is just a high hover —
-        //     position live in bytes 2–5, pressure/tilt zero. It can persist
-        //     for the entire time a hand rests with the pen held above the
-        //     tablet (~50% of hover reports on a PTH-850 Grip Pen). Escalating
-        //     it fabricates a proximity exit every exitThreshold frames, which
-        //     on the intuosV1+touch models resets the BPT3 pen-arbitration
-        //     latch and kills capacitive touch for the whole hover.
-        // So only a rotation pen escalates; for everyone else 0x20 is a hover
-        // and the genuine both-bits-clear signal above is the only exit.
-        if !highConfidence {
+        // In-range state, `(data[1] & 0xFE) == 0x20`: a tool is present but
+        // the tablet isn't reporting position, and bytes 6-8 arrive zeroed.
+        // Decoding them gives tilt -1.02 (outside ±1.0) and hover pegged at
+        // 63 — the PTH-850 wireless chatter. The kernel returns before
+        // `wacom_intuos_general()` here; Wacom's 6.1.6-4 kext handles it
+        // separately as `ESNID`.
+        //
+        // An Art Pen still escalates a sustained run to an exit — its
+        // rotation sensor oscillates the confidence bit at the tracking
+        // boundary. A plain stylus must not: a hand resting at high hover
+        // holds this state, and a fabricated exit resets the BPT3
+        // arbitration latch, killing touch for the whole hover.
+        if isInRangeOnly {
             let toolHasRotation = WacomToolCatalog.hasRotation(toolCode: state.currentToolCode)
             state.exitFrameCount += 1
             if toolHasRotation
@@ -179,10 +184,21 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                             eraser: state.isEraser, inProximity: false, hoverDistance: 0))
                 ]
             }
-            // Still send point data during boundary noise - don't break decoding
-        } else {
-            state.exitFrameCount = 0
+            // Mid-stroke, mirror the kernel's flush: tip up, hover to max,
+            // position held. Otherwise report nothing.
+            guard state.prevInProximity else { return [] }
+            return [
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: state.isEraser, inProximity: true,
+                        hoverDistance: Self.maxHoverDistance))
+            ]
         }
+        if highConfidence { state.exitFrameCount = 0 }
 
         let subtype = (status >> 1) & 0x0F
 
