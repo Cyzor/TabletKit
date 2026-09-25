@@ -37,6 +37,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   defaulted, so existing call sites still compile; the signature change is
   recorded in `api-breakage-allowlist.txt`.
 
+- `WacomDeviceRegistry` — 0x0531:0x0105, the Wacom One M (CTC-6110WL) in its
+  USB Android mode. The medium model spans three product IDs exactly as the
+  small one does — USB, Bluetooth, USB Android — but only the small model's
+  third ID was on file. Sourced from libwacom's `wacom-one-pen-m.tablet`,
+  which is alone in listing it: OpenTabletDriver carries the other two, and
+  the kernel has no 0x0531 device at all.
+
+  The two existing medium rows were both named "Wacom CTC-6110WL" with
+  nothing to tell them apart; libwacom's transport tags identify 0x0102 as
+  USB and 0x0103 as Bluetooth, so they now read like the small model's.
+
+  No CTC-6110WL has been seen here, so all three medium rows stay
+  unverified. The new one assumes the medium behaves like the small, whose
+  Android row is hardware-confirmed.
+
 - `WacomDeviceRegistry.vendorIDs` — the set of USB vendor IDs this registry is
   keyed on. Wacom ships under two: 0x056A for the main line, and 0x0531 for the
   consumer Wacom One CTC line. Callers deciding whether to consult `spec(for:)`

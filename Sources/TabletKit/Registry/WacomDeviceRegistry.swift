@@ -2067,6 +2067,16 @@ public enum WacomDeviceRegistry: Sendable {
         // `TabletManager.start()`/`vendorGate` now match and admit 0x0531
         // alongside 0x056A.
         //
+        // Dimensions keep OTD's figures over libwacom's, which look like outer
+        // body size rather than active area: libwacom gives the S 152×102 while
+        // its own comment states a 5.98×3.74in active area — that is 152×95,
+        // ours. For the M it gives 229×127 against our 216×135, and 21600×13500
+        // at 2540 LPI is exactly 216×135. Do not "fix" toward libwacom.
+        //
+        // The kernel is no help here and must not be cited for this family: it
+        // knows no 0x0531 device at all. Its wacom_features_0x37A "One by Wacom
+        // S" shares 15200×9500 but is a different tablet on 0x056A.
+        //
         // The pen (CP92303B2Z) has no physical tail eraser, but its upper
         // side switch reports as a logical eraser tool (byte 2 bit 5 on both
         // the 0x1F vendor report and the 0x06 HID-standard report) — hence
@@ -2100,13 +2110,26 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 152, activeHeightMM: 95),
+        // The M's three PIDs mirror the S's: USB PC, Bluetooth, USB Android.
+        // Transport roles come from libwacom's wacom-one-pen-m.tablet
+        // (`usb|0531|0102;bluetooth|0531|0103;usb|0531|0105`); OTD carries
+        // 0x0102/0x0103 unlabeled and lacks 0x0105 entirely.
         .init(
-            productID: 0x0102, name: "Wacom CTC-6110WL",  // ⚠ from OTD
+            productID: 0x0102, name: "Wacom One M (CTC-6110WL)",  // ⚠ from OTD + libwacom
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
         .init(
-            productID: 0x0103, name: "Wacom CTC-6110WL",  // ⚠ from OTD
+            productID: 0x0103, name: "Wacom One M (CTC-6110WL, Bluetooth)",  // ⚠ from OTD + libwacom
+            parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
+        .init(
+            // libwacom-only; absent from OTD and from the kernel, which knows
+            // no 0x0531 device at all. Inferred to behave like the S's 0x0104
+            // since that pairing is confirmed on real hardware — no CTC-6110WL
+            // has been seen here, so all three M rows remain unverified.
+            productID: 0x0105, name: "Wacom One M (CTC-6110WL, Android)",  // ⚠ from libwacom
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
