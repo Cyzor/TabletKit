@@ -718,17 +718,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            active, bit3 = left dial rotating CCW (clear = CW), bit4 =
     ///            right dial active, bit5 = right dial rotating CCW (clear =
     ///            CW). Confirmed via isolated left-dial/right-dial/CW/CCW
-    ///            captures — no bit overlap with the button bits. NOT
-    ///            confirmed: per-frame step magnitude. The one raw sequential
-    ///            dial capture on hand shows the active bit held across many
-    ///            consecutive reports at a steady ~10 Hz for the whole
-    ///            rotation gesture, not one report per physical detent —
-    ///            emitting `delta: ±1` on every such frame below is a
-    ///            placeholder that will over-report rotation speed if that
-    ///            reading is right. A capture of a single, deliberate,
-    ///            one-detent dial click (versus a multi-second continuous
-    ///            spin) is needed to confirm whether this field ticks once
-    ///            per detent or free-runs while held.
+    ///            captures — no bit overlap with the button bits. One
+    ///            frame per detent: with no pen, frames arrive only on a
+    ///            click; amid a pen stream, a click sets the bit in a single
+    ///            frame. So `delta: ±1` per flagged frame is exact.
     ///
     /// Still unassigned: [2] and [16..17]. [2] tracks [3]'s upper bits
     /// loosely (0x00 while out of range, 0x80 or 0x20 in range) and may be a
