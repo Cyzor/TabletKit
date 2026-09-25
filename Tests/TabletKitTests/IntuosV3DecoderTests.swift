@@ -917,6 +917,30 @@ final class IntuosV3DecoderTests: XCTestCase {
             "filler must replay the last reading, not snap to neutral")
     }
 
+    /// A proximity exit drops the held reading, so the next pen's filler
+    /// frames don't inherit the previous pen's angle.
+    func testBLEProximityExitClearsHeldRotation() {
+        var st = DecoderState()
+        let twist: [UInt8] = [
+            0x1A, 0x42, 0x80, 0xC0, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
+            0x00, 0x1B, 0x13, 0x0F, 0x7F, 0x6B, 0xC0, 0x24, 0x00, 0x00,
+        ]
+        let exit: [UInt8] = [
+            26, 2, 0, 0, 240, 123, 112, 187, 4, 0,
+            0, 0, 0, 0, 176, 255, 252, 51, 0, 0,
+        ]
+        let filler: [UInt8] = [
+            0x1A, 0x02, 0x00, 0x80, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x20, 0xFF, 0x58, 0x23, 0x00, 0x00,
+        ]
+        _ = decodeBLE(twist, state: &st)
+        _ = decodeBLE(exit, state: &st)
+        XCTAssertFalse(st.hasValidRotationFrame)
+        let next = pens(decodeBLE(filler, state: &st))
+        XCTAssertEqual(next.count, 1)
+        XCTAssertEqual(next[0].rotation, 0.0, accuracy: 1e-9)
+    }
+
     /// Real sample from `ptk-870-left-to-right.txt` with a barrel button
     /// held and the tip up (status 0xC4). Bit 2 is the only barrel bit any
     /// capture ever set; bit 0 tracks the tip switch, and agrees with

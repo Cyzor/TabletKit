@@ -883,6 +883,11 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             // signal that says so.
             state.lastSerial = 0
             state.lastToolCode = 0
+            // The held rotation belongs to the pen that left; replayed onto
+            // the next pen's filler frames, it passed that pen off as a
+            // twisted Art Pen.
+            state.lastRotation = 0.0
+            state.hasValidRotationFrame = false
             results.append(
                 .pen(
                     TabletPoint(
