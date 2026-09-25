@@ -2280,13 +2280,9 @@ public enum WacomDeviceRegistry: Sendable {
             // cohort as `CDTH271GraphicsTablet` (our DTH-2700) — which is why
             // the 0x032B row's companion approach is reused here.
             //
-            // PID split corroborated by linuxwacom's device-ID database, which
-            // lists 0x03B2 as the DTH167 pen sensor and 0x03B3 as its touch
-            // sensor; 0x03B4 is this unit's internal USB hub and is
-            // deliberately absent. Linux support landed in kernel 4.11 /
-            // input-wacom 3.7 / libwacom 1.13. Agrees with both things checked
-            // locally: Wacom's own driver gives DTH-167 a dedicated class, and
-            // the touch maxima separate it from the DTH-1620.
+            // PID split corroborated by linuxwacom's device-ID database:
+            // 0x03B2 pen, 0x03B3 touch, 0x03B4 the internal USB hub, which is
+            // deliberately absent here.
             //
             // ⚠ Still unverified is the *pen* side of this row — maxPressure,
             // buttonCount and the parser remain this block's by-similarity
@@ -2298,34 +2294,37 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: true, maxTouchContacts: 5,
             touchMaxX: 13768, touchMaxY: 7744,
             isPenDisplay: true,
-            // DATAMODE only, deliberately. Wacom's driver makes this a
-            // GD16-family device (`CDTH167GraphicsTablet` tail-calls
-            // `CGD16GraphicsTablet::CreateTabletMenuArea`), and that family's
-            // `DeviceStart` enables a pen scan (feature 0x0D, payload inverted
-            // so enable == 0x00) before DATAMODE. The 0x03B3 touch interface
-            // declares 0x0D and 0x0E, so the sequence plausibly applies here —
-            // but this row's init targets the *pen* interface, 0x03B2, whose
-            // descriptor nobody has captured.
-            //
-            // Not added on that guess: `declaresInitFeatureReports` requires
-            // every init report ID to be declared, so if 0x03B2 does not
-            // declare 0x0D the interface is rejected and the device loses its
-            // init entirely — strictly worse than DATAMODE alone. Add the scan
-            // step once a 0x03B2 capture confirms 0x0D. Recovered bytes in
+            // Wacom's GD16 `DeviceStart` sequence: enable both scans, then
+            // DATAMODE. Payloads are inverted, so enable sends 0x00.
+            // `CDTH167GraphicsTablet` tail-calls
+            // `CGD16GraphicsTablet::CreateTabletMenuArea`, putting this device
+            // in that family. Bytes in
             // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x03B3,
-            // Standard HID Device Mode write, same shape and rationale as the
-            // 0x032B row: Inputmode = 2, index 0. The report ID differs from
-            // that row's 0x83 — this descriptor puts Inputmode (Digitizer
-            // usage 0x52) and Device Index (0x53) on `feature:0x0E`, one 8-bit
-            // field each. Not 0x0C, which carries usage 0x55 (Contact Count
-            // Maximum) and is read-only.
             //
-            // Unverified: the reporter's capture collected zero input reports,
-            // so nothing yet shows whether the sensor needs this to stream or
-            // only to leave single-contact mode. Report 0x0C already declares
-            // all five slots, so the 0x032B precedent suggests the latter.
+            // Unverified — no 0x03B2 descriptor exists, so whether the pen
+            // interface declares 0x0D and 0x0E is unknown. Attempted anyway
+            // because nothing on this device works: a rejected write leaves it
+            // as dead as it already is, and `executeInitSteps` continues past a
+            // failure so DATAMODE still lands. Not a precedent for working
+            // devices, which mostly do declare 0x0D and would accept the write.
+            //
+            // `recordAutoInitReport` logs each ioReturn, so the next capture
+            // says whether these landed. Drop them if it shows failures.
+            seizeUSB: true,
+            initSteps: [
+                .featureReport([0x0E, 0x00]),
+                .featureReport([0x0D, 0x00]),
+                .featureReport([0x02, 0x02]),
+            ],
+            touchCompanionPID: 0x03B3,
+            // Standard HID Device Mode write, Inputmode = 2, index 0. This
+            // descriptor puts Inputmode (usage 0x52) and Device Index (0x53) on
+            // `feature:0x0E`, not 0x0C — which carries Contact Count Maximum
+            // and is read-only.
+            //
+            // Unverified: the capture collected zero input reports, so whether
+            // the sensor needs this to stream or only to leave single-contact
+            // mode is unknown.
             touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])],
             activeWidthMM: 344.2, activeHeightMM: 193.6),
         .init(
@@ -3155,10 +3154,10 @@ public enum WacomDeviceRegistry: Sendable {
             // Pen report 0x10 is declared here and has never once arrived, in
             // any of seven captures, while report 0x11 (express keys) decodes
             // fine and DATAMODE itself reports success. The cause is still
-            // unknown. A startup sequence recovered from Wacom's driver was
-            // investigated and *ruled out* for this device: its pen interface
-            // declares neither of two feature reports that sequence requires.
-            // Do not add scan enables here without new evidence — see
+            // unknown. The GD16 startup sequence was investigated and *ruled
+            // out* here: this pen interface declares neither 0x14 nor 0x0E,
+            // two of the five calls it makes. The DTH-167 (0x03B2) does carry
+            // it — that row is not a precedent for this one. See
             // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x032C,
@@ -3394,16 +3393,11 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false),
         .init(
             // Emits report 0x0C: a Digitizer Touch Screen collection with five
-            // finger slots, each carrying Contact Identifier, Tip Switch, X/Y,
-            // Width and Height, plus a per-frame Contact Count and Scan Time.
-            // Decoded generically via `deriveTouchDecoders` — confirmed by
-            // running this capture's own descriptor through
-            // `PrecisionTouchLayout.derive`, which yields the 5-slot 0x0C
-            // layout at 13768 x 7744. The same descriptor's report 0x1F is
-            // correctly rejected as single-contact and cannot shadow it.
-            //
-            // 0x03B4, the third product this unit exposes, is its internal USB
-            // hub and is deliberately absent.
+            // finger slots, plus Contact Count and Scan Time — decoded
+            // generically via `deriveTouchDecoders`. Confirmed by running this
+            // capture's descriptor through `PrecisionTouchLayout.derive`, which
+            // yields the 5-slot 0x0C layout at 13768 x 7744 and correctly
+            // rejects report 0x1F as single-contact.
             productID: 0x03B3, name: "Cintiq Pro 16 Touch sensor (pairs 0x03B2)",  // ⚠ name-only, decoder routed generically from its own descriptor
             parser: .intuosV2, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,

@@ -416,28 +416,39 @@ final class WacomDeviceRegistryTests: XCTestCase {
                           "the generations are distinguished by touch maxima alone")
     }
 
-    /// `WacomKnownDevice.declaresInitFeatureReports` requires an interface to
-    /// declare *every* report ID in `initSteps` before it will be used as the
-    /// init target, so an init step for a report the hardware doesn't declare
-    /// doesn't merely fail — it disqualifies the interface and the device loses
-    /// its whole init.
-    ///
-    /// Both Cintiq Pro pen displays below were nearly given a pen-scan enable
-    /// (feature 0x0D) recovered from Wacom's driver. The 27QHD's pen interface
-    /// declares 0x0D but not two other reports in that same sequence, which is
-    /// what ruled the sequence out for it; the DTH-167's pen interface has
-    /// never been captured at all. Until a capture settles it, these rows stay
-    /// on DATAMODE alone — see Wacom-GD16-GD20-Startup-Findings.md.
-    func testCintiqProPenDisplaysSendDataModeOnly() {
-        for pid in [0x032B, 0x03B2] {
-            guard let spec = WacomDeviceRegistry.spec(for: pid) else {
-                return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
-            }
-            XCTAssertEqual(
-                spec.initSteps, [.featureReport([0x02, 0x02])],
-                "0x\(String(pid, radix: 16)) gained an init step; confirm the pen "
-                    + "interface declares that report or it loses init entirely")
+    /// The 27QHD keeps DATAMODE alone. Its pen interface declares 0x0D but not
+    /// 0x14 or 0x0E, so the GD16 sequence recovered from Wacom's driver is not
+    /// this tablet's bring-up, and its express keys and touch already work —
+    /// nothing here is worth risking on a guess.
+    /// See Wacom-GD16-GD20-Startup-Findings.md.
+    func testCintiq27QHDSendsDataModeOnly() {
+        guard let spec = WacomDeviceRegistry.spec(for: 0x032B) else {
+            return XCTFail("0x032B missing from registry")
         }
+        XCTAssertEqual(
+            spec.initSteps, [.featureReport([0x02, 0x02])],
+            "0x032B gained an init step. Its pen interface declares neither 0x14 "
+                + "nor 0x0E across seven captures, so the GD16 sequence is not "
+                + "this tablet's bring-up. Its express keys and touch work today "
+                + "— do not add speculative writes here")
+    }
+
+    /// The DTH-167 carries the GD16 scan enables as a deliberate guess, safe
+    /// only because nothing on that device works yet. Pinned so the ordering
+    /// survives: DATAMODE must stay last.
+    func testCintiqPro16SendsScanEnablesBeforeDataMode() {
+        guard let spec = WacomDeviceRegistry.spec(for: 0x03B2) else {
+            return XCTFail("0x03B2 missing from registry")
+        }
+        XCTAssertEqual(
+            spec.initSteps,
+            [
+                .featureReport([0x0E, 0x00]),
+                .featureReport([0x0D, 0x00]),
+                .featureReport([0x02, 0x02]),
+            ],
+            "0x03B2 init changed; DATAMODE must stay last so it lands even when "
+                + "the scan enables fail")
     }
 
     /// A claimed sensor must not also be a drivable tablet in its own right:
