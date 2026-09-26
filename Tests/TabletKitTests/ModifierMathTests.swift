@@ -249,6 +249,41 @@ final class ModifierMathTests: XCTestCase {
         }
     }
 
+    // MARK: - physicalCacheAgrees
+
+    /// Shift held since before the drag: the cache is older than every
+    /// report, but the system agrees with it, so Shift must ride along.
+    func testHeldModifierAgreesInSteadyState() {
+        let shift = CGEventFlags.maskShift.rawValue
+        XCTAssertTrue(ModifierMath.physicalCacheAgrees(
+            systemFlags: shift, tapPhysicalManaged: shift, syntheticFlags: 0))
+    }
+
+    /// A press the tap hasn't delivered yet: the system has it, the cache doesn't.
+    func testPendingChangeDisagrees() {
+        let shift = CGEventFlags.maskShift.rawValue
+        XCTAssertFalse(ModifierMath.physicalCacheAgrees(
+            systemFlags: shift, tapPhysicalManaged: 0, syntheticFlags: 0))
+        XCTAssertFalse(ModifierMath.physicalCacheAgrees(
+            systemFlags: 0, tapPhysicalManaged: shift, syntheticFlags: 0))
+    }
+
+    /// Our own synthetic Option shows up in the system state; it must not
+    /// read as a pending physical change.
+    func testSyntheticBitsAreIgnored() {
+        let option = CGEventFlags.maskAlternate.rawValue
+        let shift = CGEventFlags.maskShift.rawValue
+        XCTAssertTrue(ModifierMath.physicalCacheAgrees(
+            systemFlags: option | shift, tapPhysicalManaged: shift, syntheticFlags: option))
+    }
+
+    /// Non-managed bits (Caps Lock, device-dependent side bits) don't count.
+    func testUnmanagedBitsAreIgnored() {
+        XCTAssertTrue(ModifierMath.physicalCacheAgrees(
+            systemFlags: CGEventFlags.maskAlphaShift.rawValue | 0x2,
+            tapPhysicalManaged: 0, syntheticFlags: 0))
+    }
+
     // MARK: - moveEventFlags
 
     func testMoveEventFlagsIncludesPhysicalWhenCacheIsCurrent() {

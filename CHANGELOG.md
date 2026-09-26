@@ -114,6 +114,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   the pen-pressure dead zone. Zero everywhere except Intuos 1/2, whose hover
   baseline sits above the shared hardware-noise floor.
 
+- `ModifierMath.physicalCacheAgrees` — whether the system keyboard state
+  matches the physical-modifier cache, ignoring the driver's own bits. With a
+  modifier held, `physicalCacheIsCurrent` alone fails on every report, which
+  dropped held keyboard modifiers from all pen drags; the two together only
+  distrust the cache when a change is actually pending.
+
 - `AuxButtons.touchRingHardwareMode` — the ring mode a device's own firmware
   has selected, for hardware where the host doesn't own it. Set only by the
   ExpressKey Remote; `nil` elsewhere.

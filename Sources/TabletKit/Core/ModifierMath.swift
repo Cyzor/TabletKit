@@ -120,15 +120,38 @@ public enum ModifierMath: Sendable {
     /// report can be stamped while a `flagsChanged` waits behind it — leaving
     /// the cache describing the keyboard from before that change.
     ///
-    /// Both stamps are mach-absolute ns (`LatencyProbe.timebaseFactor`). A cache
-    /// older than the report means a keyboard change is unaccounted for; absent
-    /// stamps (timer-fired posts) return `true` to preserve prior behavior.
+    /// Both stamps are mach-absolute ns (`LatencyProbe.timebaseFactor`). Only a
+    /// cache written after the report vouches for it here; absent stamps
+    /// (timer-fired posts) return `true` to preserve prior behavior.
+    ///
+    /// Not sufficient alone: with a modifier held and no key changing, every
+    /// report postdates the cache, so this returns `false` in steady state.
+    /// Pair it with `physicalCacheAgrees`.
     public static func physicalCacheIsCurrent(
         reportTimestampNs: UInt64,
         cacheUpdatedAtNs: UInt64
     ) -> Bool {
         guard reportTimestampNs != 0, cacheUpdatedAtNs != 0 else { return true }
         return cacheUpdatedAtNs >= reportTimestampNs
+    }
+
+    /// Whether the system-wide keyboard state matches the cache, ignoring bits
+    /// this driver asserts itself (its own posts write into `systemFlags`).
+    ///
+    /// A `flagsChanged` waiting behind a report has already reached the system
+    /// state but not the tap, so a mismatch is the race behind issue #18.
+    /// Agreement means no change is pending, however old the cache is.
+    public static func physicalCacheAgrees(
+        systemFlags: UInt64,
+        tapPhysicalManaged: UInt64,
+        syntheticFlags: UInt64
+    ) -> Bool {
+        // Device-independent bits only: our posts carry left-side device bits
+        // that `syntheticFlags` doesn't name, and ⌘⌥⇧⌃ already say it all.
+        let keys = CGEventFlags.maskCommand.rawValue | CGEventFlags.maskShift.rawValue
+            | CGEventFlags.maskAlternate.rawValue | CGEventFlags.maskControl.rawValue
+        let theirs = keys & ~syntheticFlags
+        return systemFlags & theirs == tapPhysicalManaged & theirs
     }
 
     /// Flags for a high-frequency move/drag event. Mirrors `moveSafeEventFlags`.
