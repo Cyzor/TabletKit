@@ -23,15 +23,18 @@ import Foundation
 /// Report 0x11 (remote event), relevant bytes after the report ID:
 ///   [3–5]  serial number, 24-bit LE (`data[3] | data[4]<<8 | data[5]<<16`)
 ///   [7]    battery: bits 0–6 percent (0–100), bit 7 charging
-///   [9]    buttons 0–7 (bit N = key N+1)
-///   [10]   buttons 8–15
-///   [11]   bits 0–1 = buttons 16–17, two ordinary numbered buttons (kernel
-///          `BTN_BASE`/`BTN_BASE2`) — not a dedicated ring-center button as
-///          once assumed; a capture isolating one button press shows byte 9
-///          bit 0 going high instead. All 18 buttons decode the same way.
+///   [9]    bit 0 = ring center (mode) button; bits 1–7 = keys 1–7
+///   [10]   keys 8–15
+///   [11]   bits 0–1 = keys 16–17 (kernel `BTN_BASE`/`BTN_BASE2`).
 ///          bits 6–7 = active Touch Ring mode (0–2), a persistent state
 ///          field, not a per-event flag — `(byte & 0xC0) >> 6`, matching the
 ///          kernel's own "which mode select (LED light) is currently on".
+///          Emitted as `touchRingHardwareMode`.
+///
+/// Keys 1–17 come out as `buttons[0...16]`; the center button as
+/// `touchRingButtonDown`. The kernel numbers all 18 alike, but the center
+/// press is the one that changes the mode field (whot/wacom-recordings
+/// `ekr.ring-button.hid`, and a 2026-09-26 DTH-2700 capture).
 ///   [12]   Touch Ring: bit 7 = touched, bits 0–6 = position + 1 when
 ///          touched. Kernel does `(data[12] & 0x7f) - 1` since the wire is
 ///          1-indexed, giving 0–71 (72 positions, 5° resolution). Idle
@@ -96,22 +99,28 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         let batteryPercent = Int(batteryByte & 0x7F)
         let charging = batteryByte & 0x80 != 0
 
-        var buttons = [Bool](repeating: false, count: 18)
-        for bit in 0..<8 { buttons[bit] = report[9] & (1 << UInt8(bit)) != 0 }
-        for bit in 0..<8 { buttons[8 + bit] = report[10] & (1 << UInt8(bit)) != 0 }
-        buttons[16] = report[11] & 0x01 != 0
-        buttons[17] = report[11] & 0x02 != 0
+        // Wire bit 0 is the ring's center button, which the remote's own
+        // firmware uses to switch ring modes (captured 2026-09-26: it fires
+        // as byte 11's mode field changes). Bits 1–17 are keys 1–17, emitted
+        // as buttons 0–16.
+        var raw = [Bool](repeating: false, count: 18)
+        for bit in 0..<8 { raw[bit] = report[9] & (1 << UInt8(bit)) != 0 }
+        for bit in 0..<8 { raw[8 + bit] = report[10] & (1 << UInt8(bit)) != 0 }
+        raw[16] = report[11] & 0x01 != 0
+        raw[17] = report[11] & 0x02 != 0
 
         let ringByte = report[12]
         let ringActive = ringByte & 0x80 != 0
         let ringPosition = ringActive ? (ringByte & 0x7F) &- 1 : 0x7F
+        let mode = Int((report[11] & 0xC0) >> 6)
 
-        var results: [DecodeResult] = [
-            .aux(AuxButtons(
-                buttons: buttons,
-                touchRingActive: ringActive,
-                touchRingPosition: ringPosition))
-        ]
+        var aux = AuxButtons(
+            buttons: Array(raw[1...]),
+            touchRingActive: ringActive,
+            touchRingButtonDown: raw[0],
+            touchRingPosition: ringPosition)
+        aux.touchRingHardwareMode = mode < 3 ? mode : nil
+        var results: [DecodeResult] = [.aux(aux)]
 
         // Only emit battery when it actually changed — this report streams
         // continuously while the remote is in range, and every other

@@ -3433,9 +3433,12 @@ public enum WacomDeviceRegistry: Sendable {
             // (only 70 of 72 values happened to appear in the recordings).
             // Still no hardware of this project's own — `crossReferenced`
             // per that tier's definition, not `verified`.
+            // buttonCount 17 counts keys only; the ring's center button is
+            // its mode switch. ringSlotCount 3 matches the remote's three
+            // mode LEDs.
             productID: 0x0331, name: "ExpressKey Remote (EKR-100)",
             parser: .expressKeyRemote, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 18, hasTouchRing: true, hasEraser: false, tiltMaxDegrees: 64.0,
+            buttonCount: 17, hasTouchRing: true, ringSlotCount: 3, hasEraser: false, tiltMaxDegrees: 64.0,
             seizeUSB: false, confidence: .crossReferenced),
         .init(
             // Firmware-update (DFU) mode. Never attach a driver to this.

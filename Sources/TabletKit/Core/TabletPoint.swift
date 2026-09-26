@@ -188,6 +188,9 @@ public struct AuxButtons: Sendable {
     /// Intuos3 WS right touch strip.  Same encoding as strip 1.
     public var touchStrip2Active: Bool = false
     public var touchStrip2Position: UInt8 = 0xFF
+    /// Active ring mode, 0-based, on hardware whose own firmware switches
+    /// modes (ExpressKey Remote). `nil` where the host owns the mode.
+    public var touchRingHardwareMode: Int? = nil
 
     public subscript(index: Int) -> Bool {
         guard index < buttons.count else { return false }

@@ -114,6 +114,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   the pen-pressure dead zone. Zero everywhere except Intuos 1/2, whose hover
   baseline sits above the shared hardware-noise floor.
 
+- `AuxButtons.touchRingHardwareMode` — the ring mode a device's own firmware
+  has selected, for hardware where the host doesn't own it. Set only by the
+  ExpressKey Remote; `nil` elsewhere.
+
 ### Fixed
 
 - Intuos 1/2 tablets drew a faint line while the pen hovered, without touching
@@ -131,10 +135,19 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   the previous pen's rotation after a swap, and be relabeled as an Art Pen.
   `IntuosV3Decoder` now drops the held angle on proximity exit, as USB did.
 
+- `PrecisionTouchDecoder` reported nine phantom contacts per frame on the
+  Cintiq 27QHD Touch, which fills unused finger slots with `0xFF`. Slots whose
+  position exceeds the declared range, or whose contact id repeats, are now
+  dropped.
+
 ### Changed
 
 - Tool code `0x0842` (and eraser `0x084A`) is now named Pro Pen 2, the pen
   bundled with the PTH-660. It was listed as Pro Pen 3, which is `0x0200`.
+
+- ExpressKey Remote: the ring's center button is now `touchRingButtonDown`
+  rather than `buttons[0]`, and keys 1–17 are `buttons[0...16]`. The registry
+  row's `buttonCount` is 17 and `ringSlotCount` 3.
 
 Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
 device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and

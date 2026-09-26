@@ -63,48 +63,54 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
 
     // MARK: - Verbatim captured frame
 
-    /// One isolated button, pressed then released (whot/wacom-recordings
-    /// `ekr.ring-button.hid`, labeled as the ring-center/mode button by that
-    /// capture's own naming). The signal is byte 9 bit 0 — plain `BTN_0` per
-    /// the kernel source, i.e. `buttons[0]`, the same as any other numbered
-    /// key. Nothing in the kernel driver or this capture singles it out as a
-    /// structurally distinct control; see the decoder's header note.
+    /// The ring-center button, pressed then released (whot/wacom-recordings
+    /// `ekr.ring-button.hid`). Byte 9 bit 0; the remote's firmware switches
+    /// ring modes on it, so it comes out as the ring's center button.
     func testCapturedButtonPressAndRelease() {
         var state = DecoderState()
         let pressed = auxButtons(decode(
             frame("11 01 00 43 b2 01 00 64 00 01 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state))
-        XCTAssertEqual(pressed?.buttons[0], true)
-        XCTAssertEqual(pressed?.buttons.filter { $0 }.count, 1)
+        XCTAssertEqual(pressed?.touchRingButtonDown, true)
+        XCTAssertEqual(pressed?.buttons.contains(true), false)
+        XCTAssertEqual(pressed?.touchRingHardwareMode, 2)
 
         let released = auxButtons(decode(
             frame("11 01 00 43 b2 01 00 64 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state))
+        XCTAssertEqual(released?.touchRingButtonDown, false)
         XCTAssertEqual(released?.buttons.contains(true), false)
     }
 
     // MARK: - Buttons
 
-    func testEighteenButtonsDecodeAcrossThreeBytes() {
+    func testSeventeenKeysDecodeAcrossThreeBytes() {
         var state = DecoderState()
-        // One bit lit in each of the three source bytes.
-        let a = auxButtons(decode(makeRemote(buttons9: 0x01), state: &state))
-        XCTAssertEqual(a?.buttons.count, 18)
+        let a = auxButtons(decode(makeRemote(buttons9: 0x02), state: &state))
+        XCTAssertEqual(a?.buttons.count, 17)
         XCTAssertEqual(a?.buttons[0], true)
         XCTAssertEqual(a?.buttons.filter { $0 }.count, 1)
 
         let b = auxButtons(decode(makeRemote(buttons9: 0x80), state: &state))
-        XCTAssertEqual(b?.buttons[7], true)
+        XCTAssertEqual(b?.buttons[6], true)
 
         let c = auxButtons(decode(makeRemote(buttons10: 0x01), state: &state))
-        XCTAssertEqual(c?.buttons[8], true)
+        XCTAssertEqual(c?.buttons[7], true)
 
         let d = auxButtons(decode(makeRemote(buttons10: 0x80), state: &state))
-        XCTAssertEqual(d?.buttons[15], true)
+        XCTAssertEqual(d?.buttons[14], true)
 
         let e = auxButtons(decode(makeRemote(byte11: 0x02), state: &state))
-        XCTAssertEqual(e?.buttons[17], true)
-        XCTAssertEqual(e?.buttons[16], false)
+        XCTAssertEqual(e?.buttons[16], true)
+        XCTAssertEqual(e?.buttons[15], false)
+    }
+
+    func testRingModeComesFromByteElevenTopBits() {
+        var state = DecoderState()
+        XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x00), state: &state))?.touchRingHardwareMode, 0)
+        XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x40), state: &state))?.touchRingHardwareMode, 1)
+        XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x81), state: &state))?.touchRingHardwareMode, 2)
+        XCTAssertNil(auxButtons(decode(makeRemote(byte11: 0xC0), state: &state))?.touchRingHardwareMode)
     }
 
     func testAllZeroFrameIsRelease() {
