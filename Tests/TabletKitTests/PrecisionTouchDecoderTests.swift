@@ -164,6 +164,42 @@ final class PrecisionTouchDecoderTests: XCTestCase {
         XCTAssertTrue(frame.contactCountMismatch)
     }
 
+    /// A real DTH-2700 frame: one finger, nine unused slots filled with 0xFF.
+    /// The filler reads as Tip Switch set with a shared id and must not
+    /// become contacts.
+    func testFillerSlotsAreNotContacts() throws {
+        let layout = try layout(forReportID: 0x81)
+        let decoder = PrecisionTouchDecoder(layout: layout)
+
+        var report = [UInt8](repeating: 0xFF, count: 64)
+        report[0] = 0x81
+        report[1...6] = [0x01, 0x01, 0x83, 0x11, 0x7D, 0x21]
+        report[61] = 0x9E; report[62] = 0x9C; report[63] = 0x01
+
+        let frame = try XCTUnwrap(decoder.decode(report: report))
+
+        XCTAssertEqual(frame.contacts.count, 1)
+        XCTAssertEqual(frame.contacts[0].id, 1)
+        XCTAssertEqual(frame.contacts[0].x, 0x1183)
+        XCTAssertEqual(frame.contacts[0].y, 0x217D)
+        XCTAssertFalse(frame.contactCountMismatch)
+    }
+
+    /// Two slots claiming the same id: the first wins.
+    func testRepeatedContactIDIsDropped() throws {
+        let layout = try layout(forReportID: 0x81)
+        let decoder = PrecisionTouchDecoder(layout: layout)
+
+        var report = emptyReport(0x81, payloadBytes: 63)
+        setFinger(&report, slot: 0, down: true, id: 3, x: 10, y: 20)
+        setFinger(&report, slot: 1, down: true, id: 3, x: 30, y: 40)
+        report[63] = 2
+
+        let frame = try XCTUnwrap(decoder.decode(report: report))
+
+        XCTAssertEqual(frame.contacts.map(\.x), [10])
+    }
+
     /// Scan Time is carried through for future frame-reassembly work.
     func testScanTimeIsCarried() throws {
         let layout = try layout(forReportID: 0x81)

@@ -324,6 +324,17 @@ public struct PrecisionTouchDecoder: Sendable {
             // bounded index.
             let id = slot.contactID.map { extractField($0, from: payload) } ?? index
 
+            // The DTH-2700 fills unused slots with 0xFF, which reads as Tip
+            // Switch set at 65535,65535 with a shared id. Out-of-range
+            // positions and repeated ids are never real fingers. A maximum
+            // that sign-extended negative is ignored rather than trusted.
+            let x = extractField(slot.x, from: payload)
+            let y = extractField(slot.y, from: payload)
+            guard slot.x.logicalMax <= 0 || x <= slot.x.logicalMax,
+                  slot.y.logicalMax <= 0 || y <= slot.y.logicalMax,
+                  !contacts.contains(where: { $0.id == id })
+            else { continue }
+
             // Contact area: report the major axis where the device gives one.
             // `TouchContact.contactArea` is a single scalar, and width is the
             // conventional major axis in the Digitizer usage set.
@@ -331,8 +342,8 @@ public struct PrecisionTouchDecoder: Sendable {
 
             contacts.append(TouchContact(
                 id: id,
-                x: extractField(slot.x, from: payload),
-                y: extractField(slot.y, from: payload),
+                x: x,
+                y: y,
                 contactArea: area))
         }
 
