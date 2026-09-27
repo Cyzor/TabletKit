@@ -1096,23 +1096,23 @@ public enum WacomDeviceRegistry: Sendable {
             // (archived at Notes/Scratch/manuals/IntuosPro-PTH-451-651-851-IPI.pdf,
             // gitignored — shared across the whole Intuos5/Intuos5-Touch line).
             // activeWidthMM/Height corrected to match (157.48×98.43mm).
-            // Confirmed 2026-08-03. NOT fixed here: this device is genuinely
-            // touch-capable per the kernel's Device IDs table and the manual's
-            // own "Multi-finger Touch: Supported" line, but this row carries
-            // no `hasFingerTouch` and MockTab has never decoded its touch
-            // report — a real coverage gap, not a spec question. Needs a
-            // capture (touch report ID + coordinate range), not a manual.
+            // Confirmed 2026-08-03. Touch: kernel `touch_max = 16`, OTD
+            // PTH-450.json (MaxX/MaxY 4095), same BPT3 container as the
+            // hardware-verified PTH-850 (0x0028) and PTH-651 (0x0315).
             productID: 0x0026, name: "Intuos5 S (PTH-450)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
-            // Same confirmation and same untouched touch-capability gap as
-            // 0x0026 above. Confirmed 2026-08-03.
+            // Same confirmation and touch sources as 0x0026 above.
             productID: 0x0027, name: "Intuos5 M (PTH-650)",
             parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
         .init(
@@ -1149,12 +1149,13 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // mm corrected to 157.48×98.43mm — confirmed against Wacom's Intuos
             // Pro (PTH-451/651/851) IPI booklet and OTD's PTH-451.json, same
-            // sources and same untouched touch-capability gap as 0x0026 above
-            // (this Pro-generation row lacks hasFingerTouch too). Confirmed
+            // sources and same touch sources as 0x0026 above. Confirmed
             // 2026-08-03.
             productID: 0x0314, name: "Intuos Pro S (PTH-451)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
@@ -1173,6 +1174,8 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0317, name: "Intuos Pro L (PTH-851)",  // ✓ confirmed live
             parser: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .verified,
             activeWidthMM: 325.1, activeHeightMM: 203.2),
@@ -1300,11 +1303,11 @@ public enum WacomDeviceRegistry: Sendable {
             // nominal pen-chassis numbers — so the kernel's 14720×9200 for
             // this PID was never the wire format. The manual's 125×85mm is
             // presumably the sensor glass vs. the 120×80mm reported area;
-            // the descriptor's own figure wins here. Note BambooDecoder has
-            // no touch path for this report — decoding is still a coverage
-            // gap; these values just make the row honest about the wire.
+            // the descriptor's own figure wins here. Touch decodes through
+            // BambooDecoder's 20-byte path (`decodeBPTTouch`).
             parser: .bamboo, maxX: 480, maxY: 320, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, confidence: .verified,
             activeWidthMM: 120, activeHeightMM: 80),
         .init(
@@ -1760,6 +1763,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x00DE, name: "Wacom CTH-470",  // ⚠ from OTD
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            // Touch: kernel touch_max = 16, 64-byte BPT3 container → flat 4096 range.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -1784,6 +1790,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0302, name: "Wacom CTH-480",  // ⚠ from OTD
             parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            // Touch: kernel touch_max = 16 + flat 4096 (INTUOSHT); OTD CTH-480.json 4095×4095.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
@@ -1795,6 +1804,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x033C, name: "Wacom CTH-490",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
             buttonCount: 4, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            // Touch: INTUOSHT2 range is pen max / 10, same rule as the verified CTH-690.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 1520, touchMaxY: 950,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
@@ -1830,9 +1842,7 @@ public enum WacomDeviceRegistry: Sendable {
             // .bamboo). OTD's CTH-670.json confirms: 9/10-byte pen via
             // `IntuosReportParser` (little-endian) plus a 64-byte
             // `Wacom64bAuxReportParser` — the BPT3 container, not the 20-byte
-            // format 0x00D1-class devices use. Same gap as 0x00DE: no
-            // registry row sets `hasFingerTouch` for the 64-byte container
-            // path yet, so left off here too, consistently.
+            // format 0x00D1-class devices use.
             //
             // activeWidthMM/activeHeightMM corrected 152×102 → 216.48×137:
             // the prior figure didn't match this row's own maxX/maxY
@@ -1843,6 +1853,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x00DF, name: "Wacom CTH-670",  // ⚠ from OTD
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            // Touch: same as 0x00DE.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216.48, activeHeightMM: 137),
         .init(
@@ -1851,6 +1864,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0303, name: "Wacom CTH-680",  // ⚠ from OTD
             parser: .bamboo, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            // Touch: same as 0x0302.
+            hasFingerTouch: true, maxTouchContacts: 16,
+            touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(

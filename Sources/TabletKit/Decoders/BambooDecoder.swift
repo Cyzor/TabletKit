@@ -58,9 +58,8 @@ import Foundation
 ///   [offset+5:6]                     Y, BE16 & 0x7FF
 /// ```
 ///
-/// Touch on the INTUOSHT generation (CTH-480/680) instead arrives in the
-/// 64-byte BPT3 container above; those registry rows do not yet set
-/// `hasFingerTouch`, so their touch stays inert until someone enables it.
+/// Touch on the INTUOSHT generation (CTH-480/680) and the 16FG Bamboos
+/// (CTH-470/670) instead arrives in the 64-byte BPT3 container above.
 ///
 /// ---
 ///
