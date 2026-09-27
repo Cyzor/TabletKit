@@ -167,10 +167,15 @@ public enum VendorDeviceRegistry: Sendable {
     /// for both slots, and `driverSlots.max` picked one via undefined
     /// dictionary iteration order rather than deterministically preferring
     /// the newly-arrived, more reliable USB transport.
+    ///
+    /// The Wacom ACK-40401 RF dongle (0x0084) ranks with them. It has no
+    /// canonical-PID entry because its paired tablet is only known at
+    /// runtime, but it joins that tablet's slots all the same.
     public static func transportPriority(forRawProductID rawProductID: Int) -> Int {
         switch rawProductID {
         case 0x5202: return 2  // wired puck
         case 0x5203, 0x520D: return 1  // wireless dongle / display-relayed
+        case 0x0084: return -1  // Wacom ACK-40401 RF dongle
         default:
             // A Wacom BT/dongle-variant PID ranks below its canonical USB
             // sibling; the canonical PID itself (and anything not in the

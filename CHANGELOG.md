@@ -146,6 +146,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   position exceeds the declared range, or whose contact id repeats, are now
   dropped.
 
+- `VendorDeviceRegistry.transportPriority` ranked the Wacom ACK-40401 RF dongle
+  (0x0084) equal to USB, so a tablet reachable over both had no deterministic
+  winner. The dongle now ranks below USB, like Wacom Bluetooth PIDs.
+
 ### Changed
 
 - Tool code `0x0842` (and eraser `0x084A`) is now named Pro Pen 2, the pen

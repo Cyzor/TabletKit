@@ -175,6 +175,13 @@ final class VendorDeviceRegistryTests: XCTestCase {
         XCTAssertGreaterThan(usb, bluetooth)
     }
 
+    func testWacomRFDongleRanksBelowUSB() {
+        // ACK-40401 relaying a PTH-850 (Intuos5 L, 0x0028 USB).
+        let usb = VendorDeviceRegistry.transportPriority(forRawProductID: 0x0028)
+        let dongle = VendorDeviceRegistry.transportPriority(forRawProductID: 0x0084)
+        XCTAssertLessThan(dongle, usb)
+    }
+
     func testWacomCanonicalUSBPIDStaysAtDefaultPriority() {
         // The canonical PID itself is not a key in canonicalPIDMap, so it
         // must fall through to the unranked default rather than being
