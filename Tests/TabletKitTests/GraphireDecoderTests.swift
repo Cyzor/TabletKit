@@ -162,9 +162,9 @@ final class GraphireDecoderTests: XCTestCase {
 
     func testHoverDistanceFromByte7Low6Bits() {
         var st = DecoderState()
-        // hoverDistance = d[7] & 0x3F; d[7]=0x2A=0b00101010 → 0x2A & 0x3F = 0x2A = 42
+        // Padless models only: d[7] & 0x3F; 0x2A → 42. Pad models carry button bits there.
         let b = makePen(status: 0x80, byte7: 0x2A)
-        let r = decode(b, state: &st)
+        let r = decode(b, state: &st, spec: penPartner)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
         XCTAssertEqual(pt.hoverDistance, 0x2A)
@@ -220,5 +220,55 @@ final class GraphireDecoderTests: XCTestCase {
         let r = decode(b, state: &st, spec: penPartner)
         let auxResult = r.first { if case .aux = $0 { return true }; return false }
         XCTAssertNil(auxResult, "PenPartner should produce no pad event")
+    }
+    // MARK: - WACOM_MO (Bamboo Fun CTE-650) — real capture, issue #20
+
+    // CTE-650: 4 pad buttons + ring, 9-byte reports.
+    private let bambooFun = DigitizerSpec(
+        maxX: 21648, maxY: 13530, maxPressure: 511,
+        buttonCount: 4, hasTilt: false, hasDualRings: false,
+        isPenDisplay: false, ringSlotCount: 4)
+
+    private func pen(_ results: [DecodeResult]) -> TabletPoint? {
+        for r in results { if case .pen(let p) = r { return p } }
+        return nil
+    }
+
+    func testCTE650TipIsPenAndEraserIsEraser() {
+        // Status 0x91 = in range, pen, tip down; 0xB1 = eraser down.
+        var st = DecoderState()
+        let tip = pen(decode([0x02, 0x91, 0x42, 0x1F, 0x92, 0x1A, 0xFE, 0x01, 0x00],
+                             state: &st, spec: bambooFun))
+        XCTAssertEqual(tip?.inProximity, true)
+        XCTAssertEqual(tip?.eraser, false)
+        XCTAssertEqual(tip?.pressure, 510)
+        XCTAssertEqual(tip?.x, 0x1F42)
+
+        var st2 = DecoderState()
+        let eraser = pen(decode([0x02, 0xB1, 0x42, 0x1F, 0x92, 0x1A, 0x20, 0x00, 0x00],
+                                state: &st2, spec: bambooFun))
+        XCTAssertEqual(eraser?.inProximity, true)
+        XCTAssertEqual(eraser?.eraser, true)
+    }
+
+    func testCTE650PadButtonsAndRing() {
+        var st = DecoderState()
+        // Out of range; lower-left FN (0x20) held, finger on ring at position 71.
+        let r = decode([0x02, 0x00, 0, 0, 0, 0, 0, 0x20, 0xC7], state: &st, spec: bambooFun)
+        let auxResult = r.first { if case .aux = $0 { return true }; return false }
+        guard case .aux(let aux) = auxResult else { return XCTFail("expected .aux") }
+        XCTAssertEqual(aux.buttons, [false, false, true, false])
+        XCTAssertTrue(aux.touchRingActive)
+        XCTAssertEqual(aux.touchRingPosition, 71)
+    }
+    func testCTE650PadWhilePenHovers() {
+        // Status 0x90 = pen hovering; > (0x10) held in d[7].
+        var st = DecoderState()
+        let r = decode([0x02, 0x90, 0x42, 0x1F, 0x92, 0x1A, 0x00, 0x10, 0x00],
+                       state: &st, spec: bambooFun)
+        XCTAssertEqual(pen(r)?.hoverDistance, 0)
+        let auxResult = r.first { if case .aux = $0 { return true }; return false }
+        guard case .aux(let aux) = auxResult else { return XCTFail("expected .aux") }
+        XCTAssertEqual(aux.buttons, [false, true, false, false])
     }
 }

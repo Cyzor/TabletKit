@@ -21,12 +21,9 @@ import Foundation
 ///   • Graphire 1 (RS-232 serial) — pre-USB, irrelevant
 ///   • Graphire BT (CTE-630BT, RFCOMM/SPP) — not HID, separate transport stack
 ///
-/// Unclear: the WACOM_MO (Bamboo Fun / Manga) pad layout. This decoder was
-/// written without it in scope, but the registry routes at least one WACOM_MO
-/// row here — 0x0017 (CTE-450, `hasTouchRing: true`) — and that entry is
-/// `.crossReferenced`, not hardware-confirmed. Whether the pen path is
-/// correct and only the pad/ring differs, or the whole row is misrouted, has
-/// not been checked. Treat WACOM_MO pad and ring behavior as unverified here.
+/// WACOM_MO (Bamboo Fun CTE-450/650, Bamboo MTE-450) is in scope: same pen
+/// path, own pad/ring layout in `decodePad`. Pen path confirmed on a CTE-650
+/// capture (issue #20, 2026-09-27).
 ///
 /// **Report layout — Report ID 0x02 (kernel `WACOM_REPORT_PENABLED`), 8 bytes:**
 /// ```
@@ -50,11 +47,11 @@ import Foundation
 /// **Pressure** is 10-bit on pen tools: `d[6] | ((d[7] & 0x03) << 8)`.
 /// Distance: `d[7] & 0x3F` (G4 also uses `d[6] & 0x3F`).
 ///
-/// **Pad (G4 / Graphire 4 only)**, signalled when pen NOT in proximity:
-///   d[7]: bit 6=BTN_BACK, bit 7=BTN_FORWARD, bits 3..5=wheel direction.
+/// **Pad**, signalled when pen NOT in proximity — see `decodePad` for the
+/// G4 and WACOM_MO layouts.
 ///
-/// The kernel also handles GRAPHIRE_BT and WACOM_MO inside `wacom_graphire_irq`;
-/// neither path is reproduced here. If a future RFCOMM-aware transport layer
+/// The kernel also handles GRAPHIRE_BT inside `wacom_graphire_irq`;
+/// that path is not reproduced here. If a future RFCOMM-aware transport layer
 /// lands, GraphireBT can be added as a sibling decoder.
 public struct GraphireDecoder: TabletReportDecoder {
 
@@ -94,10 +91,7 @@ public struct GraphireDecoder: TabletReportDecoder {
                             penButton1: false, penButton2: false,
                             eraser: exitEraser, inProximity: false, hoverDistance: 0)))
             }
-            // Pad buttons (G4 only — buttonCount > 0 implies pad capability).
-            if spec.buttonCount > 0 {
-                results.append(contentsOf: decodePad(report: report, spec: spec))
-            }
+            appendPad(&results, report: report, length: length, spec: spec)
             return results
         }
 
@@ -153,7 +147,9 @@ public struct GraphireDecoder: TabletReportDecoder {
         let pressure = min(rawPressure, spec.maxPressure)
         // Distance: 6-bit hover height in d[7] bits 0..5 (kernel masks 0x3F).
         // Bits 0..1 are also pressure-high; the kernel mask matches both uses.
-        let hoverDistance = Int(report[7] & 0x3F)
+        // Pad models carry button bits in d[7], and the kernel reports no pen
+        // distance for them.
+        let hoverDistance = spec.buttonCount > 0 ? 0 : Int(report[7] & 0x3F)
 
         results.append(
             .pen(
@@ -166,23 +162,56 @@ public struct GraphireDecoder: TabletReportDecoder {
                     eraser: isEraser,
                     inProximity: true,
                     hoverDistance: hoverDistance)))
+        appendPad(&results, report: report, length: length, spec: spec)
 
         return results
     }
 
     // MARK: - Pad (Graphire 4 only)
 
-    /// Decode the G4 pad buttons (back/forward + wheel) from d[7].
-    /// Kernel reference: `wacom_graphire_irq()` WACOM_G4 branch.
-    /// d[7] layout when in pad mode:
-    ///   bit 6 (0x40) = BTN_BACK
-    ///   bit 7 (0x80) = BTN_FORWARD
-    ///   bits 3..5    = relative wheel
+    /// The kernel reads the pad from every report, pen in range or not; pad
+    /// bits never overlap the pressure bits (d[7] & 0x03).
+    private func appendPad(
+        _ results: inout [DecodeResult], report: UnsafePointer<UInt8>,
+        length: CFIndex, spec: DigitizerSpec
+    ) {
+        guard spec.buttonCount > 0 else { return }
+        results.append(contentsOf: decodePad(report: report, length: length, spec: spec))
+    }
+
+    /// Decode the pad from d[7] (and d[8] on WACOM_MO).
+    /// Kernel reference: `wacom_graphire_irq()` WACOM_G4 / WACOM_MO branches.
+    ///
+    /// G4 (2 buttons): d[7] bit 6 = BTN_BACK, bit 7 = BTN_FORWARD,
+    /// bits 3..5 = relative wheel.
+    ///
+    /// MO — Bamboo Fun CTE-450/650, Bamboo MTE-450 (4 buttons + ring):
+    /// d[7] 0x08 = BACK, 0x10 = FORWARD, 0x20/0x40 = lower-left/right FN;
+    /// d[8] bit 7 = finger on ring, bits 0..6 = position 0–71.
+    /// Emitted in reading order (upper-left, upper-right, lower-left,
+    /// lower-right) — kernel key names matched to the CTE-650 manual's
+    /// layout. Bits confirmed on a capture 2026-09-27; which bit is which
+    /// key is not hardware-checked.
     private func decodePad(
         report: UnsafePointer<UInt8>,
+        length: CFIndex,
         spec: DigitizerSpec
     ) -> [DecodeResult] {
         let padByte = report[7]
+        // Only the MO models have four buttons; G4 has two.
+        if spec.buttonCount >= 4, length >= 9 {
+            let ringByte = report[8]
+            let ringActive = (ringByte & 0x80) != 0
+            return [.aux(AuxButtons(
+                buttons: [
+                    (padByte & 0x08) != 0,   // < (BACK)
+                    (padByte & 0x10) != 0,   // > (FORWARD)
+                    (padByte & 0x20) != 0,   // FN, lower left
+                    (padByte & 0x40) != 0,   // FN, lower right
+                ],
+                touchRingActive: ringActive,
+                touchRingPosition: ringActive ? ringByte & 0x7F : 0x7F))]
+        }
         // Two physical buttons on Graphire 4 — map to AuxButtons[0..1].
         let buttons = [
             (padByte & 0x40) != 0,   // BTN_BACK

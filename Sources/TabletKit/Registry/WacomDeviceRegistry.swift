@@ -1688,8 +1688,11 @@ public enum WacomDeviceRegistry: Sendable {
             // mm (21648/13530, 216/135) already matched exactly; no change
             // needed, kept as corroboration for the sibling rows above and
             // below. Confirmed 2026-08-03.
+            // Graphire-format reports like its 0x0017/0x0065 siblings; the
+            // .bamboo parser read pen hover as out of range and the eraser as
+            // the tip (issue #20 capture, 2026-09-27).
             productID: 0x0018, name: "Bamboo Fun medium (CTE-650)",  // ⚠ from kernel/libwacom/OTD
-            parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 511,
+            parser: .graphire, maxX: 21648, maxY: 13530, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
