@@ -568,10 +568,8 @@ public struct WacomDeviceSpec: Sendable {
     /// Used to check tool compatibility against `WacomToolSpec.supportedFamilies`.
     ///
     /// The `.intuosV1` branch still sniffs `name` to split one parser across
-    /// five families; replacing that with structured data is a separate task.
-    /// Intuos 1/2 is matched by PID and so is immune to that weakness — the
-    /// other four aren't, which is why `WacomKnownDevice`'s
-    /// `intuos5PackedLEDProductIDs` exists.
+    /// five families. Intuos 1/2, 4 and 5 are matched by PID; only the Cintiq
+    /// split still sniffs `name`.
     ///
     /// Reaches tool-compatibility checks only: it selects no decoder and
     /// changes no coordinate, pressure, tilt or button handling. Outputs are
@@ -611,10 +609,13 @@ public struct WacomDeviceSpec: Sendable {
             if name.contains("Cintiq") || name.contains("DTK") || name.contains("DTH") {
                 return .cintiq
             }
-            if name.contains("Intuos 4") || name.contains("PTK") {
+            // Intuos4/5 by PID too: the rows spell it "Intuos4"/"Intuos5" (or
+            // just "Wacom PTK-450"), so name tokens misfiled PTH-450/650 as
+            // Pro gen 1, PTH-851 as Intuos5, and PTK-450/650 as Intuos4.
+            if (0x00B8...0x00BD).contains(productID) {
                 return .intuos4
             }
-            if name.contains("Intuos 5") || name.contains("PTH-8") {
+            if (0x0026...0x002A).contains(productID) {
                 return .intuos5
             }
             return .intuosProGen1

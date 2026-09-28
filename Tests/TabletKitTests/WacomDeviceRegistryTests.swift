@@ -172,6 +172,23 @@ final class WacomDeviceRegistryTests: XCTestCase {
         }
     }
 
+    /// Rows spell "Intuos4"/"Intuos5" without a space, so the old name tokens
+    /// misfiled PTH-450/650, PTH-851 and PTK-450/650.
+    func testIntuos4And5AndProGen1ClassifyByPID() {
+        let expected: [(ClosedRange<Int>, DeviceFamily)] = [
+            (0x00B8...0x00BD, .intuos4),
+            (0x0026...0x002A, .intuos5),
+            (0x0314...0x0317, .intuosProGen1),
+        ]
+        for (pids, family) in expected {
+            for pid in pids {
+                let spec = WacomDeviceRegistry.spec(for: pid)!
+                XCTAssertEqual(spec.family, family,
+                               "0x\(String(pid, radix: 16)) \(spec.name) misfiled")
+            }
+        }
+    }
+
     /// `IntuosV1Decoder` synthesizes a tool code when a device enters
     /// proximity without a 0xC2 tool-change packet, and those codes hit
     /// `emitToolCompatibility` like real ones. Each must therefore be
