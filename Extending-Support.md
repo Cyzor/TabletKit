@@ -83,7 +83,7 @@ Open `WacomDeviceRegistry.swift` and search for a model close to yours, ideally 
     parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
     buttonCount: 4, hasTouchRing: false, hasEraser: false,
     hasFingerTouch: true, maxTouchContacts: 16,
-    touchMaxX: 4095, touchMaxY: 4095,
+    touchMaxX: 2160, touchMaxY: 1350,
     seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
     confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
 ```

@@ -29,7 +29,7 @@ like `registry_audit.csv`, not built on the fly.
 
 ```swift
 // Package.swift
-.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.3.0")
+.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.4.0")
 ```
 
 Then add `"TabletKit"` to your target's dependencies and `import TabletKit`.
