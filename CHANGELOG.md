@@ -157,6 +157,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - The Pro Pen shipped with the Cintiq 13HD and 27QHD reported as an unknown
   tool. Tool codes `0x1E02` and `0x1E0A` (its eraser) are now cataloged.
 
+- The Grip Pen and its eraser were marked "not fully supported" on Intuos Pro
+  gen 2 tablets (PTH-660/860), where they work with full pressure and tilt.
+
 - `VendorDeviceRegistry.transportPriority` ranked the Wacom ACK-40401 RF dongle
   (0x0084) equal to USB, so a tablet reachable over both had no deterministic
   winner. The dongle now ranks below USB, like Wacom Bluetooth PIDs.

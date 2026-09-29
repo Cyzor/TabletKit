@@ -16,8 +16,8 @@ public enum WacomToolCatalog: Sendable {
 
         // MARK: - Intuos Pro / Intuos5 Series (0x08xx family)
 
-        // Grip Pen (standard Intuos Pro pen). Confirmed 2026-09-18 to also
-        // decode correctly (real pressure/tilt) on a PTK-870 gen3 — see the
+        // Grip Pen (standard Intuos Pro pen). Confirmed on a PTH-860 gen2 over
+        // Bluetooth (2026-09-29) and 2026-09-18 on a PTK-870 gen3 — see the
         // 0x0842 Pro Pen 2 comment below for the capture this and its eraser
         // variant were confirmed alongside.
         //
@@ -41,8 +41,8 @@ public enum WacomToolCatalog: Sendable {
             hasEraserVariant: true,
             eraserToolCode: 0x080A,
             supportedFamilies: [
-                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3,
-                .cintiq,
+                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2,
+                .intuosProGen3, .cintiq,
             ]
         )
 
@@ -60,8 +60,8 @@ public enum WacomToolCatalog: Sendable {
             hasEraserVariant: false,
             eraserToolCode: nil,
             supportedFamilies: [
-                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen3,
-                .cintiq,
+                .intuos1And2, .intuos3, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2,
+                .intuosProGen3, .cintiq,
             ]
         )
 
