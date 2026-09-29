@@ -507,4 +507,55 @@ final class CintiqV1DecoderTests: XCTestCase {
         let bytes: [UInt8] = [0x11, 0x80]  // length 2, threshold is 3
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
+
+    // MARK: - In-range packets (status 0x20), DTH-2700 capture 2026-09-26
+
+    private func toolEnters(_ results: [DecodeResult]) -> [ToolIdentity] {
+        results.compactMap { if case .toolEnter(let id) = $0 { return id } else { return nil } }
+    }
+
+    private func pens(_ results: [DecodeResult]) -> [TabletPoint] {
+        results.compactMap { if case .pen(let p) = $0 { return p } else { return nil } }
+    }
+
+    func testInRangePacketsBeforeToolChangeRegisterNoPhantomTool() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        let inRange1 = decode([0x10, 0x20, 0x87, 0xF2, 0x3B, 0xE6, 0, 0, 0, 0], decoder: &decoder, state: &state)
+        let inRange2 = decode([0x10, 0x20, 0x87, 0xF6, 0x3B, 0xAE, 0, 0, 0, 0x03], decoder: &decoder, state: &state)
+        XCTAssertTrue(toolEnters(inRange1 + inRange2).isEmpty)
+        XCTAssertEqual(pens(inRange1).first?.x, 69604)
+
+        let change = decode([0x10, 0xC2, 0x80, 0x26, 0x71, 0xA8, 0x06, 0x71, 0x60, 0x00], decoder: &decoder, state: &state)
+        XCTAssertEqual(toolEnters(change).map(\.serial), [1_729_790_055])
+        XCTAssertEqual(toolEnters(change).map(\.toolCode), [0x1E02])
+
+        let data = decode([0x10, 0xE0, 0x87, 0xE8, 0x3A, 0xCA, 0x00, 0x28, 0xE3, 0xA0], decoder: &decoder, state: &state)
+        XCTAssertTrue(toolEnters(data).isEmpty)
+    }
+
+    func testInRangePacketKeepsTiltAndZeroesPressure() {
+        var decoder = CintiqV1Decoder()
+        var state = seededState()
+        _ = decode([0x10, 0xE0, 0x63, 0x7B, 0x56, 0xAD, 0x00, 0x31, 0xD4, 0x3D], decoder: &decoder, state: &state)
+        let tiltX = state.lastTiltX, tiltY = state.lastTiltY
+        let lift = pens(decode([0x10, 0x20, 0x63, 0x72, 0x50, 0x9C, 0, 0, 0, 0], decoder: &decoder, state: &state))
+        XCTAssertEqual(lift.first?.tiltX, tiltX)
+        XCTAssertEqual(lift.first?.tiltY, tiltY)
+        XCTAssertEqual(lift.first?.pressure, 0)
+        XCTAssertEqual(lift.first?.x, 50916)
+    }
+
+    func testFallbackToolStillEmittedWhenDataPacketArrivesFirst() {
+        var decoder = CintiqV1Decoder()
+        var state = DecoderState()
+        let first = decode(generalPacket(), decoder: &decoder, state: &state)
+        XCTAssertEqual(toolEnters(first).map(\.serial), [0])
+    }
+
+    func testProPenToolCodeIsCataloged() {
+        XCTAssertEqual(WacomToolCatalog.name(forToolCode: 0x1E02), "Pro Pen")
+        XCTAssertEqual(WacomToolCatalog.name(forToolCode: 0x1E0A), "Pro Pen (Eraser)")
+        XCTAssertTrue(WacomToolCatalog.capabilities(forToolCode: 0x1E02, family: .cintiq).isSupported)
+    }
 }

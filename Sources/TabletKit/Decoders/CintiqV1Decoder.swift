@@ -67,6 +67,10 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // causing rapid mouseUp/mouseDown and a "dots instead of line" appearance.
     private var lastPressure: Int = 0
 
+    // Set on proximity entry, cleared once a data packet decides whether a
+    // fallback tool identity is needed — see `inRangeOnly` in `decodePen`.
+    private var fallbackToolPending = false
+
     public mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
@@ -138,6 +142,12 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         // Packet type nibble: (status >> 1) & 0x0F — from wacom_intuos_general().
         let typeNibble = (Int(status) >> 1) & 0x0F
 
+        // In-range packet (status 0x20/0x21): pen sensed at the edge of range,
+        // sent before the tool-change packet on entry and after lift. Position
+        // matches the neighboring data packets; tilt/pressure bytes are zero.
+        // Linux skips these (wacom_intuos_inout); we keep the position only.
+        let inRangeOnly = (status & 0xFE) == 0x20
+
         if typeNibble == 0x05 {
             // Art Pen / Marker Pen rotation packet.
             // Kernel formula (wacom_intuos_general, type 0x05):
@@ -186,8 +196,10 @@ public struct CintiqV1Decoder: TabletReportDecoder {
             // Tilt (kernel, signed ±63):
             //   tiltX = (((d7<<1) & 0x7E) | (d8>>7)) - 64
             //   tiltY = (d8 & 0x7F) - 64
-            state.lastTiltX = Double((((Int(report[7]) << 1) & 0x7E) | (Int(report[8]) >> 7)) - 64) / 63.0
-            state.lastTiltY = Double((Int(report[8]) & 0x7F) - 64) / 63.0
+            if !inRangeOnly {
+                state.lastTiltX = Double((((Int(report[7]) << 1) & 0x7E) | (Int(report[8]) >> 7)) - 64) / 63.0
+                state.lastTiltY = Double((Int(report[8]) & 0x7F) - 64) / 63.0
+            }
         }
         // typeNibble 0x0A (airbrush wheel): not yet decoded; falls through with cached state.
 
@@ -208,7 +220,10 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         // `tipPressureOverride` (see type header) substitutes in below when
         // raw pressure is 0 but the tip-switch fired.
         let pressure: Int
-        if typeNibble <= 0x03 {
+        if inRangeOnly {
+            lastPressure = 0
+            pressure = 0
+        } else if typeNibble <= 0x03 {
             let raw11 = (Int(report[6]) << 3) | ((Int(report[7]) & 0xC0) >> 5) | (Int(status) & 1)
             let raw = spec.maxPressure <= 1023 ? raw11 >> 1 : raw11
             lastPressure = (raw == 0 && tipPressureOverride > 0) ? tipPressureOverride : raw
@@ -217,10 +232,16 @@ public struct CintiqV1Decoder: TabletReportDecoder {
             pressure = lastPressure
         }
 
-        // Fallback onToolEnter on first proximity entry (no prior tool-change packet).
+        // Fallback onToolEnter on first proximity entry (no prior tool-change
+        // packet). Deferred past in-range packets: the real tool-change packet
+        // follows them, and a premature serial-0 identity registers a phantom pen.
         var results: [DecodeResult] = []
         if !state.prevInProximity {
             state.prevInProximity = true
+            fallbackToolPending = true
+        }
+        if fallbackToolPending && !inRangeOnly {
+            fallbackToolPending = false
             if state.currentToolCode == 0 {
                 let fallbackCode: UInt16 = state.isEraser ? 0x080A : 0x0802
                 results.append(
@@ -423,5 +444,6 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         tipSwitchActive = false
         tipPressureOverride = 0
         lastPressure = 0
+        fallbackToolPending = false
     }
 }

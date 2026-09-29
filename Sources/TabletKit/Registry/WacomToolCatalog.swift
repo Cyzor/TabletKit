@@ -192,6 +192,37 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.cintiq, .intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
+        // Pro Pen (KP-503E), shipped with the Cintiq 13HD and 27QHD. Linux id
+        // 0x16802; the 16-bit tool-code fold overlaps its 0x6000 bits onto
+        // 0x0802, giving 0x1E02. Seen from two DTH-2700 units (#14).
+        catalog[0x1E02] = WacomToolSpec(
+            toolCode: 0x1E02,
+            name: "Pro Pen",
+            toolType: .stylus,
+            buttonCount: 2,
+            maxPressure: 2047,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0x1E0A,
+            supportedFamilies: [.cintiq]
+        )
+
+        catalog[0x1E0A] = WacomToolSpec(
+            toolCode: 0x1E0A,
+            name: "Pro Pen (Eraser)",
+            toolType: .eraser,
+            buttonCount: 2,
+            maxPressure: 2047,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: [.cintiq]
+        )
+
         // Intuos Mouse (cordless)
         catalog[0x0806] = WacomToolSpec(
             toolCode: 0x0806,

@@ -149,6 +149,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   position exceeds the declared range, or whose contact id repeats, are now
   dropped.
 
+- Older Cintiqs registered a phantom generic pen each time a pen first came
+  into range, and hovering at the edge of range read as full tilt. The pen
+  sends an in-range packet before naming itself; `CintiqV1Decoder` now takes
+  only its position and waits for real pen data before assuming a generic pen.
+
+- The Pro Pen shipped with the Cintiq 13HD and 27QHD reported as an unknown
+  tool. Tool codes `0x1E02` and `0x1E0A` (its eraser) are now cataloged.
+
 - `VendorDeviceRegistry.transportPriority` ranked the Wacom ACK-40401 RF dongle
   (0x0084) equal to USB, so a tablet reachable over both had no deterministic
   winner. The dongle now ranks below USB, like Wacom Bluetooth PIDs.
