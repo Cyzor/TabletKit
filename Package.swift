@@ -50,5 +50,10 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/touch-surface"
         ),
+        .executableTarget(
+            name: "pen-surface",
+            dependencies: ["TabletKit"],
+            path: "Samples/pen-surface"
+        ),
     ]
 )

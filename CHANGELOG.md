@@ -9,6 +9,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `pen-surface` sample: a minimal pen driver (cursor, tip and barrel-button
+  clicks, pressure, tilt) with an `--init` option to skip or replace the
+  switch-on sequence.
 - `WacomDeviceSpec.touchCompanionPID`, `WacomDeviceSpec.touchCompanionInitSteps`,
   and `WacomDeviceRegistry.touchCompanionPIDs` — the product ID a tablet's
   finger sensor enumerates under when it is a separate USB product rather than
