@@ -1074,7 +1074,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             tiltX: tiltX, tiltY: tiltY, rotation: rotation,
             penButton1: (status & 0x02) != 0,
             penButton2: (status & 0x04) != 0,
-            eraser: (status & 0x10) != 0,
+            // 0x10 Eraser (pressed) or 0x20 Invert (eraser end in range), the
+            // same layout as the kernel's Pro2022 report: Eraser alone made
+            // the eraser exist only in contact over Bluetooth.
+            eraser: (status & 0x30) != 0,
             inProximity: true, hoverDistance: 0)
         // Same third barrel button as the USB extended report — see the
         // comment on decodeExtendedPenReport's equivalent assignment.

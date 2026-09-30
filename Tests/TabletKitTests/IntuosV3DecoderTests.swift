@@ -824,6 +824,18 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// carries the last tracked coordinates, so the emitted point must use
     /// the remembered position and report `inProximity == false` rather than
     /// treating those stale bytes as a fresh sample.
+    /// Invert (0x20, eraser end in range) must count as the eraser while it
+    /// hovers, not only once Eraser (0x10) reports contact.
+    func testBLEHoveringEraserReportsEraser() {
+        var st = DecoderState()
+        let hovering: [UInt8] = [
+            26, 2, 0, 0xA0, 12, 124, 48, 188, 4, 0,
+            0, 0, 0, 0, 144, 255, 215, 50, 0, 0,
+        ]
+        let p = pens(decodeBLE(hovering, state: &st))
+        XCTAssertEqual(p.last?.eraser, true)
+    }
+
     func testRealCaptureBLEProximityExitOnZeroStatus() {
         var st = DecoderState()
         let inRange: [UInt8] = [
