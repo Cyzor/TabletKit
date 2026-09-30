@@ -1103,33 +1103,15 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///   [1]      constant `0x01` in every sample seen — likely a
     ///             sub-collection/report-count artifact of this descriptor's
     ///             nested collection structure, not decoded.
-    ///   [2]      status, same bit convention as every other Wacom decoder in
-    ///             this file (`decodePenReport`/`decodeExtendedPenReport`/
-    ///             `decodeBLEReport`), not the descriptor's own declared
-    ///             field order — see below: bit0 = tip switch, bit1 = pen
-    ///             button 1, bit2 = pen button 2, bit5 = eraser (this pen's
-    ///             upper side switch reports as a logical eraser per
-    ///             `WacomDeviceRegistry`'s `hasEraser: true` comment), bit6 =
-    ///             in-range/proximity.
-    ///
-    ///             The descriptor declares a *different* bit order for this
-    ///             report (`TipSwitch`, `BarrelSwitch`, reserved, `Eraser`,
-    ///             `Invert`, `InRange`, reserved — i.e. only one barrel-switch
-    ///             bit at bit1, `InRange` at bit5, not bit6). That reading
-    ///             does NOT fit the two discovery captures on hand: their
-    ///             aggregate byte-2 value sets are `{0, 64, 65, 66, 96}` in
-    ///             both sessions, and under the descriptor's literal order
-    ///             `96` (`0x60`) would mean `InRange` (bit5) *and* the
-    ///             adjacent reserved bit6 both set simultaneously — no clean
-    ///             single-flag story. Under this file's established
-    ///             cross-device convention instead, `96` decomposes cleanly
-    ///             as eraser(0x20) | prox(0x40), `66` as button1(0x02) |
-    ///             prox(0x40), `65` as tip(0x01) | prox(0x40), `64` as prox
-    ///             alone — every value a single clean combination, and
-    ///             consistent with `decodePenReport`'s identical bit
-    ///             assignment for the same vendor's `0x1F` report. Treated as
-    ///             the correct reading on that strength, not the descriptor's
-    ///             literal declaration.
+    ///   [2]      status, per the descriptor: bit0 tip, bit1 barrel
+    ///             (pen button 1), bits 2–3 padding, bit4 Eraser (pressed),
+    ///             bit5 Invert (eraser end in range), bit6 In Range. The
+    ///             captures' byte-2 values `{0, 64, 65, 66, 96}` fit exactly:
+    ///             96 is Invert | In Range, a hovering eraser. The decoder
+    ///             reads bit5 (Invert) as the eraser so it counts in range,
+    ///             not only in contact. An earlier reading of this comment
+    ///             counted the two padding bits as one and concluded the
+    ///             descriptor disagreed with the captures; it doesn't.
     ///
     ///             **Button 2 is NOT decoded from this report — deliberately.**
     ///             Bit2 (`0x04`) never appears in either capture's aggregate
