@@ -129,6 +129,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Intuos Pro (PTH-x60) over USB, and Cintiq Pro in the offset report format,
+  reported the eraser only while it touched the surface, so apps saw each
+  eraser stroke begin and end as the pen. The decoder now reads the Invert bit
+  (eraser end in range) and holds the eraser through weak frames at the edge
+  of range.
 - Intuos 1/2 tablets drew a faint line while the pen hovered, without touching
   the surface. The per-tool dead zone that corrects this already existed but
   defaulted to zero, so a fresh install still drew until the setting was found

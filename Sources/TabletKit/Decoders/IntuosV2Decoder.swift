@@ -140,6 +140,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                 state.prevInProximity = false
                 state.lastSerial = 0  // force toolEnter on re-entry
                 state.lastToolCode = 0
+                state.isEraser = false
                 // FIX: capture cached values before zeroing them so the exit event
                 // carries the pen's last known orientation rather than 0° / (0,0).
                 let exitRotation = state.lastRotation
@@ -175,6 +176,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                 state.prevInProximity = false
                 state.lastSerial = 0  // force toolEnter on re-entry
                 state.lastToolCode = 0
+                state.isEraser = false
                 // FIX: capture cached values before zeroing — same mutation-before-use
                 // correction as the isExitSignal path above.
                 let exitRotation = state.lastRotation
@@ -213,7 +215,10 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                             tiltX: state.lastTiltX, tiltY: state.lastTiltY,
                             rotation: state.lastRotation,
                             penButton1: false, penButton2: false,
-                            eraser: false, inProximity: true, hoverDistance: 0))
+                            // Held like tilt: a hard-coded false flipped the
+                            // eraser to the pen on every weak frame at the
+                            // edge of range.
+                            eraser: state.isEraser, inProximity: true, hoverDistance: 0))
                 ]
             }
             return []
@@ -338,6 +343,10 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         // 0 = tip in contact, 1-63 = hover height (kernel: features.distance_max = 63).
         // When the pen approaches the tablet, distance decreases toward 0.
         let hoverDistance = Int(report[16])
+        // 0x10 Invert (eraser end in range) as well as 0x08 Eraser (eraser
+        // pressed), per the PTH-860 descriptor: Eraser alone made the eraser
+        // exist only in contact, so apps saw each eraser stroke as the pen.
+        state.isEraser = (status & 0x18) != 0
 
         results.append(
             .pen(
@@ -347,7 +356,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                     tiltX: tiltX, tiltY: tiltY, rotation: rotation,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
-                    eraser: (status & 0x08) != 0,
+                    eraser: state.isEraser,
                     inProximity: true,
                     hoverDistance: hoverDistance)))
 
@@ -455,7 +464,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
                     rotation: isArtPen ? state.lastRotation : 0.0,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
-                    eraser: (status & 0x10) != 0,
+                    eraser: (status & 0x30) != 0,  // eraser or invert, as above
                     inProximity: true,
                     hoverDistance: hoverDistance))]
     }

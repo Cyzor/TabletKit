@@ -69,6 +69,28 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(mask, 0x05)
     }
 
+    // MARK: - 0x10 pen path: eraser end
+
+    private func penPoints(_ results: [DecodeResult]) -> [TabletPoint] {
+        results.compactMap { if case .pen(let p) = $0 { return p } else { return nil } }
+    }
+
+    func testHoveringEraserReportsEraser() {
+        // 0x10 Invert (eraser end in range) without 0x08 Eraser (pressed).
+        var state = DecoderState()
+        let points = penPoints(decode(make0x10(status: 0x70), state: &state))
+        XCTAssertEqual(points.last?.eraser, true)
+    }
+
+    func testWeakFrameKeepsEraser() {
+        // A strong hovering-eraser frame, then a weak one (prox without
+        // confidence) at the edge of range: the eraser must not drop out.
+        var state = DecoderState()
+        _ = decode(make0x10(status: 0x70), state: &state)
+        let weak = penPoints(decode(make0x10(status: 0x40), state: &state))
+        XCTAssertEqual(weak.last?.eraser, true)
+    }
+
     // MARK: - 0x10 pen path: tool identity
 
     func testToolEnterOnFirstSightOfToolCode() {
