@@ -422,7 +422,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
     /// touch maxima are the only discriminator, so a well-meaning cleanup that
     /// unified them would silently misplace every contact on one of the two.
     func testCintiqPro16GenerationsKeepDistinctTouchMaxima() {
-        guard let old = WacomDeviceRegistry.spec(for: 0x0354),
+        guard let old = WacomDeviceRegistry.spec(for: 0x0350),
             let new = WacomDeviceRegistry.spec(for: 0x03B2)
         else { return XCTFail("a Cintiq Pro 16 generation is missing") }
         XCTAssertEqual(old.touchMaxX, 13824)

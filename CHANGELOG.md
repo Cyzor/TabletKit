@@ -166,6 +166,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Registry cross-checked against Wacom model data. Pen range and pressure
+  match on 102 models; 38 more move to `.crossReferenced` as a result.
+- Pen range and pressure now follow Wacom model data on 25 models whose values
+  came from libwacom or were placeholders, among them Cintiq Pro 16, the
+  MobileStudio Pros, Cintiq 22 (DTK-2260), DTU-1141B, DTH-1152, Wacom One, and
+  Cintiq 24. Cintiq 13HD pressure is 2047. DTU-710 and DTU-1931 get the PL
+  decoder and their ranges.
+- Touch sensors that enumerate under their own product ID are now claimed by
+  their pen display: Cintiq Pro 13/16/24/32, MobileStudio Pro 13/16, DTH-1152,
+  DTH-2452, and the 24HD/22HD/13HD/Cintiq 22 Touch. The last four also send
+  Linux's `0x12 = 2` touch mode switch. Touch ranges come from Wacom model data
+  where it matches the sensor's descriptor.
+- Added Cintiq 24 (DTK246, DTH246) and Wacom One 14 Touch (DTH142), and the
+  2025 USB revisions of the Intuos Pro gen 3.
+
 - Tool code `0x0842` (and eraser `0x084A`) is now named Pro Pen 2, the pen
   bundled with the PTH-660. It was listed as Pro Pen 3, which is `0x0200`.
 

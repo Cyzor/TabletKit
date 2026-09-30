@@ -270,7 +270,7 @@ final class PrecisionTouchDecoderTests: XCTestCase {
         XCTAssertEqual(layout.logicalMaxX, 13824)
         XCTAssertEqual(layout.logicalMaxY, 7776)
 
-        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0354))
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0350))
         XCTAssertEqual(layout.logicalMaxX, spec.touchMaxX)
         XCTAssertEqual(layout.logicalMaxY, spec.touchMaxY)
     }
