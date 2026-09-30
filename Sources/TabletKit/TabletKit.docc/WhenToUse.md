@@ -46,5 +46,3 @@ Otherwise → Use TabletKit.
 - ``WacomDeviceRegistry``
 - ``VendorDeviceRegistry``
 - ``GenericPenDecoder``
-
-This revision keeps the original scope and technical claims while placing the practical decision first, using active verbs, and reserving HID terminology for places where it identifies a concrete interface or feature. [sqlite](https://sqlite.org/whentouse.html)

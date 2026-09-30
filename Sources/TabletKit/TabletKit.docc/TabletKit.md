@@ -24,6 +24,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 
 - <doc:WhenToUse>
 - <doc:DecodingPenReports>
+- <doc:BuildingAMinimalDriver>
 
 ### Essentials
 
