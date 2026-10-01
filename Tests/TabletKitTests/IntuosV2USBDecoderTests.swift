@@ -39,9 +39,9 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     ) -> [DecodeResult] {
         var decoder = IntuosV2Decoder()
         let spec = spec ?? pth660
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec, state: &state, deviceFamily: family)
         }
     }

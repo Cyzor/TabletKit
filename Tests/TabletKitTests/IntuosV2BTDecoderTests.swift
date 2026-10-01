@@ -29,9 +29,9 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         family: DeviceFamily = .intuosProGen2
     ) -> [DecodeResult] {
         var decoder = IntuosV2Decoder()
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: pth660, state: &state, deviceFamily: family)
         }
     }

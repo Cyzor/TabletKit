@@ -26,9 +26,9 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
 
     private func decode(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
         var decoder = IntuosV2Decoder()
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: ctl4100, state: &state, deviceFamily: .intuosProGen2)
         }
     }

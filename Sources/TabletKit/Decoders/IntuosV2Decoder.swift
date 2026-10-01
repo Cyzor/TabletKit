@@ -36,69 +36,68 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         switch report[0] {
         case 0x01:
             // The PTH-660/860 expose a standard USB HID mouse interface (usagePage=0x01)
             // that carries 4-byte button reports for cordless mouse accessories (KC-100).
             // BLE HOGP pen reports share Report ID 0x01 but are ≥ 23 bytes.
             // Distinguish by length: ≤ 8 bytes → USB mouse buttons; otherwise → BLE pen.
-            if length <= 8 {
+            if report.count <= 8 {
                 // [0]=0x01 [1]=buttons(bit0=L,bit1=R,bit2=M) [2]=relX [3]=relY
                 return [.mouseButton(report[1])]
             }
             return decodeBLEPen(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x03:
-            guard let aux = decodeBLEPadReport(report: report, length: length) else { return [] }
+            guard let aux = decodeBLEPadReport(report: report) else { return [] }
             return [.aux(aux)]
         case 0x10:
             // Body reads through report[16] (hover distance / mouse scroll counter)
             // unconditionally; reject short reports here so the body can rely on it.
             // Mirrors the bounds-check spirit of upstream input-wacom 09bc480.
-            guard length >= 17 else { return [] }
+            guard report.count >= 17 else { return [] }
             return decodePenReport(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x1E:
-            return decodeOffsetPenReport(report: report, length: length, spec: spec, state: &state)
+            return decodeOffsetPenReport(report: report, spec: spec, state: &state)
         case 0x11:
-            return decodeAuxReport(report: report, length: length)
+            return decodeAuxReport(report: report)
         case 0x21:
-            guard length >= 10 else { return [] }
-            return decodeTouchReport(report: report, length: length)
+            guard report.count >= 10 else { return [] }
+            return decodeTouchReport(report: report)
         case 0x80:
             // Report ID 0x80 is shared by three distinct payloads:
             // • RF wireless status (report[1] = 0x02/0x05/0x06)
             // • PTH-860 BT Classic: 99 bytes — 1 header + 7 × 14-byte pen frames
             //   (wacom_intuos_pro2_bt_irq / INTUOSP2_BT kernel type)
             // • PTH-660 BT Classic: 361 bytes — single pen sub-report + pad at offset 281
-            if length >= 2 && (report[1] == 0x02 || report[1] == 0x05 || report[1] == 0x06) {
-                return decodeWireless(report: report, length: length)
+            if report.count >= 2 && (report[1] == 0x02 || report[1] == 0x05 || report[1] == 0x06) {
+                return decodeWireless(report: report)
             }
-            if length == 99 {
+            if report.count == 99 {
                 return decodeBTClassicFrames(
-                    report: report, length: length, spec: spec, state: &state,
+                    report: report, spec: spec, state: &state,
                     deviceFamily: deviceFamily)
             }
             var results = decodeBTPen(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
             // Touch is woven into the same 361-byte container at offset 109.
             // Only the Intuos Pro Gen 2 family with capacitive touch carries it
             // (PTH-660 BT 0x0360, PTH-860 BT 0x0361); spec.hasFingerTouch gates
             // the work for every other device that lands here.
             if spec.hasFingerTouch {
-                results.append(contentsOf: decodeBTTouch(report: report, length: length, state: &state))
+                results.append(contentsOf: decodeBTTouch(report: report, state: &state))
             }
             return results
         case 0x81:
@@ -106,7 +105,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
             // Distinct geometry from the 0x80 Pro frames above — see
             // `decodeIntuosHT3BTFrames`.
             return decodeIntuosHT3BTFrames(
-                report: report, length: length, spec: spec, state: &state)
+                report: report, spec: spec, state: &state)
         default:
             return []
         }
@@ -118,8 +117,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     // MARK: - Standard pen report (0x10)
 
     private func decodePenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -234,7 +232,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         // Extract pen serial (bytes 17–20 LE) and tool code (bytes 21–22 LE).
         // Fire toolEnter whenever the active tool changes — either by serial (pens)
         // or by toolCode alone when serial = 0 (some mouse accessories).
-        if length >= 27 {
+        if report.count >= 27 {
             let serial =
                 UInt32(report[17])
                 | UInt32(report[18]) << 8
@@ -397,14 +395,13 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// The device sends 192 bytes but only the first 34 carry payload; bit 3
     /// is a third barrel button that `TabletPoint` has no field for.
     private func decodeOffsetPenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
         // 20 bytes covers through the height byte at 19. Real devices send 192;
         // the shortest capture on hand is exactly 20.
-        guard length >= 20 else { return [] }
+        guard report.count >= 20 else { return [] }
         let status = report[2]
         let prox = (status & 0x80) != 0
 
@@ -477,15 +474,14 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     // MARK: - BLE HOGP pen (0x01)
 
     private func decodeBLEPen(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard
             let result = decodeBLEPenReport(
-                report: report, length: length, spec: spec,
+                report: report, spec: spec,
                 lastX: &state.lastX, lastY: &state.lastY)
         else { return [] }
 
@@ -523,13 +519,12 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// Note: ring contact is indicated by posByte != 0x7F, NOT by ringByte.
     /// ringByte is the center button click, which is independent of ring touch.
     private func decodeAuxReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 3 else { return [] }
+        guard report.count >= 3 else { return [] }
         let mechanicalByte = report[1]
-        let ringByte: UInt8 = length >= 5 ? report[3] : 0
-        let posByte: UInt8 = length >= 5 ? report[4] : 0x7F
+        let ringByte: UInt8 = report.count >= 5 ? report[3] : 0
+        let posByte: UInt8 = report.count >= 5 ? report[4] : 0x7F
         let buttons = (0..<8).map { bit in (mechanicalByte & (1 << bit)) != 0 }
         let ringActive = posByte != 0x7F  // finger on ring (position valid)
         let ringButtonDown = ringByte != 0  // center button pressed
@@ -564,8 +559,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
     /// is what promoted 0x0357's registry `touchMaxX`/`touchMaxY` from
     /// estimate to confirmed.
     private func decodeTouchReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
         let count = Int(report[1])
         guard count > 0 else { return [.touch([])] }
@@ -573,7 +567,7 @@ public struct IntuosV2Decoder: TabletReportDecoder {
         let maxSlots = min(count, 5)
         for i in 0 ..< maxSlots {
             let base = 2 + i * 8
-            guard base + 7 < length else { break }
+            guard base + 7 < report.count else { break }
             guard report[base + 1] == 0x01 else { continue }
             let x = Int(report[base + 2]) | (Int(report[base + 3]) << 8)
             let y = Int(report[base + 4]) | (Int(report[base + 5]) << 8)

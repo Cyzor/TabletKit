@@ -80,13 +80,12 @@ extension IntuosV2Decoder {
     // bytes 103:104, so downstream consumers see the correct tool regardless.
 
     func decodeBTPen(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 15 else { return [] }
+        guard report.count >= 15 else { return [] }
 
         var results: [DecodeResult] = []
 
@@ -111,7 +110,7 @@ extension IntuosV2Decoder {
         // 0x02 = BTN_STYLUS (barrel button 1)
 
         // Tool identity: tool code at bytes [103:104] LE (confirmed from live BT captures).
-        let toolCode: UInt16 = length >= 105 ? UInt16(report[103]) | UInt16(report[104]) << 8 : 0
+        let toolCode: UInt16 = report.count >= 105 ? UInt16(report[103]) | UInt16(report[104]) << 8 : 0
         let isMouse = (toolCode & 0x000F) == 0x0006
         // Art Pen variants: 0x0804, 0x1108 (confirmed 2026-04-01).
         // Note: 0x1108 has bit3 set, so the standard (toolCode & 0x0008) eraser test
@@ -145,8 +144,8 @@ extension IntuosV2Decoder {
             let frameOffset = 1 + i * 14
             // Stop early if the report is truncated mid-frame. Bounds-check
             // spirit of upstream input-wacom 09bc480.
-            guard frameOffset + 14 <= length else { break }
-            let f = report.advanced(by: frameOffset)
+            guard frameOffset + 14 <= report.count else { break }
+            let f = report.pointer.advanced(by: frameOffset)
             let flags = f[0]
 
             // Invalid frame (bit7=0): threshold before treating as exit, same
@@ -306,7 +305,7 @@ extension IntuosV2Decoder {
         // byte[284] = battery: bit7=charging, bits6:0=capacity 0–100 (direct %)
         //             (kernel: wacom_intuos_pro2_bt_battery(), data[284])
         // byte[285] = ring byte: bit7=ring active, bits0-6=position (0–71); 0x7F=no touch
-        if length >= 286 {
+        if report.count >= 286 {
             let mechanicalByte = report[282]   // one-frame click pulse (rising edge)
             let ringByte = report[285]
             let btnByte = report[281]
@@ -334,7 +333,7 @@ extension IntuosV2Decoder {
         // Kernel source: wacom_intuos_pro2_bt_battery(), wacom_wac.c ~line 1503.
         // bit7 = charging flag; bits6:0 = battery percentage (0–100, direct value).
         // Only emit on change to avoid flooding with redundant events.
-        if length >= 285 {
+        if report.count >= 285 {
             let batByte = report[284]
             if batByte != state.lastBatteryByte {
                 state.lastBatteryByte = batByte
@@ -383,14 +382,13 @@ extension IntuosV2Decoder {
     // the decoder boundary, matching the USB decoder; the tracker recovers
     // the lift by seeing the absence on the next emission.
     func decodeBTTouch(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         state: inout DecoderState
     ) -> [DecodeResult] {
         let frameBase = 109
         let frameLen = 43
         let frameCount = 4
-        guard length >= frameBase + frameLen * frameCount else { return [] }
+        guard report.count >= frameBase + frameLen * frameCount else { return [] }
 
         var results: [DecodeResult] = []
         state.btTouchFrameStamps.removeAll(keepingCapacity: true)
@@ -481,19 +479,18 @@ extension IntuosV2Decoder {
     /// misses are the opening records, where holding the last position has no
     /// prior value to hold. All 622 aux-bearing records matched on byte 44.
     func decodeIntuosHT3BTFrames(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
         // Kernel accepts this family from 46 bytes; bytes 44/45 must exist
         // before the pad and battery reads below.
-        guard length >= 46 else { return [] }
+        guard report.count >= 46 else { return [] }
 
         var results: [DecodeResult] = []
 
         for i in 0..<4 {
-            let f = report.advanced(by: 1 + i * 8)
+            let f = report.pointer.advanced(by: 1 + i * 8)
             guard (f[0] & 0x80) != 0 else { continue }  // frame not valid
 
             let inProx = (f[0] & 0x40) != 0
@@ -577,18 +574,17 @@ extension IntuosV2Decoder {
     }
 
     func decodeBTClassicFrames(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 99 else { return [] }
+        guard report.count >= 99 else { return [] }
 
         var results: [DecodeResult] = []
 
         for i in 0..<7 {
-            let f = report.advanced(by: 1 + i * 14)
+            let f = report.pointer.advanced(by: 1 + i * 14)
 
             guard (f[0] & 0x80) != 0 else { continue }  // frame not valid — skip
 
@@ -689,10 +685,9 @@ extension IntuosV2Decoder {
     // unreachable.
 
     func decodeWireless(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         switch report[1] {
         case 0x02: return [.wireless(.active)]
         case 0x05: return [.wireless(.lost)]

@@ -33,9 +33,9 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
     ) -> [DecodeResult] {
         var decoder = IntuosV2Decoder()
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec, state: &state, deviceFamily: .intuosProGen2)
         }
     }
