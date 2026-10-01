@@ -1979,10 +1979,13 @@ public enum WacomDeviceRegistry: Sendable {
             // "5.8 x 3.63in" ≈ 147×92mm comment).
             // A CTL-471 capture through tools/hid_input_capture.c would still
             // be the definitive check.
-            productID: 0x0300, name: "Wacom CTL-471",  // ⚠ from kernel
+            // Dims match Wacom model data (every version) and OTD; the kernel's
+            // 14720×9225 is the CTE-460's range.
+            productID: 0x0300, name: "Wacom CTL-471",  // ⚠ from OTD + Wacom model data
             parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 152, activeHeightMM: 95),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // activeHeightMM corrected 102→95 — confirmed against Wacom's One
             // by Wacom (CTL-472/672) Important Product Information booklet
@@ -2014,12 +2017,15 @@ public enum WacomDeviceRegistry: Sendable {
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Kernel wacom_features_0x301 names this "Bamboo One M" (BAMBOO_PEN
-            // family) — parser switched from .intuosV1 to .bamboo to match, and
-            // dims corrected to the kernel values. Both unverified on hardware.
-            productID: 0x0301, name: "Bamboo One M (CTL-671)",  // ⚠ from kernel + OTD
-            parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 1023,
+            // family) — parser switched from .intuosV1 to .bamboo to match.
+            // Dims are 21600×13500 per Wacom model data (every version) and OTD,
+            // matching 216×135 mm at 100 lines/mm. The kernel's 21648×13530 is
+            // the CTE-660's range. Not hardware-tested.
+            productID: 0x0301, name: "Bamboo One M (CTL-671)",  // ⚠ from OTD + Wacom model data
+            parser: .bamboo, maxX: 21600, maxY: 13500, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x037B, name: "Wacom CTL-672",  // ⚠ from OTD
             parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
@@ -2195,30 +2201,21 @@ public enum WacomDeviceRegistry: Sendable {
 
         // ── Cintiq pen-display additional models ──────────────────────────────
         .init(
-            // maxPressure 2047: Wacom model data, every version (2026-09-29).
-            // Pressure and dimensions corrected to kernel wacom_features_0x304
-            // (59552×33848, 1023 pressure). Previous dims were 59800×34200 (~0.4 %
-            // drift); aligned during 2026-05-21 audit pass.
-            //
-            // ⚠️ maxPressure 1023 now has teeth (2026-07-29): CintiqV1Decoder halves
-            // the 11-bit raw form whenever maxPressure ≤ 1023, so if this value is
-            // wrong the device loses half its pressure range rather than merely
-            // overshooting. Kept at 1023 because that is what the kernel declares —
-            // but note the kernel gives 2047 for 0x0333 (13HD Touch) on the *same*
-            // 59552×33848 panel, and Wacom specs the model at 2048 levels. Unresolved
-            // asymmetry; needs a real DTK-1300 capture. Run it through
-            // hid-trace-sweep's parity check: mostly-even values ⇒ 1023 is right.
-            productID: 0x0304, name: "Wacom Cintiq 13HD (DTK-1300)",  // ⚠ from OTD
+            // Dimensions match the kernel and Wacom model data. maxPressure 2047
+            // per Wacom model data (every version) and OTD; the kernel's 1023
+            // disagrees with its own 13HD Touch (0x0333) on the same panel.
+            // CintiqV1Decoder halves raw pressure when maxPressure ≤ 1023, so
+            // this value matters. Not hardware-tested.
+            productID: 0x0304, name: "Wacom Cintiq 13HD (DTK-1300)",  // ⚠ from kernel, OTD + Wacom model data
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             // activeWidthMM/Height corrected 294/165→299/171 (298.74×171.35mm)
             // per Wacom's DTK-1300/DTH-1300 Important Product Information
             // booklet (archived at Notes/Scratch/manuals/IPI-0x0304.pdf,
-            // gitignored). Unrelated to the maxPressure question noted above,
-            // which the manual doesn't settle either — still needs a capture.
-            // Confirmed 2026-08-03.
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 299, activeHeightMM: 171),
+            // gitignored). Confirmed 2026-08-03.
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
         .init(
             // Second interface of the same DTK-2200 as 0x00FA, not a separate
             // tablet (corrected 2026-09-10). OTD carries both PIDs under one

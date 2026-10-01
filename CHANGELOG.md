@@ -22,6 +22,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - `HIDReport`, and `decode(report:)` forms taking it on `GenericPenDecoder`
   and `PrecisionTouchDecoder`. Their `[UInt8]` forms remain.
 
+### Fixed
+
+- Bamboo One M (CTL-671) pen range is 21600×13500, matching Wacom's own model
+  data and OTD. The Linux kernel's figure belongs to the CTE-660.
+- CTL-471, CTL-671, and Cintiq 13HD (DTK-1300) are now cross-referenced:
+  Wacom's model data confirms their ranges and pressure.
+
 ## [0.5.0] — 2026-10-01
 
 Art Pen rotation on Intuos4/5 and Intuos Pro gen 1, a hovering eraser on
