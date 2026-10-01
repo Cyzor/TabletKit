@@ -165,11 +165,16 @@ public struct GenericPenDecoder: Sendable {
     /// - Returns: `nil` when the report is not this layout's report ID or is
     ///   too short to hold the declared payload.
     public func decode(report: [UInt8]) -> TabletPoint? {
+        HIDReport.withReport(report) { decode(report: $0) }
+    }
+
+    /// Decodes one raw input report, borrowed for the duration of the call.
+    public func decode(report: HIDReport) -> TabletPoint? {
         guard report.count > layout.payloadBytes,
-              report[0] == layout.reportID
+              report.reportID == layout.reportID
         else { return nil }
 
-        let payload = Array(report.dropFirst())
+        let payload = Array(UnsafeBufferPointer(start: report.pointer + 1, count: report.count - 1))
 
         let x = extractField(layout.x, from: payload)
         let y = extractField(layout.y, from: payload)

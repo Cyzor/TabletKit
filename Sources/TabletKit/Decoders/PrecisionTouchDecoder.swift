@@ -289,13 +289,18 @@ public struct PrecisionTouchDecoder: Sendable {
     /// - Returns: The frame, or `nil` when the report is not this layout's
     ///   report ID or is too short to hold the declared payload.
     public func decode(report: [UInt8]) -> PrecisionTouchFrame? {
+        HIDReport.withReport(report) { decode(report: $0) }
+    }
+
+    /// Decodes one raw input report, borrowed for the duration of the call.
+    public func decode(report: HIDReport) -> PrecisionTouchFrame? {
         guard report.count > layout.payloadBytes,
-              report[0] == layout.reportID
+              report.reportID == layout.reportID
         else { return nil }
 
         // `DescriptorField.bitOffset` is relative to the first byte after the
         // report ID, so the ID byte is dropped before any extraction.
-        let payload = Array(report.dropFirst())
+        let payload = Array(UnsafeBufferPointer(start: report.pointer + 1, count: report.count - 1))
 
         let reported = layout.contactCount.map { extractField($0, from: payload) }
         let scanTime = layout.scanTime.map { extractField($0, from: payload) }
