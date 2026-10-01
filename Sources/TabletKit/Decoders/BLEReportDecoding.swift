@@ -138,26 +138,3 @@ public func decodeWirelessReport(report: HIDReport) -> [DecodeResult] {
     return [.wireless(.lost)]
 }
 
-// Pointer forms, kept while callers migrate to `HIDReport`.
-
-/// Decodes a BLE pen report. See ``decodeBLEPenReport(report:spec:lastX:lastY:)``.
-public func decodeBLEPenReport(
-    report: UnsafePointer<UInt8>,
-    length: CFIndex,
-    spec: DigitizerSpec,
-    lastX: inout Int,
-    lastY: inout Int
-) -> BLEPenResult? {
-    decodeBLEPenReport(report: HIDReport(pointer: report, count: length),
-                       spec: spec, lastX: &lastX, lastY: &lastY)
-}
-
-/// Decodes a BLE pad report. See ``decodeBLEPadReport(report:)``.
-public func decodeBLEPadReport(report: UnsafePointer<UInt8>, length: CFIndex) -> AuxButtons? {
-    decodeBLEPadReport(report: HIDReport(pointer: report, count: length))
-}
-
-/// Decodes a wireless status report. See ``decodeWirelessReport(report:)``.
-public func decodeWirelessReport(report: UnsafePointer<UInt8>, length: CFIndex) -> [DecodeResult] {
-    decodeWirelessReport(report: HIDReport(pointer: report, count: length))
-}

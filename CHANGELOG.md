@@ -7,6 +7,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Changed
+
+- **Source-breaking:** decoders take an `HIDReport` instead of a raw pointer
+  and length. `TabletReportDecoder.decode(report:spec:state:deviceFamily:)`,
+  `decodeBLEPenReport`, `decodeBLEPadReport`, and `decodeWirelessReport` all
+  changed. `HIDReport` keeps the report-ID byte at index 0, so byte offsets are
+  unchanged. Wrap the IOKit callback's buffer with
+  `HIDReport(pointer:count:)`, or a `[UInt8]` with `HIDReport.withReport(_:_:)`.
+  A report is valid only for the call that receives it.
+
+### Added
+
+- `HIDReport`, and `decode(report:)` forms taking it on `GenericPenDecoder`
+  and `PrecisionTouchDecoder`. Their `[UInt8]` forms remain.
+
 ## [0.5.0] — 2026-10-01
 
 Art Pen rotation on Intuos4/5 and Intuos Pro gen 1, a hovering eraser on
