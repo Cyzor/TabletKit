@@ -38,13 +38,12 @@ import Foundation
 /// because the spec says so; it needs the same hardware-capture scrutiny
 /// the USB path got before it can be trusted either way.
 public func decodeBLEPenReport(
-    report: UnsafePointer<UInt8>,
-    length: CFIndex,
+    report: HIDReport,
     spec: DigitizerSpec,
     lastX: inout Int,
     lastY: inout Int
 ) -> BLEPenResult? {
-    guard length >= 11 else { return nil }
+    guard report.count >= 11 else { return nil }
 
     let flags = report[1]
     _ = (flags & 0x10) != 0  // tip switch — implicit in pressure > 0
@@ -60,12 +59,12 @@ public func decodeBLEPenReport(
     let tiltY = Double(Int8(bitPattern: report[10])) / 127.0
 
     let serial: UInt32 =
-        length >= 15
+        report.count >= 15
         ? UInt32(report[11]) | UInt32(report[12]) << 8
             | UInt32(report[13]) << 16 | UInt32(report[14]) << 24
         : 0
     let toolCode: UInt16 =
-        length >= 17
+        report.count >= 17
         ? UInt16(report[15]) | UInt16(report[16]) << 8
         : 0
 
@@ -113,10 +112,9 @@ public func decodeBLEPenReport(
 /// [5] Mirrors byte[4]
 /// [6–9] Reserved
 public func decodeBLEPadReport(
-    report: UnsafePointer<UInt8>,
-    length: CFIndex
+    report: HIDReport
 ) -> AuxButtons? {
-    guard length >= 5 else { return nil }
+    guard report.count >= 5 else { return nil }
     let keys = report[4]
     let ringByte = report[2]
     let ringActive = (ringByte & 0x80) != 0
@@ -134,8 +132,32 @@ public func decodeBLEPadReport(
 
 /// Decode wireless status for V1/Intuos3 dongles (ACK-4040 / basic protocol).
 /// Protocol: report[1] bit 0 = connection state (1 = active, 0 = lost).
-public func decodeWirelessReport(report: UnsafePointer<UInt8>, length: CFIndex) -> [DecodeResult] {
-    guard length >= 2 else { return [] }
+public func decodeWirelessReport(report: HIDReport) -> [DecodeResult] {
+    guard report.count >= 2 else { return [] }
     if (report[1] & 0x01) != 0 { return [.wireless(.active)] }
     return [.wireless(.lost)]
+}
+
+// Pointer forms, kept while callers migrate to `HIDReport`.
+
+/// Decodes a BLE pen report. See ``decodeBLEPenReport(report:spec:lastX:lastY:)``.
+public func decodeBLEPenReport(
+    report: UnsafePointer<UInt8>,
+    length: CFIndex,
+    spec: DigitizerSpec,
+    lastX: inout Int,
+    lastY: inout Int
+) -> BLEPenResult? {
+    decodeBLEPenReport(report: HIDReport(pointer: report, count: length),
+                       spec: spec, lastX: &lastX, lastY: &lastY)
+}
+
+/// Decodes a BLE pad report. See ``decodeBLEPadReport(report:)``.
+public func decodeBLEPadReport(report: UnsafePointer<UInt8>, length: CFIndex) -> AuxButtons? {
+    decodeBLEPadReport(report: HIDReport(pointer: report, count: length))
+}
+
+/// Decodes a wireless status report. See ``decodeWirelessReport(report:)``.
+public func decodeWirelessReport(report: UnsafePointer<UInt8>, length: CFIndex) -> [DecodeResult] {
+    decodeWirelessReport(report: HIDReport(pointer: report, count: length))
 }

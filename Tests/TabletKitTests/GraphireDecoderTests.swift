@@ -32,9 +32,9 @@ final class GraphireDecoderTests: XCTestCase {
     ) -> [DecodeResult] {
         var decoder = GraphireDecoder()
         let s = spec ?? graphire4
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: s, state: &state, deviceFamily: family)
         }
     }

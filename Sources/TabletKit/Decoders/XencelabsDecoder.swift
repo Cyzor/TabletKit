@@ -116,10 +116,9 @@ public struct XencelabsDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -130,7 +129,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
         // report ID, i.e. no padding at all), while the wireless dongle and the
         // Pen Display both declare 31 (32 total). All pen fields through tilt Y
         // fit inside 10 bytes, so gate on that floor rather than a fixed size.
-        guard length >= 10, report[0] == Self.penReportID else { return [] }
+        guard report.count >= 10, report[0] == Self.penReportID else { return [] }
 
         let tag = report[1]
 
@@ -163,7 +162,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
         // so charging is always false here. Single-sample confirmation;
         // revisit byte[2]'s role if a reply is ever seen with a different
         // value there.
-        if tag == Self.tagBattery, length >= 4, report[2] == 0x01 {
+        if tag == Self.tagBattery, report.count >= 4, report[2] == 0x01 {
             return [.battery(percent: Int(report[3]), charging: false)]
         }
         // Any other tag with the aux bit set isn't a pen frame either — it's
@@ -249,7 +248,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
     /// dial center click reported separately via `touchRingButtonDown`
     /// (reused from the touch-ring model — see the type's header comment),
     /// dial rotation event at byte 7 (1 / 2 = the two directions).
-    private static func decodeAux(_ report: UnsafePointer<UInt8>) -> [DecodeResult] {
+    private static func decodeAux(_ report: HIDReport) -> [DecodeResult] {
         var results: [DecodeResult] = []
 
         var buttons = [Bool](repeating: false, count: 9)

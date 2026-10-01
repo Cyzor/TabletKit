@@ -58,15 +58,14 @@ public struct GraphireDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 8, report[0] == 0x02 else { return [] }
+        guard report.count >= 8, report[0] == 0x02 else { return [] }
 
         let status = report[1]
         let inProximity = (status & 0x80) != 0
@@ -93,7 +92,7 @@ public struct GraphireDecoder: TabletReportDecoder {
                             penButton1: false, penButton2: false,
                             eraser: exitEraser, inProximity: false, hoverDistance: 0)))
             }
-            appendPad(&results, report: report, length: length, spec: spec)
+            appendPad(&results, report: report, spec: spec)
             return results
         }
 
@@ -164,7 +163,7 @@ public struct GraphireDecoder: TabletReportDecoder {
                     eraser: isEraser,
                     inProximity: true,
                     hoverDistance: hoverDistance)))
-        appendPad(&results, report: report, length: length, spec: spec)
+        appendPad(&results, report: report, spec: spec)
 
         return results
     }
@@ -174,11 +173,10 @@ public struct GraphireDecoder: TabletReportDecoder {
     /// The kernel reads the pad from every report, pen in range or not; pad
     /// bits never overlap the pressure bits (d[7] & 0x03).
     private func appendPad(
-        _ results: inout [DecodeResult], report: UnsafePointer<UInt8>,
-        length: CFIndex, spec: DigitizerSpec
+        _ results: inout [DecodeResult], report: HIDReport, spec: DigitizerSpec
     ) {
         guard spec.buttonCount > 0 else { return }
-        results.append(contentsOf: decodePad(report: report, length: length, spec: spec))
+        results.append(contentsOf: decodePad(report: report, spec: spec))
     }
 
     /// Decode the pad from d[7] (and d[8] on WACOM_MO).
@@ -195,13 +193,12 @@ public struct GraphireDecoder: TabletReportDecoder {
     /// layout. Bits confirmed on a capture 2026-09-27; which bit is which
     /// key is not hardware-checked.
     private func decodePad(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec
     ) -> [DecodeResult] {
         let padByte = report[7]
         // Only the MO models have four buttons; G4 has two.
-        if spec.buttonCount >= 4, length >= 9 {
+        if spec.buttonCount >= 4, report.count >= 9 {
             let ringByte = report[8]
             let ringActive = (ringByte & 0x80) != 0
             return [.aux(AuxButtons(

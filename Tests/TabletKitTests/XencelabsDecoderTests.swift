@@ -24,9 +24,9 @@ final class XencelabsDecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState
     ) -> [DecodeResult] {
         var decoder = XencelabsDecoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: display, state: &state, deviceFamily: .xencelabs)
         }
     }
