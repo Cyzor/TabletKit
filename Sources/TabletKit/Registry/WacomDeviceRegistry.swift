@@ -373,8 +373,11 @@ public struct WacomDeviceSpec: Sendable {
     public let ringSlotCount: Int
     /// True if the pen family includes an eraser tool type.
     public let hasEraser: Bool
-    /// True if this device's pen reports include tilt data (Bamboo 4-bit format).
-    /// Has no effect on IntuosV1/V2/Intuos3 decoders, which always decode tilt.
+    /// True if the tablet senses pen tilt. Pass it to `init` to override; by
+    /// default it's false for formats with no tilt field (Graphire, Bamboo,
+    /// PL, DTU, DTUS), for consumer and business models that lack tilt, and
+    /// for entries with no pen, and true otherwise. `BambooDecoder` reads it
+    /// to decide whether to decode tilt; other decoders ignore it.
     public let hasTilt: Bool
     /// Full-scale tilt angle in degrees for this family's wire tilt value, sourced
     /// from a HID descriptor, a kernel-cited constant, or a stop-to-stop hardware
@@ -481,7 +484,7 @@ public struct WacomDeviceSpec: Sendable {
         buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
         hasMechanicalDial: Bool = false,
         hasKeyOLEDs: Bool = false,
-        hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool = false,
+        hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool? = nil,
         tiltMaxDegrees: Double? = nil,
         hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
         touchMaxX: Int = 0, touchMaxY: Int = 0,
@@ -515,7 +518,7 @@ public struct WacomDeviceSpec: Sendable {
         self.touchMaxY = touchMaxY
         self.ringSlotCount = ringSlotCount
         self.hasEraser = hasEraser
-        self.hasTilt = hasTilt
+        self.hasTilt = hasTilt ?? Self.defaultHasTilt(parser: parser, productID: productID)
         self.tiltMaxDegrees = tiltMaxDegrees
         self.isPenDisplay = isPenDisplay
         self.seizeUSB = seizeUSB
@@ -527,6 +530,24 @@ public struct WacomDeviceSpec: Sendable {
         self.productStringMatch = productStringMatch
         self.activeWidthMM = activeWidthMM
         self.activeHeightMM = activeHeightMM
+    }
+
+    /// Products without tilt in formats that otherwise carry it: consumer
+    /// Intuos (CTL/CTH-x90, CTL-x100), CTE-460, CTL-470, DTU-class business
+    /// displays, and entries with no pen (touch sensors, receivers,
+    /// bootloader). From DrawTabData's per-model tilt where it has one.
+    static let noTiltProductIDs: Set<Int> = [
+        0x005D, 0x005E, 0x006A, 0x0084, 0x0094, 0x009A, 0x009D, 0x00DD,
+        0x00F6, 0x00F9, 0x0326, 0x032C, 0x0335, 0x033B, 0x033C, 0x033D,
+        0x033E, 0x0354, 0x0359, 0x035A, 0x0374, 0x0375, 0x0376, 0x0377,
+        0x0378, 0x0379, 0x037D, 0x03B3, 0x03C5, 0x03C6, 0x03C7, 0x03C8,
+    ]
+
+    static func defaultHasTilt(parser: ReportParser, productID: Int) -> Bool {
+        switch parser {
+        case .graphire, .bamboo, .pl, .dtu, .dtus, .expressKeyRemote: return false
+        default: return !noTiltProductIDs.contains(productID)
+        }
     }
 
     /// Lines per inch derived from `maxX`/`maxY` and `activeWidthMM`/`activeHeightMM`.

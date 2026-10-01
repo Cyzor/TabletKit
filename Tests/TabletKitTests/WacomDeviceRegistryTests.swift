@@ -482,4 +482,23 @@ final class WacomDeviceRegistryTests: XCTestCase {
                                + "sensor but also declares buttons")
         }
     }
+
+    /// Tilt per DrawTabData and the decoders' formats: professional tablets
+    /// and the 2023 Wacom One sense it; consumer Intuos, Bamboo-format, and
+    /// pen-less entries don't.
+    func testHasTiltDefaults() {
+        let expected: [(Int, Bool)] = [
+            (0x0358, true),   // Intuos Pro L (PTH-860)
+            (0x03F9, true),   // Intuos Pro L gen 3 (PTK-870)
+            (0x0100, true),   // Wacom One S (CTC-4110WL)
+            (0x0028, true),   // Intuos5 L (PTH-850)
+            (0x0374, false),  // Intuos S (CTL-4100)
+            (0x033E, false),  // CTH-690
+            (0x00D4, false),  // Bamboo Pen (CTL-460)
+            (0x0331, false),  // ExpressKey Remote
+        ]
+        for (pid, tilt) in expected {
+            XCTAssertEqual(WacomDeviceRegistry.spec(for: pid)?.hasTilt, tilt, String(format: "0x%04X", pid))
+        }
+    }
 }

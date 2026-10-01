@@ -129,6 +129,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `WacomDeviceSpec.hasTilt` was false for every device. It now reports
+  whether the tablet senses tilt, derived from the report format plus a list
+  of consumer, business, and pen-less products (per DrawTabData where it
+  covers the model), and can still be set explicitly.
 - Art Pen on Intuos4/5 and Intuos Pro gen 1: rotation packets were decoded as
   pen packets, pressing barrel button 1 and setting pressure from the angle
   on every other report. They now set the pen's rotation, which these
