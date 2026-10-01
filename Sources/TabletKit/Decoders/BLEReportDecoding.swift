@@ -10,7 +10,9 @@ import Foundation
 /// Intuos Pro models (PTH-451/651/851, PTH-660/860) when connected via
 /// Bluetooth Low Energy.
 ///
-/// Layout (from Wacom-Wireless-Specification-Notes.md §4.5):
+/// Layout from early research notes, not a capture or the kernel. No
+/// supported tablet is known to send it: the PTH-x60's LE identity serves
+/// Wacom's paper-notes mode.
 /// [0] 0x01 Report ID
 /// [1] bits 0–3 = tool index; bit 4 = tip switch; bit 5 = barrel 1;
 ///     bit 6 = barrel 2; bit 7 = proximity

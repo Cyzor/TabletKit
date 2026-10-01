@@ -1,7 +1,7 @@
 # TabletKit Changelog
 
 This changelog covers the `TabletKit` Swift package (the decoder layer defined in `Package.swift`).
-The MockTab app tracks its own version in `MockTab/Info.plist` and maintains separate release notes in `release-notes/`.
+The MockTab app sets its own version in its Xcode project and maintains separate release notes in `release-notes/`.
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and will adopt [Semantic Versioning](https://semver.org/spec/v2.0.0.html) after 1.0. Before 1.0, minor versions may break source compatibility.
 
@@ -172,6 +172,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- `WacomToolCatalog` names tool code `0x0832` the Stroke Pen, as the Linux
+  driver does, instead of Pro Pen 2.
+- Registry confidence for the Intuos Pro L gen 3 (`0x03F9`) and Bamboo Pen
+  CTL-460 (`0x00D4`) is now `.verified`, matching their hardware testing.
 - Registry cross-checked against Wacom model data. Pen range and pressure
   match on 102 models; 38 more move to `.crossReferenced` as a result.
 - Pen range and pressure now follow Wacom model data on 25 models whose values

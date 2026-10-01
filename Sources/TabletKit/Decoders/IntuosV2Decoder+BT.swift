@@ -99,7 +99,7 @@ extension IntuosV2Decoder {
         // [100] = 0xCE (device metadata marker, constant)
         // [100..109] = device capability block:
         //      [100] = 0xCE marker
-        //      [104:105]= tool code LE (e.g., 0x0804 = Art Pen)
+        //      [103:104]= tool code LE (e.g., 0x0804 = Art Pen)
         // [281..285] = pad sub-report (center button, express keys, touch ring)
         //
         // Per-frame flag byte (f[0]):
@@ -654,8 +654,8 @@ extension IntuosV2Decoder {
                     state.lastTiltY = tiltY
                     state.hasValidTiltFrame = true
                 }
-            // Rotation is NOT available over BT Classic — kernel does not decode
-            // f[9:13] (reserved). Rotation only exists in USB Report ID 0x10.
+            // Rotation not decoded here, though the kernel reads it at f[9:10]
+            // and the 361-byte path above decodes it. Unverified on this path.
 
             state.lastX = x
             state.lastY = y
@@ -674,6 +674,11 @@ extension IntuosV2Decoder {
     }
 
     // MARK: - Wireless status (0x80)
+
+    // Whole-value states below have no known source. The kernel
+    // (wacom_wireless_irq) reads [1] bit 0 as connected, which makes 0x02 a
+    // disconnect. ACK-40401 tablets decode through IntuosV1, so this may be
+    // unreachable.
 
     func decodeWireless(
         report: UnsafePointer<UInt8>,

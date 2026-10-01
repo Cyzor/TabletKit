@@ -114,7 +114,7 @@ public struct TabletPoint: Sendable {
 public struct ToolIdentity: Sendable {
     /// Unique 32-bit serial per physical pen body.  0 means not available (IntuosV1).
     public let serial: UInt32
-    /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0832 Pro Pen 2, 0x0842 Pro Pen 3.
+    /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0804 Art Pen, 0x0842 Pro Pen 2.
     public let toolCode: UInt16
     /// True for the eraser end.  Derived from toolCode: bit 3 of the low byte is set.
     public let isEraser: Bool

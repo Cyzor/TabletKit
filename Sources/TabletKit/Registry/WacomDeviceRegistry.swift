@@ -1343,7 +1343,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
+            confidence: .verified, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             productID: 0x00D5, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel 0xD5 (Bamboo Pen 6×8, BAMBOO_PEN family); linux-hardware "Bamboo Pen (M)"
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
@@ -2749,10 +2749,10 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Dimensions corrected 2026-07-29; 69800/349 and 39000/195 are both
             // exactly 200 units/mm. See the density note on the M size above.
-            productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // cross-referenced: OTD + libwacom (2025 model); dials hardware-confirmed
+            productID: 0x03F9, name: "Intuos Pro L gen 3 (PTK-870)",  // hardware-verified over USB and Bluetooth
             parser: .intuosV3, maxX: 69800, maxY: 39000, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: true, hasDualRings: true, hasMechanicalDial: true, hasEraser: true, tiltMaxDegrees: 64.0,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 349, activeHeightMM: 195),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .verified, activeWidthMM: 349, activeHeightMM: 195),
         .init(
             // Pen range and pressure: Wacom model data (2026-09-29).
             productID: 0x03E6, name: "Wacom Cintiq 16 gen 3 (DTK-168)",  // ⚠ pen range from Wacom model data only

@@ -263,6 +263,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///   [2]       pen status: bit0=tip-switch echo (not a button),
     ///                        bit1=button1, bit2=button2, bit3=button3,
     ///                        bit5=eraser, bit6=tip switch, bit7=proximity
+    ///             bit6 is also set on every hover frame with measured tilt, so
+    ///             it may mean "range", as in Wacom's Pro 2022 report.
     ///   [3..5]    X coordinate, 24-bit (LE u16 at [3..4] | byte[5] << 16)
     ///   [6..8]    Y coordinate, 24-bit (LE u16 at [6..7] | byte[8] << 16)
     ///   [9..10]   pressure, LE u16
@@ -741,18 +743,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Art Pen wheel upstream also carries in this region is not decoded
     /// here.
     ///
-    /// Discriminator byte [1] follows Wacom's legacy Intuos proximity
-    /// state-machine bit convention (`wacom_intuos_inout()` in the Linux
-    /// `input-wacom` driver): high bits are a packet-class field, the low
-    /// bit is a slot index. Every discriminator value actually observed
-    /// decomposes cleanly: `0x02` = idle, `0x21`/`0x22` = in-range (class
-    /// 0x20, slot 1/0), `0x41`/`0x42` = in-range/reporting (class 0x40, slot
-    /// 1/0). It is NOT the proximity signal — `0x02` carries live hover and
-    /// contact data throughout — and proximity is read from [3] instead, per
-    /// above.
-    ///
-    /// The class also says whether a frame carries tilt and rotation: class-0
-    /// (`0x02`) never does, `0x2-`/`0x4-`/`0xC-` carry both.
+    /// Discriminator byte [1]: the low nibble is the packet class, the high
+    /// nibble a rolling counter, so compare only the low nibble. It is not the
+    /// proximity signal; proximity is read from [3], per above.
     ///
     /// Class 1 is identity, never a position — a pen announcing its serial
     /// and tool code at [4..9], byte-identical to the extended USB report's

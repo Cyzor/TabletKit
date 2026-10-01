@@ -65,19 +65,8 @@ public enum WacomToolCatalog: Sendable {
             ]
         )
 
-        // Marker Pen (Intuos4 — rotation-capable; listed in kernel is_art_pen for 0x804.
-        // Likely an OEM or limited-market variant; the primary Intuos4 Art Pen is 0x10804.)
-        //
-        // Confirmed 2026-09-18 to also decode correctly (real pressure/tilt)
-        // on a PTK-870 gen3, alongside the Grip Pen and older Pro Pen 2 (see
-        // 0x0802/0x0842) — same three-pen capture. `hasRotation` stays
-        // unread on gen3: the same capture shows report 0x1e byte [15]
-        // moving (0x00-0x5c) only during this pen's segment, pinned at 0x00
-        // for the other two, so the tablet is sending something rotation-shaped
-        // — but nothing in the capture deliberately rotates the pen, so the
-        // byte's zero point, polarity and units aren't known yet.
-        // IntuosV3Decoder still hardcodes rotation to 0.0; decoding this byte
-        // needs a capture with a deliberate rotation gesture first.
+        // Art Pen. Identity confirmed on a PTK-870 against a pen of known
+        // serial (2026-09-16); rotation decoded on gen 2 and gen 3.
         catalog[0x0804] = WacomToolSpec(
             toolCode: 0x0804,
             name: "Art Pen",
@@ -240,10 +229,11 @@ public enum WacomToolCatalog: Sendable {
 
         // MARK: - Intuos Pro Gen2 / IntuosV2 Series (0x08xx extended)
 
-        // Pro Pen 2 (PTH-660, PTH-860)
+        // Stroke Pen, per the kernel's tool table. Never seen on hardware;
+        // properties below are unverified.
         catalog[0x0832] = WacomToolSpec(
             toolCode: 0x0832,
-            name: "Pro Pen 2",
+            name: "Stroke Pen",
             toolType: .stylus,
             buttonCount: 2,
             maxPressure: 8191,
@@ -255,10 +245,10 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pro Pen 2 Eraser
+        // Stroke Pen eraser
         catalog[0x083A] = WacomToolSpec(
             toolCode: 0x083A,
-            name: "Pro Pen 2 (Eraser)",
+            name: "Stroke Pen (Eraser)",
             toolType: .eraser,
             buttonCount: 2,
             maxPressure: 8191,
