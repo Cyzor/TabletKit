@@ -60,6 +60,15 @@ import Foundation
 /// decoder were gated on touch capability.
 enum BPT3ContainerDecoder {
 
+    // Pointer form, kept until IntuosV1Decoder takes HIDReport.
+    static func decode(
+        report: UnsafePointer<UInt8>,
+        spec: DigitizerSpec,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        decode(report: HIDReport(pointer: report, count: reportLength), spec: spec, state: &state)
+    }
+
     /// Length of the container report. Callers dispatch on this.
     static let reportLength: CFIndex = 64
 
@@ -71,7 +80,7 @@ enum BPT3ContainerDecoder {
     }
 
     static func decode(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {

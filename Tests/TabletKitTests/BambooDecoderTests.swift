@@ -38,9 +38,9 @@ final class BambooDecoderTests: XCTestCase {
     ) -> [DecodeResult] {
         var decoder = BambooDecoder()
         let s = spec ?? cth470
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: s, state: &state, deviceFamily: family)
         }
     }

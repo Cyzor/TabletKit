@@ -100,10 +100,9 @@ public struct BambooDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -112,16 +111,16 @@ public struct BambooDecoder: TabletReportDecoder {
         // report and a 64-byte touch/pad container share it, distinguished only
         // by length. Dispatch on length before anything else — without this the
         // container would be decoded as pen coordinates.
-        if report[0] == 0x02, length == BPT3ContainerDecoder.reportLength {
+        if report[0] == 0x02, report.count == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
         }
-        if report[0] == 0x02, length == 20 {
+        if report[0] == 0x02, report.count == 20 {
             return decodeBPTTouch(report: report, spec: spec)
         }
-        if report[0] == 0x02, (9...10).contains(length) {
+        if report[0] == 0x02, (9...10).contains(report.count) {
             return decodeBPT(report: report, spec: spec, state: &state)
         }
-        guard length >= 10, report[0] == 0x10 else { return [] }
+        guard report.count >= 10, report[0] == 0x10 else { return [] }
 
         let status = report[1]
         let inProximity = (status & 0x80) != 0
@@ -220,7 +219,7 @@ public struct BambooDecoder: TabletReportDecoder {
     /// contact is inferred from pressure instead, and 0x10's role (possibly a
     /// near/far proximity-zone flag) doesn't affect current decode correctness.
     private mutating func decodeBPT(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
@@ -283,7 +282,7 @@ public struct BambooDecoder: TabletReportDecoder {
     /// the byte diagram. Two fixed slots; an empty result means both fingers
     /// lifted, matching `DecodeResult.touch`'s documented convention.
     private func decodeBPTTouch(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         spec: DigitizerSpec
     ) -> [DecodeResult] {
         let padByte = report[1]
@@ -313,7 +312,7 @@ public struct BambooDecoder: TabletReportDecoder {
     // MARK: - Pad buttons
 
     private func decodePad(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         spec: DigitizerSpec
     ) -> [DecodeResult] {
         let padByte = report[7]
