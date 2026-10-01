@@ -81,21 +81,20 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 1 else { return [] }
+        guard report.count >= 1 else { return [] }
 
         if report[0] == Self.deviceListReportID {
-            return Self.decodePairingTable(report: report, length: length)
+            return Self.decodePairingTable(report: report)
         }
 
-        guard length >= 13, report[0] == Self.remoteReportID else { return [] }
+        guard report.count >= 13, report[0] == Self.remoteReportID else { return [] }
 
         let batteryByte = report[7]
         let batteryPercent = Int(batteryByte & 0x7F)
@@ -140,7 +139,7 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
     /// empty" from "the frame was short" — slots the frame can't hold are
     /// omitted rather than guessed.
     static func decodePairingTable(
-        report: UnsafePointer<UInt8>, length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
         var slots: [RemotePairingSlot] = []
         slots.reserveCapacity(maxRemotes)
@@ -148,7 +147,7 @@ public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         for index in 0..<maxRemotes {
             let base = index * pairingSlotStride
             // Highest byte this slot reads is base+6; need it within the frame.
-            guard base + 6 < length else { break }
+            guard base + 6 < report.count else { break }
 
             let serial =
                 UInt32(report[base + 4])

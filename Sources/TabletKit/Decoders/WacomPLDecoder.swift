@@ -59,15 +59,14 @@ public struct WacomPLDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 8, report[0] == 0x02 else { return [] }
+        guard report.count >= 8, report[0] == 0x02 else { return [] }
 
         let status1 = report[1]
         let status4 = report[4]

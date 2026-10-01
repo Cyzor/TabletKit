@@ -25,9 +25,9 @@ final class DTUSDecoderTests: XCTestCase {
         family: DeviceFamily = .dtus
     ) -> [DecodeResult] {
         let decoder = DTUSDecoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: dtk1651, state: &state, deviceFamily: family)
         }
     }

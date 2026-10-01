@@ -20,9 +20,9 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState
     ) -> [DecodeResult] {
         var decoder = ExpressKeyRemoteDecoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: remote, state: &state, deviceFamily: .expressKeyRemote)
         }
     }

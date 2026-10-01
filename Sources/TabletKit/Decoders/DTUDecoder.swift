@@ -28,16 +28,15 @@ public struct DTUDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 8 else { return [] }
-        return decodePenReport(report: report, length: length, spec: spec, state: &state)
+        guard report.count >= 8 else { return [] }
+        return decodePenReport(report: report, spec: spec, state: &state)
     }
 
     // MARK: - Pen report
@@ -54,8 +53,7 @@ public struct DTUDecoder: TabletReportDecoder {
     ///   [6]     pressure LSB (8 bits)
     ///   [7]     bit 0: pressure MSB → 9-bit total (0–511)
     private func decodePenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {

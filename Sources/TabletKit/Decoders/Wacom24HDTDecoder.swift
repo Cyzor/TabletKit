@@ -78,16 +78,15 @@ public struct Wacom24HDTDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 62, report[0] == 0x01 else { return [] }
-        return decodeMultitouchReport(report: report, length: length, state: &state)
+        guard report.count >= 62, report[0] == 0x01 else { return [] }
+        return decodeMultitouchReport(report: report, state: &state)
     }
 
     // MARK: - 0x01 multitouch report
@@ -104,8 +103,7 @@ public struct Wacom24HDTDecoder: TabletReportDecoder {
     private static let maxPlausibleContacts = 10
 
     private func decodeMultitouchReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         state: inout DecoderState
     ) -> [DecodeResult] {
         let frameCount = min(Int(report[Self.frameCountOffset]), Self.maxPlausibleContacts)
@@ -134,7 +132,7 @@ public struct Wacom24HDTDecoder: TabletReportDecoder {
         let recordsThisPacket = min(Self.recordsPerPacket, state.wacom24HDTRemainingContacts)
         for slot in 0 ..< recordsThisPacket {
             let base = Self.recordsBase + slot * Self.recordSize
-            guard base + Self.recordSize <= length else { break }
+            guard base + Self.recordSize <= report.count else { break }
             guard let contact = decodeContactRecord(report: report, base: base) else { continue }
             state.wacom24HDTPendingContacts.append(contact)
         }
@@ -159,7 +157,7 @@ public struct Wacom24HDTDecoder: TabletReportDecoder {
     /// only reports what is currently active, matching how `IntuosV2Decoder`
     /// /`BPT3ContainerDecoder`'s touch paths already work.
     private func decodeContactRecord(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         base: Int
     ) -> TouchContact? {
         let status = report[base]

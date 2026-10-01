@@ -26,22 +26,21 @@ public struct DTUSDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         switch report[0] {
         case 0x11:
-            guard length >= 7 else { return [] }
+            guard report.count >= 7 else { return [] }
             return decodePenReport(
-                report: report, length: length, spec: spec, state: &state)
+                report: report, spec: spec, state: &state)
         case 0x15:
-            return decodePadReport(report: report, length: length)
+            return decodePadReport(report: report)
         default:
             return []
         }
@@ -65,8 +64,7 @@ public struct DTUSDecoder: TabletReportDecoder {
     /// no serial or tool-code field exists in the wire format, so no
     /// `.toolEnter` events are produced.
     private func decodePenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState
     ) -> [DecodeResult] {
@@ -116,10 +114,9 @@ public struct DTUSDecoder: TabletReportDecoder {
     // MARK: - 0x15 pad report
 
     private func decodePadReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let mechanicalByte = report[1] & 0x0F
         let buttons = (0..<4).map { bit in (mechanicalByte & (1 << bit)) != 0 }
             + Array(repeating: false, count: 4)

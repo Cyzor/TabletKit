@@ -62,16 +62,15 @@ public struct Wacom27QHDTDecoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 64, report[0] == 0x05 else { return [] }
-        return decodeMultitouchReport(report: report, length: length)
+        guard report.count >= 64, report[0] == 0x05 else { return [] }
+        return decodeMultitouchReport(report: report)
     }
 
     // MARK: - 0x05 multitouch report
@@ -82,8 +81,7 @@ public struct Wacom27QHDTDecoder: TabletReportDecoder {
     private static let frameCountOffset = 63
 
     private func decodeMultitouchReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
         let frameCount = min(Int(report[Self.frameCountOffset]), Self.recordsPerPacket)
         guard frameCount > 0 else { return [.touch([])] }
@@ -91,7 +89,7 @@ public struct Wacom27QHDTDecoder: TabletReportDecoder {
         var contacts: [TouchContact] = []
         for slot in 0 ..< frameCount {
             let base = Self.recordsBase + slot * Self.recordSize
-            guard base + Self.recordSize <= length else { break }
+            guard base + Self.recordSize <= report.count else { break }
             guard let contact = decodeContactRecord(report: report, base: base) else { continue }
             contacts.append(contact)
         }
@@ -102,7 +100,7 @@ public struct Wacom27QHDTDecoder: TabletReportDecoder {
     /// Returns `nil` for an inactive slot (status bit 0 clear) — same
     /// release-by-omission convention as `Wacom24HDTDecoder`.
     private func decodeContactRecord(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         base: Int
     ) -> TouchContact? {
         let status = report[base]

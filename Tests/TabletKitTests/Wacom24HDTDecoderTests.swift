@@ -21,9 +21,9 @@ final class Wacom24HDTDecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState
     ) -> [DecodeResult] {
         let decoder = Wacom24HDTDecoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: touchSpec, state: &state, deviceFamily: .cintiq)
         }
     }

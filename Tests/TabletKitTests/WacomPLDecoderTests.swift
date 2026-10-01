@@ -27,9 +27,9 @@ final class WacomPLDecoderTests: XCTestCase {
         _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
     ) -> [DecodeResult] {
         let decoder = WacomPLDecoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec, state: &state, deviceFamily: .cintiq)
         }
     }
