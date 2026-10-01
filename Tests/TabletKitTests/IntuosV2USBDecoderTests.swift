@@ -26,15 +26,23 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         // unit 0x14 (degrees) — matching the BT path's hardware-measured ±64.
         tiltMaxDegrees: 64.0)
 
+    /// Cintiq Pro 22 (DTH-227): no registry tilt scale, so the alternate
+    /// report's ±90 fallback applies.
+    private let dth227 = DigitizerSpec(
+        maxX: 96012, maxY: 54356, maxPressure: 8191,
+        buttonCount: 0, hasTilt: true, hasDualRings: false,
+        isPenDisplay: true, ringSlotCount: 4)
+
     private func decode(
         _ bytes: [UInt8], state: inout DecoderState,
-        family: DeviceFamily = .intuosProGen2
+        family: DeviceFamily = .intuosProGen2, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
         var decoder = IntuosV2Decoder()
+        let spec = spec ?? pth660
         return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
             decoder.decode(
                 report: buf.baseAddress!, length: bytes.count,
-                spec: pth660, state: &state, deviceFamily: family)
+                spec: spec, state: &state, deviceFamily: family)
         }
     }
 
@@ -395,7 +403,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
             0x0C, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x4D, 0x6F,
             0x70, 0x23, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0xE4, 0x4A, 0x20, 0x3D,
         ]
-        let r = decode(b, state: &state)
+        let r = decode(b, state: &state, spec: dth227)
         let pen = r.compactMap { rr -> TabletPoint? in
             if case .pen(let p) = rr { return p } else { return nil }
         }.first
@@ -422,7 +430,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
             0x1E, 0x01, 0xC1, 0xDB, 0xFD, 0x00, 0xF4, 0x8D, 0x00, 0xDB, 0x01,
             0x0C, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,
         ]
-        let r = decode(b, state: &state)
+        let r = decode(b, state: &state, spec: dth227)
         let pen = r.compactMap { rr -> TabletPoint? in
             if case .pen(let p) = rr { return p } else { return nil }
         }.first

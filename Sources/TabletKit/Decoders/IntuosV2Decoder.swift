@@ -442,8 +442,11 @@ public struct IntuosV2Decoder: TabletReportDecoder {
             let v = Int(report[o]) | (Int(report[o + 1]) << 8)
             return Double(v >= 32768 ? v - 65536 : v)
         }
-        let tiltX = tiltRaw(11) / 90.0
-        let tiltY = tiltRaw(13) / 90.0
+        // Degrees over the device's own maximum: ±64 on the Wacom One 12, ±90
+        // per the Cintiq Pro 22 descriptor, which is the fallback.
+        let tiltScale = spec.tiltMaxDegrees ?? 90.0
+        let tiltX = tiltRaw(11) / tiltScale
+        let tiltY = tiltRaw(13) / tiltScale
         // Byte 19, past rotation (15) and the airbrush fingerwheel (17).
         let hoverDistance = Int(report[19])
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108

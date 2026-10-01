@@ -132,6 +132,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Tilt read at the wrong scale on several models. The Intuos Pro S
+  (PTH-460) and the Wacom One Creative Pen Display (DTC-133) fell back to
+  half scale; the Wacom One 12 (DTC-121) used the Cintiq Pro 22's ±90°
+  instead of its own ±64°. Values come from the devices' HID descriptors
+  (linuxwacom/wacom-hid-descriptors) or their family's confirmed scale, and
+  the alternate report now reads each device's scale instead of a constant.
 - `WacomDeviceSpec.hasTilt` was false for every device. It now reports
   whether the tablet senses tilt, derived from the report format plus a list
   of consumer, business, and pen-less products (per DrawTabData where it

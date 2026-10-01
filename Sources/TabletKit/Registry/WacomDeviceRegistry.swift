@@ -1666,6 +1666,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0392, name: "Intuos Pro S (PTH-460)",  // cross-referenced: kernel + OTD + libwacom
             parser: .intuosV2, maxX: 31920, maxY: 19950, maxPressure: 8191,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // PTH-x60 family, descriptor-confirmed on PTH-660/860
             hasFingerTouch: true, maxTouchContacts: 5,
             touchMaxX: 6384, touchMaxY: 3990,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
@@ -1677,6 +1678,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03DC, name: "Intuos Pro S (PTH-460)",  // cross-referenced: OTD + libwacom
             parser: .intuosV2, maxX: 31920, maxY: 19950, maxPressure: 8191,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // PTH-x60 family, descriptor-confirmed on PTH-660/860
             hasFingerTouch: true, maxTouchContacts: 5,
             touchMaxX: 6384, touchMaxY: 3990,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
@@ -2258,6 +2260,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03A6, name: "Wacom DTC-133",  // ⚠ from OTD
             parser: .intuosV2, maxX: 29434, maxY: 16556, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // descriptor: vendor 0x10 tilt [-64,63] degrees
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 279, activeHeightMM: 152),
         .init(
@@ -2668,6 +2671,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03CE, name: "Wacom One Pen Display 12 (DTC-121)",  // ⚠ from OTD; name per libwacom
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // descriptor: vendor 0x1E tilt [-64,63] degrees
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 279, activeHeightMM: 152),
         .init(
@@ -3084,6 +3088,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03CF, name: "Wacom DTC121 (alt)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // descriptor: vendor 0x1E tilt [-64,63] degrees
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 279, activeHeightMM: 152),
@@ -3107,6 +3112,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03ED, name: "Wacom DTC121",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // descriptor: vendor 0x1E tilt [-64,63] degrees
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 256, activeHeightMM: 144),
@@ -3114,6 +3120,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only; buttonCount 3 per libwacom
             parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,
             buttonCount: 3, hasTouchRing: false, hasEraser: true,
+            tiltMaxDegrees: 64.0,  // same as 0x03F0, measured
             hasFingerTouch: false, maxTouchContacts: 0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
