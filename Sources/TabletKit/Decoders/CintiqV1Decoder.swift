@@ -44,6 +44,7 @@ import Foundation
 /// injects a minimum contact pressure so apps register a click.
 public struct CintiqV1Decoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
     // ── Barrel button debounce state ──────────────────────────────────────────
@@ -71,6 +72,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // fallback tool identity is needed — see `inRangeOnly` in `decodePen`.
     private var fallbackToolPending = false
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

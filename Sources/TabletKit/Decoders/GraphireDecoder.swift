@@ -55,8 +55,10 @@ import Foundation
 /// lands, GraphireBT can be added as a sibling decoder.
 public struct GraphireDecoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

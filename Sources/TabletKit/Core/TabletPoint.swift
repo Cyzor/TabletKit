@@ -4,6 +4,11 @@
 
 import Foundation
 
+/// One pen sample: position, pressure, tilt, rotation, and button state,
+/// decoded from a single report or frame.
+///
+/// Values stay in the device's own units; normalize at the point where you
+/// map them to a screen or canvas. See <doc:DecodingPenReports>.
 public struct TabletPoint: Sendable {
     /// Raw digitizer X coordinate (device units)
     public var x: Int
@@ -47,10 +52,20 @@ public struct TabletPoint: Sendable {
     public var tiltY: Double
     /// Pen rotation (twist), 0.0..360.0 degrees (approximate)
     public var rotation: Double = 0.0
+    /// The pen's first side button (the lower one on most Wacom pens).
     public var penButton1: Bool
+    /// The pen's second side button (the upper one on most Wacom pens).
     public var penButton2: Bool
+    /// True while the eraser end is in range, hovering or touching, so apps
+    /// can switch tools before contact.
     public var eraser: Bool
+    /// False on the single point a decoder emits when the pen leaves range;
+    /// that point repeats the last position. True otherwise.
     public var inProximity: Bool
+    /// Height above the surface in the device's own units: smallest in
+    /// contact, larger as the pen lifts. The range differs by family (0–63
+    /// on Intuos Pro gen 2, up to 255 on gen 3, where 255 means at or past
+    /// the edge of sensing); 0 where the format doesn't report it.
     public var hoverDistance: Int
     /// For mouse tools only: middle-button state.
     public var mouseMiddleButton: Bool = false
@@ -58,12 +73,15 @@ public struct TabletPoint: Sendable {
     public var mouseWheelDelta: Int = 0
     /// Extra barrel / mouse buttons beyond the standard two side buttons.
     public var penButton3: Bool = false
+    /// A fourth pen or mouse button, where the tool has one.
     public var penButton4: Bool = false
+    /// A fifth pen or mouse button, where the tool has one.
     public var penButton5: Bool = false
     /// Absolute airbrush fingerwheel position, 0–1023; nil for tools without
     /// one. Separate from `mouseWheelDelta`, which is a relative ±1 step.
     public var airbrushWheel: Int? = nil
 
+    /// Creates a value with the given fields; optional ones default to absent.
     public init(
         x: Int,
         y: Int,
@@ -116,12 +134,14 @@ public struct ToolIdentity: Sendable {
     public let serial: UInt32
     /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0804 Art Pen, 0x0842 Pro Pen 2.
     public let toolCode: UInt16
-    /// True for the eraser end.  Derived from toolCode: bit 3 of the low byte is set.
+    /// True for the eraser end: bit 3 of the tool code, except on Art Pen
+    /// codes such as `0x1108` that set it on the tip.
     public let isEraser: Bool
-    /// True for cordless mouse / cursor accessories (Intuos Mouse).
-    /// On IntuosV2 devices: detected by the absence of the pen bit (0x0800) in toolCode.
+    /// True for cordless mouse and cursor tools: tool codes whose low four
+    /// bits are 6 (the KC-100 reports `0x0806`).
     public let isMouse: Bool
 
+    /// Creates a value with the given fields; optional ones default to absent.
     public init(serial: UInt32, toolCode: UInt16, isEraser: Bool, isMouse: Bool) {
         self.serial = serial
         self.toolCode = toolCode
@@ -130,7 +150,12 @@ public struct ToolIdentity: Sendable {
     }
 }
 
+/// ExpressKey, touch ring, dial, and touch strip state from one pad report.
+///
+/// Rings and strips report an absolute position while touched; dials and
+/// wheels arrive separately as ``DecodeResult/wheel(index:delta:)``.
 public struct AuxButtons: Sendable {
+    /// Creates a pad state. Positions default to "no contact".
     public init(
         buttons: [Bool],
         mechanicalMask: UInt8 = 0,
@@ -159,7 +184,9 @@ public struct AuxButtons: Sendable {
         self.touchStrip2Position = touchStrip2Position
     }
 
-    public var buttons: [Bool]  // up to 8 express key buttons
+    /// ExpressKeys in device order, `true` while held. Some devices report
+    /// more than eight; index past the end reads as released.
+    public var buttons: [Bool]
     /// Bitmask of buttons that had a new mechanical press pulse this frame.
     /// Bit N corresponds to buttons[N].  Set even when the synthesized button state
     /// is unchanged (e.g. rapid re-press before the previous release was detected).
@@ -181,12 +208,16 @@ public struct AuxButtons: Sendable {
     /// `touchRing2Active` (finger presence on a capacitive ring), which this
     /// hardware has no equivalent of. See `IntuosV3Decoder.decodeAuxReport`.
     public var touchRing2ButtonDown: Bool = false
+    /// Second ring position, same encoding as `touchRingPosition`.
     public var touchRing2Position: UInt8 = 0x7F
-    /// Intuos3 WS left touch strip.  0xFF = no contact; 0 = bottom zone, higher = up.
+    /// True while a finger is on the left touch strip (Intuos3 WS).
     public var touchStrip1Active: Bool = false
+    /// Left strip position: 0 is the bottom zone, higher is farther up;
+    /// `0xFF` with no contact.
     public var touchStrip1Position: UInt8 = 0xFF
-    /// Intuos3 WS right touch strip.  Same encoding as strip 1.
+    /// True while a finger is on the right touch strip.
     public var touchStrip2Active: Bool = false
+    /// Right strip position, same encoding as `touchStrip1Position`.
     public var touchStrip2Position: UInt8 = 0xFF
     /// Active ring mode, 0-based, on hardware whose own firmware switches
     /// modes (ExpressKey Remote). `nil` where the host owns the mode.
@@ -210,9 +241,11 @@ public struct LiveButtonState: Equatable, Sendable {
     public var button1Down: Bool = false
     /// Side button 2 held.
     public var button2Down: Bool = false
-    /// Extra buttons 3–5 (mice or future multi-button pens).
+    /// Extra button 3 held (mice and multi-button pens).
     public var button3Down: Bool = false
+    /// Extra button 4 held.
     public var button4Down: Bool = false
+    /// Extra button 5 held.
     public var button5Down: Bool = false
     /// Express-key live state. Sized to 16 (the storage cap shared with
     /// `TabletSettings.expressKeyBindings`); per-device, only the first
@@ -231,10 +264,12 @@ public struct LiveButtonState: Equatable, Sendable {
     /// True while the second dial's own toggle key is physically pressed
     /// (PTK-670/870's right cluster center ExpressKey). Unused elsewhere.
     public var touchRing2ButtonDown: Bool = false
-    /// Intuos3 WS touch strip states (0xFF = no contact, otherwise 0–12 zone).
+    /// True while a finger is on the left touch strip (Intuos3 WS).
     public var touchStrip1Active: Bool = false
+    /// True while a finger is on the right touch strip.
     public var touchStrip2Active: Bool = false
 
+    /// Creates a value with the given fields; optional ones default to absent.
     public init(
         tipDown: Bool = false,
         eraserDown: Bool = false,

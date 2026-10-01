@@ -38,12 +38,14 @@ import Foundation
 /// overrides `spec.maxPressure` to 8191 for BLE reports only.
 public struct IntuosV1Decoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
     /// Hover field is `report[9] >> 2`, six bits — the kernel's
     /// `distance_max` equivalent.
     private static let maxHoverDistance = 63
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

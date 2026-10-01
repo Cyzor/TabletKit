@@ -56,7 +56,7 @@ Do not try to infer tilt direction by reading `NSEvent.tilt` from a live pen whi
 
 Button state appears on the same `TabletPoint`, not as a separate event. `penButton1` and `penButton2` represent the two side buttons that most pens provide; `penButton3` through `penButton5` support pens with additional buttons.
 
-`eraser` becomes `true` when the eraser tip contacts the tablet. It does not represent a button, so check it before treating contact as drawing input.
+`eraser` is `true` while the eraser end is in range, hovering or touching, so an app can switch to its eraser tool before contact. It isn't a button; check it before treating contact as drawing input.
 
 ## See Also
 

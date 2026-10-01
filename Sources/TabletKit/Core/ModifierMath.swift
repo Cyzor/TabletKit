@@ -8,12 +8,14 @@
 //
 // Extracted from InputInjector so the bit logic can be exercised by the
 // SwiftPM test package without standing up the full AppKit / IOKit runtime.
-// See Notes/InputInjector-Modifier-State-Invariants.md for the rules that
-// govern when each helper is called and why the math is the way it is.
+// MockTab's InputInjector decides when each helper is called.
 
 import CoreGraphics
 import Foundation
 
+/// Keyboard-modifier bookkeeping for drivers that post synthetic events:
+/// which flag bits to set, and how to combine held, physical, and synthetic
+/// modifiers without leaving one stuck.
 public enum ModifierMath: Sendable {
 
     /// Device-dependent modifier-key bits (NX_DEVICE…KEYMASK low byte + RCTL).
@@ -23,8 +25,11 @@ public enum ModifierMath: Sendable {
     /// assert the left-hand bit for every modifier they set — and the bits are
     /// part of `managedMask` so release math can clear them again.
     public static let deviceLeftControl: UInt64 = 0x0001
+    /// Device bit for the left Shift key.
     public static let deviceLeftShift: UInt64 = 0x0002
+    /// Device bit for the left Command key.
     public static let deviceLeftCommand: UInt64 = 0x0008
+    /// Device bit for the left Option key.
     public static let deviceLeftOption: UInt64 = 0x0020
     /// All eight device-dependent modifier bits (left + right variants).
     public static let deviceBitsMask: UInt64 =

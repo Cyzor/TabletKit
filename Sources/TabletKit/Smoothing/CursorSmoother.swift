@@ -19,7 +19,8 @@ public struct CursorSmoother: Sendable {
     // Fixed ring buffer + running sum.
     // Eliminates O(n) Array.removeFirst() and a full reduce() on every jitterLevel read.
 
-    public static let jitterWindow = 60  // ~0.5 s at 133 Hz
+    /// Hover samples in the jitter window, about half a second at 133 Hz.
+    public static let jitterWindow = 60
     private var hoverRing = ContiguousArray<CGFloat>(repeating: 0, count: CursorSmoother.jitterWindow)
     private var hoverHead = 0
     private var hoverCount = 0
@@ -40,6 +41,7 @@ public struct CursorSmoother: Sendable {
     // tool instance — a diagnostic snapshot can show *whether* jitter has
     // been present recently, not just whether it happens to be present in
     // this exact hover micro-session.
+    /// Upper bounds, in points per sample, of the jitter histogram buckets.
     public static let jitterHistogramBucketsPtPerSample: [CGFloat] = [0.5, 1, 2, 3, 5]
     public private(set) var jitterHistogram: [UInt64] = [0, 0, 0, 0, 0, 0]
 
@@ -105,6 +107,7 @@ public struct CursorSmoother: Sendable {
     private var recentDeltas = ContiguousArray<CGFloat>(repeating: 0, count: 4)
     private var recentDeltaHead = 0
 
+    /// Creates a smoother with smoothing off.
     public init() {}
 
     // MARK: - Reads
@@ -116,6 +119,7 @@ public struct CursorSmoother: Sendable {
         return hoverSum / CGFloat(hoverCount)
     }
 
+    /// True when hover jitter exceeds 3 points per sample.
     public var isJittery: Bool { jitterLevel > 3.0 }
 
     /// Rolling 4-sample velocity estimate in screen points per sample.

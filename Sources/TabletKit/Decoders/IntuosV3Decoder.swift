@@ -97,8 +97,10 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         Swift.min(x, spec.maxX - x, y, spec.maxY - y)
     }
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

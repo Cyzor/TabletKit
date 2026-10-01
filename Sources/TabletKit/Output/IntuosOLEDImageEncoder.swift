@@ -19,7 +19,9 @@ import CoreText
 /// writeup this was built from.
 public enum IntuosOLEDImageEncoder: Sendable {
 
+    /// OLED width in pixels.
     public static let width = 64
+    /// OLED height in pixels.
     public static let height = 32
 
     /// Row-interleaves a 64×32 8-bit grayscale buffer into the Intuos4's

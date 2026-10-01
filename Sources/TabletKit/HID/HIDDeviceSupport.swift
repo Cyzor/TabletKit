@@ -10,8 +10,11 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "device"
 
 /// Digitizer dimensions in device units for a given tablet model.
 public struct DigitizerSpec: Sendable {
+    /// Largest pen X coordinate, in device units.
     public var maxX: Int
+    /// Largest pen Y coordinate, in device units.
     public var maxY: Int
+    /// Largest pressure value.
     public var maxPressure: Int
     /// Number of programmable express-key buttons on this device.
     /// Used by BambooDecoder to select the correct pad-byte bit layout.
@@ -61,14 +64,19 @@ public struct DigitizerSpec: Sendable {
     /// actual length) is handled by the consuming decoder, not here — this
     /// is just a coordinate pair.
     public struct DebugBitSource: Sendable, Equatable, Codable {
+        /// Byte offset in the report, counting the report ID as 0.
         public var byteIndex: Int
+        /// Bit within that byte, 0 being the lowest.
         public var bitIndex: Int
+        /// Creates a byte and bit position.
         public init(byteIndex: Int, bitIndex: Int) {
             self.byteIndex = byteIndex
             self.bitIndex = bitIndex
         }
     }
 
+    /// Creates a spec. For a registry device, use
+    /// ``WacomDeviceSpec/digitizerSpec`` instead.
     public init(
         maxX: Int,
         maxY: Int,
@@ -100,7 +108,8 @@ public struct DigitizerSpec: Sendable {
     }
 }
 
-// Convenience: read an integer property from an IOHIDDevice.
+/// Reads an integer property, such as `kIOHIDProductIDKey`, from a HID
+/// device; 0 if it's missing or not a number.
 public func hidIntProperty(_ device: IOHIDDevice, _ key: String) -> Int {
     guard let val = IOHIDDeviceGetProperty(device, key as CFString) else { return 0 }
     return (val as? NSNumber)?.intValue ?? 0

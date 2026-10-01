@@ -288,11 +288,17 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
 /// named correctly but pen decode may produce nonsense until verified.
 public struct WacomDeviceSpec: Sendable {
+    /// USB product ID; Bluetooth and dongle variants have their own entries.
     public let productID: Int
+    /// Display name, usually with the model number.
     public let name: String
+    /// Which report format the device sends, and so which decoder reads it.
     public let parser: ReportParser
+    /// Largest pen X coordinate, in device units.
     public let maxX: Int
+    /// Largest pen Y coordinate, in device units.
     public let maxY: Int
+    /// Largest pressure value; 0 for entries with no pen.
     public let maxPressure: Int
     /// Number of programmable express/side keys (0 if none).
     public let buttonCount: Int
@@ -478,6 +484,8 @@ public struct WacomDeviceSpec: Sendable {
     /// string).  Case-insensitive substring match.  Nil = match any.
     public let productStringMatch: String?
 
+    /// Creates an entry. Capabilities default to absent; `hasTilt` defaults
+    /// from the parser and model when omitted.
     public init(
         productID: Int, name: String, parser: ReportParser,
         maxX: Int, maxY: Int, maxPressure: Int,
@@ -662,6 +670,10 @@ public struct WacomDeviceSpec: Sendable {
 
 // MARK: - Registry
 
+/// Every Wacom device TabletKit recognizes, keyed by USB product ID.
+///
+/// Look a device up with `spec(for:)`, then use its ``WacomDeviceSpec/parser``
+/// to pick a decoder and ``WacomDeviceSpec/digitizerSpec`` to configure it.
 public enum WacomDeviceRegistry: Sendable {
 
     /// Every USB vendor ID whose PIDs this registry is keyed on.
@@ -678,6 +690,7 @@ public enum WacomDeviceRegistry: Sendable {
 
     // MARK: Known devices
 
+    /// All entries, in family order. Prefer `spec(for:)` for lookups.
     public static let knownDevices: [WacomDeviceSpec] = [
 
         // ── PenPartner / Graphire 1–4 ─────────────────────────────────────────

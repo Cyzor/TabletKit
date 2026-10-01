@@ -97,8 +97,10 @@ import Foundation
 /// InputInjector handles idempotent button state.
 public struct BambooDecoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

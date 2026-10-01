@@ -9,6 +9,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Documentation comments for the core API: `TabletPoint`, `AuxButtons`,
+  `DecodeResult`, `WirelessStatus`, `TouchContact`, `DecoderState`,
+  `WacomDeviceSpec`, `DigitizerSpec`, `ModifierMath`, and the decoders.
+  `ToolIdentity.isMouse` and `isEraser` now describe what the decoders actually
+  test, and the pen guide says `eraser` is true while the eraser end is in
+  range, not only in contact.
 - `WacomDeviceSpec.digitizerSpec` — the `DigitizerSpec` a decoder takes,
   built from the registry entry. The README and samples copied fields by hand
   and left out `tiltMaxDegrees`, so their tilt read at half scale; they now

@@ -6,17 +6,28 @@ import Foundation
 
 // MARK: - TabletReportDecoder protocol
 
+/// Link state reported by a wireless receiver.
 public enum WirelessStatus: Sendable {
+    /// A tablet is linked to the receiver.
     case active
+    /// The link to the tablet has dropped.
     case lost
+    /// The linked tablet reports a low battery.
     case lowBattery
+    /// A status byte this decoder doesn't recognize, passed through.
     case unknown(UInt8)
 }
 
 /// All mutable state shared between reports for a single decoder session.
 /// Passed `inout` through every `decode` call so decoders can be pure structs.
+///
+/// Create one per physical device and pass the same instance to every call.
+/// The fields are the decoders' own bookkeeping; treat them as opaque and
+/// read decoded values from ``DecodeResult`` instead.
 public struct DecoderState: Sendable {
+    /// Last decoded X, held for frames that carry no position.
     public var lastX: Int = 0
+    /// Last decoded Y, held for frames that carry no position.
     public var lastY: Int = 0
     /// Serial number at the last tool-identity change.
     public var lastSerial: UInt32 = 0
@@ -26,6 +37,7 @@ public struct DecoderState: Sendable {
     public var currentToolCode: UInt16 = 0
     /// Absolute scroll-position counter for mouse-tool reports (V2).
     public var lastScrollPos: UInt8 = 0
+    /// Whether the previous report left the pen in proximity.
     public var prevInProximity: Bool = false
     /// Frames decoded since the current proximity-enter, saturating at a
     /// small cap rather than counting indefinitely. Not touched by any
@@ -35,7 +47,9 @@ public struct DecoderState: Sendable {
     /// generic identity, rather than synthesizing on literally the first
     /// frame after re-entry and risking a race it usually wins.
     public var framesSinceProximityEnter: Int = 0
+    /// Whether the tool in range is the eraser end, held through weak frames.
     public var isEraser: Bool = false
+    /// Whether the tool in range is a mouse or cursor.
     public var toolIsMouse: Bool = false
     /// Active finger contacts for the BPT3 touch container (IntuosV1 path,
     /// CTH-690). Keyed by slot ID; containers carry only changed contacts,
@@ -46,29 +60,34 @@ public struct DecoderState: Sendable {
     /// families. See that decoder's header for why the old `prevInProximity`
     /// gate was removed.
     public var bpt3TouchSlots: [Int: TouchContact] = [:]
-    /// BT 0x80 container pad state — emit aux only on change.
+    /// Last ExpressKey byte from the Bluetooth `0x80` container; the pad is
+    /// emitted only when this or the next two change.
     public var lastBTPadKeys: UInt8 = 0
+    /// Last touch-ring byte from the Bluetooth `0x80` container.
     public var lastBTPadRing: UInt8 = 0x7F
+    /// Last ring center-button byte from the Bluetooth `0x80` container.
     public var lastBTPadBtn: UInt8 = 0
     /// Consecutive frames/reports with low-confidence or out-of-range signal.
     /// Exit proximity only after this reaches exitThreshold, bridging transient
     /// boundary oscillations (confirmed: Art Pen rotation sensor causes these).
     /// Reset to 0 on any valid in-proximity frame.
     public var exitFrameCount: Int = 0
+    /// Consecutive weak frames that count as leaving range.
     public static let exitThreshold = 3
     /// Whether the current tool is supported on this device family.
     /// Used to show UI warnings for incompatible tools and adjust feature decoding.
     public var toolIsSupported: Bool = true
-    /// Last valid rotation reading (Art Pen). Used to hold state during boundary-noise
-    /// frames where !highConfidence (USB) or !inRange (BT). Reset to 0.0 on proximity exit.
     /// Last airbrush fingerwheel value (0–1023). Held across reports because
     /// the wheel and pressure arrive in different packets (`0x0a` vs 0x00–03);
     /// without it every pen report would blank the wheel. Cleared on exit.
     public var lastAirbrushWheel: Int?
+    /// Last valid rotation reading (Art Pen), in degrees. Held through frames
+    /// that carry none; reset to 0 when the pen leaves.
     public var lastRotation: Double = 0.0
     /// True once at least one valid rotation frame has been decoded since tool-enter.
     /// Prevents emitting stale 0.0 during boundary oscillations at re-entry.
     public var hasValidRotationFrame: Bool = false
+    /// True once a frame with real tilt has been decoded since the pen entered.
     public var hasValidTiltFrame: Bool = false
     /// Last valid tilt readings. Used to hold state during boundary-noise frames
     /// where !highConfidence (USB) or !inRange (BT) so that apps receive a continuous
@@ -120,6 +139,7 @@ public struct DecoderState: Sendable {
     /// it cannot latch permanently against a stale reference position — see
     /// `IntuosV3Decoder`'s `bleBarrelMaxConsecutiveDrops`.
     public var bleBarrelDropCount: Int = 0
+    /// Creates empty state for a new device or session.
     public init() {}
 }
 
@@ -130,10 +150,14 @@ public struct DecoderState: Sendable {
 /// set for a remote that is paired but asleep, so it answers "is this slot
 /// claimed" rather than "is this remote awake".
 public struct RemotePairingSlot: Sendable, Equatable {
+    /// The slot's position in the receiver's table, from 0.
     public let index: Int
+    /// The paired remote's 24-bit serial, or 0 for an empty slot.
     public let serial: UInt32
+    /// Whether the slot holds a pairing.
     public let connected: Bool
 
+    /// Creates a pairing-table entry.
     public init(index: Int, serial: UInt32, connected: Bool) {
         self.index = index
         self.serial = serial
@@ -141,11 +165,19 @@ public struct RemotePairingSlot: Sendable, Equatable {
     }
 }
 
+/// One event decoded from a report. A single report can produce several,
+/// such as a tool announcement and a pen sample, so always handle the whole
+/// array a decoder returns.
 public enum DecodeResult: Sendable {
+    /// Nothing to report.
     case none
+    /// A pen sample.
     case pen(TabletPoint)
+    /// A tool came into range and identified itself.
     case toolEnter(ToolIdentity)
+    /// ExpressKey, ring, or strip state.
     case aux(AuxButtons)
+    /// A wireless receiver's link state changed.
     case wireless(WirelessStatus)
     /// Battery status from a BT device report.
     /// `percent` is 0–100 (direct, no lookup table). `charging` is true when the device is plugged in.
@@ -195,12 +227,18 @@ public enum DecodeResult: Sendable {
 /// Units still differ per device — these are raw sensor values, not normalized
 /// ones, so any threshold tuned against them must be per-device.
 public struct TouchContact: Equatable, Sendable {
+    /// Tracking ID, stable for one finger across frames.
     public let id: Int
+    /// X in the touch sensor's own units.
     public let x: Int
+    /// Y in the touch sensor's own units.
     public let y: Int
+    /// Contact width (major axis), raw; `nil` where not reported.
     public let contactArea: Int?
+    /// Contact height (minor axis), raw; `nil` where not reported.
     public let contactMinor: Int?
 
+    /// Creates a contact.
     public init(
         id: Int,
         x: Int,
@@ -245,9 +283,13 @@ public protocol TabletReportDecoder: Sendable {
 
 /// Decoded BLE HOGP pen report. See `decodeBLEPenReport` for the wire layout.
 public struct BLEPenResult: Sendable {
+    /// The pen sample.
     public let point: TabletPoint
+    /// The pen's serial number.
     public let serial: UInt32
+    /// The pen's tool code.
     public let toolCode: UInt16
+    /// Whether the tool is a mouse.
     public let isMouse: Bool
 }
 

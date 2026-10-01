@@ -59,8 +59,10 @@ import Foundation
 /// of checking `report[0]` before trusting a byte layout.
 public struct Wacom27QHDTDecoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,

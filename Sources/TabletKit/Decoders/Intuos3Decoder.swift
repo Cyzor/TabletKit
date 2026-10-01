@@ -30,8 +30,10 @@ import Foundation
 /// wireless status, mouse subtypes) is identical to IntuosV1Decoder.
 public struct Intuos3Decoder: TabletReportDecoder {
 
+    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
     public func decode(
         report: UnsafePointer<UInt8>,
         length: CFIndex,
