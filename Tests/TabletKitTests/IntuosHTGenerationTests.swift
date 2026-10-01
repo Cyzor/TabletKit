@@ -173,9 +173,9 @@ final class IntuosHTGenerationTests: XCTestCase {
         let touchMsg: [UInt8] = [0x05, 0x80, 0x51, 0x53, 0x57, 3, 3, 0]
         var decoder = IntuosV1Decoder()
         let container = makeContainer([touchMsg])
-        let results = container.withUnsafeBufferPointer { buf in
+        let results = HIDReport.withReport(container) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: container.count,
+                report: report,
                 spec: cth690, state: &state, deviceFamily: .intuosProGen1)
         }
         let contacts = touches(results)

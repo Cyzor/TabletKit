@@ -151,7 +151,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
         if typeNibble == 0x05 {
             // Art Pen / Marker Pen rotation packet — see intuosRotationDegrees.
-            state.lastRotation = intuosRotationDegrees(report.pointer)
+            state.lastRotation = intuosRotationDegrees(report)
 
         } else if typeNibble <= 0x03 {
             // General pen packet: position, pressure, tilt, and barrel

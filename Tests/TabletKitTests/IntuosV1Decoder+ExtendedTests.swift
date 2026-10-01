@@ -34,9 +34,9 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     ) -> [DecodeResult] {
         let s = spec ?? pth851
         var decoder = IntuosV1Decoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: s, state: &state, deviceFamily: family)
         }
     }

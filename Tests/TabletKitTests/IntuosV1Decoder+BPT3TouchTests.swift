@@ -22,9 +22,9 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     ) -> [DecodeResult] {
         var decoder = IntuosV1Decoder()
         let spec = spec ?? cth690
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec, state: &state, deviceFamily: .intuosProGen1)
         }
     }

@@ -20,9 +20,9 @@ final class IntuosV1DecoderTests: XCTestCase {
         family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
         var decoder = IntuosV1Decoder()
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: pth851, state: &state, deviceFamily: family)
         }
     }
@@ -239,9 +239,9 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     private func decodeGD0608(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
         var decoder = IntuosV1Decoder()
-        return bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+        return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: gd0608, state: &state, deviceFamily: .intuosProGen1)
         }
     }

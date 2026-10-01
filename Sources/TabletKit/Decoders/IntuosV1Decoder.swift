@@ -45,45 +45,44 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     /// `distance_max` equivalent.
     private static let maxHoverDistance = 63
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let id = report[0]
 
-        if id == 0x01 && length >= 11 {
+        if id == 0x01 && report.count >= 11 {
             return decodeBLEPen(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         }
-        if id == 0x03 && length >= 22 {
-            return decodeIntuos4WLAggregated(report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
+        if id == 0x03 && report.count >= 22 {
+            return decodeIntuos4WLAggregated(report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
         }
-        if id == 0x04 && length >= 32 {
-            return decodeIntuos4WLAggregated(report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
+        if id == 0x04 && report.count >= 32 {
+            return decodeIntuos4WLAggregated(report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
         }
-        if id == 0x03 && length >= 5 {
-            guard let aux = decodeBLEPadReport(report: report, length: length) else { return [] }
+        if id == 0x03 && report.count >= 5 {
+            guard let aux = decodeBLEPadReport(report: report) else { return [] }
             return [.aux(aux)]
         }
         if id == 0x11 {
-            return decodeAuxReport(report: report, length: length)
+            return decodeAuxReport(report: report)
         }
         if id == 0x0C {
-            return decodeIntuos4PadReport(report: report, length: length)
+            return decodeIntuos4PadReport(report: report)
         }
         if id == 0x80 {
-            return decodeWirelessReport(report: report, length: length)
+            return decodeWirelessReport(report: report)
         }
         // BPT3 touch/pad container: 64-byte Report ID 0x02 on INTUOSHT2-family
         // models (CTH-690). Gated on length alone — touch and pad are gated
         // independently inside, so pen-only models still get their express keys.
-        if id == 0x02 && length == BPT3ContainerDecoder.reportLength {
+        if id == 0x02 && report.count == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
         }
         // USB pen reports are exactly 10 bytes. Anything else on this ID —
@@ -96,16 +95,15 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         // PTH-850 touch (L) has a working capacitive sensor whose 64-byte
         // BPT3 container arrives on the 0xFF00 interface; user-confirmed on
         // hardware 2026-08-27.)
-        guard (id == 0x02 || id == 0x10) && length == 10 else { return [] }
+        guard (id == 0x02 || id == 0x10) && report.count == 10 else { return [] }
         return decodeUSBPen(
-            report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
+            report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
     }
 
     // MARK: - USB pen report (10-byte IntuosV1)
 
     private func decodeUSBPen(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -345,7 +343,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     // MARK: - Tool-change packet (status bits 7:2 == 0xC0)
 
     private func decodeToolChange(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
@@ -384,8 +382,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     // MARK: - BLE HOGP pen (0x01)
 
     private func decodeBLEPen(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -394,7 +391,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         let bleSpec = DigitizerSpec(maxX: spec.maxX, maxY: spec.maxY, maxPressure: 8191)
         guard
             let result = decodeBLEPenReport(
-                report: report, length: length, spec: bleSpec,
+                report: report, spec: bleSpec,
                 lastX: &state.lastX, lastY: &state.lastY
             )
         else { return [] }
@@ -425,10 +422,9 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     /// report[1] and report[2] are identical.  Use report[1] for consistency
     /// with IntuosV2 decoder convention.
     private func decodeAuxReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let auxByte = report[1]
         return [.aux(AuxButtons(buttons: (0..<8).map { bit in (auxByte & (1 << bit)) != 0 }))]
     }
@@ -450,15 +446,14 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     private static let batcapI4: [Int] = [1, 15, 30, 45, 60, 70, 85, 100]
 
     private func decodeIntuos4WLAggregated(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let frameCount = report[0] == 0x03 ? 2 : 3
         let powerIndex = frameCount * 10 + 1
-        guard length >= powerIndex + 1 else { return [] }
+        guard report.count >= powerIndex + 1 else { return [] }
 
         var results: [DecodeResult] = []
         for frame in 0..<frameCount {
@@ -466,11 +461,11 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             let frameID = report[base]
             if frameID == 0x02 || frameID == 0x10 {
                 results.append(contentsOf: decodeUSBPen(
-                    report: report + base, length: 10, spec: spec,
+                    report: HIDReport(pointer: report.pointer + base, count: 10), spec: spec,
                     state: &state, deviceFamily: deviceFamily))
             } else if frameID == 0x0C {
                 results.append(contentsOf: decodeIntuos4PadReport(
-                    report: report + base, length: 10))
+                    report: HIDReport(pointer: report.pointer + base, count: 10)))
             }
             // Other frame IDs (e.g. tool-change packets arrive as ordinary
             // 0x02/0x10 frames with status 0xC0, handled inside decodeUSBPen)
@@ -499,10 +494,9 @@ public struct IntuosV1Decoder: TabletReportDecoder {
     /// Experimental: no hardware capture to confirm against, same basis as
     /// the `.crossReferenced` PTK-xxx registry entries.
     private func decodeIntuos4PadReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 4 else { return [] }
+        guard report.count >= 4 else { return [] }
         let ringByte = report[1]
         let ringActive = (ringByte & 0x80) != 0
         let ringPosition = ringActive ? (ringByte & 0x7F) : 0x7F
@@ -521,7 +515,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
 /// Art Pen barrel angle from a 10-byte rotation packet (kernel
 /// `wacom_intuos_general`, type 0x05), in degrees, clockwise increasing.
 /// The raw value spans -900...899 for one turn.
-func intuosRotationDegrees(_ report: UnsafePointer<UInt8>) -> Double {
+func intuosRotationDegrees(_ report: HIDReport) -> Double {
     let t = (Int(report[6]) << 3) | ((Int(report[7]) >> 5) & 7)
     let absZ = (report[7] & 0x20) != 0
         ? (t > 900 ? (t - 1) / 2 - 1350 : (t - 1) / 2 + 450)
