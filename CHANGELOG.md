@@ -140,10 +140,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   pen packets, pressing barrel button 1 and setting pressure from the angle
   on every other report. They now set the pen's rotation, which these
   tablets didn't report before.
-- Intuos Pro (PTH-x60) over USB, Intuos Pro gen 3 (PTK-x70) over Bluetooth,
-  and Cintiq Pro in the offset report format, reported the eraser only while
-  it touched the surface, so apps saw each
-  eraser stroke begin and end as the pen. The decoder now reads the Invert bit
+- Intuos Pro (PTH-x60) over USB and Bluetooth, Intuos Pro gen 3 (PTK-x70)
+  over Bluetooth, and Cintiq Pro in the offset report format, reported the
+  eraser only while it touched the surface, so apps saw each eraser stroke
+  begin and end as the pen. The decoder now reads the Invert bit
   (eraser end in range) and holds the eraser through weak frames at the edge
   of range.
 - Intuos 1/2 tablets drew a faint line while the pen hovered, without touching

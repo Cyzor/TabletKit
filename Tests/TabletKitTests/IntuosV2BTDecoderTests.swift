@@ -300,4 +300,39 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.pressure, 0)
         XCTAssertFalse(state.prevInProximity)
     }
+
+    /// A real PTH-860 report (2026-10-01): an eraser hovering (flags 0xF0,
+    /// Invert without Eraser) and weak frames (0xC0, neither bit). Reading
+    /// only 0x08 showed all of them as the pen.
+    func testHoveringEraserAndWeakFrameReportEraser() {
+        let hex = [
+            "80 f0 fd 85 e2 2f 00 00 0f 11 7f 03 00 00 3f c0 fd 85 e2 2f 00 00 0f 11",
+            "7f 03 00 00 3f c0 ed 85 0d 30 00 00 00 00 00 00 00 00 3f c0 e8 85 26 30",
+            "00 00 00 00 00 00 00 00 3f f0 df 85 71 30 00 00 0f 10 7f 03 00 00 3f f0",
+            "da 85 7d 30 00 00 0f 10 7f 03 00 00 3f 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 ce 00 80 03 04 08 11 00 0c 08 82 01 01 46 2e 22 21 06 08 02 00",
+            "12 28 23 16 04 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 a8 a8 82 01 01 46 2e 22 21 06 08 02 01 09 28 10 16 04",
+            "07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 0c a9 82 01 01 46 2e 22 21 05 07 02 01 02 28 01 16 04 07 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 70 a9 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 00 00 64 7f 38 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00",
+        ].joined(separator: " ")
+        let bytes = hex.split(separator: " ").map { UInt8($0, radix: 16)! }
+        XCTAssertEqual(bytes.count, 361)
+        var state = DecoderState()
+        let points = decode(bytes, state: &state).compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }
+        // Three weak frames reach the exit threshold, so one exit point sits
+        // between them; exits carry no tool.
+        let inRange = points.filter(\.inProximity)
+        XCTAssertFalse(inRange.isEmpty)
+        XCTAssertTrue(inRange.allSatisfy(\.eraser))
+    }
 }

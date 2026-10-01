@@ -158,6 +158,7 @@ extension IntuosV2Decoder {
                 {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
+                    state.isEraser = false
                     state.lastTiltX = 0.0
                     state.lastTiltY = 0.0
                     state.hasValidTiltFrame = false
@@ -190,6 +191,7 @@ extension IntuosV2Decoder {
                 if state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
+                    state.isEraser = false
                     state.lastTiltX = 0.0
                     state.lastTiltY = 0.0
                     state.hasValidTiltFrame = false
@@ -217,6 +219,7 @@ extension IntuosV2Decoder {
                 if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
+                    state.isEraser = false
                     state.lastTiltX = 0.0
                     state.lastTiltY = 0.0
                     state.hasValidTiltFrame = false
@@ -241,10 +244,11 @@ extension IntuosV2Decoder {
                 state.prevInProximity = true
             }
 
-            // Eraser detection: flags bit3 (0x08) directly indicates eraser, same as USB path.
-            // Toolcode-based detection (toolIsEraser) only updates on tool change; reading
-            // flags bit3 ensures correct state on every frame (handles tool flip without proximity gap).
-            let isEraser = (flags & 0x08) != 0
+            // 0x10 eraser end in range or 0x08 eraser touching; 0x08 alone
+            // showed a hovering eraser as the pen (PTH-860, 2026-10-01). Weak
+            // frames carry neither bit, so they keep the last state.
+            if inRange { state.isEraser = (flags & 0x18) != 0 }
+            let isEraser = state.isEraser
             let barrel1 = (flags & 0x02) != 0
             let barrel2 = (flags & 0x04) != 0
 
@@ -590,7 +594,9 @@ extension IntuosV2Decoder {
 
             let inProx = (f[0] & 0x40) != 0
             let inRange = (f[0] & 0x20) != 0
-            let eraser = (f[0] & 0x08) != 0
+            // Either eraser bit, held through weak frames — see the 361-byte path.
+            if inRange { state.isEraser = (f[0] & 0x18) != 0 }
+            let eraser = state.isEraser
             let barrel2 = (f[0] & 0x04) != 0
             let barrel1 = (f[0] & 0x02) != 0
 
@@ -600,6 +606,7 @@ extension IntuosV2Decoder {
                 if state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
+                    state.isEraser = false
                     state.lastTiltX = 0.0
                     state.lastTiltY = 0.0
                     state.hasValidTiltFrame = false
@@ -624,6 +631,7 @@ extension IntuosV2Decoder {
                 if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
+                    state.isEraser = false
                     state.lastTiltX = 0.0
                     state.lastTiltY = 0.0
                     state.hasValidTiltFrame = false
@@ -654,8 +662,8 @@ extension IntuosV2Decoder {
                     state.lastTiltY = tiltY
                     state.hasValidTiltFrame = true
                 }
-            // Rotation not decoded here, though the kernel reads it at f[9:10]
-            // and the 361-byte path above decodes it. Unverified on this path.
+            // Rotation not decoded: this form carries no tool identity, and
+            // non-Art pens fill f[9:10] with noise. The 361-byte form has both.
 
             state.lastX = x
             state.lastY = y
