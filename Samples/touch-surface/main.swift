@@ -91,14 +91,7 @@ func resolveDevice(_ spec: WacomDeviceSpec) -> Result<(ResolvedDevice, any Table
             """))
     }
 
-    let digiSpec = DigitizerSpec(
-        maxX: spec.maxX,
-        maxY: spec.maxY,
-        maxPressure: spec.maxPressure,
-        buttonCount: spec.buttonCount,
-        hasTilt: spec.hasTilt,
-        hasFingerTouch: spec.hasFingerTouch,
-        maxTouchContacts: spec.maxTouchContacts)
+    let digiSpec = spec.digitizerSpec
 
     let decoder: any TabletReportDecoder
     // pinchDominanceRatio needs a different value per touch-sensor

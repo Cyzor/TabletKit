@@ -181,10 +181,7 @@ final class PenSurfaceRunner {
         // A different tablet takes over; another interface of the same one joins.
         if spec?.productID != found.productID {
             spec = found
-            digiSpec = DigitizerSpec(
-                maxX: found.maxX, maxY: found.maxY, maxPressure: found.maxPressure,
-                buttonCount: found.buttonCount, hasTilt: found.hasTilt,
-                hasFingerTouch: found.hasFingerTouch, maxTouchContacts: found.maxTouchContacts)
+            digiSpec = found.digitizerSpec
             decoder = newDecoder
             decoderState = DecoderState()
             interfaces = []

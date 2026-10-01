@@ -160,10 +160,7 @@ func replay(_ parser: ReportParser) -> Outcome {
         maxPressureBound: spec.maxPressure)
     var decoder = makeDecoder(parser)
     var state = DecoderState()
-    let digiSpec = DigitizerSpec(
-        maxX: spec.maxX, maxY: spec.maxY, maxPressure: spec.maxPressure,
-        buttonCount: spec.buttonCount, hasTilt: spec.hasTilt,
-        hasFingerTouch: spec.hasFingerTouch, maxTouchContacts: spec.maxTouchContacts)
+    let digiSpec = spec.digitizerSpec
 
     for event in sortedEvents {
         guard let firstByte = event.bytes.first else { continue }

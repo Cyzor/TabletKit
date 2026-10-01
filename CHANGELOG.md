@@ -9,6 +9,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `WacomDeviceSpec.digitizerSpec` — the `DigitizerSpec` a decoder takes,
+  built from the registry entry. The README and samples copied fields by hand
+  and left out `tiltMaxDegrees`, so their tilt read at half scale; they now
+  use this.
 - Documentation: report-format guides for the Intuos Pro gen 3, the Intuos
   Pro gen 2 family, and the Intuos 10-byte format, under "Report formats" in
   the DocC catalog.

@@ -3727,3 +3727,24 @@ public enum WacomDeviceRegistry: Sendable {
         canonicalPIDMap[productID] ?? productID
     }
 }
+
+extension WacomDeviceSpec {
+    /// The decoder's view of this device: ranges and capabilities copied into
+    /// the ``DigitizerSpec`` a ``TabletReportDecoder`` takes. Use this rather
+    /// than building one field by field, so a new capability can't be missed.
+    public var digitizerSpec: DigitizerSpec {
+        DigitizerSpec(
+            maxX: maxX,
+            maxY: maxY,
+            maxPressure: maxPressure,
+            buttonCount: buttonCount,
+            hasTilt: hasTilt,
+            hasDualRings: hasDualRings,
+            bezelButtonCount: bezelButtonCount,
+            isPenDisplay: isPenDisplay,
+            ringSlotCount: ringSlotCount,
+            hasFingerTouch: hasFingerTouch,
+            maxTouchContacts: maxTouchContacts,
+            tiltMaxDegrees: tiltMaxDegrees)
+    }
+}

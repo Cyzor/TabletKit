@@ -52,16 +52,8 @@ import IOKit.hid
 // 1. Look up the device. PTH-660 USB product ID is 0x0357.
 guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else { fatalError("unknown PID") }
 
-// 2. Build the digitizer dimensions from the registry entry.
-var digiSpec = DigitizerSpec(
-    maxX: spec.maxX,
-    maxY: spec.maxY,
-    maxPressure: spec.maxPressure,
-    buttonCount: spec.buttonCount,
-    hasTilt: spec.hasTilt,
-    hasFingerTouch: spec.hasFingerTouch,
-    maxTouchContacts: spec.maxTouchContacts
-)
+// 2. Take the decoder's view of the device: ranges and capabilities.
+let digiSpec = spec.digitizerSpec
 
 // 3. Allocate per-device state (one instance per physical device).
 var state = DecoderState()

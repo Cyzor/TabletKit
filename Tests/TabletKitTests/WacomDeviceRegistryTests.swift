@@ -501,4 +501,17 @@ final class WacomDeviceRegistryTests: XCTestCase {
             XCTAssertEqual(WacomDeviceRegistry.spec(for: pid)?.hasTilt, tilt, String(format: "0x%04X", pid))
         }
     }
+
+    /// The projection carries every capability, notably the tilt scale that
+    /// hand-built specs in the README and samples used to leave out.
+    func testDigitizerSpecProjection() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0358))
+        let d = spec.digitizerSpec
+        XCTAssertEqual(d.maxX, spec.maxX)
+        XCTAssertEqual(d.maxPressure, spec.maxPressure)
+        XCTAssertEqual(d.buttonCount, spec.buttonCount)
+        XCTAssertEqual(d.hasFingerTouch, spec.hasFingerTouch)
+        XCTAssertEqual(d.tiltMaxDegrees, 64.0)
+        XCTAssertTrue(d.hasTilt)
+    }
 }

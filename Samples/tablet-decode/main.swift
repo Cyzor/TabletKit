@@ -24,15 +24,7 @@ guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else {
     Foundation.exit(1)
 }
 
-let digiSpec = DigitizerSpec(
-    maxX: spec.maxX,
-    maxY: spec.maxY,
-    maxPressure: spec.maxPressure,
-    buttonCount: spec.buttonCount,
-    hasTilt: spec.hasTilt,
-    hasFingerTouch: spec.hasFingerTouch,
-    maxTouchContacts: spec.maxTouchContacts
-)
+let digiSpec = spec.digitizerSpec
 
 var state = DecoderState()
 var decoder = IntuosV2Decoder()
