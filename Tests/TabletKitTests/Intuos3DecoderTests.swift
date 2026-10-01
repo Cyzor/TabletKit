@@ -30,9 +30,9 @@ final class Intuos3DecoderTests: XCTestCase {
         family: DeviceFamily = .intuos3
     ) -> [DecodeResult] {
         var decoder = Intuos3Decoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: ptz631w, state: &state, deviceFamily: family)
         }
     }

@@ -53,9 +53,9 @@ final class CintiqV1DecoderPressureDepthTests: XCTestCase {
     private func decode(_ bytes: [UInt8], spec: DigitizerSpec) -> TabletPoint? {
         var decoder = CintiqV1Decoder()
         var state = seededState()
-        let results = bytes.withUnsafeBufferPointer { buf in
+        let results = HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec, state: &state, deviceFamily: .cintiq)
         }
         for r in results { if case .pen(let p) = r { return p } }

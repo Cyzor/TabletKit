@@ -33,20 +33,19 @@ public struct Intuos3Decoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let id = report[0]
 
         // Intuos3 express key — 8 keys in byte 4.
         if id == 0x03 {
-            guard length >= 10 else { return [] }
+            guard report.count >= 10 else { return [] }
             let byte = report[4]
             return [.aux(AuxButtons(buttons: (0..<8).map { (byte & (1 << $0)) != 0 }))]
         }
@@ -63,7 +62,7 @@ public struct Intuos3Decoder: TabletReportDecoder {
         //   Bit N set → finger is in zone N (0 = bottom, higher = farther up the strip).
         //   All-zero → no contact.
         if id == 0x0C {
-            guard length >= 5 else { return [] }
+            guard report.count >= 5 else { return [] }
 
             // Touch strips — bytes 1–4.
             let leftRaw = (UInt16(report[1]) << 8) | UInt16(report[2])
@@ -73,7 +72,7 @@ public struct Intuos3Decoder: TabletReportDecoder {
 
             // Express keys (4+4 split variant) — bytes 5–6.  Zero on PTZ-631W.
             var buttons = [Bool](repeating: false, count: 8)
-            if length >= 7 {
+            if report.count >= 7 {
                 let lo = report[5]
                 let hi = report[6]
                 buttons =
@@ -95,19 +94,18 @@ public struct Intuos3Decoder: TabletReportDecoder {
         }
 
         if id == 0x80 {
-            return decodeWirelessReport(report: report, length: length)
+            return decodeWirelessReport(report: report)
         }
 
-        guard (id == 0x02 || id == 0x10) && length >= 10 else { return [] }
+        guard (id == 0x02 || id == 0x10) && report.count >= 10 else { return [] }
         return decodeUSBPen(
-            report: report, length: length, spec: spec, state: &state, deviceFamily: deviceFamily)
+            report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
     }
 
     // MARK: - USB pen report (10-byte IntuosV1 format, Intuos3 status layout)
 
     private func decodeUSBPen(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -230,7 +228,7 @@ public struct Intuos3Decoder: TabletReportDecoder {
     // MARK: - Tool-change packet (identical to IntuosV1Decoder)
 
     private func decodeToolChange(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {

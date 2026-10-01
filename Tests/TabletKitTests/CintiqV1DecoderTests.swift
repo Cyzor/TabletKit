@@ -46,9 +46,9 @@ final class CintiqV1DecoderTests: XCTestCase {
         spec: DigitizerSpec? = nil,
         family: DeviceFamily = .cintiq
     ) -> [DecodeResult] {
-        bytes.withUnsafeBufferPointer { buf in
+        HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec ?? dtk2400, state: &state, deviceFamily: family)
         }
     }

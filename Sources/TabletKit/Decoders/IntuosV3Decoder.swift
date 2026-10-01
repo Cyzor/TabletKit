@@ -100,41 +100,40 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         switch report[0] {
         case 0x1F:
             // OTD gates on data[1] == 0x01; other 0x1F payloads are unknown.
-            guard length >= 14, report[1] == 0x01 else { return [] }
+            guard report.count >= 14, report[1] == 0x01 else { return [] }
             return decodePenReport(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x1E:
-            guard length >= 20 else { return [] }
+            guard report.count >= 20 else { return [] }
             return decodeExtendedPenReport(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x11:
-            return decodeAuxReport(report: report, length: length)
+            return decodeAuxReport(report: report)
         case 0x1A:
-            guard length >= 20 else { return [] }
+            guard report.count >= 20 else { return [] }
             return decodeBLEReport(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x1B:
             // Only byte [1] is read, which the length >= 2 guard above covers.
             return decodeBatteryReport(report: report, state: &state)
         case 0x06:
-            guard length >= 13 else { return [] }
+            guard report.count >= 13 else { return [] }
             return decodeStandardDigitizerReport(
-                report: report, length: length, spec: spec, state: &state,
+                report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         default:
             return []
@@ -165,7 +164,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Only emit on change; at 1 Hz this is mostly about avoiding redundant
     /// published-property churn downstream.
     private func decodeBatteryReport(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         state: inout DecoderState
     ) -> [DecodeResult] {
         let batByte = report[1]
@@ -194,8 +193,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// checks won't fire. The IntuosV3Decoder targets unverified hardware
     /// (PTK-470/670/870); without a capture we can't fill that gap.
     private func decodePenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -286,8 +284,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Same report ID as IntuosV2's "offset" report, but the byte layout is
     /// completely different. Per-decoder dispatch keeps the two separate.
     private func decodeExtendedPenReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -463,7 +460,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // of the tool code itself — not read here. Same
         // lastSerial/lastToolCode change-detection pattern as
         // IntuosV2Decoder.decodeOffsetPenReport.
-        if length >= 26 {
+        if report.count >= 26 {
             let serial =
                 UInt32(report[20])
                 | UInt32(report[21]) << 8
@@ -575,12 +572,11 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// InputInjector can route them through touchRingSlots (scroll /
     /// key-press / off) without further state in this decoder.
     private func decodeAuxReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex
+        report: HIDReport
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let primary = report[1]
-        let dialButtons: UInt8 = length >= 4 ? report[3] : 0
+        let dialButtons: UInt8 = report.count >= 4 ? report[3] : 0
         let buttons: [Bool] = (0..<8).map { bit in (primary & (1 << bit)) != 0 }
         var results: [DecodeResult] = [
             .aux(
@@ -591,11 +587,11 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         ]
         // Sign-extend 7-bit values: shift the sign bit into bit 7, then
         // arithmetic-shift right to propagate it across the Int8 range.
-        if length >= 5 {
+        if report.count >= 5 {
             let leftDelta = Int((Int8(bitPattern: report[4]) << 1) >> 1)
             if leftDelta != 0 { results.append(.wheel(index: 0, delta: leftDelta)) }
         }
-        if length >= 6 {
+        if report.count >= 6 {
             let rightDelta = Int((Int8(bitPattern: report[5]) << 1) >> 1)
             if rightDelta != 0 { results.append(.wheel(index: 1, delta: rightDelta)) }
         }
@@ -756,8 +752,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// counterpart and is undecoded. Read before the position guard rejects
     /// the class.
     private func decodeBLEReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -772,7 +767,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // Low nibble only, as in the position guard below: the high bits are a
         // rolling counter, so an announcement arriving as `0x41` was skipped
         // here and rejected there, losing the pen's identity entirely.
-        if (discriminator & 0x0F) == 0x01, length >= 10 {
+        if (discriminator & 0x0F) == 0x01, report.count >= 10 {
             let serial =
                 UInt32(report[4])
                 | UInt32(report[5]) << 8
@@ -1167,8 +1162,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// byte [13] or `0x1A`'s byte [15] do, so `TabletPoint.hoverDistance` is
     /// emitted as 0 rather than guessed from an unassigned byte.
     private func decodeStandardDigitizerReport(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -1220,7 +1214,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
                     // unless a diagnostic override names a specific bit to
                     // try instead (see `DigitizerSpec.debugButton2Source`).
                     penButton2: Self.debugBit(
-                        spec.debugButton2Source, report: report, length: length),
+                        spec.debugButton2Source, report: report),
                     eraser: (status & 0x20) != 0,
                     inProximity: true,
                     hoverDistance: 0))
@@ -1231,9 +1225,9 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// its `byteIndex` falls outside `report`'s actual length this frame —
     /// never traps on an out-of-range diagnostic pick.
     static func debugBit(
-        _ source: DigitizerSpec.DebugBitSource?, report: UnsafePointer<UInt8>, length: CFIndex
+        _ source: DigitizerSpec.DebugBitSource?, report: HIDReport
     ) -> Bool {
-        guard let source, source.byteIndex >= 0, source.byteIndex < length,
+        guard let source, source.byteIndex >= 0, source.byteIndex < report.count,
             source.bitIndex >= 0, source.bitIndex < 8
         else { return false }
         return (report[source.byteIndex] & (1 << source.bitIndex)) != 0

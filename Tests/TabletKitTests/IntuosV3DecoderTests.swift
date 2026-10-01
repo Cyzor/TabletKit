@@ -33,18 +33,18 @@ final class IntuosV3DecoderTests: XCTestCase {
         family: DeviceFamily = .intuosProGen3, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
         let decoder = IntuosV3Decoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: spec ?? ptk670, state: &state, deviceFamily: family)
         }
     }
 
     private func decodeBLE(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
         let decoder = IntuosV3Decoder()
-        return bytes.withUnsafeBufferPointer { buf in
+        return HIDReport.withReport(bytes) { report in
             decoder.decode(
-                report: buf.baseAddress!, length: bytes.count,
+                report: report,
                 spec: ptk870, state: &state, deviceFamily: .intuosProGen3)
         }
     }

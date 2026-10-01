@@ -72,34 +72,33 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // fallback tool identity is needed — see `inRangeOnly` in `decodePen`.
     private var fallbackToolPending = false
 
-    /// Decodes one report. See ``TabletReportDecoder/decode(report:length:spec:state:deviceFamily:)``.
+    /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard length >= 2 else { return [] }
+        guard report.count >= 2 else { return [] }
         let id = report[0]
 
         if id == 0x01 {
             return decodeTipSwitch(report: report)
         }
         if id == 0x0C {
-            return decodeExpressKeys(report: report, length: length, spec: spec)
+            return decodeExpressKeys(report: report, spec: spec)
         }
-        if id == 0x11 && length >= 3 {
+        if id == 0x11 && report.count >= 3 {
             return decodeCintiqPad(report: report)
         }
-        guard (id == 0x02 || id == 0x10) && length >= 10 else { return [] }
+        guard (id == 0x02 || id == 0x10) && report.count >= 10 else { return [] }
         return decodePen(
             report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
     }
 
     // MARK: - Report 0x01: physical tip-switch
 
-    private mutating func decodeTipSwitch(report: UnsafePointer<UInt8>) -> [DecodeResult] {
+    private mutating func decodeTipSwitch(report: HIDReport) -> [DecodeResult] {
         let tipDown = (report[1] & 0x01) != 0
         guard tipDown != tipSwitchActive else { return [.none] }
         tipSwitchActive = tipDown
@@ -110,7 +109,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // MARK: - Report 0x02/0x10: pen digitizer
 
     private mutating func decodePen(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         spec: DigitizerSpec,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
@@ -152,7 +151,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
         if typeNibble == 0x05 {
             // Art Pen / Marker Pen rotation packet — see intuosRotationDegrees.
-            state.lastRotation = intuosRotationDegrees(report)
+            state.lastRotation = intuosRotationDegrees(report.pointer)
 
         } else if typeNibble <= 0x03 {
             // General pen packet: position, pressure, tilt, and barrel
@@ -263,7 +262,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // MARK: - Tool-change packet (status bits 7:2 == 0xC0)
 
     private func decodeToolChange(
-        report: UnsafePointer<UInt8>,
+        report: HIDReport,
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
@@ -348,11 +347,10 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     //   [17]    = byte[7] bit0, right center toggle
 
     private func decodeExpressKeys(
-        report: UnsafePointer<UInt8>,
-        length: CFIndex,
+        report: HIDReport,
         spec: DigitizerSpec
     ) -> [DecodeResult] {
-        guard length >= 7 else { return [] }
+        guard report.count >= 7 else { return [] }
 
         let leftRingRaw = report[1]
         let leftRingActive = (leftRingRaw & 0x80) != 0
@@ -360,22 +358,22 @@ public struct CintiqV1Decoder: TabletReportDecoder {
 
         var rightRingActive = false
         var rightRingPos = UInt8(0x7F)
-        if spec.hasDualRings && length >= 3 {
+        if spec.hasDualRings && report.count >= 3 {
             let rightRingRaw = report[2]
             rightRingActive = (rightRingRaw & 0x80) != 0
             rightRingPos = rightRingActive ? (rightRingRaw & 0x7F) : UInt8(0x7F)
         }
 
         let leftByte  = report[6]
-        let rightByte = length >= 9 ? report[8] : 0
+        let rightByte = report.count >= 9 ? report[8] : 0
         let leftBits:  [Bool] = (0..<8).map { bit in (leftByte  & (1 << bit)) != 0 }
         let rightBits: [Bool] = (0..<8).map { bit in (rightByte & (1 << bit)) != 0 }
 
         let buttons: [Bool]
         if spec.bezelButtonCount > 0 {
             // DTK-2400 / 24HD family: bytes 3-4 are capacitive OSD buttons.
-            let capA = length >= 4 ? report[3] : 0
-            let capB = length >= 5 ? report[4] : 0
+            let capA = report.count >= 4 ? report[3] : 0
+            let capB = report.count >= 5 ? report[4] : 0
             let osdBits: [Bool] = [
                 (capA & 0x10) != 0,  // left OSD button
                 (capB & 0x40) != 0,  // middle OSD button
@@ -387,7 +385,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
             // buttons — not decoded (no strip control type yet). Bytes 5/7
             // bit 0 are the two center toggles the 24HD path doesn't have.
             let byte5 = report[5]
-            let byte7 = length >= 8 ? report[7] : 0
+            let byte7 = report.count >= 8 ? report[7] : 0
             let centerToggleBits: [Bool] = [
                 (byte5 & 0x01) != 0,  // left center toggle
                 (byte7 & 0x01) != 0,  // right center toggle
@@ -411,7 +409,7 @@ public struct CintiqV1Decoder: TabletReportDecoder {
     // Byte[2] bits 0-2 are the three panel buttons (capture-confirmed).
     // Bytes 5/7/9 drift slowly, unrelated to buttons (likely an ambient
     // sensor) — left undecoded.
-    private func decodeCintiqPad(report: UnsafePointer<UInt8>) -> [DecodeResult] {
+    private func decodeCintiqPad(report: HIDReport) -> [DecodeResult] {
         let mask = report[2]
         let buttons: [Bool] = (0..<3).map { bit in (mask & (1 << bit)) != 0 }
         return [.aux(AuxButtons(buttons: buttons))]
