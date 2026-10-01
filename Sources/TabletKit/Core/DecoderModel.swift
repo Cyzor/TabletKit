@@ -279,6 +279,44 @@ public protocol TabletReportDecoder: Sendable {
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult]
+
+    /// Decode one raw HID report into zero or more results.
+    /// - Parameters:
+    ///   - report: The raw report, valid only for the duration of this call.
+    ///   - spec: The device's digitizer dimensions.
+    ///   - state: Per-device decoder state, carried by the caller across calls.
+    ///   - deviceFamily: The device family.
+    mutating func decode(
+        report: HIDReport,
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult]
+}
+
+// Each form forwards to the other while decoders migrate to `HIDReport`; a
+// conformer must implement one. The pointer form is removed once all have moved.
+extension TabletReportDecoder {
+    public mutating func decode(
+        report: UnsafePointer<UInt8>,
+        length: CFIndex,
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult] {
+        decode(report: HIDReport(pointer: report, count: length),
+               spec: spec, state: &state, deviceFamily: deviceFamily)
+    }
+
+    public mutating func decode(
+        report: HIDReport,
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult] {
+        decode(report: report.pointer, length: report.count,
+               spec: spec, state: &state, deviceFamily: deviceFamily)
+    }
 }
 
 /// Decoded BLE HOGP pen report. See `decodeBLEPenReport` for the wire layout.
