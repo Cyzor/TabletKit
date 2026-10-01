@@ -29,6 +29,8 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 ### Report formats
 
 - <doc:IntuosProGen3Reports>
+- <doc:IntuosProGen2Reports>
+- <doc:IntuosTenByteReports>
 
 ### Essentials
 

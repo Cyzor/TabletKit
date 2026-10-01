@@ -9,6 +9,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Documentation: report-format guides for the Intuos Pro gen 3, the Intuos
+  Pro gen 2 family, and the Intuos 10-byte format, under "Report formats" in
+  the DocC catalog.
 - `pen-surface` sample: a minimal pen driver (cursor, tip and barrel-button
   clicks, pressure, tilt) with an `--init` option to skip or replace the
   switch-on sequence.
