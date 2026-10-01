@@ -180,6 +180,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- `WacomToolCatalog` follows libwacom for `0x0852`/`0x085A` (Intuos2 Grip
+  Pen, was "Pen 4K") and `0x0862` (Intuos Pen, was "Pen 5K"), which reports
+  neither tilt nor an eraser. The invented `0x086A` eraser entry is removed.
 - `WacomToolCatalog` names tool code `0x0832` the Stroke Pen, as the Linux
   driver does, instead of Pro Pen 2.
 - Registry confidence for the Intuos Pro L gen 3 (`0x03F9`) and Bamboo Pen

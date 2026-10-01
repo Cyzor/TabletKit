@@ -297,10 +297,11 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2, .intuosProGen3]
         )
 
-        // Pen 4K (CTL-4100, CTL-6100 series)
+        // Intuos2 Grip Pen, per libwacom. Was misnamed "Pen 4K"; not seen on
+        // hardware.
         catalog[0x0852] = WacomToolSpec(
             toolCode: 0x0852,
-            name: "Pen 4K",
+            name: "Intuos2 Grip Pen",
             toolType: .stylus,
             buttonCount: 2,
             maxPressure: 4095,
@@ -312,10 +313,10 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pen 4K Eraser
+        // Intuos2 Grip Pen eraser
         catalog[0x085A] = WacomToolSpec(
             toolCode: 0x085A,
-            name: "Pen 4K (Eraser)",
+            name: "Intuos2 Grip Pen (Eraser)",
             toolType: .eraser,
             buttonCount: 2,
             maxPressure: 4095,
@@ -327,29 +328,15 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pen 5K (Pro Pen 2 equivalent for older devices)
+        // Intuos Pen (Intuos P/PT 2), per libwacom: no tilt, no eraser. Was
+        // listed as "Pen 5K" with both, plus an invented 0x086A eraser.
         catalog[0x0862] = WacomToolSpec(
             toolCode: 0x0862,
-            name: "Pen 5K",
+            name: "Intuos Pen",
             toolType: .stylus,
             buttonCount: 2,
             maxPressure: 2047,
-            hasTilt: true,
-            hasRotation: false,
-            hasWheel: false,
-            hasEraserVariant: true,
-            eraserToolCode: 0x086A,
-            supportedFamilies: [.intuosProGen1]
-        )
-
-        // Pen 5K Eraser
-        catalog[0x086A] = WacomToolSpec(
-            toolCode: 0x086A,
-            name: "Pen 5K (Eraser)",
-            toolType: .eraser,
-            buttonCount: 2,
-            maxPressure: 2047,
-            hasTilt: true,
+            hasTilt: false,
             hasRotation: false,
             hasWheel: false,
             hasEraserVariant: false,
