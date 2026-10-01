@@ -217,7 +217,7 @@ final class PenSurfaceRunner {
     func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
         guard let spec, let digiSpec, var decoder else { return }
         let results = decoder.decode(
-            report: report, length: length, spec: digiSpec,
+            report: HIDReport(pointer: report, count: length), spec: digiSpec,
             state: &decoderState, deviceFamily: spec.family)
         self.decoder = decoder  // value type: keep the mutated copy
 

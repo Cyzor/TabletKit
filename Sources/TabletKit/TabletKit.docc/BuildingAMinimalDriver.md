@@ -53,7 +53,7 @@ Register a callback for input reports on each interface. Every call hands over o
 
 ```swift
 let results = decoder.decode(
-    report: report, length: length, spec: digitizerSpec,
+    report: HIDReport(pointer: report, count: length), spec: digitizerSpec,
     state: &decoderState, deviceFamily: spec.family)
 ```
 

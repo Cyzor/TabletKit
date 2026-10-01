@@ -162,8 +162,7 @@ final class TouchSurfaceRunner {
     func handleReport(length: CFIndex) {
         guard let resolved, var decoder, let recognizer else { return }
         let results = decoder.decode(
-            report: reportBuffer,
-            length: length,
+            report: HIDReport(pointer: reportBuffer, count: length),
             spec: resolved.digiSpec,
             state: &decoderState,
             deviceFamily: resolved.spec.family)

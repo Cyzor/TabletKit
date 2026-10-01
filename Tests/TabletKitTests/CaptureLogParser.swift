@@ -14,8 +14,8 @@
 //     var decoder = IntuosV2Decoder()
 //     var state   = DecoderState()
 //     for r in records {
-//         let results = r.bytes.withUnsafeBufferPointer { buf in
-//             decoder.decode(report: buf.baseAddress!, length: r.length,
+//         let results = HIDReport.withReport(r.bytes) { report in
+//             decoder.decode(report: report,
 //                            spec: spec, state: &state, deviceFamily: "...")
 //         }
 //         // assert on results …

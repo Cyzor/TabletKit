@@ -166,10 +166,9 @@ func replay(_ parser: ReportParser) -> Outcome {
         guard let firstByte = event.bytes.first else { continue }
         reportIDsSeen.insert(firstByte)
 
-        let results = event.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
-            guard let base = buf.baseAddress else { return [] }
-            return decoder.decode(
-                report: base, length: buf.count, spec: digiSpec, state: &state,
+        let results = HIDReport.withReport(event.bytes) { report -> [DecodeResult] in
+            decoder.decode(
+                report: report, spec: digiSpec, state: &state,
                 deviceFamily: spec.family)
         }
         if !results.isEmpty { out.reportIDsDecoded.insert(firstByte) }

@@ -136,9 +136,9 @@ final class CaptureLogParserTests: XCTestCase {
         var state   = DecoderState()
         var allResults: [DecodeResult] = []
         for record in records {
-            let results = record.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+            let results = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in
                 decoder.decode(
-                    report: buf.baseAddress!, length: record.length,
+                    report: report,
                     spec: pth860, state: &state, deviceFamily: .intuosProGen2)
             }
             allResults.append(contentsOf: results)
@@ -228,9 +228,9 @@ final class CaptureLogParserTests: XCTestCase {
         var state   = DecoderState()
         var results: [DecodeResult] = []
         for record in records {
-            let r = record.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
+            let r = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in
                 decoder.decode(
-                    report: buf.baseAddress!, length: record.length,
+                    report: report,
                     spec: pth860, state: &state, deviceFamily: .intuosProGen2)
             }
             results.append(contentsOf: r)

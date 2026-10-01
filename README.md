@@ -65,8 +65,7 @@ var decoder = IntuosV2Decoder()
 // Inside your IOHIDDevice report callback:
 func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
     let results = decoder.decode(
-        report: report,
-        length: length,
+        report: HIDReport(pointer: report, count: length),
         spec: digiSpec,
         state: &state,
         deviceFamily: spec.family

@@ -8,8 +8,8 @@ import XCTest
 final class BLEReportDecodingTests: XCTestCase {
 
     private func decode(_ bytes: [UInt8]) -> [DecodeResult] {
-        bytes.withUnsafeBufferPointer { buf in
-            decodeWirelessReport(report: buf.baseAddress!, length: bytes.count)
+        HIDReport.withReport(bytes) { report in
+            decodeWirelessReport(report: report)
         }
     }
 

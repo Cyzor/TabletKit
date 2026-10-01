@@ -79,10 +79,9 @@ let reports: [(label: String, bytes: [UInt8])] = [
 // MARK: - Replay
 
 for (label, bytes) in reports {
-    let results = bytes.withUnsafeBufferPointer { buf in
+    let results = HIDReport.withReport(bytes) { report in
         decoder.decode(
-            report: buf.baseAddress!,
-            length: buf.count,
+            report: report,
             spec: digiSpec,
             state: &state,
             deviceFamily: spec.family

@@ -129,10 +129,9 @@ final class ConformanceHarnessTests: XCTestCase {
             var sawNonTrivialResult = false
 
             for record in records {
-                let results = record.bytes.withUnsafeBufferPointer { buf -> [DecodeResult] in
-                    guard let base = buf.baseAddress else { return [] }
-                    return decoder.decode(
-                        report: base, length: record.length,
+                let results = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in
+                    decoder.decode(
+                        report: report,
                         spec: fixture.spec, state: &state,
                         deviceFamily: fixture.deviceFamily)
                 }
