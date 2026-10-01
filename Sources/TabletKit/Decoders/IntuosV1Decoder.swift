@@ -135,8 +135,9 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.toolIsMouse = false
-                // Don't let one tool's wheel position follow the next tool in.
+                // Don't let one tool's wheel position or angle follow the next tool in.
                 state.lastAirbrushWheel = nil
+                state.lastRotation = 0
                 return [
                     .pen(
                         TabletPoint(
@@ -172,8 +173,9 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.toolIsMouse = false
-                // Don't let one tool's wheel position follow the next tool in.
+                // Don't let one tool's wheel position or angle follow the next tool in.
                 state.lastAirbrushWheel = nil
+                state.lastRotation = 0
                 return [
                     .pen(
                         TabletPoint(
@@ -192,7 +194,8 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                     TabletPoint(
                         x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
                         pressure: 0, maxPressure: spec.maxPressure,
-                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        tiltX: 0, tiltY: 0,
+                        rotation: toolHasRotation ? state.lastRotation : 0.0,
                         penButton1: false, penButton2: false,
                         eraser: state.isEraser, inProximity: true,
                         hoverDistance: Self.maxHoverDistance))
@@ -295,6 +298,17 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return results
         }
 
+        // Art Pen rotation packet (kernel type 0x05), interleaved one-for-one
+        // with pen packets. Bit 1 of its status is part of the type and bytes
+        // 6–7 hold the angle, so reading it as a pen packet sent a barrel-1
+        // press and bogus pressure on every other report. Confirmed on a
+        // PTH-850 with an Intuos4/5 Art Pen (2026-10-01). The next pen packet
+        // carries the angle.
+        if subtype == 0x05 {
+            if !state.toolIsMouse { state.lastRotation = intuosRotationDegrees(report) }
+            return results
+        }
+
         // Pen path.
         // Pressure: 11-bit formula per kernel wacom_intuos_general().
         // data[6]<<3 provides high 8 bits; data[7]>>5 provides low 2 bits of the 11-bit field.
@@ -315,7 +329,8 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                     pressure: pressure, maxPressure: spec.maxPressure,
                     tiltX: Double(tiltXRaw) / 63.0,
                     tiltY: Double(tiltYRaw) / 63.0,
-                    rotation: 0.0,
+                    rotation: WacomToolCatalog.hasRotation(toolCode: state.currentToolCode)
+                        ? state.lastRotation : 0.0,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
                     eraser: state.isEraser,
@@ -499,4 +514,18 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                                 touchRingPosition: ringPosition))]
     }
 
+}
+
+/// Art Pen barrel angle from a 10-byte rotation packet (kernel
+/// `wacom_intuos_general`, type 0x05), in degrees, clockwise increasing.
+/// The raw value spans -900...899 for one turn.
+func intuosRotationDegrees(_ report: UnsafePointer<UInt8>) -> Double {
+    let t = (Int(report[6]) << 3) | ((Int(report[7]) >> 5) & 7)
+    let absZ = (report[7] & 0x20) != 0
+        ? (t > 900 ? (t - 1) / 2 - 1350 : (t - 1) / 2 + 450)
+        : 450 - t / 2
+    var degrees = Double(900 - absZ) / 1800.0 * 360.0
+    if degrees < 0 { degrees += 360.0 }
+    if degrees >= 360 { degrees -= 360.0 }
+    return degrees
 }

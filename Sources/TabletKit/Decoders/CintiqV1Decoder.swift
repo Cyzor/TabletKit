@@ -149,23 +149,8 @@ public struct CintiqV1Decoder: TabletReportDecoder {
         let inRangeOnly = (status & 0xFE) == 0x20
 
         if typeNibble == 0x05 {
-            // Art Pen / Marker Pen rotation packet.
-            // Kernel formula (wacom_intuos_general, type 0x05):
-            //   t = (d[6]<<3) | ((d[7]>>5) & 7)
-            //   ABS_Z = (d[7]&0x20) ? ((t>900) ? (t-1)/2-1350 : (t-1)/2+450) : 450-t/2
-            // ABS_Z range: -900..+899 in 0.5° steps; negate direction, shift to [0, 1799], scale to 0–360°.
-            // Negated so clockwise twist → increasing degrees, matching macOS kCGTabletEventRotation.
-            let t = (Int(report[6]) << 3) | ((Int(report[7]) >> 5) & 7)
-            let absZ: Int
-            if (report[7] & 0x20) != 0 {
-                absZ = (t > 900) ? ((t - 1) / 2 - 1350) : ((t - 1) / 2 + 450)
-            } else {
-                absZ = 450 - t / 2
-            }
-            var degrees = Double(900 - absZ) / 1800.0 * 360.0
-            if degrees < 0 { degrees += 360.0 }
-            if degrees >= 360 { degrees -= 360.0 }
-            state.lastRotation = degrees
+            // Art Pen / Marker Pen rotation packet — see intuosRotationDegrees.
+            state.lastRotation = intuosRotationDegrees(report)
 
         } else if typeNibble <= 0x03 {
             // General pen packet: position, pressure, tilt, and barrel

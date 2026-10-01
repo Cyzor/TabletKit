@@ -129,6 +129,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Art Pen on Intuos4/5 and Intuos Pro gen 1: rotation packets were decoded as
+  pen packets, pressing barrel button 1 and setting pressure from the angle
+  on every other report. They now set the pen's rotation, which these
+  tablets didn't report before.
 - Intuos Pro (PTH-x60) over USB, Intuos Pro gen 3 (PTK-x70) over Bluetooth,
   and Cintiq Pro in the offset report format, reported the eraser only while
   it touched the surface, so apps saw each

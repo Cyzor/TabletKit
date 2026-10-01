@@ -372,4 +372,28 @@ final class IntuosV1DecoderTests: XCTestCase {
         XCTAssertNotEqual(
             hover?.pressure, 0, "0xA0 carries real pressure — see the GD-0608 hover-noise test")
     }
+
+    // MARK: - Art Pen rotation packets
+
+    /// Bytes from a PTH-850 capture with an Intuos4/5 Art Pen (2026-10-01).
+    /// Rotation packets (status 0xAA/0xEA, type 0x05) alternate with pen
+    /// packets; read as pen packets they pressed barrel 1 and set pressure
+    /// from the angle bytes.
+    func testArtPenRotationPacketSetsAngleWithoutPenOutput() {
+        var state = DecoderState()
+        let enter = decode([0x02, 0xC2, 0x80, 0x42, 0x48, 0x09, 0x08, 0x11, 0x00, 0x00], state: &state)
+        guard case .toolEnter(let tool)? = enter.first else { return XCTFail("expected .toolEnter") }
+        XCTAssertEqual(tool.toolCode, 0x1804)
+
+        _ = decode([0x02, 0xA0, 0x35, 0x27, 0x4F, 0x60, 0x00, 0x1F, 0xBC, 0xFE], state: &state)
+        let rot = decode([0x02, 0xAA, 0x35, 0x25, 0x4F, 0x60, 0x67, 0xC0, 0x00, 0xFC], state: &state)
+        XCTAssertTrue(rot.allSatisfy { if case .pen = $0 { return false }; return true },
+            "a rotation packet carries no position, pressure, or buttons")
+
+        let pen = decode([0x02, 0xA0, 0x35, 0x2A, 0x4F, 0x60, 0x00, 0x1F, 0xBC, 0xFE], state: &state)
+        guard case .pen(let p)? = pen.last else { return XCTFail("expected .pen") }
+        XCTAssertFalse(p.penButton1)
+        XCTAssertEqual(p.pressure, 0)
+        XCTAssertEqual(p.rotation, 173.0, accuracy: 0.01, "raw 35 of -900...899")
+    }
 }
