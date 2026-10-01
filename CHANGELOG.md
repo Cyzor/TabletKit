@@ -7,6 +7,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-01
+
+Art Pen rotation on Intuos4/5 and Intuos Pro gen 1, a hovering eraser on
+Intuos Pro gen 2 (USB and Bluetooth), gen 3 (Bluetooth), and Cintiq Pro, tilt
+at the right scale on several models, and `WacomDeviceSpec.hasTilt` filled in
+for every device. Adds the Cintiq 24 and 24 Touch, Wacom One 14 Touch, and the
+Wacom One M's Android mode; ExpressKey Remote pairing and ring mode; an Intuos
+1/2 family; `WacomDeviceSpec.digitizerSpec`; and report-format guides plus
+documentation for the core API. Two enum additions (`DecodeResult.remotePairing`,
+`DeviceFamily.intuos1And2`) are source-breaking for exhaustive switches.
+
 ### Added
 
 - Documentation comments for the core API: `TabletPoint`, `AuxButtons`,
