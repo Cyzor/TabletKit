@@ -14,7 +14,7 @@ Use TabletKit when you need a reliable way to interpret tablet reports. Do not u
 
 **Building a macOS tablet driver or related tool.** IOKit gives your app raw report bytes. TabletKit turns those bytes into events that your app can use, so you do not need to reverse-engineer each device family’s report format yourself.
 
-**Using a Wacom or Xencelabs device in the registry.** `WacomDeviceRegistry` and `VendorDeviceRegistry` cover roughly 190 product IDs across Wacom’s Bamboo, Intuos, Cintiq, DTU, and DTH lines, plus Xencelabs pen and Quick Keys devices. When the registry includes a device, TabletKit knows its report format and, in most cases, has hardware verification.
+**Using a Wacom or Xencelabs device in the registry.** `WacomDeviceRegistry` and `VendorDeviceRegistry` cover roughly 200 product IDs across Wacom’s Bamboo, Intuos, Cintiq, DTU, and DTH lines, plus Xencelabs pen and Quick Keys devices. When the registry includes a device, TabletKit knows its report format and, in most cases, has hardware verification.
 
 **Inspecting a device’s HID reports.** The `HID/` layer includes a report-descriptor parser and capture tools. Use them to identify a device’s controls, report fields, and value ranges before writing a decoder.
 

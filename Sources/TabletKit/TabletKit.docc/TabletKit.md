@@ -44,6 +44,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``DigitizerSpec``
 - ``WirelessStatus``
 - ``DeviceInstanceKey``
+- ``RemotePairingSlot``
 
 ### Device data
 
@@ -54,6 +55,12 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``WacomToolCatalog``
 - ``WacomToolSpec``
 - ``DeviceFamily``
+- ``WacomDeviceSpec``
+- ``ReportParser``
+- ``InitStep``
+- ``ConfidenceTier``
+- ``WacomToolType``
+- ``ToolCapabilities``
 
 ### Decoders
 
@@ -69,6 +76,11 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``GenericPenDecoder``
 - ``PrecisionTouchDecoder``
 - ``XencelabsDecoder``
+- ``ExpressKeyRemoteDecoder``
+- ``WacomPLDecoder``
+- ``Wacom24HDTDecoder``
+- ``Wacom27QHDTDecoder``
+- ``BLEPenResult``
 
 ### HID mechanics
 
@@ -83,10 +95,21 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``DigitizerInterfaceKind``
 - ``classifyDigitizerInterface(_:)``
 - ``GenericDigitizerFrame``
+- ``DescriptorLayout``
+- ``DescriptorReport``
+- ``DescriptorField``
+- ``HIDReportDirection``
+- ``HIDReportDescriptorParserError``
+- ``GenericPenLayout``
+- ``PrecisionTouchLayout``
+- ``PrecisionTouchFrame``
+- ``PrecisionTouchSlot``
 
 ### Output protocols
 
 - ``XencelabsOutputProtocol``
+- ``WacomOutputProtocol``
+- ``IntuosOLEDImageEncoder``
 
 ### Live device control
 
@@ -97,3 +120,8 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``CursorSmoother``
 - ``PanSmoother``
 - ``PressureSmoother``
+
+### Input state
+
+- ``ModifierMath``
+- ``LiveButtonState``
