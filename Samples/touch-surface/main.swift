@@ -21,10 +21,10 @@
 // ignores any it can't handle and uses the most recent supported one to
 // connect — it doesn't decode multiple tablets at once.
 //
-// Unlike TabletKit's other samples, this one has real side effects: it
-// opens a live HID device and injects system input via CGEvent. TabletKit
-// itself does neither. This sample steps outside that boundary on purpose,
-// to show the library is useful for exactly this kind of app.
+// Like pen-surface, this one has real side effects: it opens a live HID
+// device and injects system input via CGEvent. TabletKit itself does
+// neither. These samples step outside that boundary on purpose, to show
+// the library is useful for exactly this kind of app.
 //
 // Injecting events normally needs Accessibility permission (System
 // Settings > Privacy & Security > Accessibility). Running from a terminal
