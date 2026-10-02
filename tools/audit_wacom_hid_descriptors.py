@@ -6,7 +6,7 @@ USB VID/PID for each Wacom-branded device from its sysinfo dump filenames
 (which encode the IDs as `BUS:VID:PID.NNNN.hid.txt`), and cross-references
 against TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift.
 
-Produces a Markdown audit table for Notes/Scratch/ — promotable entries,
+Produces a Markdown audit table: promotable entries,
 missing entries, and naming discrepancies.  Run via `gh` (no auth needed
 for the public repo).
 
@@ -34,7 +34,7 @@ we name it correctly", which is genuinely useful, and nothing more.
 
 Usage:
     python3 tools/audit_wacom_hid_descriptors.py \\
-        > Notes/Scratch/Wacom-Descriptor-Audit-$(date +%Y-%m-%d).md
+        > Wacom-Descriptor-Audit-$(date +%Y-%m-%d).md
 """
 
 import argparse

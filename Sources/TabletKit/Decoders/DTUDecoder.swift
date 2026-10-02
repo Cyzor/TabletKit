@@ -7,7 +7,7 @@ import Foundation
 /// Decoder for the Wacom DTU HID report format.
 ///
 /// Used by: DTU-2231 (0x00CE), DTU-1631 (0x00F0). Ported from input-wacom's
-/// `wacom_dtu_irq` (`Notes/Scratch/upstream/input-wacom/4.18/wacom_wac.c`, ~L276).
+/// `wacom_dtu_irq` (`drivers/hid/wacom_wac.c` in input-wacom 4.18).
 ///
 /// Report ID routing:
 /// 0x02  Pen report (WACOM_REPORT_PENABLED), 8 bytes — LE16 X/Y, 9-bit pressure.

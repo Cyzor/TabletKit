@@ -23,8 +23,7 @@ import Foundation
 ///       relative-step scroll wheels (dials)
 ///
 /// Byte layout differs from IntuosV2's main 0x10 path: the pen-status byte
-/// sits at [2] instead of [1]. See
-/// `Notes/Scratch/Upstream-Sync-2026-05-15.md` for the full diff table.
+/// sits at [2] instead of [1].
 ///
 /// 0x11 and 0x1E are hardware-confirmed against real PTK-870 and Movink 13
 /// captures — see `decodeAuxReport`/`decodeExtendedPenReport`. 0x1F is still
@@ -80,9 +79,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Sized from where the dead zone actually ends, not guessed: with a
     /// 1000-unit rim the groove traces themselves went quiet, but captures of
     /// the bezel on either side of the groove line still leaked — 175 samples
-    /// from `ptk-870-bt-upper-bezel.txt` at Y 1002-1170 and 59 from
-    /// `ptk-870-bt-top-bezel-contact.txt` at Y 1001-1631, every one of them
-    /// just past the old boundary. This covers them.
+    /// at Y 1002-1170 in one and 59 at Y 1001-1631 in another, every one of
+    /// them just past the old boundary. This covers them.
     ///
     /// Widening is close to free for real work: the in-bounds border trace,
     /// pressure, tilt and the hover sweeps hold 94-100% at every width tried
@@ -361,7 +359,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // this wider field — the old decode ran ~7x too fast and backwards,
         // matching the user's live report of rotation being "about 4x too
         // fast, spinning the opposite direction" in both MockTab and
-        // Rebelle. Confirmed against `ptk-870-usb-art-pen-pressure+rotation.txt`:
+        // Rebelle. Confirmed against a PTK-870 USB capture:
         // a deliberate ~1-turn gesture now unwraps to exactly -1.00 laps.
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
         let rawRotation = Int16(bitPattern: UInt16(report[15]) | UInt16(report[16]) << 8)
@@ -401,7 +399,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // earlier version of this comment claimed it did not, on the strength
         // of a groove trace that runs ALONG each edge and never crosses one.
         // That data could not contain a leap. Captures that do cross
-        // (`ptk-870-usb-see-saw-top.txt`, `ptk-870-usb-edge-bounce-right.txt`)
+        // (two PTK-870 USB captures)
         // hold 129 and 26 leaps up to 4965 units, none explained by a gap or
         // a proximity break, and 152 of those 155 carry a railed hover
         // distance on BOTH endpoints. It is the same barrel takeover.
@@ -452,7 +450,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // Pen serial (bytes 20-23 LE) and tool code (bytes 24-25 LE) —
         // confirmed byte-for-byte 2026-09-16 against a real PTK-870 capture
         // using a known-identity pen (Wacom Art Pen, tool code 0x0804,
-        // serial 0x038000CE): both fields decoded to the pen's real,
+        // serial 0x03801234): both fields decoded to the pen's real,
         // documented values at exactly these offsets. Both read 0 while out
         // of proximity. Byte 26 (high byte of the declared 32-bit tool-code
         // usage 0x005C) carries some other flag/capability value, not part
@@ -631,8 +629,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            Confirmed: bit0 agrees with pressure > 0 on 11,000+ samples
     ///            across five captures with 2 disagreements (the contact
     ///            transition frame itself); bit2 is the only barrel bit ever
-    ///            seen set, during a deliberate button hold in
-    ///            `ptk-870-left-to-right.txt`; bit7/bit6 gate exactly which
+    ///            seen set, during a deliberate button hold in a
+    ///            PTK-870 capture; bit7/bit6 gate exactly which
     ///            fields the device bothers to fill in (see below). The whole
     ///            observed value set is 0x00/0x80/0xC0/0xC1/0xC4/0xC5, which
     ///            decomposes cleanly under this reading and under no other.
@@ -645,7 +643,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            rounds on: the exit event was being searched for as an
     ///            `0x80`-class value of the [1] discriminator, following the
     ///            legacy Intuos state machine, and it is not there. It is
-    ///            here. `ptk-870-pen-2-proximity.txt` (three deliberate
+    ///            here. A PTK-870 Bluetooth capture (three deliberate
     ///            approach/withdraw cycles) shows the sequence
     ///            0x80 → 0xC0 → 0x80 → 0x00 exactly three times, one
     ///            single-frame 0x00 per withdrawal.
@@ -663,7 +661,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            no whole byte increments at the wrap — because the carry
     ///            lands in a nibble that shares byte [6] with Y's low bits,
     ///            which a byte-granular search cannot see. Verified on the
-    ///            two wrap events in `ptk-870-bt-x-shape-edge.txt` (bit sets
+    ///            two wrap events in a PTK-870 Bluetooth capture (bit sets
     ///            on the 65531 → 10 climb, clears on the 7 → 65526 descent)
     ///            and across all 34 captures on hand: reconstructed X reaches
     ///            exactly 69800 at the right edge and never once exceeds it.
@@ -678,7 +676,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            The previous code read byte [10] alone, whose observed
     ///            0…31 ceiling was recorded as "probably these older pens'
     ///            real mechanical range." It was not: [10] is the high byte,
-    ///            31 << 8 | 255 = 8191, and `ptk-870-pressure-spiral.txt`
+    ///            31 << 8 | 255 = 8191, and a PTK-870 Bluetooth capture
     ///            walks the full 13-bit range smoothly. Reading [10] alone
     ///            reported every stroke at 1/256th of its true force.
     ///   [11]     tilt X, signed byte, ±64 (`spec.tiltMaxDegrees`)
@@ -687,13 +685,13 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            bit-identical frame to frame for every byte up to [12] and
     ///            so isolate tilt cleanly: lean left gives [11] = +60, lean
     ///            right −60, with [12] ≈ 0; lean up gives [12] = +57, lean
-    ///            down −59, with [11] ≈ 0. `ptk-870-tilt.txt` walks [11]
+    ///            down −59, with [11] ≈ 0. A PTK-870 Bluetooth capture walks [11]
     ///            smoothly from 0 through −64 (flat left), back through 0 to
     ///            +63 (flat right) and home, saturating at both rails.
     ///            Sign is passed through unnegated, as every other decoder
     ///            here does; checked against the USB path rather than
     ///            assumed, by comparing the same natural-grip gesture on both
-    ///            transports (`ptk-870-usb-hover-left-to-right.txt` median
+    ///            transports (a PTK-870 USB capture median
     ///            tilt +13/−34, BLE +11/−8 — same signs, same axes).
     ///   [15]     hover distance — 20 with the tip down, rising as the pen
     ///            lifts, railed at 255 once it is out of range. Confirmed
@@ -728,7 +726,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// held-static pose, so they're timing or sequence data.
     ///
     /// [13..14] is Art Pen barrel rotation, confirmed 2026-09-19 against two
-    /// labelled stand captures (`ptk-870-bt-wacom-stand-art-pen.txt`, `-02`):
+    /// labeled stand captures (two PTK-870 Bluetooth captures):
     /// a signed 12-bit count at byte [13] plus [14]'s low nibble, same
     /// -900..899/5-counts-per-degree convention as USB, just narrower and
     /// packed differently. [14]'s high nibble is a separate 16-step rolling
@@ -746,7 +744,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///
     /// Class 1 is identity, never a position — a pen announcing its serial
     /// and tool code at [4..9], byte-identical to the extended USB report's
-    /// [20..25] (confirmed 2026-09-18 on `ptk-870-bt-tool-swap.txt`, both
+    /// [20..25] (confirmed 2026-09-18 on a PTK-870 Bluetooth capture, both
     /// pens matching their USB identity exactly). Byte [10] has no USB
     /// counterpart and is undecoded. Read before the position guard rejects
     /// the class.
@@ -802,8 +800,8 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // templates". They are announcements — each is one pen's own serial,
         // repeated verbatim every time it announces itself:
         //
-        //   c0 81 90 80 24 04 08 11 00 04 08  serial 0x24809081, 0x0804
-        //   c0 88 95 80 35 02 08 11 00 02 08  serial 0x35809588, 0x0802
+        //   c0 44 44 80 24 04 08 11 00 04 08  serial 0x24804444, 0x0804
+        //   c0 55 55 80 35 02 08 11 00 02 08  serial 0x35805555, 0x0802
         //
         // Matching them literally cost those two pens their identity, after
         // which a class-2 frame's coordinate bytes read as toolCode 0x1002 —
@@ -903,7 +901,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         //
         // Position cannot separate these two cases, which is the surprise
         // here. Four deliberately labelled captures settle it: a trace along
-        // the legitimate top border (`ptk-870-bt-top-border.txt`, described
+        // the legitimate top border (a PTK-870 Bluetooth capture, described
         // as tracking flawlessly) sits at Y = 0 exactly, at the limit, for
         // essentially every sample — while traces along the physical grooves
         // beyond each edge (`ptk-870-bt-{top,bottom,left}-groove.txt`) report
@@ -1013,7 +1011,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // free-running frame counter. Sign-extend from bit 11, not bit 15.
         // Confirmed against two labelled stand captures that hold the pen at
         // known angles and twist it through several turns
-        // (`ptk-870-bt-wacom-stand-art-pen.txt`, `-02.txt`): decoded values
+        // (two PTK-870 Bluetooth captures): decoded values
         // track every labelled pose to within 2° and unwrap cleanly across
         // multi-revolution twists.
         //

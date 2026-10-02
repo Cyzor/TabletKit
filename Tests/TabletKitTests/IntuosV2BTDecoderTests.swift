@@ -305,12 +305,13 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     /// Invert without Eraser) and weak frames (0xC0, neither bit). Reading
     /// only 0x08 showed all of them as the pen.
     func testHoveringEraserAndWeakFrameReportEraser() {
+        // A real capture, with the pen serial replaced.
         let hex = [
             "80 f0 fd 85 e2 2f 00 00 0f 11 7f 03 00 00 3f c0 fd 85 e2 2f 00 00 0f 11",
             "7f 03 00 00 3f c0 ed 85 0d 30 00 00 00 00 00 00 00 00 3f c0 e8 85 26 30",
             "00 00 00 00 00 00 00 00 3f f0 df 85 71 30 00 00 0f 10 7f 03 00 00 3f f0",
             "da 85 7d 30 00 00 0f 10 7f 03 00 00 3f 00 00 00 00 00 00 00 00 00 00 00",
-            "00 00 00 ce 00 80 03 04 08 11 00 0c 08 82 01 01 46 2e 22 21 06 08 02 00",
+            "00 00 00 34 12 80 03 04 08 11 00 0c 08 82 01 01 46 2e 22 21 06 08 02 00",
             "12 28 23 16 04 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 a8 a8 82 01 01 46 2e 22 21 06 08 02 01 09 28 10 16 04",
             "07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",

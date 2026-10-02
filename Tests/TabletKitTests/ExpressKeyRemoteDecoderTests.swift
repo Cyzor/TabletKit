@@ -206,21 +206,21 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
         XCTAssertEqual(slots[0].serial, 0)
     }
 
-    /// The exact 32 bytes from `DTH-2700-0x0331_20260917_155547.json` — all 34
-    /// samples in that capture were byte-for-byte identical. One remote paired
-    /// in slot 0 with serial 23547, which is the evidence that this user's
-    /// pairing was healthy while report 0x11 never fired.
+    /// The 32 bytes of an ExpressKey Remote USB capture, with the serial
+    /// replaced. All 34 samples in that capture matched byte for byte: one
+    /// remote paired in slot 0, which shows the pairing was healthy while
+    /// report 0x11 never fired.
     func testCapturedFrameDecodesOnePairedRemote() {
         var state = DecoderState()
         var bytes = [UInt8](repeating: 0, count: 32)
         bytes[0] = 0x10
         bytes[2] = 0x01
-        bytes[4] = 0xFB
-        bytes[5] = 0x5B
+        bytes[4] = 0x34
+        bytes[5] = 0x12
 
         let slots = pairing(decode(bytes, state: &state))
         XCTAssertEqual(slots?.count, 5)
-        XCTAssertEqual(slots?[0].serial, 23547)
+        XCTAssertEqual(slots?[0].serial, 0x001234)
         XCTAssertEqual(slots?[0].connected, true)
         // Every other slot empty — the receiver reports all five regardless.
         XCTAssertEqual(slots?.dropFirst().filter { $0.connected }.count, 0)

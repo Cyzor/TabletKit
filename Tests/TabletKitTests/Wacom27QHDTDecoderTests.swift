@@ -2,10 +2,9 @@
 //
 // Wacom27QHDTDecoder fixtures (Cintiq 27QHD Touch / DTH-2700 touch sensor).
 //
-// Entirely synthesized — no capture exists for this device's touch
-// interface. See Wacom27QHDTDecoder.swift and
-// Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md for the kernel
-// sources this byte layout is derived from.
+// Entirely synthesized — no capture exists for this device's touch interface.
+// See Wacom27QHDTDecoder.swift for the kernel sources this byte layout is
+// derived from.
 import XCTest
 @testable import TabletKit
 

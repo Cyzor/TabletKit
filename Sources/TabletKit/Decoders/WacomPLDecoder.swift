@@ -9,12 +9,8 @@ import Foundation
 /// line. PL-550 and PL-800 are literally the Cintiq 15X and 18SX under
 /// their internal model numbers.
 ///
-/// Ported from the Linux kernel's `wacom_pl_irq()` (`wacom_wac.c`) — two
-/// independent third-party research passes were each re-verified against
-/// that source directly before writing this decoder, following the same
-/// discipline that caught real errors elsewhere this session. See
-/// `Notes/Scratch/wacom-pl-series-design-2026-09-08.md` for the full
-/// design rationale and confidence-tier reasoning.
+/// Ported from the Linux kernel's `wacom_pl_irq()` (`wacom_wac.c`), checked
+/// against that source directly.
 ///
 /// Report ID 2 (`WACOM_REPORT_PENABLED`), 8 bytes:
 ///   [0]   report ID: 0x02

@@ -454,8 +454,8 @@ extension IntuosV2Decoder {
     /// different geometry: **four 8-byte pen frames**, not seven 14-byte ones.
     ///
     /// Layout, verified byte-for-byte against a 627-record hardware capture of
-    /// a CTL-4100WL over Bluetooth (`Notes/Scratch/Wacom-CTL-6100WL/`, OTD
-    /// debugger recording with its own decoded output alongside the raw bytes):
+    /// a CTL-4100WL over Bluetooth (an OpenTabletDriver debugger recording with
+    /// its own decoded output alongside the raw bytes):
     ///
     /// | Offset | Meaning |
     /// |---|---|

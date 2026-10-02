@@ -751,7 +751,7 @@ def upstream_section(pid: Optional[int]) -> list[str]:
         otd = None
 
     if kernel is None and otd is None:
-        lines += ["_upstream clones not present under `Notes/Scratch/upstream/` "
+        lines += ["_upstream clones not present "
                   "— run with them checked out for kernel/OTD comparison._", ""]
         return lines
 

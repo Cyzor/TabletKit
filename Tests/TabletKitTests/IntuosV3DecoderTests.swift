@@ -5,7 +5,9 @@
 // 0x1F is still synthesized (no capture exists for it). 0x11 and 0x1E are
 // hardware-confirmed against real PTK-870 captures (see IntuosV3Decoder.swift)
 // — tests marked "real capture" use bytes taken verbatim from
-// `whot/wacom-recordings` (MIT-licensed), not synthesized guesses.
+// `whot/wacom-recordings` (MIT-licensed), not synthesized guesses. Pen serial
+// numbers in fixtures from our own captures are made up; the other bytes are
+// as captured.
 import XCTest
 @testable import TabletKit
 
@@ -301,7 +303,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(pt.y, 4459)
     }
 
-    /// Real frame from `ptk-870-usb-groove-all.txt`, a four-edge trace of the
+    /// Real frame from a PTK-870 USB capture, a four-edge trace of the
     /// moulded groove over USB. The wired path has the same out-of-bounds
     /// problem as Bluetooth — the pen keeps being reported from beyond the
     /// drawable area — and states it plainly: hover distance railed at 255,
@@ -320,7 +322,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             "a pen in the groove must produce no position over USB either")
     }
 
-    /// Real consecutive pair from `ptk-870-usb-edge-bounce-right.txt`, a
+    /// Real consecutive pair from a PTK-870 USB capture, a
     /// see-saw across the right edge. USB leaps exactly as Bluetooth does:
     /// 4340 units in one 2ms step, both endpoints ~2600 from an edge with
     /// hover railed and nothing touching. That distance is outside the rim,
@@ -433,16 +435,14 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - Tool identity (serial/tool code, bytes 20-25)
     //
     // Confirmed 2026-09-16 against a real PTK-870 capture using a
-    // known-identity pen (Wacom Art Pen, tool code 0x0804, serial
-    // 0x038000CE): bytes 20-23 decoded byte-for-byte to the real serial,
-    // bytes 24-25 to the real tool code. See
-    // Notes/Scratch/PTK-870-ToolID-Field-Survey-2026-09-16.md for the full
-    // derivation. The bytes below are synthesized from that confirmed
-    // offset/encoding (not a verbatim capture — the source JSON only
-    // stores aggregate byte statistics, not a raw in-proximity sample), but
-    // every other field (status/X/Y/pressure/tilt) is copied from an
-    // already-verified real-capture fixture above, so only bytes 20-25 are
-    // constructed rather than captured.
+    // known-identity pen (Wacom Art Pen, tool code 0x0804, serial 0x03801234):
+    // bytes 20-23 decoded byte-for-byte to the real serial, bytes 24-25 to the
+    // real tool code. The bytes below are synthesized from that confirmed
+    // offset/encoding (not a verbatim capture — the source JSON only stores
+    // aggregate byte statistics, not a raw in-proximity sample), but every
+    // other field (status/X/Y/pressure/tilt) is copied from an already-verified
+    // real-capture fixture above, so only bytes 20-25 are constructed rather
+    // than captured.
 
     func testRealCaptureToolEnterFiresOnFirstProximityWithKnownArtPen() {
         var st = DecoderState()
@@ -451,10 +451,10 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
         ]
-        // Art Pen ground truth: serial 0x038000CE (LE bytes 20-23),
+        // Art Pen ground truth: serial 0x03801234 (LE bytes 20-23),
         // tool code 0x0804 (LE bytes 24-25).
-        b[20] = 0xCE
-        b[21] = 0x00
+        b[20] = 0x34
+        b[21] = 0x12
         b[22] = 0x80
         b[23] = 0x03
         b[24] = 0x04
@@ -465,7 +465,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         // capture), so no .toolCompatibility warning fires here.
         XCTAssertEqual(r.count, 2)
         guard case .toolEnter(let identity) = r.first else { return XCTFail() }
-        XCTAssertEqual(identity.serial, 0x038000CE)
+        XCTAssertEqual(identity.serial, 0x03801234)
         XCTAssertEqual(identity.toolCode, 0x0804)
         XCTAssertFalse(identity.isEraser)  // 0x0804 is the Art-Pen bit3 exclusion
         XCTAssertFalse(identity.isMouse)
@@ -479,8 +479,8 @@ final class IntuosV3DecoderTests: XCTestCase {
             0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x02, 0xD4, 0x18, 0x18, 0x3D,
         ]
-        b[20] = 0xCE
-        b[21] = 0x00
+        b[20] = 0x34
+        b[21] = 0x12
         b[22] = 0x80
         b[23] = 0x03
         b[24] = 0x04
@@ -705,7 +705,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(r.isEmpty)
     }
 
-    /// Real mid-stroke sample from `ptk-870-pressure-spiral.txt`, at the
+    /// Real mid-stroke sample from a PTK-870 Bluetooth capture, at the
     /// moment pressure reaches its ceiling. Every field in the 0x1A report
     /// is asserted here in raw device units — the report carries the same
     /// units the USB registry entry declares, so nothing is rescaled.
@@ -729,8 +729,8 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     /// The regression this whole BLE decoder existed to hit and kept
     /// missing: X is 20 bits, not 16, and its high nibble shares byte [6]
-    /// with Y's low bits. These two samples are consecutive frames from
-    /// `ptk-870-bt-x-shape-edge.txt` at the moment a real stroke crosses
+    /// with Y's low bits. These two samples are consecutive frames from a
+    /// PTK-870 Bluetooth capture at the moment a real stroke crosses
     /// 65536 — raw [4..5] reads 65531 then 10, and the low nibble of [6]
     /// goes 0 → 1. Read as 16 bits the cursor jumps the full width of the
     /// tablet; read correctly it advances 15 units.
@@ -757,7 +757,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(xAfter - xBefore, 15)
     }
 
-    /// Real sample from `ptk-870-bt-right-edge.txt`, where X rests at the
+    /// Real sample from a PTK-870 Bluetooth capture, where X rests at the
     /// tablet's true right edge. The reconstructed value must land on
     /// `spec.maxX` exactly — this is the independent check that 20 bits is
     /// the right width and that no scale factor belongs anywhere near it.
@@ -817,7 +817,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         }
     }
 
-    /// Real withdrawal from `ptk-870-pen-2-proximity.txt`. Status byte [3]
+    /// Real withdrawal from a PTK-870 Bluetooth capture. Status byte [3]
     /// drops to 0x00 for exactly one frame per withdrawal — the proximity
     /// exit this investigation spent two capture rounds looking for in the
     /// [1] discriminator, where it does not exist. The exit frame still
@@ -862,7 +862,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     /// Real hover-only frame from the labelled stand capture
-    /// (`ptk-870-bt-wacom-stand-art-pen.txt`, "0°" section) — the pen sat in
+    /// (a PTK-870 Bluetooth capture, "0°" section) — the pen sat in
     /// a fixed stand with no tip contact at all, confirming rotation isn't
     /// tip-switch-gated on BLE the way it is on USB. Bytes [13..14] pack a
     /// 12-bit signed count into byte [13] plus [14]'s low nibble; [14]'s high
@@ -881,7 +881,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(p[0].rotation, 269.4, accuracy: 1e-9)
     }
 
-    /// Real interior in-range frame from `ptk-870-bt-top-see-saw-right.txt`
+    /// Real interior in-range frame from a PTK-870 Bluetooth capture
     /// — an ordinary tracing pass with no rotation gesture involved.
     ///
     /// Its raw count is 0, which is the tablet's "no reading this frame"
@@ -953,7 +953,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(next[0].rotation, 0.0, accuracy: 1e-9)
     }
 
-    /// Real sample from `ptk-870-left-to-right.txt` with a barrel button
+    /// Real sample from a PTK-870 capture with a barrel button
     /// held and the tip up (status 0xC4). Bit 2 is the only barrel bit any
     /// capture ever set; bit 0 tracks the tip switch, and agrees with
     /// pressure > 0 across every capture on hand.
@@ -971,7 +971,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(p[0].inProximity)
     }
 
-    /// Real sample from `ptk-870-tilt-hover-left-to-right.txt` — discriminator
+    /// Real sample from a PTK-870 Bluetooth capture — discriminator
     /// 0x02, which an early version of this decoder treated as pure
     /// idle/no-pen and discarded entirely. A dedicated hover-only sweep (pen
     /// moved across the tablet without ever touching down) showed clean,
@@ -989,7 +989,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(p[0].pressure, 0)
     }
 
-    /// Real sample from `ptk-870-left.txt` (ExpressKeys/dial exercised with
+    /// Real sample from a PTK-870 capture (ExpressKeys/dial exercised with
     /// no pen anywhere near the tablet). Status byte [3] is 0x00 — the pen
     /// is not in range, so no position is emitted regardless of what the
     /// coordinate bytes happen to hold.
@@ -1031,7 +1031,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// announcements, one per pen, and must yield that pen's identity.
     ///
     /// Verified against `870-usb-healthier-art-pen-0x0084-20260923-210819`:
-    /// over USB the same physical pen reports serial 612405377 / toolCode
+    /// over USB the same physical pen reports serial 612385860 / toolCode
     /// 0x0804, and its USB identity bytes [20..29] are byte-identical to this
     /// BLE frame's [4..13]. Suppressing these cost both pens their identity,
     /// after which a class-2 position frame's coordinate bytes were trusted
@@ -1071,7 +1071,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testRealCaptureBLEArtPenClassOneFrameEmitsNoPosition() {
         var st = DecoderState()
         let zap: [UInt8] = [
-            0x1A, 0x41, 0x80, 0xC0, 0xCE, 0x00, 0x80, 0x03, 0x04, 0x08,
+            0x1A, 0x41, 0x80, 0xC0, 0x34, 0x12, 0x80, 0x03, 0x04, 0x08,
             0x11, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ]
         XCTAssertTrue(
@@ -1085,10 +1085,10 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// before the guard moved to the discriminator's low nibble.
     func testRealCaptureBLEEveryObservedClassOneSignatureEmitsNoPosition() {
         let signatures: [(String, [UInt8])] = [
-            ("Pro Pen 0x0200", [0xC0, 0x5C, 0x43, 0x18, 0x26, 0x00, 0x02]),
-            ("Grip Pen 0x0802", [0xC0, 0x4E, 0x1D, 0x80, 0x21, 0x02, 0x08]),
-            ("0x0842", [0xC0, 0x98, 0x44, 0x80, 0x87, 0x42, 0x08]),
-            ("Art Pen 0x0804", [0xC0, 0xCE, 0x00, 0x80, 0x03, 0x04, 0x08]),
+            ("Pro Pen 0x0200", [0xC0, 0x11, 0x11, 0x18, 0x26, 0x00, 0x02]),
+            ("Grip Pen 0x0802", [0xC0, 0x22, 0x22, 0x80, 0x21, 0x02, 0x08]),
+            ("0x0842", [0xC0, 0x33, 0x33, 0x80, 0x87, 0x42, 0x08]),
+            ("Art Pen 0x0804", [0xC0, 0x34, 0x12, 0x80, 0x03, 0x04, 0x08]),
         ]
         // Every class value whose low nibble is 1; the high bits are a
         // rolling counter, so all of these must behave identically.
@@ -1112,10 +1112,10 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// unrecognized — the generic-pen symptom, over Bluetooth.
     func testRealCaptureBLEClassOneAnnouncementStillYieldsToolIdentity() {
         var st = DecoderState()
-        // Pro Pen announcement (serial 0x2618435C, toolCode 0x0200), verbatim
+        // Pro Pen announcement (serial made up, toolCode 0x0200), otherwise verbatim
         // payload, carried on discriminator 0x41.
         let announce: [UInt8] = [
-            0x1A, 0x41, 0x20, 0xC0, 0x5C, 0x43, 0x18, 0x26, 0x00, 0x02,
+            0x1A, 0x41, 0x20, 0xC0, 0x11, 0x11, 0x18, 0x26, 0x00, 0x02,
             0x10, 0x00, 0x00, 0x02, 0xB0, 0x00, 0x00, 0x00, 0x00, 0x00,
         ]
         let results = decodeBLE(announce, state: &st)
@@ -1132,7 +1132,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             "the announcement frame carries identity only, never a position")
     }
 
-    /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`, at
+    /// Real three-frame sequence from a PTK-870 Bluetooth capture, at
     /// the moment the pen tip crosses the right edge during a see-saw. The
     /// first frame sits at maxX with NO close tip fix — the pen is already
     /// off the surface — so the rim rule drops it and arms the gate, and the
@@ -1168,15 +1168,15 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// The labelled pair that settles what "out of bounds" means on this
     /// hardware, from two captures made to answer exactly that.
     ///
-    /// `ptk-870-bt-top-border.txt` traces the real top border of the drawable
-    /// area — described as tracking flawlessly — and sits at Y = 0, ON the
-    /// limit. `ptk-870-bt-top-groove.txt` traces the moulded groove beyond
-    /// that border, half an inch further out where no cursor response should
-    /// be possible at all, and reports Y folded back about 850 units INSIDE
-    /// the limit. The out-of-bounds sample therefore reads as further inside
-    /// the surface than the in-bounds one, so no inset or matte can separate
-    /// them. The status byte can: the border carries a close tip fix, the
-    /// groove does not.
+    /// One PTK-870 Bluetooth capture traces the real top border of the drawable
+    /// area — described as tracking flawlessly — and sits at Y = 0, right on
+    /// the limit. A second PTK-870 Bluetooth capture traces the molded groove
+    /// beyond that border, half an inch further out where no cursor response
+    /// should be possible at all, and reports Y folded back about 850 units
+    /// inside the limit. The out-of-bounds sample therefore reads as further
+    /// inside the surface than the in-bounds one, so no inset or matte can
+    /// separate them. The status byte can: the border carries a close tip fix,
+    /// the groove does not.
     func testRealCaptureBLEGrooveSuppressedButBorderKept() {
         var st = DecoderState()
         let border: [UInt8] = [
@@ -1202,7 +1202,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             "a pen in the groove must produce no position at all")
     }
 
-    /// Real pair from `ptk-870-bt-top-bermuda-triangle-01.txt`, a capture made
+    /// Real pair from a PTK-870 Bluetooth capture, a capture made
     /// specifically to worry at the last spot still misbehaving. The pen is
     /// hovering over the top bezel at Y = 2409 — physically off the drawable
     /// area, but numerically 2409 units short of the limit, so nothing rails.
@@ -1248,7 +1248,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(moved[0].x, 24576)
     }
 
-    /// Real sequence from `ptk-870-bt-top-see-saw-right.txt`. While the pen
+    /// Real sequence from a PTK-870 Bluetooth capture. While the pen
     /// ghosts along the top bezel the tablet emits a proximity exit of its
     /// OWN accord, mid-ghost, and then carries straight on reporting the
     /// barrel. An earlier version of the gate disarmed on that exit, which
@@ -1336,7 +1336,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     /// The slot-1 (discriminator 0x21) sync template — the edge bounceback.
-    /// Taken verbatim from `ptk-870-bt-edge-bounce-right.txt`, where it is
+    /// Taken verbatim from a PTK-870 Bluetooth capture, where it is
     /// emitted as the pen leaves the active surface. It decodes to a fixed
     /// phantom point mid-tablet with a fixed phantom pressure, so letting it
     /// through throws a cursor that is correctly pinned at the edge back into
@@ -1359,7 +1359,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(b, state: &st)).isEmpty)
     }
 
-    /// Real three-frame sequence from `ptk-870-bt-edge-bounce-right.txt`: the
+    /// Real three-frame sequence from a PTK-870 Bluetooth capture: the
     /// pen is off the right edge with X railed at `maxX`, the slot-1 template
     /// lands between two railed frames, and the cursor must not move. Guards
     /// the bounceback at the sequence level, not just the single frame.
@@ -1385,7 +1385,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(after[0].y, before[0].y)
     }
 
-    /// Real idle-state frame (discriminator 0x02) from `ptk-870-left.txt`
+    /// Real idle-state frame (discriminator 0x02) from a PTK-870 capture
     /// with the first left ExpressKey (bit 0) pressed — buttons/dial must
     /// still decode even though no pen is in proximity.
     func testRealCaptureBLELeftExpressKeyOneDecoded() {
@@ -1456,7 +1456,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         return b
     }
 
-    /// Real capture byte from `ptk-870-bt-edge-trace.txt`: 0x64, discharging.
+    /// Real capture byte from a PTK-870 Bluetooth capture: 0x64, discharging.
     func testRealCaptureBatteryFullNotCharging() {
         var st = DecoderState()
         let r = decode(make0x1B(0x64), state: &st)
@@ -1475,8 +1475,8 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(batteries(r).first?.1, true)
     }
 
-    /// Real capture byte from `top.txt` / `right.txt`: 0xE4 — topped off on
-    /// the cable, so 100% and charging simultaneously.
+    /// Real capture byte from two PTK-870 Bluetooth captures: 0xE4 — topped off
+    /// on the cable, so 100% and charging simultaneously.
     func testRealCaptureBatteryFullWhileCharging() {
         var st = DecoderState()
         let r = decode(make0x1B(0xE4), state: &st)
@@ -1712,7 +1712,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         func frame(_ status: UInt8) -> [UInt8] {
             var b = make0x1E(status: status, x: 30000, y: 20000)
             b.append(contentsOf: [UInt8](repeating: 0, count: 34 - b.count))
-            b[20] = 0xCE; b[21] = 0x00; b[22] = 0x80; b[23] = 0x03  // serial 0x038000CE
+            b[20] = 0x34; b[21] = 0x12; b[22] = 0x80; b[23] = 0x03  // serial 0x03801234
             b[24] = 0x04; b[25] = 0x08  // tool code 0x0804
             return b
         }
@@ -1736,7 +1736,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             second.count, 1,
             "re-entry must re-announce, or the injector never learns the tool code again")
         XCTAssertEqual(second.first?.toolCode, 0x0804)
-        XCTAssertEqual(second.first?.serial, 0x038000CE)
+        XCTAssertEqual(second.first?.serial, 0x03801234)
     }
 
     /// The counterpart: a nonzero count always wins, including one that

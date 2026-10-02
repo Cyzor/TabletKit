@@ -2,11 +2,9 @@
 //
 // Wacom24HDTDecoder fixtures (DTH-1300/DTH-2400 touch sensors).
 //
-// Entirely synthesized — no capture exists for either device's touch
-// interface. See Wacom24HDTDecoder.swift and
-// Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md for the kernel/OTD
-// sources this byte layout is derived from and the open questions a real
-// capture would need to settle.
+// Entirely synthesized — no capture exists for either device's touch interface.
+// See Wacom24HDTDecoder.swift for the kernel and OpenTabletDriver sources this
+// byte layout is derived from.
 import XCTest
 @testable import TabletKit
 

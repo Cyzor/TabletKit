@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Used by: DTK-1651 (0x0343), DTU-1031 (0x00FB), DTU-1031X (0x032F),
 /// DTU-1141 (0x0336). Ported from input-wacom's `wacom_dtus_irq`
-/// (`Notes/Scratch/upstream/input-wacom/4.18/wacom_wac.c`, ~L306).
+/// (`drivers/hid/wacom_wac.c` in input-wacom 4.18).
 ///
 /// Report ID routing:
 /// 0x11  Pen report, 7 bytes — BE16 X/Y, 10-bit pressure split across

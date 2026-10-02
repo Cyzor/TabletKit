@@ -714,17 +714,16 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false),
         // Original Graphire (0x0004/0x0010) and Graphire 2/3/4 4×5 rows below
         // share one active area: 127.6×92.8mm per Wacom's original Graphire
-        // manual (ET-0405-R/U) and the Graphire4 manual (CTE-440), archived
-        // at Notes/Scratch/manuals/GraphireManual.pdf and G4Manual.pdf
-        // (gitignored). maxX/maxY (10206/10208, 7422/7424) were NOT changed
-        // — they already match OpenTabletDriver's ET-0405-U.json exactly,
-        // which is real hardware-measured data. Note this contradicts the
-        // manuals' own printed "coordinate resolution" figure (40 lpmm, which
-        // would give 5104/3712, not ~10208/7424) — the manual's resolution
-        // spec isn't the same thing as the raw wire units the decoder emits,
-        // confirmed by checking OTD before trusting the manual's arithmetic.
-        // Only activeHeightMM (102→93, a stale value unrelated to the above)
-        // is corrected here. Confirmed 2026-08-03.
+        // manual (ET-0405-R/U) and the Graphire4 manual (CTE-440). maxX/maxY
+        // (10206/10208, 7422/7424) stay as they were — they already match
+        // OpenTabletDriver's ET-0405-U.json exactly, which is real
+        // hardware-measured data. Note this contradicts the manuals' own
+        // printed "coordinate resolution" figure (40 lpmm, which would give
+        // 5104/3712, not ~10208/7424) — the manual's resolution spec isn't the
+        // same thing as the raw wire units the decoder emits, confirmed by
+        // checking OTD before trusting the manual's arithmetic. Only
+        // activeHeightMM (102→93, a stale value unrelated to the above) is
+        // corrected here. Confirmed 2026-08-03.
         .init(
             productID: 0x0004, name: "Graphire",
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
@@ -790,9 +789,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Active area 147.6×92.3mm confirmed against Wacom's Bamboo Fun
             // (CTE-450/650) User's Manual — matches this row's own maxX/maxY
             // (14760/9225 at 100 lpmm) exactly; activeWidthMM/Height corrected
-            // 152/102→148/92. Archived at
-            // Notes/Scratch/manuals/BambooFun-CTE-450-650-UserManual.pdf
-            // (gitignored). Confirmed 2026-08-03.
+            // 152/102→148/92. Confirmed 2026-08-03.
             productID: 0x0017, name: "Bamboo Fun small (CTE-450)",  // ⚠ from kernel/libwacom/OTD
             parser: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
@@ -804,17 +801,16 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0060, name: "Volito",  // ⚠ estimated
             parser: .graphire, maxX: 5104, maxY: 3712, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            // dimensions: libwacom wacom-volito-4x5.tablet (Width=127, Height=102).
-            // Kernel WACOM_VOLITO_RES=50 lpmm would give 102×74 mm — too small;
-            // libwacom measurement supersedes for a 4×5 (FT-0405) tablet.
-            // A third figure — Wacom's own Volito manual (technical
-            // specifications, model CTF-420/G): 127.6×92.8mm, archived at
-            // Notes/Scratch/manuals/Wacom-Volito-Windows-2005.pdf, gitignored
-            // — disagrees with libwacom's height (93 vs 102) and doesn't
-            // settle it either, since "CTF-420/G" may not be the exact
-            // hardware revision this PID maps to. Left unresolved rather than
-            // picking a winner among three disagreeing sources with no
-            // capture to arbitrate. Noted 2026-08-03.
+            // dimensions: libwacom wacom-volito-4x5.tablet (Width=127,
+            // Height=102). Kernel WACOM_VOLITO_RES=50 lpmm would give 102×74 mm
+            // — too small; libwacom measurement supersedes for a 4×5 (FT-0405)
+            // tablet. A third figure — Wacom's own Volito manual (technical
+            // specifications, model CTF-420/G): 127.6×92.8mm — disagrees with
+            // libwacom's height (93 vs 102) and doesn't settle it either, since
+            // "CTF-420/G" may not be the exact hardware revision this PID maps
+            // to. Left unresolved rather than picking a winner among three
+            // disagreeing sources with no capture to arbitrate. Noted
+            // 2026-08-03.
             //
             // Separately: maxX/maxY (5104/3712) come from the manual's stated
             // "40 lpmm" × this same active area — exactly the arithmetic that
@@ -984,8 +980,7 @@ public enum WacomDeviceRegistry: Sendable {
         // maxX/maxY confirmed 2026-08-03 for every row in this family: exact
         // match against OpenTabletDriver's PTZ-*.json, and against Wacom's own
         // Intuos3 User's Manual (technical specifications table — active area
-        // in mm at the family's 200 lpmm, archived at
-        // Notes/Scratch/manuals/Intuos3-UserManual.pdf, gitignored) once
+        // in mm at the family's 200 lpmm) once
         // doubled for IntuosV1Decoder's fractional-bit extension, same as the
         // Intuos1/2/4 families. maxPressure stays 1023 (not OTD's 2046) for
         // the same reason as Intuos4 — see that family's note. Two rows
@@ -1050,8 +1045,7 @@ public enum WacomDeviceRegistry: Sendable {
         // classic 100 lpmm, so the decoder's `<<1 | fractional bit` folds in
         // cleanly and these rows already carried the right doubled values,
         // confirmed against OpenTabletDriver's PTK-*.json (exact match) and
-        // Wacom's own Intuos4 User's Manual (technical specifications table,
-        // archived at Notes/Scratch/manuals/Intuos4-UserManual.pdf, gitignored).
+        // Wacom's own Intuos4 User's Manual (technical specifications table).
         // What was wrong instead: activeWidthMM/activeHeightMM on four of the
         // five rows didn't match their own maxX/maxY (e.g. PTK-640 claimed
         // 152mm tall against a maxY that means 140mm) — a self-consistency
@@ -1101,8 +1095,7 @@ public enum WacomDeviceRegistry: Sendable {
             // format is 1-bit monochrome plus a bit-scramble
             // (`76543210`→`GECA6420`, per the kernel's sysfs ABI doc),
             // distinct from USB's 4-bit format. WacomOutputProtocol only
-            // implements the USB encoding as of 2026-08-31 — see
-            // Notes/Scratch/intuos4-oled-image-design.md. Add this flag once
+            // implements the USB encoding as of 2026-08-31. Add this flag once
             // BT support is actually implemented, not before.
             productID: 0x00BD, name: "Intuos4 WL (PTK-540WL) BT",  // ⚠ from libwacom
             parser: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
@@ -1126,14 +1119,14 @@ public enum WacomDeviceRegistry: Sendable {
         // │ switched to IntuosV2 format and added Bluetooth support.              │
         // └──────────────────────────────────────────────────────────────────────────┘
         .init(
-            // Coordinates confirmed exact against OpenTabletDriver's PTH-450.json
-            // and against Wacom's Intuos5 Important Product Information booklet
-            // (archived at Notes/Scratch/manuals/IntuosPro-PTH-451-651-851-IPI.pdf,
-            // gitignored — shared across the whole Intuos5/Intuos5-Touch line).
-            // activeWidthMM/Height corrected to match (157.48×98.43mm).
-            // Confirmed 2026-08-03. Touch: kernel `touch_max = 16`, OTD
-            // PTH-450.json (MaxX/MaxY 4095), same BPT3 container as the
-            // hardware-verified PTH-850 (0x0028) and PTH-651 (0x0315).
+            // Coordinates confirmed exact against OpenTabletDriver's
+            // PTH-450.json and against Wacom's Intuos5 Important Product
+            // Information booklet (shared across the whole
+            // Intuos5/Intuos5-Touch line). activeWidthMM/Height corrected to
+            // match (157.48×98.43mm). Confirmed 2026-08-03. Touch: kernel
+            // `touch_max = 16`, OTD PTH-450.json (MaxX/MaxY 4095), same BPT3
+            // container as the hardware-verified PTH-850 (0x0028) and PTH-651
+            // (0x0315).
             productID: 0x0026, name: "Intuos5 S (PTH-450)",
             parser: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -1351,8 +1344,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Touch/Pen/Pen&Touch (CTT/CTL/CTH-460) User's Manual — matches
             // this row's own maxX/maxY (14720/9200 at the family's 100 lpmm)
             // exactly; the 152/102 this carried before didn't match either.
-            // Archived at Notes/Scratch/manuals/Bamboo-CTT-CTH-CTL-460-UserManual.pdf
-            // (gitignored). Confirmed 2026-08-03.
+            // Confirmed 2026-08-03.
             //
             // Touch: kernel's static table (`wacom_features_0xD1`) declares this
             // PID `BAMBOO_PT` with `touch_max = 2`, decoded by `BambooDecoder`'s
@@ -1505,22 +1497,20 @@ public enum WacomDeviceRegistry: Sendable {
             confidence: .verified,
             activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
-            // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch (wacom_sys.c).
-            // Touch wiring and range: vendor model properties (2026-09-29).
-            // activeWidthMM/Height corrected 533/330→519.0/324.0 to match
-            // 0x00F4 (Cintiq 24HD) exactly — same maxX/maxY, same physical
-            // panel, and Wacom's own 24HD/24HD touch IPI booklets both state
-            // an identical 518.4×324.0mm pen active area for the two variants
-            // (archived at Notes/Scratch/manuals/IPI-0x00F4.pdf and
-            // IPI-0x00F8.pdf, gitignored). Matched to 0x00F4's confirmed-live
-            // value rather than the manual's own rounder figure — that row
-            // outranks this one. Confirmed 2026-08-03.
+            // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch
+            // (wacom_sys.c). Touch wiring and range: vendor model properties
+            // (2026-09-29). activeWidthMM/Height corrected 533/330→519.0/324.0
+            // to match 0x00F4 (Cintiq 24HD) exactly — same maxX/maxY, same
+            // physical panel, and Wacom's own 24HD/24HD touch IPI booklets both
+            // state an identical 518.4×324.0mm pen active area for the two
+            // variants. Matched to 0x00F4's confirmed-live value rather than
+            // the manual's own rounder figure — that row outranks this one.
+            // Confirmed 2026-08-03.
             //
             // hasFingerTouch flipped to true 2026-09-08: finger touch arrives
-            // on the separate 0x00F6 interface, decoded by
-            // `Wacom24HDTDecoder` — **no capture exists for either interface
-            // of this device**; see the block comment on the 0x00F6 registry
-            // row and `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
+            // on the separate 0x00F6 interface, decoded by `Wacom24HDTDecoder`
+            // — **no capture exists for either interface of this device**; see
+            // the block comment on the 0x00F6 registry row.
             productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ⚠ estimated
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
             buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -1827,8 +1817,7 @@ public enum WacomDeviceRegistry: Sendable {
             // container, decoded by BPT3ContainerDecoder for both generations.
             // activeHeightMM corrected 102→95 — confirmed against Wacom's
             // Intuos (CTL-480/680), Intuos touch (CTH-480/680) Important
-            // Product Information booklet (archived at
-            // Notes/Scratch/manuals/IPI-0x0323.pdf, gitignored): "152.0 x
+            // Product Information booklet: "152.0 x
             // 95.0 mm". Width was already right. Confirmed 2026-08-03.
             productID: 0x0302, name: "Wacom CTH-480",  // ⚠ from OTD
             parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 1023,
@@ -1841,8 +1830,7 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // activeHeightMM corrected 102→95 — confirmed against Wacom's
             // Intuos Pen (CTL-490/690), Intuos Pen & Touch (CTH-490/690)
-            // Important Product Information booklet (archived at
-            // Notes/Scratch/manuals/IPI-0x033b.pdf, gitignored): "152.0 x
+            // Important Product Information booklet: "152.0 x
             // 95.0 mm". Width was already right. Confirmed 2026-08-03.
             productID: 0x033C, name: "Wacom CTH-490",  // ⚠ from OTD
             parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
@@ -1988,8 +1976,7 @@ public enum WacomDeviceRegistry: Sendable {
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // activeHeightMM corrected 102→95 — confirmed against Wacom's One
-            // by Wacom (CTL-472/672) Important Product Information booklet
-            // (archived at Notes/Scratch/manuals/IPI-0x037a.pdf, gitignored).
+            // by Wacom (CTL-472/672) Important Product Information booklet.
             // 9500÷100=95, matching maxY exactly; width was already right.
             // Confirmed 2026-08-03.
             productID: 0x037A, name: "Wacom CTL-472",  // ⚠ from OTD
@@ -2049,8 +2036,7 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // activeHeightMM corrected 102→95 — confirmed against Wacom's
             // Intuos (CTL-4100 family) Important Product Information booklet
-            // (archived at Notes/Scratch/manuals/IPI-0x0374.pdf, gitignored —
-            // one document covers CTL-4100/4100WL/6100/6100WL). 9500÷100=95,
+            // (one document covers CTL-4100/4100WL/6100/6100WL). 9500÷100=95,
             // matching maxY and the manual's "152 x 95 mm" exactly; width was
             // already right. Confirmed 2026-08-03.
             productID: 0x0374, name: "Wacom CTL-4100",  // ⚠ from OTD
@@ -2212,8 +2198,7 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             // activeWidthMM/Height corrected 294/165→299/171 (298.74×171.35mm)
             // per Wacom's DTK-1300/DTH-1300 Important Product Information
-            // booklet (archived at Notes/Scratch/manuals/IPI-0x0304.pdf,
-            // gitignored). Confirmed 2026-08-03.
+            // booklet. Confirmed 2026-08-03.
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
         .init(
@@ -2249,8 +2234,7 @@ public enum WacomDeviceRegistry: Sendable {
             // activeWidthMM/Height corrected 356/203→348/198. OTD's own
             // DTK-1660.json states 348.16×197.59mm (maxX/maxY match this row
             // exactly); Wacom's DTK-1660 IPI booklet gives 344×194mm — a
-            // print-rounded figure in the same direction and rough magnitude,
-            // archived at Notes/Scratch/manuals/IPI-0x0390.pdf (gitignored).
+            // print-rounded figure in the same direction and rough magnitude.
             // Both external sources sit meaningfully below this row's old
             // value; corrected toward OTD's more precise figure. Confirmed
             // 2026-08-03.
@@ -2668,7 +2652,6 @@ public enum WacomDeviceRegistry: Sendable {
         // PL-800-U was NOT imported — PLReportParser uses 8-byte reports
         // with bit-6 in-range, incompatible with our IntuosV1 decoder and
         // not worth a dedicated parser for hardware that's effectively gone.
-        // See Notes/Scratch/Upstream-Sync-2026-05-15.md for the analysis.
         .init(
             productID: 0x03CE, name: "Wacom One Pen Display 12 (DTC-121)",  // ⚠ from OTD; name per libwacom
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
@@ -2677,17 +2660,15 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 279, activeHeightMM: 152),
         .init(
-            // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch (wacom_sys.c).
-            // Touch wiring and range: vendor model properties (2026-09-29).
-            // hasFingerTouch flipped to true 2026-09-08: finger touch
-            // arrives on the separate 0x005E interface, decoded by
-            // `Wacom24HDTDecoder` — **no capture exists for either
-            // interface of this device**; see the block comment on the
-            // 0x00F6 registry row and
-            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
-            // buttonCount 20 -> 18 for the same reason as its pen-only
-            // sibling 0x00FA above: the decoder emits 18 and the OSD keys live
-            // in an undecoded byte-9 field.
+            // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch
+            // (wacom_sys.c). Touch wiring and range: vendor model properties
+            // (2026-09-29). hasFingerTouch flipped to true 2026-09-08: finger
+            // touch arrives on the separate 0x005E interface, decoded by
+            // `Wacom24HDTDecoder` — **no capture exists for either interface of
+            // this device**; see the block comment on the 0x00F6 registry row.
+            // buttonCount 20 -> 18 for the same reason as its pen-only sibling
+            // 0x00FA above: the decoder emits 18 and the OSD keys live in an
+            // undecoded byte-9 field.
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -3179,11 +3160,10 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false),
         .init(
-            // activeWidthMM/Height added — this row had none. 479.2×271.3mm
-            // per Wacom's DTK-2241/DTH-2242 Important Product Information
-            // booklet (archived at Notes/Scratch/manuals/IPI-0x0057.pdf,
-            // gitignored); divides the kernel's maxX/maxY exactly at 200
-            // lpmm, corroborating both sources at once. Confirmed 2026-08-03.
+            // activeWidthMM/Height added — this row had none. 479.2×271.3mm per
+            // Wacom's DTK-2241/DTH-2242 Important Product Information booklet;
+            // divides the kernel's maxX/maxY exactly at 200 lpmm, corroborating
+            // both sources at once. Confirmed 2026-08-03.
             productID: 0x0057, name: "Cintiq 22 (DTK-2241)",  // ⚠ from kernel (DTK type, 6 keys)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -3195,12 +3175,10 @@ public enum WacomDeviceRegistry: Sendable {
             // activeWidthMM/Height added — same source and figure as 0x0057
             // above (same panel). Confirmed 2026-08-03.
             //
-            // hasFingerTouch flipped to true 2026-09-08: finger touch
-            // arrives on the separate 0x005D interface, decoded by
-            // `Wacom24HDTDecoder` — **no capture exists for either
-            // interface of this device**; see the block comment on the
-            // 0x00F6 registry row and
-            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
+            // hasFingerTouch flipped to true 2026-09-08: finger touch arrives
+            // on the separate 0x005D interface, decoded by `Wacom24HDTDecoder`
+            // — **no capture exists for either interface of this device**; see
+            // the block comment on the 0x00F6 registry row.
             productID: 0x0059, name: "Cintiq 22 Touch (DTH-2242)",  // ⚠ from kernel (DTK type, 6 keys)
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -3208,13 +3186,11 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], touchCompanionPID: 0x005D, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
         .init(
-            // activeWidthMM/Height added — this row had none. 433.4×270.9mm
-            // per Wacom's Cintiq 20WSX User's Manual (archived at
-            // Notes/Scratch/manuals/Cintiq20WSX-DTZ2000W-UserManual.pdf,
-            // gitignored); divides the kernel's maxX/maxY exactly at 200
-            // lpmm, and the manual's stated 1024 pressure levels matches this
-            // row's maxPressure too — corroborating both fields at once.
-            // Confirmed 2026-08-03.
+            // activeWidthMM/Height added — this row had none. 433.4×270.9mm per
+            // Wacom's Cintiq 20WSX User's Manual; divides the kernel's
+            // maxX/maxY exactly at 200 lpmm, and the manual's stated 1024
+            // pressure levels matches this row's maxPressure too —
+            // corroborating both fields at once. Confirmed 2026-08-03.
             productID: 0x00C5, name: "Cintiq 20WSX (DTZ-2000W)",  // ⚠ from kernel (WACOM_BEE type)
             parser: .cintiqV1, maxX: 86680, maxY: 54180, maxPressure: 1023,
             buttonCount: 10, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -3228,8 +3204,7 @@ public enum WacomDeviceRegistry: Sendable {
             // guess that read bytes 4/6/8 as a 16-bit triplet instead).
             // activeWidthMM/Height added — this row had none. 596.7×335.6mm
             // per Wacom's DTK-2700/DTH-2700 Important Product Information
-            // booklet (archived at Notes/Scratch/manuals/IPI-0x032A.pdf,
-            // gitignored), same figure for both the pen and touch active
+            // booklet, same figure for both the pen and touch active
             // area. Confirmed 2026-08-03.
             //
             // Two upstreams disagree and both are wrong; do not "fix" toward
@@ -3315,8 +3290,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Pen interface; finger touch arrives on the separate 0x0335
             // interface, decoded by `Wacom24HDTDecoder` as of 2026-09-08 —
             // **no capture exists for either interface of this device**;
-            // see the block comment on the 0x00F6 registry row and
-            // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md`.
+            // see the block comment on the 0x00F6 registry row.
             // activeWidthMM/Height added — this row had none. Shares its
             // exact pen active area with 0x0304 (DTK-1300) per Wacom's own
             // IPI booklet for this model pair — see that row's note.
@@ -3352,9 +3326,7 @@ public enum WacomDeviceRegistry: Sendable {
         // share the exact same kernel decoder/feature-table type but have
         // no comparable tested implementation of their own; they stay
         // `.experimental` with the init step marked provisional until each
-        // is confirmed individually. See
-        // `Notes/Scratch/wacom-pl-series-design-2026-09-08.md` for the full
-        // design rationale.
+        // is confirmed individually.
         //
         // hasEraser: true on all eight — the decoder's session-persistent
         // eraser/button-2 classification (see its header comment) applies
@@ -3481,25 +3453,20 @@ public enum WacomDeviceRegistry: Sendable {
 
         // Companion touch interfaces of pen displays we already list.
         //
-        // ⚠⚠⚠ NO CAPTURE EXISTS FOR ANY OF THE FIVE DEVICES BELOW. ⚠⚠⚠
-        // As of 2026-09-08, `WacomKnownDevice.deriveFixedTouchDecoder` routes
-        // these five product IDs to `Wacom24HDTDecoder` (0x00F6/0x005E/
+        // ⚠ We have no capture from any of the five devices below. As of
+        // 2026-09-08, `WacomKnownDevice.deriveFixedTouchDecoder` routes these
+        // five product IDs to `Wacom24HDTDecoder` (0x00F6/0x005E/
         // 0x005D/0x0335) or `Wacom27QHDTDecoder` (0x032C) by product ID —
-        // hand-written decoders ported from the Linux kernel
-        // (`wacom_24hdt_irq()`, both branches) and tested only against
-        // synthetic bytes, never a real capture from any of these devices.
-        // Two independent advisor reviews approved shipping this unverified,
-        // gated at `.experimental` confidence — see
-        // `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md` for the full
-        // design rationale, the advisor reviews, and the phasing plan for
-        // promoting confidence once a real capture exists. DO NOT raise
-        // confidence, assume correctness on a specific unit, or add another
-        // PID to `deriveFixedTouchDecoder` without a real capture backing
-        // it. `touchMaxX`/`touchMaxY` stay `0` deliberately — never copy the
-        // paired pen row's `maxX`/`maxY` here, even provisionally; a
-        // touch sensor's logical coordinate space is not guaranteed to
-        // match its panel's pen digitizer space (see the CTH-690 touch-range
-        // bug this registry already fixed once for exactly that assumption).
+        // decoders ported by hand from the Linux kernel's `wacom_24hdt_irq()`
+        // (both branches), with tests that use only synthetic bytes. They stay
+        // at `.experimental` confidence until a real capture exists. Don't
+        // raise confidence, assume correctness on a specific unit, or add
+        // another PID to `deriveFixedTouchDecoder` without a real capture
+        // backing it. `touchMaxX`/`touchMaxY` stay `0` deliberately — never
+        // copy the paired pen row's `maxX`/`maxY` here, even provisionally; a
+        // touch sensor's logical coordinate space is not guaranteed to match
+        // its panel's pen digitizer space (see the CTH-690 touch-range bug this
+        // registry already fixed once for exactly that assumption).
         .init(
             // Partial exception to the block warning above: an independent
             // 2013-14 investigation of this PID (M. McGuffin,

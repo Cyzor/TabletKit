@@ -38,8 +38,7 @@ DEFAULT_VENDOR_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "VendorD
 #: Upstream clones (gitignored local checkouts of input-wacom / OpenTabletDriver,
 #: used only to cross-check registry entries — nothing here is wired into a
 #: build). These aren't part of TabletKit; they live one level up, in whichever
-#: app repo has TabletKit checked out as a submodule (MockTab keeps them at
-#: Notes/Scratch/upstream — see Notes/Scratch/upstream-pins.md there).
+#: app repo has TabletKit checked out as a submodule.
 #: Override with TABLETKIT_UPSTREAM_DIR if your checkout layout differs, or if
 #: you're running these scripts against a standalone TabletKit clone.
 UPSTREAM = Path(
@@ -211,8 +210,7 @@ def parse_kernel(path: Path | str = DEFAULT_KERNEL) -> dict[int, dict]:
     if not path.is_file():
         raise FileNotFoundError(
             f"kernel source not found: {path}\n"
-            f"Clone linuxwacom/input-wacom into {UPSTREAM} "
-            f"(see Notes/Scratch/upstream-pins.md)."
+            f"Clone linuxwacom/input-wacom into {UPSTREAM}."
         )
     text = path.read_text(encoding="utf-8", errors="ignore")
     out: dict[int, dict] = {}
@@ -268,8 +266,7 @@ def parse_otd(directory: Path | str = DEFAULT_OTD,
     if not directory.is_dir():
         raise FileNotFoundError(
             f"OTD configuration directory not found: {directory}\n"
-            f"Clone OpenTabletDriver/OpenTabletDriver into {UPSTREAM} "
-            f"(see Notes/Scratch/upstream-pins.md)."
+            f"Clone OpenTabletDriver/OpenTabletDriver into {UPSTREAM}."
         )
     paths = find_otd_configs(directory)
     if not paths:

@@ -459,10 +459,9 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     // MARK: - Report 0x11: 27QHD onboard panel buttons
     //
-    // Literal bytes from a real DTH-2700 capture (2026-09-17, see
-    // Notes/Scratch/Device-Diagnostics/Internal-Discovery-Data-Capture/
-    // Wacom-Cintiq-DTH-2700/). Byte[2] is the button bitmask; bytes 5/7/9
-    // drift as an unrelated slow sensor and are deliberately not asserted.
+    // Literal bytes from a real DTH-2700 capture (2026-09-17). Byte[2] is the
+    // button bitmask; bytes 5/7/9 drift as an unrelated slow sensor and are
+    // deliberately not asserted.
 
     func testCintiqPadReportNoButtonsPressed() {
         var decoder = CintiqV1Decoder()

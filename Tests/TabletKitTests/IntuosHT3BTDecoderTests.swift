@@ -4,10 +4,10 @@
 // over Bluetooth: CTL-4100WL (0x0377, 0x03C6) and CTL-6100WL (0x0379, 0x03C8).
 //
 // Every byte string below is verbatim from a 627-record hardware capture of a
-// CTL-4100WL paired over Bluetooth (OTD Tablet Debugger recording, archived in
-// `Notes/Scratch/Wacom-CTL-6100WL/`). That recording carries the decoded
-// position/pressure/button output beside each raw record, so the expectations
-// here are what real hardware produced, not what this decoder computes.
+// CTL-4100WL paired over Bluetooth (an OpenTabletDriver Tablet Debugger
+// recording). That recording carries the decoded position/pressure/button
+// output beside each raw record, so the expectations here are what real
+// hardware produced, not what this decoder computes.
 //
 // Replaying the whole capture through this layout reproduced that output for
 // 613 of 616 pen records; the three misses are the opening records, where

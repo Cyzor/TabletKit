@@ -261,7 +261,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Pro Pen 2 (KP-504E, bundled with the PTH-660), per libwacom and
-        // the user's own pen (serial 0x87804498); was misnamed Pro Pen 3,
+        // a pen on hand; was misnamed Pro Pen 3,
         // which is 0x0200. Confirmed 2026-09-18, alongside the Grip Pen
         // and Art Pen, to also decode correctly (real pressure/tilt) on a
         // PTK-870 gen3 — a three-pen sweep capture with each pen used in
@@ -898,8 +898,7 @@ public enum WacomToolCatalog: Sendable {
         // Pro Pen 3 (PTK-470/670/870 Intuos Pro gen 3, 2025). Confirmed
         // 2026-09-16 from a real PTK-870 capture, decoded byte-for-byte
         // against a known-identity pen (Wacom Art Pen, 0x0804) to pin down
-        // IntuosV3Decoder's serial/tool-code field offsets — see
-        // Notes/Scratch/PTK-870-ToolID-Field-Survey-2026-09-16.md. Distinct
+        // IntuosV3Decoder's serial/tool-code field offsets. Distinct
         // from 0x0842 (Pro Pen 2, an older pen) and from 0x0202
         // (Pro Pen 3E, Movink 13's bundled pen — a different physical pen
         // entirely). Per Wacom's own product page, this pen has no eraser

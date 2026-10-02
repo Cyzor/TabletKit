@@ -113,13 +113,14 @@ final class CaptureLogParserTests: XCTestCase {
     ///   • emit one `.toolEnter` on the first frame (tool ID newly seen),
     ///   • emit `.point` updates with proximity true on every frame,
     ///   • not crash on any frame.
+    // Pen serial replaced; the rest is as captured.
     private static let pth860SampleLog = """
-        [00:00.003] Intuos Pro L (PTH-86 ID=10 len=27    10 60 F2 69 00 A8 62 00 00 00 21 0D 00 00 00 00 09 B7 A5 80 14 42 08 10 00 42 08
-        [00:00.008] Intuos Pro L (PTH-86 ID=10 len=27    10 60 ED 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0A B7 A5 80 14 42 08 10 00 42 08
-        [00:00.010] Intuos Pro L (PTH-86 ID=10 len=27    10 60 EA 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0B B7 A5 80 14 42 08 10 00 42 08
-        [00:00.016] Intuos Pro L (PTH-86 ID=10 len=27    10 60 E4 69 00 A7 62 00 00 00 21 0D 00 00 00 00 0C B7 A5 80 14 42 08 10 00 42 08
-        [00:00.022] Intuos Pro L (PTH-86 ID=10 len=27    10 60 DF 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0E B7 A5 80 14 42 08 10 00 42 08
-        [00:00.032] Intuos Pro L (PTH-86 ID=10 len=27    10 60 DB 69 00 A9 62 00 00 00 21 0D 00 00 00 00 0F B7 A5 80 14 42 08 10 00 42 08
+        [00:00.003] Intuos Pro L (PTH-86 ID=10 len=27    10 60 F2 69 00 A8 62 00 00 00 21 0D 00 00 00 00 09 66 66 80 14 42 08 10 00 42 08
+        [00:00.008] Intuos Pro L (PTH-86 ID=10 len=27    10 60 ED 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0A 66 66 80 14 42 08 10 00 42 08
+        [00:00.010] Intuos Pro L (PTH-86 ID=10 len=27    10 60 EA 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0B 66 66 80 14 42 08 10 00 42 08
+        [00:00.016] Intuos Pro L (PTH-86 ID=10 len=27    10 60 E4 69 00 A7 62 00 00 00 21 0D 00 00 00 00 0C 66 66 80 14 42 08 10 00 42 08
+        [00:00.022] Intuos Pro L (PTH-86 ID=10 len=27    10 60 DF 69 00 A8 62 00 00 00 21 0D 00 00 00 00 0E 66 66 80 14 42 08 10 00 42 08
+        [00:00.032] Intuos Pro L (PTH-86 ID=10 len=27    10 60 DB 69 00 A9 62 00 00 00 21 0D 00 00 00 00 0F 66 66 80 14 42 08 10 00 42 08
         """
 
     private let pth860 = DigitizerSpec(
@@ -173,9 +174,9 @@ final class CaptureLogParserTests: XCTestCase {
         P: usb-0000:00:14.0-3/input0
         I: 3 056a 0357
         R: 18 05 0d 09 02 a1 01 85 10 09 20 a1 00 09 32 81 02 c0 c0
-        E: 000000.000123 27 10 60 f2 69 00 a8 62 00 00 00 21 0d 00 00 00 00 09 b7 a5 80 14 42 08 10 00 42 08
-        E: 000000.005678 27 10 60 ed 69 00 a8 62 00 00 00 21 0d 00 00 00 00 0a b7 a5 80 14 42 08 10 00 42 08
-        E: 000000.010234 27 10 60 ea 69 00 a8 62 00 00 00 21 0d 00 00 00 00 0b b7 a5 80 14 42 08 10 00 42 08
+        E: 000000.000123 27 10 60 f2 69 00 a8 62 00 00 00 21 0d 00 00 00 00 09 66 66 80 14 42 08 10 00 42 08
+        E: 000000.005678 27 10 60 ed 69 00 a8 62 00 00 00 21 0d 00 00 00 00 0a 66 66 80 14 42 08 10 00 42 08
+        E: 000000.010234 27 10 60 ea 69 00 a8 62 00 00 00 21 0d 00 00 00 00 0b 66 66 80 14 42 08 10 00 42 08
         """
 
     func testHidRecorderParsesEventLines() throws {

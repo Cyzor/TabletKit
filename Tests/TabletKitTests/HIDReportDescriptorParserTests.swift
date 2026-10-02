@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//
-// Validation strategy (see Notes/Scratch/HID-Descriptor-Parser-Scoping-2026-07-25.md):
+// Validation strategy:
 //   1. Fixture corpus with hand-computed offsets (HID spec's boot mouse example).
 //   2. Real in-repo descriptor bytes (Xencelabs), checked for a plausible round trip
 //      and for the DATAMODE-usage-absent finding rather than exact hand-derived offsets.
@@ -73,7 +72,6 @@ final class HIDReportDescriptorParserTests: XCTestCase {
     }
 
     // MARK: - Real in-repo descriptor: Xencelabs
-    // Notes/Scratch/Discovery-Data-Caputure/mocktab_discovery_0x033E_20260703_004619.json
 
     private let xencelabsHex =
         "0600ff0980a10185020901150026ff007508953f810385030901150026ff007508953f8103c0"
@@ -109,8 +107,7 @@ final class HIDReportDescriptorParserTests: XCTestCase {
 
     // MARK: - Differential against IOKit (validation layer 1)
     //
-    // Notes/Scratch/Discovery-Data-Caputure/mocktab_discovery_0x520D_20260726_065414.json
-    // -- a Xencelabs Pen Display capture. Unlike the opaque-blob Xencelabs fixture
+    // A Xencelabs Pen Display capture. Unlike the opaque-blob Xencelabs fixture
     // above, this descriptor's digitizer report (0x07) carries genuine per-field
     // usages (tip switch, in-range, barrel switch, X/Y, pressure, tilt), and the
     // capture's `hidReportDescriptor.reports["input:0x07"].fields` is IOKit's own

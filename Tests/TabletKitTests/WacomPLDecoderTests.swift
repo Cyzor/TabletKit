@@ -3,11 +3,9 @@
 // WacomPLDecoder fixtures (PL-400 through PL-800 pen displays).
 //
 // Byte layout and pressure math ported from the kernel's wacom_pl_irq(),
-// independently re-verified against source twice this session (once for
-// the general layout, once specifically for the C integer-promotion
-// semantics of the pressure calculation — see WacomPLDecoder.swift's own
-// header comment and Notes/Scratch/wacom-pl-series-design-2026-09-08.md).
-// Entirely synthesized; no capture exists for any of these devices.
+// checked against source for both the general layout and the C
+// integer-promotion semantics of the pressure calculation. Entirely
+// synthesized; no capture exists for any of these devices.
 import XCTest
 @testable import TabletKit
 
@@ -83,7 +81,7 @@ final class WacomPLDecoderTests: XCTestCase {
         XCTAssertEqual(point.y, 0)
     }
 
-    // MARK: - Pressure — the bug this session caught and fixed
+    // MARK: - Pressure
 
     /// report[7] >= 128 is exactly the case that exposed a real bug during
     /// development: a naive UInt8 `<<` wraps at 8 bits, which does not

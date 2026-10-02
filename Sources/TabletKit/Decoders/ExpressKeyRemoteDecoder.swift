@@ -58,7 +58,7 @@ import Foundation
 ///
 /// Worth decoding because a receiver that is paired but hearing nothing looks
 /// identical on the wire to one that is not paired at all. A 2026-09-17
-/// capture decodes as one remote in slot 0 with serial 0x005BFB, while report
+/// capture decodes as one remote in slot 0 with a valid serial, while report
 /// 0x11 never fired — enrollment was never the problem.
 ///
 /// Note this says nothing about whether the radio link is *live*: the table is

@@ -14,9 +14,7 @@ import CoreText
 /// format): 64×32 pixels, 4-bit grayscale, packed 1024 bytes total. Only
 /// the USB encoding is implemented — Bluetooth additionally bit-scrambles
 /// the packed bytes (`76543210`→`GECA6420`) on top of a different (1-bit)
-/// bit depth, which this encoder does not produce. See
-/// `Notes/Scratch/intuos4-oled-image-design.md` for the full protocol
-/// writeup this was built from.
+/// bit depth, which this encoder does not produce.
 public enum IntuosOLEDImageEncoder: Sendable {
 
     /// OLED width in pixels.

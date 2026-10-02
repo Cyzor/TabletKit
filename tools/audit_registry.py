@@ -3,7 +3,7 @@
 
 Reads:
   • TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift — our table
-  • Notes/Scratch/upstream/input-wacom/<branch>/wacom_wac.c — kernel features
+  • <upstream>/input-wacom/<branch>/wacom_wac.c — kernel features (see registry_lib.UPSTREAM)
 
 For each PID present in both, compares name, maxX, maxY, maxPressure, and
 button count. Emits a per-PID line for any mismatch. Pen-display flag and

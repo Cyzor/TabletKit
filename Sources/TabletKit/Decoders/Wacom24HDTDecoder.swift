@@ -29,16 +29,13 @@ import Foundation
 /// `0x032C` here without porting that branch first.
 ///
 /// Ported from the Linux kernel's `wacom_24hdt_irq()` (`wacom_wac.c`) and an
-/// OpenTabletDriver macOS diagnostic capture of the DTH-1300's touch
-/// interface descriptor. **Entirely unverified against a real capture from
-/// any of the four devices above** — see
-/// `Notes/Scratch/wacom-24hdt-touch-design-2026-09-08.md` for the full
-/// design rationale, open questions, and why this ships `.experimental`
-/// rather than gated behind a hardware test. No registry row currently
-/// routes to this decoder; wiring one in is a separate step, and per that
-/// design doc's advisor review, adding one must carry its own "no capture
-/// exists, unconfirmed" comment at the registry call site — this file's
-/// own disclaimer isn't sufficient warning on its own.
+/// OpenTabletDriver macOS diagnostic capture of the DTH-1300's touch interface
+/// descriptor. **Entirely unverified against a real capture from any of the
+/// four devices above**, which is why this ships `.experimental` rather than
+/// gated behind a hardware test. No registry row currently routes to this
+/// decoder. Adding one must carry its own "no capture exists, unconfirmed"
+/// comment at the registry call site — this file's own disclaimer isn't
+/// sufficient warning on its own.
 ///
 /// Report 0x01, 62 bytes:
 ///   [0]        report ID 0x01
