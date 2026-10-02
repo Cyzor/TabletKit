@@ -8,9 +8,8 @@ import Foundation
 /// Keys OLED text, LED color, dial sensitivity, and the pen displays' image
 /// controls (brightness, contrast, gamma, color mode).
 ///
-/// Decoded 2026-07-02 from dtrace captures of Xencelabs' own driver
-/// (`XencelabsDriver`) during pairing, dial-mode cycling, and a structured
-/// palette/brightness sweep. All writes are output reports with report
+/// Decoded 2026-07-02 from captured host-to-device traffic during pairing,
+/// dial-mode cycling, and a structured palette/brightness sweep. All writes are output reports with report
 /// ID 0x02 (the same vendor tunnel the input protocol uses), padded by the
 /// sender to the device's MaxOutputReportSize.
 ///
@@ -53,9 +52,8 @@ public enum XencelabsOutputProtocol: Sendable {
     ///
     /// Rotates the Quick Keys OLED text in 90° steps (0 = upright,
     /// 1 = 90°, 2 = 180°, 3 = 270° — the wire byte is steps + 1). The
-    /// vendor agent builds this frame in `SetRemoteDirection` and replays
-    /// the saved orientation during its reconnect init, which is what
-    /// earlier captures showed as a fixed `b1 01` ("upright") write.
+    /// saved orientation is sent again on reconnect, which is what earlier
+    /// captures showed as a fixed `b1 01` ("upright") write.
     /// Confirmed on hardware 2026-07-10: varying the byte visibly rotates
     /// the display.
     public static func orientationPayload(
@@ -190,8 +188,8 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Quick Keys auto-sleep timer write: `02 B4 08 01 <minutes> ... <addr>`.
     /// `minutes` is the literal sleep delay (0 = never sleep). Decoded and
-    /// hardware-confirmed 2026-07-26 via dtrace against XencelabsDriver while
-    /// stepping the native panel's sleep-timer options (30/60/90/120/Never →
+    /// hardware-confirmed 2026-07-26 from captured traffic while
+    /// stepping the vendor settings panel's sleep-timer options (30/60/90/120/Never →
     /// wire bytes `1e/3c/5a/78/00`); a value set this way was independently
     /// confirmed to survive a puck power cycle, so this is safe to persist.
     /// Byte 3 = `0x01` marks this as a SET, matching the resync GET poll's
@@ -206,8 +204,8 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Quick Keys OLED brightness write: `02 B1 0A 01 <level> ... <addr>`.
     /// `level` is a 4-step enum, 0 (off) through 3 (bright) — decoded and
-    /// hardware-confirmed 2026-07-26 via dtrace against XencelabsDriver while
-    /// stepping the native panel's OLED-brightness slider from Bright to Off
+    /// hardware-confirmed 2026-07-26 from captured traffic while
+    /// stepping the vendor settings panel's OLED-brightness slider from Bright to Off
     /// (wire bytes `03/02/01/00`). Byte 3 = `0x01` marks this as a SET, same
     /// convention as the resync GET poll (`WacomKnownDevice.resyncXencelabsOutputsAfterRelink`).
     /// Distinct from the `0xB5` pen-display panel brightness family

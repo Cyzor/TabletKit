@@ -2,8 +2,7 @@
 //
 // Xencelabs host→device control payload fixtures.
 //
-// Expected bytes are verbatim SetReport frames captured via dtrace from
-// Xencelabs' own driver (XencelabsDriver, 2026-07-02) during dial-mode
+// Expected bytes are verbatim host-to-device frames captured 2026-07-02 during dial-mode
 // cycling, a structured palette/brightness sweep, and label syncs. The
 // captured frames carry the puck's paired address at bytes 10–15; fixtures
 // reproduce that via the `address` parameter. MockTab sends zeros there on

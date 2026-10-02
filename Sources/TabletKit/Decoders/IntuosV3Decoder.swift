@@ -374,7 +374,6 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         //
         // Rotation therefore updates only on a frame carrying a count, and
         // every other frame — stub or filler — replays the last real reading.
-        // Wacom's CGD16ArtPen caches and replays it the same way.
         var rotation: Double
         if isArtPen && tipSwitch && rawRotation != 0 {
             rotation = (900.0 - Double(rawRotation)) / 5.0
@@ -1031,8 +1030,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // Raw count 0 is the tablet's "no reading" filler, as on USB, and
         // mapping it to 180° is what made rotation flip between extremes —
         // 85% of BLE position frames carry it, in runs up to 18. Every other
-        // frame replays the last real reading, as USB and Wacom's own
-        // CGD16ArtPen do.
+        // frame replays the last real reading, as on USB.
         //
         // Keyed on the count, not on the high nibble of [1] that marks the
         // filler frames, so this needs no second frame taxonomy.

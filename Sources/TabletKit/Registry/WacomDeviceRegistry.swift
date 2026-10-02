@@ -2319,9 +2319,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Renamed from "DTH/DTK-1662". "Cintiq Pro 16" is ambiguous by
             // itself: Wacom sells it as the name of both the 2016/2017 DTH-1620
             // and this 2021 DTH-167, and the reporter used the bare marketing
-            // name. Wacom's driver 6.4.14 carries that ambiguity in its own
-            // model table, which lists `DTH-1620`, `Cintiq Pro 16`, `DTH167`
-            // consecutively — one marketing name over two internal codes.
+            // name.
             //
             // What distinguishes them here is the touch maxima, not the panel
             // size: every Cintiq Pro 16 of every generation is 15.6" 16:9 at
@@ -2337,11 +2335,9 @@ public enum WacomDeviceRegistry: Sendable {
             // Desktop X/Y (0.01 mm units). maxX/maxY keep this block's
             // 200 units/mm convention against the corrected width.
             //
-            // Wacom's driver also gives DTH-167 a dedicated
-            // `CDTH167GraphicsTablet` (DTH-1620 has no such class), and its
-            // `GetEnableOEMTouchDefault` puts it in the same standard-HID-touch
-            // cohort as `CDTH271GraphicsTablet` (our DTH-2700) — which is why
-            // the 0x032B row's companion approach is reused here.
+            // Its touch is assumed to be standard HID touch, like the
+            // DTH-2700's, so the 0x032B row's companion approach is reused
+            // here.
             //
             // PID split corroborated by linuxwacom's device-ID database:
             // 0x03B2 pen, 0x03B3 touch, 0x03B4 the internal USB hub, which is
@@ -2357,12 +2353,8 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 13768, touchMaxY: 7744,
             isPenDisplay: true,
-            // Wacom's GD16 `DeviceStart` sequence: enable both scans, then
-            // DATAMODE. Payloads are inverted, so enable sends 0x00.
-            // `CDTH167GraphicsTablet` tail-calls
-            // `CGD16GraphicsTablet::CreateTabletMenuArea`, putting this device
-            // in that family. Bytes in
-            // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
+            // Startup sequence: enable both scans, then DATAMODE. Payloads
+            // are inverted, so enable sends 0x00.
             //
             // Unverified — no 0x03B2 descriptor exists, so whether the pen
             // interface declares 0x0D and 0x0E is unknown. Attempted anyway
@@ -3295,11 +3287,10 @@ public enum WacomDeviceRegistry: Sendable {
             // Pen report 0x10 is declared here and has never once arrived, in
             // any of seven captures, while report 0x11 (express keys) decodes
             // fine and DATAMODE itself reports success. The cause is still
-            // unknown. The GD16 startup sequence was investigated and *ruled
-            // out* here: this pen interface declares neither 0x14 nor 0x0E,
-            // two of the five calls it makes. The DTH-167 (0x03B2) does carry
-            // it — that row is not a precedent for this one. See
-            // Notes/Scratch/Wacom-GD16-GD20-Startup-Findings.md (gitignored).
+            // unknown. The scan-enable startup sequence was *ruled out* here:
+            // this pen interface declares neither 0x14 nor 0x0E, which that
+            // sequence writes. The DTH-167 (0x03B2) does carry it — that row
+            // is not a precedent for this one.
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x032C,
             // Standard HID digitizer Device Mode write: report 0x83 declares
