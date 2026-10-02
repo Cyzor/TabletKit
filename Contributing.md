@@ -47,7 +47,7 @@ The zip holds only what your tablet sent and some details about your setup, like
 Beyond MockTab's own recording, a few command-line tools in the [MockTab repository](https://github.com/Cyzor/tablet-driver/tree/main/tools/capture) help.
 
 - **`hid_input_capture.c`** logs every report from any USB device. It runs alongside the tablet maker's own driver, so you can see what a tablet sends when its own software is in charge. Build it with `clang`, as its comments describe.
-- **`wacom_capture.d`** records traffic in both directions, including the setup commands a driver sends to switch a tablet on. It uses dtrace, which only works with System Integrity Protection turned off. Turn it back on when you're done.
+- **`hid_traffic_capture.d`** logs the commands a driver sends to a tablet, including the setup commands that switch it on, and the replies to its requests. It uses dtrace, which only works with System Integrity Protection turned off. Turn it back on when you're done.
 - **`triage_discovery.py`**, in TabletKit's `tools/` folder, reads a recording's `summary.json`, compares the tablet with the kernel and OpenTabletDriver, and drafts a registry entry.
 
 If you get stuck, open an issue with what you've found so far. Every little bit helps.

@@ -28,10 +28,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   bit 7 of the status byte. The Thin Pen and
   its eraser have their own tool codes, `0xE812` and `0xE81A`, in
   `WacomToolCatalog`. The 3 Button Pen keeps `0xE802` and `0xE80A`.
-- Bamboo One M (CTL-671) pen range is 21600×13500, matching Wacom's own model
-  data and OTD. The Linux kernel's figure belongs to the CTE-660.
+- Bamboo One M (CTL-671) pen range is 21600×13500, matching vendor model
+  properties and OTD. The Linux kernel's figure belongs to the CTE-660.
 - CTL-471, CTL-671, and Cintiq 13HD (DTK-1300) are now cross-referenced:
-  Wacom's model data confirms their ranges and pressure.
+  vendor model properties confirm their ranges and pressure.
 
 ## [0.5.0] — 2026-10-01
 
@@ -243,9 +243,9 @@ documentation for the core API. Two enum additions (`DecodeResult.remotePairing`
   driver does, instead of Pro Pen 2.
 - Registry confidence for the Intuos Pro L gen 3 (`0x03F9`) and Bamboo Pen
   CTL-460 (`0x00D4`) is now `.verified`, matching their hardware testing.
-- Registry cross-checked against Wacom model data. Pen range and pressure
+- Registry cross-checked against vendor model properties. Pen range and pressure
   match on 102 models; 38 more move to `.crossReferenced` as a result.
-- Pen range and pressure now follow Wacom model data on 25 models whose values
+- Pen range and pressure now follow vendor model properties on 25 models whose values
   came from libwacom or were placeholders, among them Cintiq Pro 16, the
   MobileStudio Pros, Cintiq 22 (DTK-2260), DTU-1141B, DTH-1152, Wacom One, and
   Cintiq 24. Cintiq 13HD pressure is 2047. DTU-710 and DTU-1931 get the PL
@@ -253,8 +253,8 @@ documentation for the core API. Two enum additions (`DecodeResult.remotePairing`
 - Touch sensors that enumerate under their own product ID are now claimed by
   their pen display: Cintiq Pro 13/16/24/32, MobileStudio Pro 13/16, DTH-1152,
   DTH-2452, and the 24HD/22HD/13HD/Cintiq 22 Touch. The last four also send
-  Linux's `0x12 = 2` touch mode switch. Touch ranges come from Wacom model data
-  where it matches the sensor's descriptor.
+  Linux's `0x12 = 2` touch mode switch. Touch ranges come from vendor model properties
+  where they match the sensor's descriptor.
 - Added Cintiq 24 (DTK246, DTH246) and Wacom One 14 Touch (DTH142), and the
   2025 USB revisions of the Intuos Pro gen 3.
 
