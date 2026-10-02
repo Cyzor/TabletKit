@@ -21,4 +21,3 @@ __pycache__/
 *.pyc
 # Default --out of tools/verify_registry.py, written to the working directory.
 registry_audit.csv
-TabletKit.doccarchive/

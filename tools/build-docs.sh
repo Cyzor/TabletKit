@@ -8,13 +8,13 @@
 # so they get an opt-in script instead. `docc` itself ships in the Xcode
 # toolchain, so this needs nothing that isn't already installed.
 #
-# Usage: tools/build-docs.sh [output-path]   (default: ./TabletKit.doccarchive)
+# Usage: tools/build-docs.sh [output-path]   (default: .build/TabletKit.doccarchive)
 # Open the result with: open <output-path>
 set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
-OUT="${1:-$ROOT/TabletKit.doccarchive}"
+OUT="${1:-$ROOT/.build/TabletKit.doccarchive}"
 SG="$(mktemp -d)"
 trap 'rm -rf "$SG"' EXIT
 
