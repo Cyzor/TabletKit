@@ -1,82 +1,116 @@
 # Contributing to TabletKit
 
-TabletKit is part of a hardware driver project called [MockTab](https://github.com/Cyzor/tablet-driver) to support older drawing tablets on macOS.
+Perhaps your tablet doesn't work with MockTab, or only partly works, and you'd like to help fix that. This page explains how to add support for a tablet, as well as the ways you can help.  Contributions range from sending a recording, which needs no programming at all, to writing the code yourself.
 
-TabletKit ships under MPL-2.0.
+## What TabletKit Is
 
-## Source layout
+[MockTab](https://github.com/Cyzor/tablet-driver) is a Mac app that drives drawing tablets Wacom no longer supports. TabletKit is the part of MockTab that knows about tablets. It has two jobs:
 
-- `Sources/TabletKit/Core/` — shared model types: `TabletPoint`, the `TabletDevice` and `TabletReportDecoder` protocols, `DecoderState`/`DecodeResult`.
-- `Sources/TabletKit/Decoders/` — one decoder per HID report family, plus the BLE report decoders.
-- `Sources/TabletKit/Registry/` — device and tool data tables: which PID maps to which dimensions, decoder, and confidence tier.
-- `Sources/TabletKit/Smoothing/` — cursor and pressure filters.
-- `Sources/TabletKit/HID/` — the only IOKit-touching code: descriptor queries, init handshakes, and device control (LEDs, OLED, display).
-- `Sources/TabletKit/Output/` — output-report encoders for device-bound writes: Wacom and Xencelabs control protocols, the Intuos OLED image encoder.
+- **The registry** is a list of known tablets. For each one, it records the coordinate range, pressure levels, buttons, touch support, and which decoder reads its reports.
+- **Decoders** read what a tablet sends. A tablet doesn't send "the pen is here, pressed this hard". It sends a stream of bytes called reports, and a decoder knows which bytes mean position, which mean pressure, and which bits are buttons.
 
-## Contribution process
+Most tablets share a report format with several others, so most new tablets need only a registry entry. A tablet with a format nobody has worked out yet needs a new decoder.
 
-- **New device profiles** in `WacomDeviceRegistry` or `VendorDeviceRegistry`. Recognition-only entries help; decoded entries help more.
-- **New decoders** for tablet families MockTab doesn't yet handle, conforming to `TabletReportDecoder`.
-- **Decoder bug fixes** with a capture-log fixture that demonstrates the bug.
-- **Test fixtures** that improve coverage of existing decoders — especially edge cases like wireless drop, tool swap, and out-of-range.
-- **Dimension or metadata corrections** for existing registry entries, with a citable source (libwacom data, Wacom spec sheet, direct measurement).
+## Adding Support
 
-App-level bugs, UI issues, and installation problems belong on the [MockTab repo](https://github.com/Cyzor/tablet-driver) — see its [`Contributing.md`](https://github.com/Cyzor/tablet-driver/blob/main/Contributing.md).
+Tablets don't come with documentation of their reports, so adding one is mostly patient observation:
 
-## Data sources, in order of confidence
+1. **Plug the tablet in and record everything it sends.** Move the pen, press it lightly and firmly, tilt it, press every button, touch the surface.
+2. **Compare the recording with what you did.** If one byte climbs while you press harder, that's probably pressure. If a bit turns on only while you hold the second button, that's the button.
+3. **Look at what others have found.** The Linux kernel, libwacom, and OpenTabletDriver already describe many tablets. A match there can save hours.
+4. **Change the registry entry or decoder, then try the tablet again.** Repeat until everything works.
 
-Decoder work is only as good as the data behind it. Three tiers, strongest first:
+Each round teaches you a little more. Nothing replaces having the tablet in hand.
 
-1. **Raw IOKit traffic via dtrace, with SIP off.** The reference script is [`tools/capture/wacom_capture.d`](https://github.com/Cyzor/tablet-driver/blob/main/tools/capture/wacom_capture.d) in the MockTab repo. Captures the bytes that crossed the USB boundary before any decoding interpreted them, a valuable data source for protocols, initialization, and device properties. Requires disabling Apple's System Integrity Protection (SIP) for optimal analysis.
-2. **Upstream cross-reference.** The Linux kernel's `input-wacom` driver, `libwacom` metadata, and OpenTabletDriver vendor configs together cover most of the field. Strong for protocol shape and device metadata, weaker for Mac-specific quirks.  Cite the source and commit when importing.
-3. **In-app capture via *Info → Collect Device Data…*.** Runs in userspace with no special permissions, parses the HID descriptor the OS exposes, and records input reports as the OS delivers them. Sufficient for variants of already-known families, but not for novel protocols or for anything that depends on output reports the OS filters.
+## Choose How to Help
 
-Tier 1 or 2 evidence should accompany `.verified` and `.crossReferenced` entries. Tier 3 alone supports `.experimental`.
+### Send a Recording
 
-See [`Extending-Support.md`](Extending-Support.md) for a walkthrough of what a capture actually contains and how to turn one into a registry entry and decoder. The steps below assume that context.
+**Anyone can do this, and it takes about five minutes.** It's also the most useful thing a person with an unsupported tablet can do. A recording often has everything someone else needs to add the tablet.
 
-## How to submit a decoder or device entry
+1. In MockTab, choose **Help › Collect Device Data…**, or click **Collect Device Data…** in the Info pane.
+2. Do what the app asks: tap the pen, press its buttons, press the tablet's buttons, and so on. Skip anything your tablet doesn't have, then click **Done**.
+3. On the last screen, click **Open GitHub Issue…**. A device support form opens on GitHub with your tablet's details filled in. Drag the zip file MockTab saved to your Desktop into the form, and say what does and doesn't work.
 
-1. **Capture the device.** In MockTab, visit the *Info* pane and press the *Collect Device Data…* button. The result is a JSON file with the Human Interface Device (HID) descriptors, USB strings, and a short input report capture. A [`hid-recorder`](https://github.com/hidutils/hid-recorder) log may also help, as the test harness parses both formats.
-2. **Add the registry entry** in `Sources/TabletKit/Registry/WacomDeviceRegistry.swift` or `Sources/TabletKit/Registry/VendorDeviceRegistry.swift`. Mark confidence: `.experimental` if untested, `.crossReferenced` if it matches a known protocol family, `.verified` only with the hardware in hand.
-3. **Add a test case** in `Tests/TabletKitTests/`, alongside the matching `<Family>DecoderTests.swift`. Fixtures live inline in those files as hex strings rather than in a separate directory. At minimum, assert that the decoder emits *some* `DecodeResult` for each captured report — that catches regressions without forcing hand-annotated expected values.
-4. **Run `swift test`** locally. PRs that fail tests sit until they pass.
-5. **Open the PR** with: device model, connection (USB / Bluetooth / dongle), what got verified, and what didn't.
+The zip holds only what your tablet sent and some details about your setup, like display models. It's plain text, so you can open it and look before you send it.
 
-## If CI reports an API breakage
+### Add Your Tablet to the Registry
 
-A separate `api-breakage` job diffs the public API against the latest tag. It
-catches more than deletions: most public types here have no explicit `init`, so
-**adding a stored property changes the synthesized memberwise initializer** and
-counts as a source break for anyone who spelled out every argument.
+**For people comfortable editing a file and building an app in Xcode.** If MockTab says your tablet is unrecognized, it probably shares a format with a tablet MockTab already supports and just needs an entry of its own.
 
-If the break is unintended, try fixing it. When the cause is a new field on a public
-value type, do **not** reach for a defaulted parameter on the existing
-initializer — that keeps callers compiling but still removes the old
-initializer at the symbol level, which is how `TouchContact.init` ended up in
-the allowlist. Instead, keep the existing initializer exactly as it is and add
-a **new initializer overload** carrying the extra field (the discipline
-Apple PencilKit uses: `PKStrokePoint` has four initializers, each appending one
-field, none ever mutated). One small extra method, zero breakage of either
-kind.
+[Adding Support for a New Tablet](Extending-Support.md) describes the process: reading your recording, finding similar tablets, writing the entry, and testing it.
 
-If the break is deliberate (still routine before 1.0), record it:
+### Work Out a New Format
 
-1. Add the digester's exact message, verbatim, as a line in
-   `api-breakage-allowlist.txt`, with a comment above it saying why.
-2. Describe the break in `CHANGELOG.md` under `### Changed` or `### Removed`,
-   including what a caller has to do about it.
+**For developers who don't mind experimenting.** If no decoder reads your tablet's reports, the job is to work out what each byte means and write a decoder for it, conforming to `TabletReportDecoder`. Look at an existing decoder for a similar tablet first. Many formats are variations on another.
 
-The job fails on any breakage not in the allowlist, and the
-changelog is what a consumer actually reads.
+Beyond MockTab's own recording, a few command-line tools in the [MockTab repository](https://github.com/Cyzor/tablet-driver/tree/main/tools/capture) help.
 
-## Pull requests
+- **`hid_input_capture.c`** logs every report from any USB device. It runs alongside the tablet maker's own driver, so you can see what a tablet sends when its own software is in charge. Build it with `clang`, as its comments describe.
+- **`wacom_capture.d`** records traffic in both directions, including the setup commands a driver sends to switch a tablet on. It uses dtrace, which only works with System Integrity Protection turned off. Turn it back on when you're done.
+- **`triage_discovery.py`**, in TabletKit's `tools/` folder, reads a recording's `summary.json`, compares the tablet with the kernel and OpenTabletDriver, and drafts a registry entry.
 
-- One sentence description of what the revision does.
-- Confidence level — *"verified on a PTH-660 over USB"* vs. *"imported from OTD, untested"*. Both work; the distinction matters for review.
-- Anything unusual the capture may have revealed (unexpected report IDs, padding, vendor quirks).
-- The test plan actually executed.
+If you get stuck, open an issue with what you've found so far. Every little bit helps.
+
+## Submitting a Change
+
+### How Sure Is the Entry?
+
+Every registry entry carries a confidence level, so users and other contributors know how much to trust it:
+
+- **`.experimental`**: the values come from one source, like your recording or a single other project.
+- **`.crossReferenced`**: two independent sources agree, like the Linux kernel and libwacom.
+- **`.verified`**: someone tested the entry on the tablet itself.
+
+Mention your sources in a comment above the entry, including the project and commit for any values you took from elsewhere.
+
+### Add a Test
+
+Tests keep a fix from quietly breaking later. Add yours to `Tests/TabletKitTests/`, next to the decoder's existing `…DecoderTests.swift` file.
+
+The easiest test uses reports from your recording. Paste them into the test as text, and `CaptureLogParser` turns them back into bytes. It reads [hid-recorder](https://github.com/hidutils/hid-recorder) dumps as they are. From `full-log.txt`, copy lines that show one report each, and delete the decoded summary after the `→` at the end of a line. Lines marked `×` stand for many reports and can't be used.
+
+A good first test checks that the decoder produces a result for each report. You don't need to work out every expected value by hand.
+
+Run the tests from the `TabletKit` folder:
+
+```
+swift test
+```
+
+### Open a Pull Request
+
+In the description, include:
+
+- What the change does, in a sentence.
+- The tablet model and how it connects: USB, Bluetooth, or a wireless receiver.
+- What you tested and what you didn't. "Pen and buttons tested over USB; touch untested" is perfect.
+- Anything surprising you noticed, like reports you didn't expect.
+
+Problems with the MockTab app itself, like its settings window or installing it, belong in the [MockTab repository](https://github.com/Cyzor/tablet-driver). See its [contributing guide](https://github.com/Cyzor/tablet-driver/blob/main/Contributing.md).
+
+## Reference for Code Changes
+
+### What's Where
+
+- `Sources/TabletKit/Registry/` holds the registry of tablets and pens.
+- `Sources/TabletKit/Decoders/` has one decoder per report format.
+- `Sources/TabletKit/Core/` holds the types decoders share, like `TabletPoint`, `HIDReport`, and `DecodeResult`.
+- `Sources/TabletKit/HID/` is the only code that talks to macOS about tablets: reading their descriptions of their reports, switching them on, and setting lights and screens.
+- `Sources/TabletKit/Output/` builds the reports sent to tablets, such as LED colors and button labels.
+- `Sources/TabletKit/Smoothing/` holds the cursor and pressure filters.
+
+### If CI Reports an API Break
+
+Apps other than MockTab can use TabletKit, so a check runs on every change to catch edits that would stop their code from compiling. It compares TabletKit's public interface with the latest release.
+
+The most common surprise: adding a property to a public type usually counts as a break. Most types here rely on the initializer Swift writes for them, and a new property changes it. To avoid that, leave the existing initializer as it is and add a second initializer that includes the new property. Adding a parameter with a default value to the existing one looks like it should work, but it still breaks compiled code.
+
+Some breaks are worth making, especially before 1.0. To keep one:
+
+1. Copy the check's message exactly into `api-breakage-allowlist.txt`, with a comment saying why.
+2. Describe the change in `CHANGELOG.md` under **Changed** or **Removed**, including what other apps need to do about it.
 
 ## Forking
 
-If project requirements fall outside the scope above, or if waiting for review does not fit timeline needs, another option is to create an independent instance of the project. TabletKit's MPL-2.0 license permits derivatives to ship under any compatible license with no obligation back. The MockTab app pins a specific TabletKit version, so a fork won't disrupt downstream users.
+You're welcome to fork TabletKit for your own project. It's licensed under MPL-2.0, which lets you change it and ship it with software under other licenses. Changes to TabletKit's own files stay under MPL-2.0.
