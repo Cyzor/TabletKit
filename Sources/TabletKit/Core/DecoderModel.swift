@@ -106,19 +106,19 @@ public struct DecoderState: Sendable {
     ///
     /// Each Bluetooth touch sub-frame carries a 16-bit little-endian stamp
     /// from the tablet's own clock in its trailing two bytes, at
-    /// `btTouchTicksPerCount` (0.225 ms) per count. Consecutive sub-frames in
-    /// one container are stamped exactly `btTouchTicksPerFrame` (100 counts =
-    /// 22.5 ms) apart — hardware-measured on a PTH-660, 2026-09-03. The host
+    /// `btTouchMsPerCount` (0.1 ms) per count. Consecutive sub-frames are
+    /// stamped exactly `btTouchCountsPerFrame` (100 counts = 10 ms) apart,
+    /// measured on a PTH-660 over runs of more than 1,000 frames. The host
     /// only learns when the *container* arrived; this is when the tablet
     /// actually sampled, which is what velocity `dt` wants.
     ///
     /// Consume only differences *within* one container. The field wraps every
-    /// 14.75 s, so a difference across containers is not recoverable from the
+    /// 6.55 s, so a difference across containers is not recoverable from the
     /// value alone; within a container the span is at most a few hundred
     /// counts and cannot wrap.
     public var btTouchFrameStamps: [UInt16] = []
     /// Milliseconds per count of `btTouchFrameStamps`.
-    public static let btTouchMsPerCount = 0.225
+    public static let btTouchMsPerCount = 0.1
     /// Counts between consecutive sub-frames in one BT touch container.
     public static let btTouchCountsPerFrame = 100
     /// WACOM_24HDT (`Wacom24HDTDecoder`) multi-packet frame accumulator.

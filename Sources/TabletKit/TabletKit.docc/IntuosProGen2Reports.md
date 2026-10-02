@@ -53,7 +53,7 @@ Each frame starts with a flags byte: `0x80` valid, `0x40` proximity, `0x20` in r
 The 361-byte form adds:
 
 - Bytes 99–106: the pen serial, and bytes 107–108 its tool ID.
-- Bytes 109–280: four touch frames, each ending in a 16-bit device clock that ticks every 0.225 ms.
+- Bytes 109–280: four touch frames, each ending in a 16-bit device clock that ticks every 0.1 ms.
 - Byte 282: ExpressKeys, set for one report per press.
 - Byte 284: battery, with bit 7 for charging and bits 0–6 the percentage.
 - Byte 285: the touch ring, with bit 7 for contact and bits 0–6 the position.

@@ -227,7 +227,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
 
     /// Real 3-sub-frame container captured from a PTH-660 over Bluetooth
     /// (2026-09-03), whose frames are stamped 6264, 6364, 6464 — the fixed
-    /// 100-count (22.5 ms) stride the hardware emits.
+    /// 100-count (10 ms) stride the hardware emits.
     private func containerWithStampedFrames(_ stamps: [UInt16]) -> [UInt8] {
         var report = [UInt8](repeating: 0, count: 361)
         report[0] = 0x80
@@ -259,7 +259,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
 
     /// The stride is what the batch pacer times frames by: consecutive
     /// sub-frames are exactly `btTouchCountsPerFrame` apart, which at
-    /// `btTouchMsPerCount` is 22.5 ms.
+    /// `btTouchMsPerCount` is 10 ms.
     func testBTTouchStampStrideIsOneFramePeriod() {
         var state = DecoderState()
         _ = decode(
@@ -270,7 +270,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         XCTAssertEqual(deltas, [DecoderState.btTouchCountsPerFrame,
                                 DecoderState.btTouchCountsPerFrame])
         let msApart = Double(DecoderState.btTouchCountsPerFrame) * DecoderState.btTouchMsPerCount
-        XCTAssertEqual(msApart, 22.5, accuracy: 0.001)
+        XCTAssertEqual(msApart, 10, accuracy: 0.001)
     }
 
     /// A frame the decoder skips must contribute no stamp, or stamps stop

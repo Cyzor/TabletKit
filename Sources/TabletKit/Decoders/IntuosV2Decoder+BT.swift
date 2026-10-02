@@ -369,8 +369,8 @@ extension IntuosV2Decoder {
     //   [7] = touch minor (h)
     //
     // Frame bytes [41..42] (past the 5 contacts) are a 16-bit little-endian
-    // device timestamp: 0.225 ms per count, consecutive sub-frames exactly
-    // 100 counts (22.5 ms) apart, wrapping every 14.75 s. Neither the kernel
+    // device timestamp: 0.1 ms per count, consecutive sub-frames exactly
+    // 100 counts (10 ms) apart, wrapping every 6.55 s. Neither the kernel
     // (wacom_intuos_pro2_bt_touch) nor earlier versions of this decoder read
     // them. Hardware-measured on a PTH-660 over two live captures,
     // 2026-09-03; unverified on the PTH-860. Recorded into

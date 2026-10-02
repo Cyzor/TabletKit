@@ -25,6 +25,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `DecoderState.btTouchMsPerCount` is 0.1 ms, not 0.225 ms. Intuos Pro
+  Bluetooth touch frames are 10 ms apart, and their clock wraps every
+  6.55 seconds. The earlier figure placed older frames in a container too far
+  back in time.
 - `descriptor-dump` sample accepts hex with spaces or line breaks, as capture
   tools print it.
 - `XencelabsDecoder` tells the 3 Button Pen and the Thin Pen apart, from
