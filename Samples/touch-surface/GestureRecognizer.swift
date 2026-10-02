@@ -16,6 +16,9 @@ enum Gesture {
     /// Two-finger pinch. `scale` > 1 means the fingers moved apart since
     /// the gesture started, < 1 means they moved together.
     case pinch(scale: Double)
+    /// Two-finger twist since the last frame, in degrees. Positive is
+    /// counterclockwise, as in `NSEvent.rotation`.
+    case rotate(degrees: Double)
     /// Two fingers touched down and lifted again without moving far or
     /// lingering — a gesture Wacom's own touch handling doesn't offer.
     case twoFingerTap
@@ -49,6 +52,7 @@ final class GestureRecognizer {
         case undecided
         case pan
         case pinch
+        case rotate
     }
     private var twoFingerKind: TwoFingerKind = .undecided
     /// Centroid and inter-finger distance when the current two-finger
@@ -59,6 +63,10 @@ final class GestureRecognizer {
     /// Distance between the two fingers as of the last frame — used for a
     /// committed pinch's frame-to-frame scale.
     private var lastPinchDistance: Double = 0
+    /// Angle of the line between the two fingers, in radians: at the start
+    /// of the sequence, and as of the last frame.
+    private var undecidedOriginAngle: Double = 0
+    private var lastPairAngle: Double = 0
 
     /// Consecutive frames that aren't exactly two contacts, while a
     /// two-finger gesture is in progress.
@@ -98,6 +106,10 @@ final class GestureRecognizer {
     /// Absolute floor pinch's signal must also clear, on top of beating
     /// pan by `pinchDominanceRatio`.
     private let pinchNoiseFloor: Double
+    /// The arc the fingers must travel to count as a twist. Higher than
+    /// pinch's floor, as in MockTab, because a pan or pinch always carries
+    /// some incidental twist.
+    private let rotateNoiseFloor: Double
 
     /// - Parameters:
     ///   - deviceUnitsPerMM: the connected device's touch resolution
@@ -118,6 +130,7 @@ final class GestureRecognizer {
         self.pinchDominanceRatio = pinchDominanceRatio
         self.twoFingerDecideDistance = 6.0 * Self.pointsToMM * deviceUnitsPerMM
         self.pinchNoiseFloor = self.twoFingerDecideDistance
+        self.rotateNoiseFloor = self.twoFingerDecideDistance * 1.5
     }
 
     /// Debug switch (TOUCH_SURFACE_FORCE_PINCH=1): skips the undecided
@@ -187,6 +200,10 @@ final class GestureRecognizer {
         let currCentroid = (x: Double(a.x + b.x) / 2, y: Double(a.y + b.y) / 2)
         let currDist = distance(a.x, a.y, b.x, b.y)
         defer { lastPinchDistance = currDist }
+        // Order by contact ID so the angle doesn't flip 180° when the
+        // sensor reports the fingers in the other order.
+        let (first, second) = a.id < b.id ? (a, b) : (b, a)
+        let currAngle = atan2(Double(second.y - first.y), Double(second.x - first.x))
 
         guard let prevA = twoFingerTouches[a.id], let prevB = twoFingerTouches[b.id] else {
             // First frame of a new two-finger touch (or the first after a
@@ -194,6 +211,7 @@ final class GestureRecognizer {
             // measure against yet.
             undecidedOriginCentroid = currCentroid
             undecidedOriginDistance = currDist
+            undecidedOriginAngle = currAngle
             twoFingerKind = Self.forcePinchForDebug ? .pinch : .undecided
             if Self.forcePinchForDebug {
                 print("[debug] forced twoFingerKind to .pinch on two-finger touch-down")
@@ -212,6 +230,14 @@ final class GestureRecognizer {
             guard currDist != lastPinchDistance, lastPinchDistance > 0 else { return nil }
             return .pinch(scale: currDist / lastPinchDistance)
 
+        case .rotate:
+            let delta = Self.wrappedDelta(from: lastPairAngle, to: currAngle)
+            lastPairAngle = currAngle
+            // Negated: the tablet's Y axis points down, which reverses
+            // atan2's counterclockwise-positive convention. MockTab
+            // confirmed the direction on hardware.
+            return delta != 0 ? .rotate(degrees: -delta * 180 / .pi) : nil
+
         case .undecided:
             guard let origin = undecidedOriginCentroid else {
                 // Shouldn't happen — origin is set alongside `.undecided`
@@ -219,6 +245,7 @@ final class GestureRecognizer {
                 // nil.
                 undecidedOriginCentroid = currCentroid
                 undecidedOriginDistance = currDist
+                undecidedOriginAngle = currAngle
                 return nil
             }
             // Motion since the sequence started, not frame-to-frame:
@@ -229,17 +256,32 @@ final class GestureRecognizer {
                     + (currCentroid.y - origin.y) * (currCentroid.y - origin.y)
             ).squareRoot()
             let totalScaleChange = abs(currDist - undecidedOriginDistance)
+            // How far the fingers traveled around their midpoint: the twist
+            // as a distance, so it compares with pan and pinch directly.
+            let totalTwist = abs(Self.wrappedDelta(from: undecidedOriginAngle, to: currAngle)) * currDist / 2
 
             guard totalScaleChange >= twoFingerDecideDistance
                 || totalTranslation >= twoFingerDecideDistance
+                || totalTwist >= rotateNoiseFloor
             else {
                 // Neither signal has moved enough to mean anything yet.
                 return nil
             }
 
+            // One gesture per touch, the larger of twist and pinch, and
+            // either must beat pan by `pinchDominanceRatio`. MockTab also
+            // allows both at once; this sample keeps it simple.
+            let rotateQualifies = totalTwist > totalTranslation * pinchDominanceRatio
+                && totalTwist >= rotateNoiseFloor
+                && totalTwist > totalScaleChange
             let pinchQualifies = totalScaleChange > totalTranslation * pinchDominanceRatio
                 && totalScaleChange >= pinchNoiseFloor
 
+            if rotateQualifies {
+                twoFingerKind = .rotate
+                lastPairAngle = currAngle
+                return nil
+            }
             if pinchQualifies {
                 twoFingerKind = .pinch
                 return nil  // no prior distance yet to compute a scale from
@@ -292,6 +334,15 @@ final class GestureRecognizer {
             }
         }
         twoFingerTouches = next
+    }
+
+    /// Shortest signed difference between two angles, so a pair turning
+    /// past ±π doesn't read as a near-full turn.
+    private static func wrappedDelta(from old: Double, to new: Double) -> Double {
+        var delta = new - old
+        while delta > .pi { delta -= 2 * .pi }
+        while delta < -.pi { delta += 2 * .pi }
+        return delta
     }
 
     private func distance(_ x1: Int, _ y1: Int, _ x2: Int, _ y2: Int) -> Double {

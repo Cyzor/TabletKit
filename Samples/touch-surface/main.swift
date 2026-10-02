@@ -6,7 +6,8 @@
 // This is a reference sample, not a shipping tool. It shows what you can
 // build directly on TabletKit's touch decoding: single-finger cursor
 // movement, single-finger tap for left-click, two-finger pan (scroll),
-// two-finger pinch-zoom, and two-finger tap for right-click.
+// two-finger pinch-zoom, two-finger rotate, and two-finger tap for
+// right-click.
 //
 // It works with any Wacom tablet whose touch report TabletKit can decode
 // from a fixed coordinate range in the registry — the intuosV1, intuosV2,
@@ -221,12 +222,18 @@ var pinchPhaseOpen = false
 var lastPinchAt = Date.distantPast
 let pinchIdleTimeout: TimeInterval = 0.15
 
+var rotatePhaseOpen = false
+var lastRotateAt = Date.distantPast
+let rotateIdleTimeout: TimeInterval = 0.15
+
 let nsEventTypeGesture = CGEventType(rawValue: 29)!
 let fieldIOHIDEventSubtype = CGEventField(rawValue: 110)!
 let fieldMagnification = CGEventField(rawValue: 113)!
+let fieldRotation = CGEventField(rawValue: 114)!
 let fieldGestureDeltaX = CGEventField(rawValue: 116)!
 let fieldGestureDeltaY = CGEventField(rawValue: 119)!
 let fieldGesturePhase = CGEventField(rawValue: 132)!
+let iohidEventTypeRotation: Int64 = 5
 let iohidEventTypeScroll: Int64 = 6
 let iohidEventTypeZoom: Int64 = 8
 
@@ -265,12 +272,22 @@ func postGestureMagnify(magnification: Double, phase: GesturePhase, at location:
     e.post(tap: .cghidEventTap)
 }
 
+func postGestureRotate(degrees: Double, phase: GesturePhase, at location: CGPoint) {
+    guard let e = CGEvent(source: nil) else { return }
+    e.type = nsEventTypeGesture
+    e.location = location
+    e.setIntegerValueField(fieldIOHIDEventSubtype, value: iohidEventTypeRotation)
+    e.setIntegerValueField(fieldGesturePhase, value: phase.rawValue)
+    e.setDoubleValueField(fieldRotation, value: degrees)
+    e.post(tap: .cghidEventTap)
+}
+
 func dispatch(_ gesture: Gesture) {
     if ProcessInfo.processInfo.environment["TOUCH_SURFACE_DEBUG"] != nil {
         print("[gesture] \(gesture)")
     }
 
-    // Close a still-open pan or pinch if this event is a different gesture
+    // Close a still-open pan, pinch, or rotate if this event is a different gesture
     // and enough time has passed since the last one.
     if case .pan = gesture {} else if panPhaseOpen, Date().timeIntervalSince(lastPanAt) > panIdleTimeout {
         postGestureScroll(dx: 0, dy: 0, phase: .ended, at: virtualCursor)
@@ -279,6 +296,10 @@ func dispatch(_ gesture: Gesture) {
     if case .pinch = gesture {} else if pinchPhaseOpen, Date().timeIntervalSince(lastPinchAt) > pinchIdleTimeout {
         postGestureMagnify(magnification: 0, phase: .ended, at: virtualCursor)
         pinchPhaseOpen = false
+    }
+    if case .rotate = gesture {} else if rotatePhaseOpen, Date().timeIntervalSince(lastRotateAt) > rotateIdleTimeout {
+        postGestureRotate(degrees: 0, phase: .ended, at: virtualCursor)
+        rotatePhaseOpen = false
     }
 
     switch gesture {
@@ -343,6 +364,14 @@ func dispatch(_ gesture: Gesture) {
         postGestureMagnify(magnification: scale - 1.0, phase: .changed, at: virtualCursor)
         lastPinchAt = Date()
 
+    case .rotate(let degrees):
+        if !rotatePhaseOpen {
+            postGestureRotate(degrees: 0, phase: .began, at: virtualCursor)
+            rotatePhaseOpen = true
+        }
+        postGestureRotate(degrees: degrees, phase: .changed, at: virtualCursor)
+        lastRotateAt = Date()
+
     case .twoFingerTap:
         // Clicks at the tracked cursor position, not a fresh system read
         // — see `virtualCursor`'s comment.
@@ -373,7 +402,7 @@ func dispatch(_ gesture: Gesture) {
 
 print("touch-surface — TabletKit live touch-gesture sample")
 print("Works with any Wacom touch-capable tablet TabletKit's registry has a fixed touchMaxX/Y for.")
-print("Gestures: 1-finger cursor, 1-finger tap (left-click), 2-finger pan (scroll), pinch (zoom), 2-finger tap (right-click)")
+print("Gestures: 1-finger cursor, 1-finger tap (left-click), 2-finger pan (scroll), pinch (zoom), twist (rotate), 2-finger tap (right-click)")
 print("Debug flags: TOUCH_SURFACE_DEBUG=\(ProcessInfo.processInfo.environment["TOUCH_SURFACE_DEBUG"] != nil)  TOUCH_SURFACE_FORCE_PINCH=\(GestureRecognizer.forcePinchForDebug)")
 print("Waiting for a tablet to connect over USB…")
 print(String(repeating: "─", count: 64))
