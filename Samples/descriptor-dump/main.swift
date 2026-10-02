@@ -63,7 +63,8 @@ if arguments.first == "--file" {
 
 let layout: DescriptorLayout
 do {
-    layout = try HIDReportDescriptorParser.parse(hex: hex)
+    // Accept hex with spaces or line breaks, as capture tools print it.
+    layout = try HIDReportDescriptorParser.parse(hex: hex.filter { !$0.isWhitespace })
 } catch {
     fputs("error: failed to parse descriptor: \(error)\n", stderr)
     Foundation.exit(1)
