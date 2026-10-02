@@ -138,7 +138,7 @@ final class XencelabsDecoderTests: XCTestCase {
         results.compactMap { if case .toolEnter(let t) = $0 { return t.toolCode } else { return nil } }
     }
 
-    /// Bit 7 tells the pens apart, as in Xencelabs' own driver. Tags from a
+    /// Bit 7 tells the pens apart. Tags from a
     /// capture with both pens: Thin Pen 20/21/24/28/60/61, 3 Button Pen
     /// A0/A1/A2/A4/A8/E0/E1.
     func testBit7IdentifiesThePen() {

@@ -956,7 +956,7 @@ public enum WacomToolCatalog: Sendable {
         // Xencelabs ships two pens with the Pen Display 24 and Pen Tablets:
         // the 3 Button Pen v2 (XMCPH35) and the Thin Pen v2 (XMCPH36, two
         // barrel buttons). Neither sends a serial or tool ID, but bit 7 of
-        // the status byte tells them apart, as in Xencelabs' own driver; see
+        // the status byte tells them apart; see
         // XencelabsDecoder. 0xE8xx is outside Wacom's code space; each eraser
         // code keeps the Wacom eraser-bit convention (base | 0x0008).
         catalog[0xE802] = WacomToolSpec(

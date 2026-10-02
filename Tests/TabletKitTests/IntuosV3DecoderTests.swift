@@ -1622,8 +1622,8 @@ final class IntuosV3DecoderTests: XCTestCase {
     // 2026-09-23 ran 61.7% stubs and one September capture ran 100%, so
     // resetting rotation to 0 on each stub collapsed the barrel angle to
     // neutral between every pair of real readings. Replaying the last real
-    // value across a stub is what Wacom's own driver does (CGD16ArtPen caches
-    // rotation on its transducer). See project_ptk870_stub_frame_discovery.
+    // value across a stub matches what Wacom's driver shows: rotation holds
+    // steady between real readings.
 
     /// Puts the decoder in Art Pen identity, then returns a full frame
     /// carrying `rotation`, so the tests below start from a known angle.

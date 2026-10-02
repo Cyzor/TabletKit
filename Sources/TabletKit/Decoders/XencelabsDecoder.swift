@@ -43,8 +43,8 @@ import Foundation
 ///   bit 4 = aux frame: QuickKeys puck buttons/dial, not pen data
 ///   bit 6 = eraser end in range
 ///   bit 7 = which pen: set for the 3 Button Pen, clear for the Thin Pen
-/// Xencelabs' own driver tells the pens apart by bit 7 alone
-/// (`CTablet::OnEventCallBackEx`), and a capture with both pens agrees.
+/// A capture with both pens on one Pen Display, in one session, shows
+/// bit 7 tracking the pen and nothing else.
 /// The out-of-range tag 0xC0 has bit 7 set regardless of pen, so it says
 /// nothing about which pen left.
 ///

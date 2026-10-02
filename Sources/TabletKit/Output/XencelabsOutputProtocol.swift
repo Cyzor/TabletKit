@@ -99,11 +99,9 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// The 0xB5 frame family carries the pen display's on-device panel
     /// controls. Each frame is `02 B5 01 <sub> <p3> <p4> <value> <p6>`; the
-    /// subcommand byte selects which control. Decoded 2026-07-10/11 from the
-    /// vendor agent's disassembly (`CTablet::SetColorCommand`, driven by
-    /// `MainWindow::RgbAppliedBtnFunction`), which issues these as a batch on
-    /// its Apply button: color mode, then RGB gains, gamma, brightness,
-    /// contrast, then a commit.
+    /// subcommand byte selects which control. The vendor's settings app sends
+    /// these as a batch when its Apply button is pressed: color mode, then
+    /// RGB gains, gamma, brightness, contrast, then a commit.
     ///
     /// Subcommand 3 (brightness) is user-confirmed on hardware; the others share
     /// the identical frame shape and are decoded but not yet hardware-verified.
