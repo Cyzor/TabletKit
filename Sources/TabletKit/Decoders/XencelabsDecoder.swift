@@ -37,15 +37,16 @@ import Foundation
 ///
 /// Tag byte: 0xC0 = pen out of range. Otherwise a bitfield:
 ///   bit 0 = tip switch (pressure is nonzero iff set)
-///   bit 1 = barrel button 1 (lowest button, 3-button pen only)
-///   bit 2 = barrel button 2 (slim pen's first button)
-///   bit 3 = barrel button 3 (slim pen's second button)
+///   bit 1 = barrel button 1 (lowest button, 3 Button Pen only)
+///   bit 2 = barrel button 2 (Thin Pen's first button)
+///   bit 3 = barrel button 3 (Thin Pen's second button)
 ///   bit 4 = aux frame: QuickKeys puck buttons/dial, not pen data
 ///   bit 6 = eraser end in range
-///   bit 7 = device has been driver-initialized (0xA0 vs 0x20 hover);
-///           orthogonal to everything else, ignored here
-/// The two pens are not distinguishable in the report (bytes 12+ carry the
-/// same constant on both), so tool identity only tracks pen vs eraser.
+///   bit 7 = which pen: set for the 3 Button Pen, clear for the Thin Pen
+/// Xencelabs' own driver tells the pens apart by bit 7 alone
+/// (`CTablet::OnEventCallBackEx`), and a capture with both pens agrees.
+/// The out-of-range tag 0xC0 has bit 7 set regardless of pen, so it says
+/// nothing about which pen left.
 ///
 /// Aux (bit-4) frames: byte 2 bits 0–7 are the 8 express keys, reported as
 /// `AuxButtons.buttons[0...7]`.
@@ -90,6 +91,13 @@ public struct XencelabsDecoder: TabletReportDecoder {
     static let tagAux: UInt8 = 0xF0
     static let tagBattery: UInt8 = 0xF2
     static let eraserBit: UInt8 = 0x40
+    static let threeButtonPenBit: UInt8 = 0x80
+
+    /// Tool codes. See ``ToolIdentity/toolCode``.
+    static let threeButtonPenCode: UInt16 = 0xE802
+    static let threeButtonEraserCode: UInt16 = 0xE80A
+    static let thinPenCode: UInt16 = 0xE812
+    static let thinEraserCode: UInt16 = 0xE81A
 
     /// Full-scale tilt in degrees. The wire unit is 1° per count: a
     /// stop-to-stop capture saturates at raw ±60 (see `tiltRawScale`) while
@@ -189,21 +197,24 @@ public struct XencelabsDecoder: TabletReportDecoder {
         }
 
         let isEraser = tag & Self.eraserBit != 0
+        let toolCode: UInt16 =
+            tag & Self.threeButtonPenBit != 0
+            ? (isEraser ? Self.threeButtonEraserCode : Self.threeButtonPenCode)
+            : (isEraser ? Self.thinEraserCode : Self.thinPenCode)
 
         var results: [DecodeResult] = []
-        // toolEnter on rising edge or pen/eraser flip.  No serials or tool
-        // IDs on this hardware (the 3 Button Pen and Thin Pen emit identical
-        // reports), so both map to the shared synthetic Xencelabs codes in
-        // WacomToolCatalog (0xE802 pen / 0xE80A eraser, following the Wacom
-        // eraser-bit convention) for naming and per-tool settings.
-        if !state.prevInProximity || isEraser != state.isEraser {
+        // Announce the tool on entering range, and whenever the pen or its
+        // end changes. The pens carry no serial, so these codes are
+        // TabletKit's own, listed in WacomToolCatalog.
+        if !state.prevInProximity || toolCode != state.currentToolCode {
             state.prevInProximity = true
             state.isEraser = isEraser
+            state.currentToolCode = toolCode
             results.append(
                 .toolEnter(
                     ToolIdentity(
                         serial: 0,
-                        toolCode: isEraser ? 0xE80A : 0xE802,
+                        toolCode: toolCode,
                         isEraser: isEraser,
                         isMouse: false)))
         }

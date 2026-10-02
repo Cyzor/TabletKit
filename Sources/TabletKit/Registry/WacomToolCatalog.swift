@@ -955,15 +955,13 @@ public enum WacomToolCatalog: Sendable {
 
         // Xencelabs ships two pens with the Pen Display 24 and Pen Tablets:
         // the 3 Button Pen v2 (XMCPH35) and the Thin Pen v2 (XMCPH36, two
-        // barrel buttons). The wire protocol carries no tool identifier —
-        // both pens emit byte-identical reports apart from which barrel-button
-        // bits ever fire (confirmed from separate per-pen captures) — so one
-        // shared spec covers both, sized for the larger pen's 3 buttons.
-        // 0xE8xx is outside Wacom's code space; the eraser code keeps the
-        // Wacom eraser-bit convention (base | 0x0008).
+        // barrel buttons). Neither sends a serial or tool ID, but bit 7 of
+        // the status byte tells them apart, as in Xencelabs' own driver; see
+        // XencelabsDecoder. 0xE8xx is outside Wacom's code space; each eraser
+        // code keeps the Wacom eraser-bit convention (base | 0x0008).
         catalog[0xE802] = WacomToolSpec(
             toolCode: 0xE802,
-            name: "Xencelabs Pen",
+            name: "Xencelabs 3 Button Pen",
             toolType: .stylus,
             buttonCount: 3,
             maxPressure: nil,
@@ -977,9 +975,37 @@ public enum WacomToolCatalog: Sendable {
 
         catalog[0xE80A] = WacomToolSpec(
             toolCode: 0xE80A,
-            name: "Xencelabs Pen (Eraser)",
+            name: "Xencelabs 3 Button Pen (Eraser)",
             toolType: .eraser,
             buttonCount: 3,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: [.xencelabs]
+        )
+
+        catalog[0xE812] = WacomToolSpec(
+            toolCode: 0xE812,
+            name: "Xencelabs Thin Pen",
+            toolType: .stylus,
+            buttonCount: 2,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0xE81A,
+            supportedFamilies: [.xencelabs]
+        )
+
+        catalog[0xE81A] = WacomToolSpec(
+            toolCode: 0xE81A,
+            name: "Xencelabs Thin Pen (Eraser)",
+            toolType: .eraser,
+            buttonCount: 2,
             maxPressure: nil,
             hasTilt: true,
             hasRotation: false,

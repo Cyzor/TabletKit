@@ -24,6 +24,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `XencelabsDecoder` tells the 3 Button Pen and the Thin Pen apart, from
+  bit 7 of the status byte, as Xencelabs' own driver does. The Thin Pen and
+  its eraser have their own tool codes, `0xE812` and `0xE81A`, in
+  `WacomToolCatalog`. The 3 Button Pen keeps `0xE802` and `0xE80A`.
 - Bamboo One M (CTL-671) pen range is 21600×13500, matching Wacom's own model
   data and OTD. The Linux kernel's figure belongs to the CTE-660.
 - CTL-471, CTL-671, and Cintiq 13HD (DTK-1300) are now cross-referenced:

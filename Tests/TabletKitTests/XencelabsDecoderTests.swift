@@ -5,7 +5,8 @@
 // Layout confirmed 2026-07-02 from 10k+ live report-2 frames captured off a
 // real Xencelabs Pen Display (both pens, driver present and absent): tag
 // bitfield at byte 1 (bit0 tip, bits1–3 barrel buttons, bit4 aux/puck,
-// bit6 eraser, bit7 driver-initialized, 0xC0 out of range), X/Y as 24-bit LE
+// bit6 eraser, bit7 set for the 3 Button Pen and clear for the Thin Pen,
+// 0xC0 out of range), X/Y as 24-bit LE
 // (low words at bytes 2/4, high bytes at 10/11 — the Pen Display's X range
 // of 0–105000 needs the third byte), pressure u16 LE at 6, signed-byte tilt
 // at 8/9. The hex fixtures below are verbatim frames from those captures.
@@ -127,10 +128,50 @@ final class XencelabsDecoderTests: XCTestCase {
 
     func testEraserBitSetsEraserAndToolIdentity() {
         var state = DecoderState()
-        // 0x61 = eraser + tip, verbatim tag from both pens' captures.
+        // 0x61 = the Thin Pen's eraser touching, a verbatim captured tag.
         let results = decode(makePen(tag: 0x61, x: 5, y: 5, pressure: 1000), state: &state)
         XCTAssertEqual(penPoint(results)?.eraser, true)
         XCTAssertTrue(results.contains { if case .toolEnter(let t) = $0 { return t.isEraser } else { return false } })
+    }
+
+    private func toolCodes(_ results: [DecodeResult]) -> [UInt16] {
+        results.compactMap { if case .toolEnter(let t) = $0 { return t.toolCode } else { return nil } }
+    }
+
+    /// Bit 7 tells the pens apart, as in Xencelabs' own driver. Tags from a
+    /// capture with both pens: Thin Pen 20/21/24/28/60/61, 3 Button Pen
+    /// A0/A1/A2/A4/A8/E0/E1.
+    func testBit7IdentifiesThePen() {
+        var state = DecoderState()
+        XCTAssertEqual(toolCodes(decode(makePen(tag: 0x20), state: &state)), [0xE812])
+        state = DecoderState()
+        XCTAssertEqual(toolCodes(decode(makePen(tag: 0x60), state: &state)), [0xE81A])
+        state = DecoderState()
+        XCTAssertEqual(toolCodes(decode(makePen(tag: 0xA0), state: &state)), [0xE802])
+        state = DecoderState()
+        XCTAssertEqual(toolCodes(decode(makePen(tag: 0xE0), state: &state)), [0xE80A])
+    }
+
+    func testPenIdentityIsAnnouncedOnce() {
+        var state = DecoderState()
+        _ = decode(makePen(tag: 0x20), state: &state)
+        XCTAssertTrue(toolCodes(decode(makePen(tag: 0x21, pressure: 500), state: &state)).isEmpty)
+        XCTAssertTrue(toolCodes(decode(makePen(tag: 0x28), state: &state)).isEmpty)
+    }
+
+    /// Out of range (C0) has bit 7 set for both pens, so it mustn't count
+    /// as the 3 Button Pen.
+    func testOutOfRangeDoesNotChangeThePen() {
+        var state = DecoderState()
+        _ = decode(makePen(tag: 0x20), state: &state)
+        XCTAssertTrue(toolCodes(decode(makePen(tag: 0xC0), state: &state)).isEmpty)
+        XCTAssertEqual(toolCodes(decode(makePen(tag: 0x20), state: &state)), [0xE812])
+    }
+
+    func testCatalogNamesBothPens() {
+        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE802)?.buttonCount, 3)
+        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE812)?.buttonCount, 2)
+        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE81A)?.toolType, .eraser)
     }
 
     func testPenToEraserFlipReemitsToolEnter() {
