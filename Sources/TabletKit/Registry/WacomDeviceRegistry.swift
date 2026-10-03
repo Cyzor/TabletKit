@@ -2952,7 +2952,8 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
             // Pen range and pressure: vendor model properties (2026-09-29).
-            productID: 0x0350, name: "Wacom Cintiq Pro 16 (DTH-1620)",  // ⚠ recognition-only
+            // Matches the vendor pen report 0x10 in linuxwacom/wacom-hid-descriptors.
+            productID: 0x0350, name: "Wacom Cintiq Pro 16 (DTH-1620)",
             parser: .intuosV2, maxX: 69920, maxY: 39680, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
@@ -2962,7 +2963,7 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 13824, touchMaxY: 7776,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x0354, activeWidthMM: 350, activeHeightMM: 198),
+            touchCompanionPID: 0x0354, confidence: .crossReferenced, activeWidthMM: 350, activeHeightMM: 198),
         .init(
             // Touch interface of 0x0350, per vendor model properties; routed as its companion.
             // Pen range and pressure: vendor model properties (2026-09-29).
@@ -3056,13 +3057,14 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
             // Pen range and pressure: vendor model properties (2026-09-29).
-            productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",  // ⚠ pen range from vendor model properties only
+            // Matches the vendor pen report 0x1E in linuxwacom/wacom-hid-descriptors.
+            productID: 0x03CB, name: "Wacom One Pen Display 13 (DTH134)",
             parser: .intuosV2, maxX: 29376, maxY: 16524, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 11752, touchMaxY: 6608, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 294, activeHeightMM: 165),
+            confidence: .crossReferenced, activeWidthMM: 294, activeHeightMM: 165),
         .init(
             productID: 0x03CF, name: "Wacom DTC121 (alt)",  // ⚠ recognition-only
             parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
@@ -3074,7 +3076,8 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
             // Pen range and pressure: vendor model properties (2026-09-29).
-            productID: 0x03EC, name: "Wacom DTH134",  // ⚠ pen range from vendor model properties only
+            // Matches the vendor pen report 0x1E in linuxwacom/wacom-hid-descriptors.
+            productID: 0x03EC, name: "Wacom DTH134",
             parser: .intuosV2, maxX: 29376, maxY: 16524, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
@@ -3085,16 +3088,17 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 11752, touchMaxY: 6608,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 294, activeHeightMM: 165),
+            confidence: .crossReferenced, activeWidthMM: 294, activeHeightMM: 165),
         .init(
             // Pen range and pressure: vendor model properties (2026-09-29).
-            productID: 0x03ED, name: "Wacom DTC121",  // ⚠ recognition-only
+            // Matches the vendor pen report 0x1E in linuxwacom/wacom-hid-descriptors.
+            productID: 0x03ED, name: "Wacom DTC121",
             parser: .intuosV2, maxX: 25632, maxY: 14418, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             tiltMaxDegrees: 64.0,  // descriptor: vendor 0x1E tilt [-64,63] degrees
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 256, activeHeightMM: 144),
+            confidence: .crossReferenced, activeWidthMM: 256, activeHeightMM: 144),
         .init(
             productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only; buttonCount 3 per libwacom
             parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,

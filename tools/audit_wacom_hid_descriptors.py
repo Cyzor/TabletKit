@@ -10,27 +10,14 @@ Produces a Markdown audit table: promotable entries,
 missing entries, and naming discrepancies.  Run via `gh` (no auth needed
 for the public repo).
 
-**"Promotable" means the PID and name line up — it does NOT mean the
-dimensions were checked, and you cannot check them from these descriptors.**
-Verified 2026-09-11 by decoding the corpus's `.hid.bin` report descriptors
-directly: what they expose is the device's standards-compliant HID digitizer
-collection, not the vendor report our decoders actually parse, and the two
-disagree in three distinct ways:
-
-    device     descriptor X   registry maxX   note
-    PTK-470          18700           37400    exactly half
-    PTK-670          26300           52600    exactly half
-    PTK-870          32767           69800    0x7FFF, a clamp, not an extent
-    DTC-133          29434           29434    agrees exactly
-
-Pressure is worse: the descriptors report 4095 (or 2047) for devices whose
-vendor path genuinely carries 8191.  Same half-scale trap as
-`KERNEL_HALF_SCALE_PIDS` in verify_registry.py, from a different source.
-
-So a promotion to `.crossReferenced` on the strength of this audit alone
-would be wrong for any device whose vendor collection differs — which is
-most of the modern line.  Treat the table below as "this device is real and
-we name it correctly", which is genuinely useful, and nothing more.
+**"Promotable" means the PID and name line up.** This script doesn't check
+ranges. The descriptors can: many modern models declare a Wacom vendor pen
+report (usage page 0xFF0D, report 0x10 or 0x1E) alongside the standard one,
+and its X, Y, and pressure maxima are the ranges our decoders read. The
+standard collection is a compatibility view (X clamped at 0x7FFF, pressure
+2047 or 4095), so read the vendor report, not that one. Re-checked
+2026-10-03: every vendor report in the corpus matches its registry row.
+Older models expose only an opaque vendor blob and confirm nothing.
 
 Usage:
     python3 tools/audit_wacom_hid_descriptors.py \\
