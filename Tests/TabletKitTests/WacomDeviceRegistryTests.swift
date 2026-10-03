@@ -449,22 +449,20 @@ final class WacomDeviceRegistryTests: XCTestCase {
                 + "— do not add speculative writes here")
     }
 
-    /// The DTH-167 carries the scan enables as a deliberate guess, safe
-    /// only because nothing on that device works yet. Pinned so the ordering
-    /// survives: DATAMODE must stay last.
-    func testCintiqPro16SendsScanEnablesBeforeDataMode() {
+    /// The DTH-167 pen interface declares 0x0D and 0x02 but not 0x0E.
+    /// Pinned so 0x0E stays off this interface and DATAMODE stays last.
+    func testCintiqPro16SendsPenScanBeforeDataMode() {
         guard let spec = WacomDeviceRegistry.spec(for: 0x03B2) else {
             return XCTFail("0x03B2 missing from registry")
         }
         XCTAssertEqual(
             spec.initSteps,
             [
-                .featureReport([0x0E, 0x00]),
                 .featureReport([0x0D, 0x00]),
                 .featureReport([0x02, 0x02]),
             ],
             "0x03B2 init changed; DATAMODE must stay last so it lands even when "
-                + "the scan enables fail")
+                + "the scan enable fails")
     }
 
     /// A claimed sensor must not also be a drivable tablet in its own right:

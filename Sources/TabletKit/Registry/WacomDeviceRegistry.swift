@@ -2327,31 +2327,27 @@ public enum WacomDeviceRegistry: Sendable {
             // 0x03B2 pen, 0x03B3 touch, 0x03B4 the internal USB hub, which is
             // deliberately absent here.
             //
-            // ⚠ Still unverified is the *pen* side of this row — maxPressure,
-            // buttonCount and the parser remain this block's by-similarity
-            // guesses, and no 0x03B2 descriptor has ever been captured. Touch
-            // is the part with descriptor evidence.
-            productID: 0x03B2, name: "Cintiq Pro 16 (DTH-167)",  // ⚠ pen side unverified
+            // The pen side matches a public 0x03B2 descriptor (libwacom issue
+            // 512): report 0x10 declares X 69644, Y 39524, and pressure 8191
+            // at the offsets `.intuosV2` reads, and report 0x11 carries eight
+            // key bits. That recording has no input reports, so live pen
+            // traffic is still unconfirmed.
+            productID: 0x03B2, name: "Cintiq Pro 16 (DTH-167)",  // ⚠ pen traffic unconfirmed
             parser: .intuosV2, maxX: 69644, maxY: 39524, maxPressure: 8191,
             buttonCount: 8, hasTouchRing: false, hasEraser: true,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 13768, touchMaxY: 7744,
             isPenDisplay: true,
-            // Startup sequence: enable both scans, then DATAMODE. Payloads
-            // are inverted, so enable sends 0x00.
-            //
-            // Unverified — no 0x03B2 descriptor exists, so whether the pen
-            // interface declares 0x0D and 0x0E is unknown. Attempted anyway
-            // because nothing on this device works: a rejected write leaves it
-            // as dead as it already is, and `executeInitSteps` continues past a
-            // failure so DATAMODE still lands. Not a precedent for working
-            // devices, which mostly do declare 0x0D and would accept the write.
+            // Startup sequence: enable pen scan, then DATAMODE. The payload is
+            // inverted, so enable sends 0x00. The descriptor declares both
+            // reports. It doesn't declare 0x0E, so the touch-scan write from
+            // Wacom's family sequence is left out; the touch interface gets
+            // its own 0x0E (Input Mode) below.
             //
             // `recordAutoInitReport` logs each ioReturn, so the next capture
-            // says whether these landed. Drop them if it shows failures.
+            // shows whether these writes landed.
             seizeUSB: true,
             initSteps: [
-                .featureReport([0x0E, 0x00]),
                 .featureReport([0x0D, 0x00]),
                 .featureReport([0x02, 0x02]),
             ],
