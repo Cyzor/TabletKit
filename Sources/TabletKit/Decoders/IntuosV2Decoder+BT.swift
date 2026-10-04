@@ -94,11 +94,9 @@ extension IntuosV2Decoder {
         // send which:
         // [0] = 0x80 (report ID)
         // [1..98] = up to 7 × 14-byte pen frames (oldest first)
-        // [99] = would-be frame 7 flags byte — always 0x00, acts as sentinel
-        // [100] = 0xCE (device metadata marker, constant)
-        // [100..109] = device capability block:
-        //      [100] = 0xCE marker
-        //      [103:104]= tool code LE (e.g., 0x0804 = Art Pen)
+        // [99..102] = pen serial LE, the same value USB reports (confirmed on
+        //      a PTH-660 against its USB serial)
+        // [103:104] = tool code LE (e.g., 0x0804 = Art Pen)
         // [281..285] = pad sub-report (center button, express keys, touch ring)
         //
         // Per-frame flag byte (f[0]):
@@ -111,6 +109,12 @@ extension IntuosV2Decoder {
 
         // Tool identity: tool code at bytes [103:104] LE (confirmed from live BT captures).
         let toolCode: UInt16 = report.count >= 105 ? UInt16(report[103]) | UInt16(report[104]) << 8 : 0
+        // Without the serial a pen was filed under its tool code over
+        // Bluetooth and its serial over USB: two entries, two sets of settings.
+        let serial: UInt32 = report.count >= 105
+            ? UInt32(report[99]) | UInt32(report[100]) << 8
+                | UInt32(report[101]) << 16 | UInt32(report[102]) << 24
+            : 0
         let isMouse = (toolCode & 0x000F) == 0x0006
         // Art Pen variants: 0x0804, 0x1108 (confirmed 2026-04-01).
         // Note: 0x1108 has bit3 set, so the standard (toolCode & 0x0008) eraser test
@@ -121,14 +125,15 @@ extension IntuosV2Decoder {
         // but exclude known Art Pen codes that happen to have bit3 set.
         let toolIsEraser = !isArtPen && (toolCode & 0x0008) != 0
 
-        if toolCode != 0 && toolCode != state.lastToolCode {
+        if toolCode != 0 && (toolCode != state.lastToolCode || serial != state.lastSerial) {
             state.lastToolCode = toolCode
+            state.lastSerial = serial
             state.currentToolCode = toolCode
             state.toolIsMouse = isMouse
             results.append(
                 .toolEnter(
                     ToolIdentity(
-                        serial: 0, toolCode: toolCode,
+                        serial: serial, toolCode: toolCode,
                         isEraser: toolIsEraser,
                         isMouse: isMouse)))
 

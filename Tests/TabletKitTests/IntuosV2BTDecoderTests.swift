@@ -108,6 +108,26 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         XCTAssertEqual(state.lastToolCode, 0x0842)
     }
 
+    /// The 361-byte container carries the pen serial at [99..102], the same
+    /// value USB reports. Without it a pen got one identity per transport.
+    func testToolEnterCarriesPenSerial() {
+        var state = DecoderState()
+        var bytes = make361(toolCode: 0x0804)
+        bytes[99] = 0x34; bytes[100] = 0x12; bytes[101] = 0x80; bytes[102] = 0x03
+        let tool = decode(bytes, state: &state).compactMap { r -> ToolIdentity? in
+            if case .toolEnter(let t) = r { return t } else { return nil }
+        }.first
+        XCTAssertEqual(tool?.serial, 0x0380_1234)
+        XCTAssertEqual(tool?.toolCode, 0x0804)
+
+        // Same tool code, another pen: a new identity.
+        bytes[99] = 0x78; bytes[100] = 0x56
+        let swapped = decode(bytes, state: &state).contains {
+            if case .toolEnter(let t) = $0 { return t.serial == 0x0380_5678 } else { return false }
+        }
+        XCTAssertTrue(swapped, "a second pen of the same type must enter")
+    }
+
     func testArtPenToolCodeWithBit3SetIsNotMisclassifiedAsEraser() {
         // 0x1108 has bit3 set but is an Art Pen variant, not an eraser.
         var state = DecoderState()
