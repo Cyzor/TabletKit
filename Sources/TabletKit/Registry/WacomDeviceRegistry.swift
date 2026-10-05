@@ -2190,11 +2190,11 @@ public enum WacomDeviceRegistry: Sendable {
             // Dimensions match the kernel and vendor model properties. maxPressure 2047
             // per vendor model properties and OTD; the kernel's 1023
             // disagrees with its own 13HD Touch (0x0333) on the same panel.
-            // CintiqV1Decoder halves raw pressure when maxPressure ≤ 1023, so
-            // this value matters. Not hardware-tested.
+            // Parser .intuosV1 like 0x0333: Wacom's driver and the kernel
+            // (WACOM_13HD) treat both as one model. Not hardware-tested.
             productID: 0x0304, name: "Wacom Cintiq 13HD (DTK-1300)",  // ⚠ from kernel, OTD + vendor model properties
-            parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            parser: .intuosV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
+            buttonCount: 9, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             // activeWidthMM/Height corrected 294/165→299/171 (298.74×171.35mm)
             // per Wacom's DTK-1300/DTH-1300 Important Product Information
@@ -3300,7 +3300,7 @@ public enum WacomDeviceRegistry: Sendable {
             // OTD's favor; dims/pressure/buttonCount already agreed exactly.
             productID: 0x0333, name: "Cintiq 13HD Touch (DTH-1300)",  // dims kernel (WACOM_13HD type) + OTD
             parser: .intuosV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 9, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],

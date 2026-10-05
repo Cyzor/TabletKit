@@ -396,6 +396,22 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         XCTAssertFalse(aux.buttons[4])
     }
 
+    func testCintiq13HDPadReadsBytes3And4() {
+        var st = DecoderState()
+        // Captured DTH-1300 frame: byte 1 is the 0x80 marker, not a key.
+        let r = decode([0x11, 0x80, 0x00, 0x01, 0x08, 0, 0, 0, 0, 0], state: &st, family: .cintiq)
+        guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
+        XCTAssertEqual(aux.buttons.count, 9)
+        XCTAssertEqual(aux.buttons.indices.filter { aux.buttons[$0] }, [0, 4])
+    }
+
+    func testCintiq13HDPadIdleHasNoButtons() {
+        var st = DecoderState()
+        let r = decode([0x11, 0x80, 0, 0, 0, 0, 0, 0, 0, 0], state: &st, family: .cintiq)
+        guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
+        XCTAssertFalse(aux.buttons.contains(true))
+    }
+
     func testAuxTooShortReturnsEmpty() {
         var st = DecoderState()
         XCTAssertTrue(decode([0x11], state: &st).isEmpty)

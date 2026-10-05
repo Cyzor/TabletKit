@@ -9,7 +9,7 @@ import Foundation
 /// Handles all old Cintiq models (`.cintiqV1` parser family):
 ///   DTK-2400 (0x00F4) ✓ confirmed live, DTH-2400 (0x00F8),
 ///   DTK-2200 (0x00FA/0x00F9), DTZ-2100B (0x00FB), DTZ-2100 (0x00CC),
-///   Cintiq 20WSX (0x00C0), Cintiq 13HD (0x00C4/0x0304), Cintiq 12WX (0x00C6).
+///   Cintiq 20WSX (0x00C0), Cintiq 13HD (0x00C4), Cintiq 12WX (0x00C6).
 ///
 /// **Report routing:**
 ///   0x01 — tip-switch (mouse-compatible collection; requires device seizure to suppress

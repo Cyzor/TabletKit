@@ -71,7 +71,10 @@ public struct IntuosV1Decoder: TabletReportDecoder {
             return [.aux(aux)]
         }
         if id == 0x11 {
-            return decodeAuxReport(report: report)
+            // The Cintiq 13HD and 13HD Touch are this parser's only pen displays.
+            return deviceFamily == .cintiq
+                ? decode13HDPadReport(report: report)
+                : decodeAuxReport(report: report)
         }
         if id == 0x0C {
             return decodeIntuos4PadReport(report: report)
@@ -427,6 +430,17 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         guard report.count >= 2 else { return [] }
         let auxByte = report[1]
         return [.aux(AuxButtons(buttons: (0..<8).map { bit in (auxByte & (1 << bit)) != 0 }))]
+    }
+
+    /// Cintiq 13HD pad: byte 1 is a fixed 0x80 marker; buttons are
+    /// `(report[4] << 1) | (report[3] & 1)`, nine of them (kernel
+    /// `wacom_intuos_pad`, WACOM_13HD; matches a DTH-1300 capture).
+    private func decode13HDPadReport(
+        report: HIDReport
+    ) -> [DecodeResult] {
+        guard report.count >= 5 else { return [] }
+        let mask = Int(report[4]) << 1 | Int(report[3] & 0x01)
+        return [.aux(AuxButtons(buttons: (0..<9).map { mask & (1 << $0) != 0 }))]
     }
 
     // MARK: - Intuos4 WL Bluetooth aggregated reports (0x03 / 0x04)
