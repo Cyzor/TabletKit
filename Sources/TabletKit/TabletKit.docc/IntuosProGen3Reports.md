@@ -4,7 +4,7 @@ Read the 2025 Intuos Pro (PTK-470, PTK-670, PTK-870) over USB and Bluetooth, and
 
 ## Overview
 
-``IntuosV3Decoder`` handles these tablets and the Movink 13, which shares their USB pen report. The Linux driver had no support for them when this decoder was written, so the layouts here come from captures of a PTK-870. Where something hasn't been seen on hardware, this article says so.
+``IntuosV3Decoder`` handles these tablets and the Movink 13, which shares their USB pen report. The Linux driver had no support for them when this decoder was written, so the layouts here come from captures of a PTK-870. Where something hasn't been seen on hardware, this article says so. Annotated excerpts from those captures back the [dial steps](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Dial-Steps.md), [edge behavior](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Edge-and-Groove.md), and [tilt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Tilt.md).
 
 The PTK-870's surface is 69,800 × 39,000 units at 200 units per millimeter. Pressure runs from 0 to 8,191, and tilt from −64° to 64°. Multi-byte values are little-endian, and byte offsets count the report ID as byte 0.
 

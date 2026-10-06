@@ -61,13 +61,10 @@ public struct PanSmoother: Sendable {
     /// speed (seconds — lag budget = this × points/second).
     ///
     /// This trailing distance is not an artifact to be minimized. When the
-    /// hand stops, the anchor keeps catching up, and the caller emits that
-    /// catch-up as scroll deltas — a coast, expressed purely as displacement,
-    /// with no scroll-phase or momentum-phase fields attached. That reaches
-    /// apps our explicit momentum tail cannot: recognizers that reject a
-    /// phased stream lacking real gesture backing (Calendar Month/Year, and
-    /// the same class of custom scroll views elsewhere) accept this, because
-    /// to them it is simply continued scrolling.
+    /// hand stops, the anchor keeps catching up, so a caller that turns the
+    /// output into scrolling gets a short coast as plain movement. Some apps
+    /// reject synthesized momentum but accept this, because to them it is
+    /// simply continued scrolling.
     ///
     /// Scaling the budget by speed is what makes the coast feel earned: a
     /// slow, deliberate pan carries almost no lag and stops dead where the

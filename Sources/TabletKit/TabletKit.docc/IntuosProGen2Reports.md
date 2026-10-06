@@ -4,7 +4,7 @@ Read the Intuos Pro gen 2 (PTH-460, PTH-660, PTH-860), the 2018 Intuos (CTL-4100
 
 ## Overview
 
-``IntuosV2Decoder`` handles this format. It started with the Intuos Pro gen 2 and spread to the Cintiq 16, 22, and 24, the Cintiq Pro, Wacom One pen displays, and MobileStudio Pro. Most layouts here were confirmed on a PTH-660 and PTH-860; where something comes only from the Linux driver, this article says so.
+``IntuosV2Decoder`` handles this format. It started with the Intuos Pro gen 2 and spread to the Cintiq 16, 22, and 24, the Cintiq Pro, Wacom One pen displays, and MobileStudio Pro. Most layouts here were confirmed on a PTH-660 and PTH-860; where something comes only from the Linux driver, this article says so. An [annotated capture excerpt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/Intuos-Pro-Bluetooth-Touch-Clock.md) backs the Bluetooth touch clock.
 
 Multi-byte values are little-endian, and byte offsets count the report ID as byte 0.
 
