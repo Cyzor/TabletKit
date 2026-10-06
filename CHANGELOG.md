@@ -62,6 +62,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   properties and OTD. The Linux kernel's figure belongs to the CTE-660.
 - CTL-471, CTL-671, and Cintiq 13HD (DTK-1300) are now cross-referenced:
   vendor model properties confirm their ranges and pressure.
+- Bamboo Pen CTL-460 (`0x00D4`) is back to `.crossReferenced`. 0.5.0 marked it
+  `.verified`, but it hasn't been tested on hardware. Its range, pressure, and
+  startup mode switch match vendor model properties.
 
 ## [0.5.0] — 2026-10-01
 

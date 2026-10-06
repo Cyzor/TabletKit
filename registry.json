@@ -1058,7 +1058,7 @@
       "productID": "0x00D4",
       "name": "Bamboo Pen (CTL-460)",
       "parser": "bamboo",
-      "confidence": "verified",
+      "confidence": "crossReferenced",
       "productStringMatch": null,
       "maxX": 14720,
       "maxY": 9200,

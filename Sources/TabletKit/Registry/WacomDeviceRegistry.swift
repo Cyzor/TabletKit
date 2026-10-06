@@ -1404,7 +1404,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .verified, activeWidthMM: 147, activeHeightMM: 92),
+            confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
             productID: 0x00D5, name: "Bamboo Pen (CTL-660)",  // ⚠ from kernel 0xD5 (Bamboo Pen 6×8, BAMBOO_PEN family); linux-hardware "Bamboo Pen (M)"
             parser: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
