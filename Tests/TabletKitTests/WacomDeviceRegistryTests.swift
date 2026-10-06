@@ -511,4 +511,10 @@ final class WacomDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(d.tiltMaxDegrees, 64.0)
         XCTAssertTrue(d.hasTilt)
     }
+
+    func testMakeDecoderMatchesFormat() {
+        XCTAssertTrue(ReportParser.intuosV2.makeDecoder() is IntuosV2Decoder)
+        XCTAssertTrue(ReportParser.ucLogic.makeDecoder() is UCLogicDecoder)
+        XCTAssertTrue(ReportParser.pl.makeDecoder() is WacomPLDecoder)
+    }
 }

@@ -16,12 +16,35 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   unchanged. Wrap the IOKit callback's buffer with
   `HIDReport(pointer:count:)`, or a `[UInt8]` with `HIDReport.withReport(_:_:)`.
   A report is valid only for the call that receives it.
+- **Source-breaking:** `ReportParser.ucLogic` and `DeviceFamily.ucLogic` are new
+  cases, so exhaustive switches over either need one more case. Hand
+  `.ucLogic` to `UCLogicDecoder`, or use `ReportParser.makeDecoder()` and stop
+  switching over formats.
 
 ### Added
 
+- `ReportParser.makeDecoder()`, which creates the decoder for a report format.
+  Formats added later need no change in your code.
 - `HIDReport`, and `decode(report:)` forms taking it on `GenericPenDecoder`
   and `PrecisionTouchDecoder`. Their `[UInt8]` forms remain.
 - `touch-surface` sample: twist two fingers to rotate, as on a trackpad.
+- `UCLogicTabletInfo`, which reads what a Huion, Gaomon, XP-Pen, or UGEE tablet
+  says about itself when switched on: its coordinate range, pressure levels,
+  resolution, and button count. It turns the answer into a `DigitizerSpec`, so
+  these tablets can be sized without a registry entry.
+- `TabletReportDecoder.silenceTimeout` and `decodeSilence(spec:state:deviceFamily:)`,
+  for tablets that never report the pen leaving and just stop sending. The
+  caller keeps time and calls `decodeSilence` when the timeout passes. Both have
+  defaults, so existing decoders are unchanged.
+- A catalog entry, `0xE902`, for Huion, Gaomon, XP-Pen, and UGEE pens, which
+  send no serial or tool code. `ToolIdentity.toolCode` now documents `0xE000`
+  to `0xEFFF` as codes TabletKit assigns to such pens.
+- `UCLogicDecoder`, which reads pen reports from Huion, Gaomon, XP-Pen, UGEE,
+  and Parblo tablets, in both the Huion v2 and UGEE v2 layouts. Huion v2
+  tablets don't report the pen leaving, so it sets a 100 ms `silenceTimeout`
+  for them. It also reports the tablet's buttons. Checked against public
+  recordings of Huion tablets and tested on a Xencelabs pen display; dials and
+  touch strips aren't decoded yet.
 
 ### Fixed
 

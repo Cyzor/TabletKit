@@ -277,6 +277,35 @@ public protocol TabletReportDecoder: Sendable {
         state: inout DecoderState,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult]
+
+    /// How long without a report means the pen has left, or `nil` if the
+    /// tablet says so itself.
+    ///
+    /// Some tablets never report the pen leaving; they just stop sending.
+    /// Decoders don't read clocks, so the caller keeps time: after this long
+    /// with no report, it calls ``decodeSilence(spec:state:deviceFamily:)``.
+    var silenceTimeout: TimeInterval? { get }
+
+    /// Called when ``silenceTimeout`` has passed with no report. Returns what
+    /// a "pen left" report would, usually a `.pen` point with `inProximity`
+    /// false, or nothing if the pen had already left.
+    mutating func decodeSilence(
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult]
+}
+
+extension TabletReportDecoder {
+    /// Most tablets report the pen leaving, so there's no timeout by default.
+    public var silenceTimeout: TimeInterval? { nil }
+
+    /// Does nothing by default.
+    public mutating func decodeSilence(
+        spec: DigitizerSpec,
+        state: inout DecoderState,
+        deviceFamily: DeviceFamily
+    ) -> [DecodeResult] { [] }
 }
 
 /// Decoded BLE HOGP pen report. See `decodeBLEPenReport` for the wire layout.

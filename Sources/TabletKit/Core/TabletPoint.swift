@@ -133,6 +133,12 @@ public struct ToolIdentity: Sendable {
     /// Unique 32-bit serial per physical pen body.  0 means not available (IntuosV1).
     public let serial: UInt32
     /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0804 Art Pen, 0x0842 Pro Pen 2.
+    ///
+    /// Pens that don't identify themselves get a code TabletKit assigns, from
+    /// `0xE000` to `0xEFFF`, outside Wacom's range: `0xE802` for Xencelabs
+    /// pens and `0xE902` for Huion, Gaomon, XP-Pen, and UGEE pens. Their
+    /// eraser ends add `0x0008`, as Wacom's do. Each has a
+    /// ``WacomToolCatalog`` entry giving its name, buttons, and tilt support.
     public let toolCode: UInt16
     /// True for the eraser end: bit 3 of the tool code, except on Art Pen
     /// codes such as `0x1108` that set it on the tip.

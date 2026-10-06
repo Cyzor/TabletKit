@@ -25,6 +25,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - <doc:WhenToUse>
 - <doc:DecodingPenReports>
 - <doc:BuildingAMinimalDriver>
+- <doc:SupportingTabletsThatDescribeThemselves>
 
 ### Report formats
 
@@ -37,6 +38,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``DecodeResult``
 - ``DecoderState``
 - ``TabletReportDecoder``
+- ``HIDReport``
 - ``TabletPoint``
 - ``ToolIdentity``
 - ``AuxButtons``
@@ -76,6 +78,9 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``GenericPenDecoder``
 - ``PrecisionTouchDecoder``
 - ``XencelabsDecoder``
+- ``UCLogicDecoder``
+- ``UCLogicTabletInfo``
+- ``UCLogicProtocol``
 - ``ExpressKeyRemoteDecoder``
 - ``WacomPLDecoder``
 - ``Wacom24HDTDecoder``

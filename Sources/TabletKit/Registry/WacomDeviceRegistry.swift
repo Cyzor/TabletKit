@@ -102,6 +102,11 @@ public enum ReportParser: String, Sendable {
     /// `XencelabsDecoder` (experimental — not yet hardware-validated).
     case xencelabs
 
+    /// Huion, Gaomon, XP-Pen, UGEE, and Parblo tablets, whose ranges come from
+    /// the tablet when it's switched on (see `UCLogicTabletInfo`). Decoded by
+    /// `UCLogicDecoder`.
+    case ucLogic
+
     /// ExpressKey Remote (EKR-100, PID 0x0331) — standalone wireless
     /// button/ring accessory, no digitizer. Report ID 0x11, 32 bytes, opaque
     /// vendor collection (usage page 0xFF0C, no field-level HID descriptor).
@@ -122,6 +127,30 @@ public enum ReportParser: String, Sendable {
     /// prior art (OpenTabletDriver); the other seven PIDs sharing this
     /// decoder do not and stay experimental.
     case pl
+}
+
+extension ReportParser {
+    /// Creates a fresh decoder for this report format.
+    ///
+    /// Use this instead of switching over formats yourself, so a format added
+    /// in a later release needs no change in your code.
+    public func makeDecoder() -> any TabletReportDecoder {
+        switch self {
+        case .graphire: return GraphireDecoder()
+        case .intuosV1: return IntuosV1Decoder()
+        case .intuosV2: return IntuosV2Decoder()
+        case .intuosV3: return IntuosV3Decoder()
+        case .dtus: return DTUSDecoder()
+        case .dtu: return DTUDecoder()
+        case .bamboo: return BambooDecoder()
+        case .intuos3: return Intuos3Decoder()
+        case .cintiqV1: return CintiqV1Decoder()
+        case .xencelabs: return XencelabsDecoder()
+        case .ucLogic: return UCLogicDecoder()
+        case .expressKeyRemote: return ExpressKeyRemoteDecoder()
+        case .pl: return WacomPLDecoder()
+        }
+    }
 }
 
 // MARK: - Init step
@@ -197,6 +226,10 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case dtus
     case bamboo
     case xencelabs
+
+    /// Huion, Gaomon, XP-Pen, UGEE, and Parblo tablets. Their shared pen,
+    /// `0xE902`, works with any family, so no catalog entry names this one.
+    case ucLogic
 
     /// ExpressKey Remote (EKR-100) — standalone button/ring accessory, no
     /// digitizer and no pen. `WacomToolCatalog` has and needs no entries for
@@ -660,6 +693,8 @@ public struct WacomDeviceSpec: Sendable {
             return .bamboo
         case .xencelabs:
             return .xencelabs
+        case .ucLogic:
+            return .ucLogic
         case .expressKeyRemote:
             return .expressKeyRemote
         case .pl:

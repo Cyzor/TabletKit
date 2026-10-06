@@ -402,3 +402,9 @@ API breakage: func decodeBLEPenReport(report:length:spec:lastX:lastY:) has param
 API breakage: func decodeBLEPenReport(report:length:spec:lastX:lastY:) has parameter 2 type change from TabletKit.DigitizerSpec to Swift.Int
 API breakage: func decodeWirelessReport(report:length:) has been renamed to func decodeWirelessReport(report:)
 API breakage: func decodeWirelessReport(report:length:) has parameter 0 type change from Swift.UnsafePointer<Swift.UInt8> to TabletKit.HIDReport
+
+# New report format and family for Huion, Gaomon, XP-Pen, UGEE, and Parblo
+# tablets. Breaks exhaustive switches over either enum. Pre-1.0,
+# changelog-documented.
+API breakage: enumelement ReportParser.ucLogic has been added as a new enum case
+API breakage: enumelement DeviceFamily.ucLogic has been added as a new enum case

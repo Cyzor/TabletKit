@@ -86,25 +86,6 @@ guard let spec = WacomDeviceRegistry.spec(for: trace.pid) else {
     exit(1)
 }
 
-// MARK: - Parser -> decoder dispatch (mirrors WacomKnownDevice.swift; keep in sync)
-
-func makeDecoder(_ parser: ReportParser) -> TabletReportDecoder {
-    switch parser {
-    case .intuosV2:  return IntuosV2Decoder()
-    case .intuosV3:  return IntuosV3Decoder()
-    case .dtus:      return DTUSDecoder()
-    case .dtu:       return DTUDecoder()
-    case .intuos3:   return Intuos3Decoder()
-    case .bamboo:    return BambooDecoder()
-    case .cintiqV1:  return CintiqV1Decoder()
-    case .graphire:  return GraphireDecoder()
-    case .xencelabs: return XencelabsDecoder()
-    case .intuosV1:  return IntuosV1Decoder()
-    case .pl:        return WacomPLDecoder()
-    case .expressKeyRemote: return ExpressKeyRemoteDecoder()
-    }
-}
-
 /// Families worth replaying. Xencelabs is excluded: it is the only non-Wacom
 /// parser and its specs are synthesized at connect time rather than stored in
 /// this registry, so replaying a Wacom trace through it is meaningless.
@@ -158,7 +139,7 @@ func replay(_ parser: ReportParser) -> Outcome {
     var out = Outcome(
         parser: parser, maxXBound: spec.maxX, maxYBound: spec.maxY,
         maxPressureBound: spec.maxPressure)
-    var decoder = makeDecoder(parser)
+    var decoder = parser.makeDecoder()
     var state = DecoderState()
     let digiSpec = spec.digitizerSpec
 

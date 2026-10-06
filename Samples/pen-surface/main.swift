@@ -6,8 +6,12 @@
 // A reference sample, not a shipping tool. It moves the cursor, clicks with
 // the tip, maps the barrel buttons to right and middle click, and passes
 // pressure and tilt to apps that read them. The whole tablet maps to the
-// main display. No settings, no ExpressKeys, no Bluetooth, one tablet at a
-// time.
+// main display. No settings, no ExpressKeys, no Bluetooth. Several tablets
+// can be connected at once; each has its own decoder.
+//
+// Wacom tablets are sized from TabletKit's registry. Huion, Gaomon, XP-Pen,
+// and UGEE tablets are sized from their own answer when switched on; see
+// the "Supporting Tablets That Describe Themselves" article.
 //
 // Switch-on: most Wacom tablets start in a reduced mode (the pen moves the
 // cursor, but pressure, tilt, tool type or a barrel button can be missing)
@@ -24,7 +28,10 @@
 // or try sequences on a tablet the registry lacks. Commands go straight to
 // the hardware; send only what you understand. Unplugging resets the mode.
 //
-// Quit MockTab or Wacom's driver first, or both will move the cursor.
+// --init applies to Wacom tablets only.
+//
+// Quit MockTab or your tablet maker's driver first, or both will move the
+// cursor.
 //
 // Injecting events needs Accessibility permission for the terminal
 // (System Settings > Privacy & Security > Accessibility).
@@ -36,6 +43,7 @@ import ApplicationServices
 import CoreGraphics
 import Foundation
 import IOKit.hid
+import IOKit.usb.IOUSBLib
 import TabletKit
 
 // MARK: - Arguments
@@ -98,17 +106,8 @@ func describe(_ steps: [InitStep]) -> String {
 
 func makeDecoder(_ parser: ReportParser) -> (any TabletReportDecoder)? {
     switch parser {
-    case .intuosV1: return IntuosV1Decoder()
-    case .intuosV2: return IntuosV2Decoder()
-    case .intuosV3: return IntuosV3Decoder()
-    case .intuos3: return Intuos3Decoder()
-    case .bamboo: return BambooDecoder()
-    case .cintiqV1: return CintiqV1Decoder()
-    case .graphire: return GraphireDecoder()
-    case .dtus: return DTUSDecoder()
-    case .dtu: return DTUDecoder()
-    case .pl: return WacomPLDecoder()
-    case .xencelabs, .expressKeyRemote: return nil  // not Wacom pens
+    case .xencelabs, .ucLogic, .expressKeyRemote: return nil  // not Wacom pens
+    default: return parser.makeDecoder()
     }
 }
 
@@ -148,15 +147,135 @@ func runSteps(_ steps: ArraySlice<InitStep>, on device: IOHIDDevice) {
     }
 }
 
+// MARK: - Tablets that describe themselves
+
+let wacomVendorID = 0x056A
+/// Huion and Gaomon; XP-Pen, UGEE, and Parblo; older UC-Logic tablets.
+let ucLogicVendorIDs = [0x256C, 0x28BD, 0x5543]
+
+/// Reads a USB string descriptor, header included, without opening the
+/// device, so it works alongside our own HID connection.
+func readStringDescriptor(_ device: IOHIDDevice, index: UInt8) -> [UInt8]? {
+    // String descriptors belong to the USB device, a few levels above the
+    // HID interface.
+    var entry = IOHIDDeviceGetService(device)
+    IOObjectRetain(entry)
+    while entry != 0, IOObjectConformsTo(entry, "IOUSBHostDevice") == 0 {
+        var parent: io_registry_entry_t = 0
+        let kr = IORegistryEntryGetParentEntry(entry, kIOServicePlane, &parent)
+        IOObjectRelease(entry)
+        entry = kr == KERN_SUCCESS ? parent : 0
+    }
+    guard entry != 0 else { return nil }
+    defer { IOObjectRelease(entry) }
+
+    // IOUSBLib's IDs are C macros Swift can't import.
+    let userClientType = CFUUIDGetConstantUUIDWithBytes(
+        nil, 0x9D, 0xC7, 0xB7, 0x80, 0x9E, 0xC0, 0x11, 0xD4, 0xA5, 0x4F, 0x00, 0x0A, 0x27, 0x05, 0x28, 0x61)
+    let plugInInterface = CFUUIDGetConstantUUIDWithBytes(
+        nil, 0xC2, 0x44, 0xE8, 0x58, 0x10, 0x9C, 0x11, 0xD4, 0x91, 0xD4, 0x00, 0x50, 0xE4, 0xC6, 0x42, 0x6F)
+    let deviceInterface = CFUUIDGetConstantUUIDWithBytes(
+        nil, 0x5C, 0x81, 0x87, 0xD0, 0x9E, 0xF3, 0x11, 0xD4, 0x8B, 0x45, 0x00, 0x0A, 0x27, 0x05, 0x28, 0x61)
+
+    var plugIn: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?
+    var score: Int32 = 0
+    guard IOCreatePlugInInterfaceForService(entry, userClientType, plugInInterface, &plugIn, &score)
+        == kIOReturnSuccess, let plugIn, let plugInTable = plugIn.pointee?.pointee
+    else { return nil }
+    defer { _ = plugInTable.Release(plugIn) }
+
+    var raw: LPVOID?
+    guard plugInTable.QueryInterface(plugIn, CFUUIDGetUUIDBytes(deviceInterface), &raw) == S_OK, let raw
+    else { return nil }
+    let usb = raw.assumingMemoryBound(to: UnsafeMutablePointer<IOUSBDeviceInterface100>.self).pointee.pointee
+    defer { _ = usb.Release(raw) }
+
+    var buffer = [UInt8](repeating: 0, count: 255)
+    var length = 0
+    let result = buffer.withUnsafeMutableBytes { bytes -> IOReturn in
+        var request = IOUSBDevRequest(
+            bmRequestType: 0x80,  // device to host, standard, device
+            bRequest: 6,  // GET_DESCRIPTOR
+            wValue: 0x0300 | UInt16(index),  // string descriptor
+            wIndex: 0x0409,  // US English
+            wLength: UInt16(bytes.count), pData: bytes.baseAddress, wLenDone: 0)
+        let kr = usb.DeviceRequest(raw, &request)
+        length = Int(request.wLenDone)
+        return kr
+    }
+    return result == kIOReturnSuccess ? Array(buffer.prefix(length)) : nil
+}
+
+/// True if `device` declares output report `reportID`.
+func declaresOutputReport(_ device: IOHIDDevice, _ reportID: UInt8) -> Bool {
+    guard let hex = hidReportDescriptorHex(device),
+        let layout = try? HIDReportDescriptorParser.parse(hex: hex)
+    else { return false }
+    return layout.reports.contains { $0.direction == .output && $0.reportID == reportID }
+}
+
+/// Switches a UC-Logic tablet on and reads what it says about itself.
+///
+/// Huion tablets switch on when descriptor 200 is read. UGEE tablets need
+/// output report `02 B0 04` first, sent to the interface that declares it,
+/// so for those this returns `nil` until that interface turns up. The
+/// vendor ID says which to try, so neither tablet gets the other's command.
+func switchOnAndDescribe(_ device: IOHIDDevice, vendor: Int) -> UCLogicTabletInfo? {
+    if vendor != 0x28BD,
+        let reply = readStringDescriptor(device, index: 200),
+        let info = UCLogicTabletInfo(huionDescriptor200: reply)
+    {
+        return info
+    }
+    guard vendor != 0x256C, declaresOutputReport(device, 0x02) else { return nil }
+    // The firmware ignores a short write; pad to the declared report size.
+    let size = max(hidIntProperty(device, kIOHIDMaxOutputReportSizeKey), 3)
+    let command: [UInt8] = [0x02, 0xB0, 0x04] + [UInt8](repeating: 0, count: size - 3)
+    let ret = IOHIDDeviceSetReport(device, kIOHIDReportTypeOutput, 0x02, command, command.count)
+    print("switch-on: output 02 B0 04, padded to \(size) bytes → \(ret == kIOReturnSuccess ? "OK" : String(format: "failed 0x%08X", ret))")
+    return readStringDescriptor(device, index: 100).flatMap(UCLogicTabletInfo.init(ugeeDescriptor100:))
+}
+
 // MARK: - Runner
 
-final class PenSurfaceRunner {
-    var spec: WacomDeviceSpec?
-    var digiSpec: DigitizerSpec?
-    var decoder: (any TabletReportDecoder)?
-    var decoderState = DecoderState()
-    var interfaces: [IOHIDDevice] = []
+/// One connected tablet: its spec, its decoder, and the decoder's state.
+/// Every tablet gets its own, so two tablets never share a decoder.
+final class Tablet {
+    let name: String
+    let spec: DigitizerSpec
+    let family: DeviceFamily
+    var decoder: any TabletReportDecoder
+    var state = DecoderState()
     var initSent = false
+    /// Fires when a tablet that never reports the pen leaving goes quiet.
+    var silenceTimer: Timer?
+
+    init(name: String, spec: DigitizerSpec, family: DeviceFamily, decoder: any TabletReportDecoder) {
+        self.name = name
+        self.spec = spec
+        self.family = family
+        self.decoder = decoder
+    }
+}
+
+/// The context for one interface's report callback, so each report reaches
+/// the tablet it came from.
+final class Listener {
+    let tablet: Tablet
+    unowned let runner: PenSurfaceRunner
+
+    init(tablet: Tablet, runner: PenSurfaceRunner) {
+        self.tablet = tablet
+        self.runner = runner
+    }
+}
+
+final class PenSurfaceRunner {
+    /// Connected tablets, keyed by vendor and product ID.
+    var tablets: [Int: Tablet] = [:]
+    var listeners: [Listener] = []
+    /// Interfaces of UC-Logic tablets that haven't answered yet.
+    var waiting: [Int: [IOHIDDevice]] = [:]
 
     let screen = CGDisplayBounds(CGMainDisplayID())
     var tipDown = false
@@ -164,47 +283,66 @@ final class PenSurfaceRunner {
     var button2Down = false
     var lastStatus = Date.distantPast
 
-    // What this tablet has reported so far. With --init none, some stay no.
+    // What the tablets have reported so far. With --init none, some stay no.
     var seenPressure = false
     var seenTilt = false
     var seenButton2 = false
     var seenTool = false
 
     func handleInterface(_ device: IOHIDDevice) {
+        let vendor = hidIntProperty(device, kIOHIDVendorIDKey)
+        if vendor == wacomVendorID {
+            handleWacom(device)
+        } else {
+            handleUCLogic(device, vendor: vendor)
+        }
+    }
+
+    /// Returns the tablet with `id`, adding it if it's new.
+    func tablet(
+        id: Int, name: String, spec: DigitizerSpec, family: DeviceFamily,
+        decoder: @autoclosure () -> any TabletReportDecoder
+    ) -> (tablet: Tablet, isNew: Bool) {
+        if let existing = tablets[id] { return (existing, false) }
+        let added = Tablet(name: name, spec: spec, family: family, decoder: decoder())
+        tablets[id] = added
+        print("Connected: \(name)  (\(String(format: "%04X:%04X", id >> 16, id & 0xFFFF)))")
+        return (added, true)
+    }
+
+    func listen(to device: IOHIDDevice, for tablet: Tablet) {
+        let listener = Listener(tablet: tablet, runner: self)
+        listeners.append(listener)  // keeps the callback's context alive
+        let size = max(hidIntProperty(device, kIOHIDMaxInputReportSizeKey), 512)
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: size)  // lives as long as the device
+        IOHIDDeviceRegisterInputReportCallback(
+            device, buffer, size, Self.reportCallback, Unmanaged.passUnretained(listener).toOpaque())
+    }
+
+    func handleWacom(_ device: IOHIDDevice) {
         let pid = hidIntProperty(device, kIOHIDProductIDKey)
         guard let found = WacomDeviceRegistry.spec(for: pid) else {
             fputs("PID 0x\(String(pid, radix: 16)) is not in TabletKit's registry — ignoring\n", stderr)
             return
         }
-        guard let newDecoder = makeDecoder(found.parser) else { return }
+        guard let decoder = makeDecoder(found.parser) else { return }
 
-        // A different tablet takes over; another interface of the same one joins.
-        if spec?.productID != found.productID {
-            spec = found
-            digiSpec = found.digitizerSpec
-            decoder = newDecoder
-            decoderState = DecoderState()
-            interfaces = []
-            initSent = false
-            seenPressure = false; seenTilt = false; seenButton2 = false; seenTool = false
-            print("Connected: \(found.name)  (PID \(String(format: "0x%04X", pid)))")
+        let (tablet, isNew) = tablet(
+            id: wacomVendorID << 16 | pid, name: found.name, spec: found.digitizerSpec,
+            family: found.family, decoder: decoder)
+        if isNew {
             print("switch-on sequence: \(describe(initOverride ?? found.initSteps))\(initOverride == nil ? " (registry)" : " (--init)")")
         }
-        interfaces.append(device)
 
         if found.seizeUSB {
             // Keeps macOS's own mouse driver from also moving the cursor.
             IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeSeizeDevice))
         }
-
-        let size = max(hidIntProperty(device, kIOHIDMaxInputReportSizeKey), 512)
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: size)  // lives as long as the device
-        let context = Unmanaged.passUnretained(self).toOpaque()
-        IOHIDDeviceRegisterInputReportCallback(device, buffer, size, Self.reportCallback, context)
+        listen(to: device, for: tablet)
 
         let steps = initOverride ?? found.initSteps
-        if !initSent, declaresFeatureReports(device, for: steps) {
-            initSent = true
+        if !tablet.initSent, declaresFeatureReports(device, for: steps) {
+            tablet.initSent = true
             runSteps(steps[...], on: device)
         }
         // Intuos Pro (PTH-x60) also needs its input mode set on USB, or it
@@ -214,13 +352,51 @@ final class PenSurfaceRunner {
         }
     }
 
-    func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
-        guard let spec, let digiSpec, var decoder else { return }
-        let results = decoder.decode(
-            report: HIDReport(pointer: report, count: length), spec: digiSpec,
-            state: &decoderState, deviceFamily: spec.family)
-        self.decoder = decoder  // value type: keep the mutated copy
+    func handleUCLogic(_ device: IOHIDDevice, vendor: Int) {
+        let id = vendor << 16 | hidIntProperty(device, kIOHIDProductIDKey)
+        if let known = tablets[id] {
+            listen(to: device, for: known)
+            return
+        }
+        // Interfaces arrive one at a time, and only one can switch a UGEE
+        // tablet on. Hold the others until the tablet answers.
+        waiting[id, default: []].append(device)
+        guard let info = switchOnAndDescribe(device, vendor: vendor) else { return }
 
+        let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "UC-Logic tablet"
+        let (tablet, _) = tablet(
+            id: id, name: name, spec: info.digitizerSpec, family: .ucLogic,
+            decoder: UCLogicDecoder(protocol: info.tabletProtocol))
+        print("It describes itself (\(info.tabletProtocol)): \(info.maxX) × \(info.maxY), pressure \(info.maxPressure), \(info.lpi) lines per inch")
+        if VendorDeviceRegistry.drivableProfile(forVendorID: vendor, productID: id & 0xFFFF) != nil {
+            print("TabletKit also has a dedicated decoder for this tablet; this sample uses the self-description anyway.")
+        }
+        for interface in waiting.removeValue(forKey: id) ?? [] {
+            listen(to: interface, for: tablet)
+        }
+    }
+
+    func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex, from tablet: Tablet) {
+        handle(
+            tablet.decoder.decode(
+                report: HIDReport(pointer: report, count: length), spec: tablet.spec,
+                state: &tablet.state, deviceFamily: tablet.family))
+
+        // Some tablets never say the pen left; they go quiet. Decoders don't
+        // read the clock, so watch for the silence here.
+        if let timeout = tablet.decoder.silenceTimeout {
+            tablet.silenceTimer?.invalidate()
+            tablet.silenceTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) {
+                [weak self, weak tablet] _ in
+                guard let self, let tablet else { return }
+                self.handle(
+                    tablet.decoder.decodeSilence(
+                        spec: tablet.spec, state: &tablet.state, deviceFamily: tablet.family))
+            }
+        }
+    }
+
+    func handle(_ results: [DecodeResult]) {
         for result in results {
             switch result {
             case .pen(let point): handlePen(point)
@@ -285,9 +461,9 @@ final class PenSurfaceRunner {
         lastStatus = Date()
         let yn = { (b: Bool) in b ? "yes" : "no " }
         let line = String(
-            format: "x %6d  y %6d  pressure %4d/%d  tilt %+.2f %+.2f  buttons %@%@%@   seen: pressure %@ tilt %@ button 2 %@ tool ID %@",
+            format: "x %6d  y %6d  pressure %4d/%d  tilt %+.2f %+.2f  buttons %@%@%@%@   seen: pressure %@ tilt %@ button 2 %@ tool ID %@",
             p.x, p.y, p.pressure, p.maxPressure, p.tiltX, p.tiltY,
-            tipDown ? "T" : "-", p.penButton1 ? "1" : "-", p.penButton2 ? "2" : "-",
+            tipDown ? "T" : "-", p.penButton1 ? "1" : "-", p.penButton2 ? "2" : "-", p.penButton3 ? "3" : "-",
             yn(seenPressure), yn(seenTilt), yn(seenButton2), yn(seenTool))
         print("\r" + line, terminator: "")
         fflush(stdout)
@@ -300,7 +476,8 @@ final class PenSurfaceRunner {
 
     static let reportCallback: IOHIDReportCallback = { context, _, _, _, _, report, length in
         guard let context else { return }
-        Unmanaged<PenSurfaceRunner>.fromOpaque(context).takeUnretainedValue().handleReport(report, length: length)
+        let listener = Unmanaged<Listener>.fromOpaque(context).takeUnretainedValue()
+        listener.runner.handleReport(report, length: length, from: listener.tablet)
     }
 }
 
@@ -311,11 +488,12 @@ if !AXIsProcessTrusted() {
     fputs("Accessibility permission missing: pen input will decode but not reach the cursor.\n", stderr)
 }
 print("Tip: left click. Lower barrel button: right click. Upper: middle click. Ctrl-C quits.")
-print("Waiting for a Wacom tablet over USB…")
+print("Waiting for a Wacom, Huion, Gaomon, XP-Pen, or UGEE tablet over USB…")
 
 let runner = PenSurfaceRunner()
 let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
-IOHIDManagerSetDeviceMatching(manager, [kIOHIDVendorIDKey: 0x056A] as CFDictionary)  // Wacom
+let matching = ([wacomVendorID] + ucLogicVendorIDs).map { [kIOHIDVendorIDKey: $0] }
+IOHIDManagerSetDeviceMatchingMultiple(manager, matching as CFArray)
 IOHIDManagerRegisterDeviceMatchingCallback(
     manager, PenSurfaceRunner.deviceCallback, Unmanaged.passUnretained(runner).toOpaque())
 IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)

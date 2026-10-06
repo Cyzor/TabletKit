@@ -1014,6 +1014,38 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.xencelabs]
         )
 
+        // Huion, Gaomon, XP-Pen, and UGEE pens send no serial or tool code,
+        // so one entry covers them all. Two barrel buttons and tilt, per the
+        // kernel's hid-uclogic report descriptors; pressure comes from the
+        // tablet. No family restriction, since every such tablet uses it.
+        catalog[0xE902] = WacomToolSpec(
+            toolCode: 0xE902,
+            name: "Pen",
+            toolType: .stylus,
+            buttonCount: 2,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: true,
+            eraserToolCode: 0xE90A,
+            supportedFamilies: []
+        )
+
+        catalog[0xE90A] = WacomToolSpec(
+            toolCode: 0xE90A,
+            name: "Pen (Eraser)",
+            toolType: .eraser,
+            buttonCount: 2,
+            maxPressure: nil,
+            hasTilt: true,
+            hasRotation: false,
+            hasWheel: false,
+            hasEraserVariant: false,
+            eraserToolCode: nil,
+            supportedFamilies: []
+        )
+
         // MARK: - Intuos 1 / Intuos 2 (GD/XD-series, 0x88xx family)
 
         // GD-series Grip Pen and its eraser end, both from one GD-0608-U

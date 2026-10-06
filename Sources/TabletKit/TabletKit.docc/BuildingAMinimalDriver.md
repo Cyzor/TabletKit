@@ -6,7 +6,7 @@ Move the cursor, click, and pass pressure and tilt to apps with about 300 lines 
 
 TabletKit decodes tablet reports but doesn't act on them. Getting from decoded pen data to a working cursor takes four more steps: find the tablet, switch it on, decode each report as it arrives, and post events to macOS.
 
-The `pen-surface` sample does all four. It maps the whole tablet to the main display, clicks with the tip, and maps the two side buttons to right and middle click. It has no settings, handles one USB tablet at a time, and skips ExpressKeys and touch. Its release build is about 1 MB.
+The `pen-surface` sample does all four. It maps the whole tablet to the main display, clicks with the tip, and maps the two side buttons to right and middle click. It has no settings, handles USB tablets only, and skips ExpressKeys and touch. Its release build is about 1 MB.
 
 Run it from the TabletKit folder:
 
@@ -18,23 +18,21 @@ Quit MockTab or Wacom's driver first, or two drivers will move the cursor. The t
 
 ## Find the Tablet
 
-`IOHIDManager` reports each device that matches a filter. The sample asks for everything with Wacom's vendor ID:
+`IOHIDManager` reports each device that matches a filter. For Wacom tablets, ask for everything with Wacom's vendor ID:
 
 ```swift
 let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
 IOHIDManagerSetDeviceMatching(manager, [kIOHIDVendorIDKey: 0x056A] as CFDictionary)
 ```
 
-A tablet usually shows up as several devices, called interfaces: one for the pen, one for the buttons, sometimes one for touch. The matching callback runs once for each. The sample looks up each interface's product ID in ``WacomDeviceRegistry``. Interfaces with the same product ID belong to the same tablet and share one decoder.
+A tablet usually shows up as several devices, called interfaces: one for the pen, one for the buttons, sometimes one for touch. The matching callback runs once for each. The sample looks up each interface's product ID in ``WacomDeviceRegistry``. Interfaces with the same product ID belong to the same tablet and share one decoder. Each tablet gets its own, so several can be connected at once.
 
-The registry entry, a ``WacomDeviceSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format picks the decoder:
+The sample also matches Huion, XP-Pen, and other tablets built on UC-Logic chips. Those size themselves instead of using the registry; see <doc:SupportingTabletsThatDescribeThemselves>.
+
+The registry entry, a ``WacomDeviceSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format creates the decoder:
 
 ```swift
-switch spec.parser {
-case .intuosV2: return IntuosV2Decoder()
-case .bamboo:   return BambooDecoder()
-// …one case per format
-}
+var decoder = spec.parser.makeDecoder()
 ```
 
 ## Switch It On
