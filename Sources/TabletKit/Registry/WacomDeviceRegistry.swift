@@ -1543,6 +1543,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
             buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
+            touchMaxX: 5184, touchMaxY: 3240,  // 0x00F6 descriptor (linuxwacom)
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, touchCompanionPID: 0x00F6, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .crossReferenced, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
@@ -2692,6 +2693,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
+            touchMaxX: 4752, touchMaxY: 2673,  // 0x005E descriptor (hid-devices recording)
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], touchCompanionPID: 0x005E, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .crossReferenced, activeWidthMM: 483, activeHeightMM: 279),
         // 0x03CF and 0x03F2 are deliberately not rows. They are the USB-C
@@ -2947,6 +2949,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 4, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
+            touchMaxX: 2934, touchMaxY: 1650,  // 0x0326 descriptor (linuxwacom)
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x0326, confidence: .crossReferenced, activeWidthMM: 294, activeHeightMM: 166),
@@ -3325,6 +3328,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .intuosV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 9, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
+            touchMaxX: 2937, touchMaxY: 1652,  // 0x0335 descriptor (field capture, 2026-10-05)
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x0335, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .crossReferenced, activeWidthMM: 299, activeHeightMM: 171),
