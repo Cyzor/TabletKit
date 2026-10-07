@@ -341,7 +341,8 @@ public enum WacomToolCatalog: Sendable {
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuosProGen1]
+            // Gen 2 covers the CTL-4100/6100, which ship with this pen.
+            supportedFamilies: [.intuosProGen1, .intuosProGen2]
         )
 
         // MARK: - Art Pen (rotatable, ABS_Z barrel)
