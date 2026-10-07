@@ -442,4 +442,74 @@ extension BambooDecoderTests {
             XCTAssertTrue(pt.inProximity)
         }
     }
+
+    // MARK: - Bamboo Pad container (0x10, 32/64 bytes)
+
+    // Bamboo Pad: 2 click buttons, 511 pressure. Synthesized from the
+    // descriptors' layout; no capture exists.
+    private var bambooPad: DigitizerSpec {
+        DigitizerSpec(
+            maxX: 10690, maxY: 6680, maxPressure: 511,
+            buttonCount: 2, hasTilt: false, hasDualRings: false,
+            isPenDisplay: false, ringSlotCount: 0)
+    }
+
+    private func makePad(length: Int = 64, parts: UInt8, pen: [UInt8] = [], touch: [UInt8] = []) -> [UInt8] {
+        var r = [UInt8](repeating: 0, count: length)
+        r[0] = 0x10
+        r[1] = parts
+        for (i, b) in pen.enumerated() { r[2 + i] = b }
+        for (i, b) in touch.enumerated() { r[9 + i] = b }
+        return r
+    }
+
+    func testBambooPadPenDecodesLittleEndianFields() {
+        var state = DecoderState()
+        // Tip + barrel + in range; X 0x1234, Y 0x0567, pressure 0x0100.
+        let r = makePad(parts: 0x01, pen: [0x23, 0x34, 0x12, 0x67, 0x05, 0x00, 0x01])
+        let results = decode(r, state: &state, spec: bambooPad)
+        XCTAssertTrue(results.contains { if case .toolEnter = $0 { return true }; return false })
+        guard case .pen(let pt)? = results.last else { return XCTFail("no pen point: \(results)") }
+        XCTAssertEqual(pt.x, 0x1234)
+        XCTAssertEqual(pt.y, 0x0567)
+        XCTAssertEqual(pt.pressure, 0x0100)
+        XCTAssertTrue(pt.penButton1)
+        XCTAssertFalse(pt.eraser)
+        XCTAssertTrue(pt.inProximity)
+    }
+
+    func testBambooPadEraserAndWirelessLength() {
+        var state = DecoderState()
+        // Invert + eraser + in range, 32-byte wireless container.
+        let r = makePad(length: 32, parts: 0x01, pen: [0x2C, 0x10, 0x00, 0x20, 0x00, 0x50, 0x00])
+        guard case .pen(let pt)? = decode(r, state: &state, spec: bambooPad).last else {
+            return XCTFail("no pen point")
+        }
+        XCTAssertTrue(pt.eraser)
+        XCTAssertEqual(pt.pressure, 0x50)
+    }
+
+    func testBambooPadPenExitAfterRange() {
+        var state = DecoderState()
+        _ = decode(makePad(parts: 0x01, pen: [0x20, 0x10, 0x00, 0x20, 0x00]), state: &state, spec: bambooPad)
+        let results = decode(makePad(parts: 0x00), state: &state, spec: bambooPad)
+        guard case .pen(let pt)? = results.first else { return XCTFail("no exit point: \(results)") }
+        XCTAssertFalse(pt.inProximity)
+    }
+
+    func testBambooPadTouchAndClickButtons() {
+        var state = DecoderState()
+        // Fingers 0 and 2 live, left click held. Finger 0: X 0x123, Y 0x456.
+        // Finger 2: X 0xFFF, Y 0x000.
+        let touch: [UInt8] = [0x45, 0x23, 0x61, 0x45, 0, 0, 0, 0xFF, 0x0F, 0x00]
+        let results = decode(makePad(parts: 0x02, touch: touch), state: &state, spec: bambooPad)
+        guard case .touch(let contacts)? = results.first else { return XCTFail("no touch: \(results)") }
+        XCTAssertEqual(contacts.map(\.id), [0, 2])
+        XCTAssertEqual(contacts[0].x, 0x123)
+        XCTAssertEqual(contacts[0].y, 0x456)
+        XCTAssertEqual(contacts[1].x, 0xFFF)
+        XCTAssertEqual(contacts[1].y, 0)
+        guard case .aux(let aux)? = results.last else { return XCTFail("no buttons") }
+        XCTAssertEqual(Array(aux.buttons.prefix(2)), [true, false])
+    }
 }

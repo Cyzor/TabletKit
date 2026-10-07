@@ -120,6 +120,11 @@ public struct BambooDecoder: TabletReportDecoder {
         if report[0] == 0x02, (9...10).contains(report.count) {
             return decodeBPT(report: report, spec: spec, state: &state)
         }
+        // Bamboo Pad (CTH-300/301): pen and touch share one 0x10 container,
+        // 32 bytes wireless or 64 over USB. Every other 0x10 here is 9–10.
+        if report[0] == 0x10, report.count == 32 || report.count == 64 {
+            return decodeBambooPad(report: report, spec: spec, state: &state)
+        }
         guard report.count >= 10, report[0] == 0x10 else { return [] }
 
         let status = report[1]
@@ -305,6 +310,78 @@ public struct BambooDecoder: TabletReportDecoder {
                 (padByte & 0x01) != 0,  // BTN_3
             ]
             results.append(.aux(AuxButtons(buttons: buttons)))
+        }
+        return results
+    }
+
+    // MARK: - Bamboo Pad container (0x10, 32/64 bytes)
+
+    /// Layout from the pad's own descriptors. [1] says which halves are
+    /// live: bit 0 pen, bit 1 touch. [2..8] is the pen interface's report 3
+    /// minus its ID: flags (bit 0 tip, 1 barrel, 2 eraser, 3 invert, 5 in
+    /// range), then X, Y, and pressure as LE u16. [9] is the touch header:
+    /// bits 0–3 mark live fingers, 0x40 and 0x80 the two click buttons. Each
+    /// finger at [10 + 3n] packs 12-bit X and Y. No capture exists yet.
+    private func decodeBambooPad(
+        report: HIDReport,
+        spec: DigitizerSpec,
+        state: inout DecoderState
+    ) -> [DecodeResult] {
+        var results: [DecodeResult] = []
+        let parts = report[1]
+        let flags = report[2]
+        let penInRange = (parts & 0x01) != 0 && (flags & 0x20) != 0
+
+        if penInRange {
+            let isEraser = (flags & 0x0C) != 0
+            if !state.prevInProximity {
+                state.prevInProximity = true
+                state.isEraser = isEraser
+                results.append(
+                    .toolEnter(
+                        ToolIdentity(
+                            serial: 0, toolCode: isEraser ? 0x080A : 0x0802,
+                            isEraser: isEraser, isMouse: false)))
+            }
+            let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8)
+            let y = Int(UInt16(report[5]) | UInt16(report[6]) << 8)
+            let pressure = Int(UInt16(report[7]) | UInt16(report[8]) << 8)
+            state.lastX = x
+            state.lastY = y
+            results.append(
+                .pen(
+                    TabletPoint(
+                        x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: (flags & 0x01) != 0 || (flags & 0x04) != 0 ? pressure : 0,
+                        maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: (flags & 0x02) != 0, penButton2: false,
+                        eraser: state.isEraser, inProximity: true, hoverDistance: 0)))
+        } else if state.prevInProximity {
+            state.prevInProximity = false
+            results.append(
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: state.isEraser, inProximity: false, hoverDistance: 0)))
+        }
+
+        if (parts & 0x02) != 0 {
+            let header = report[9]
+            var contacts: [TouchContact] = []
+            for id in 0..<4 where (header & (1 << id)) != 0 {
+                let base = 10 + id * 3
+                let x = Int(report[base]) | (Int(report[base + 1] & 0x0F) << 8)
+                let y = (Int(report[base + 2]) << 4) | (Int(report[base + 1]) >> 4)
+                contacts.append(TouchContact(id: id, x: x, y: y, contactArea: nil, contactMinor: nil))
+            }
+            results.append(.touch(contacts))
+            if spec.buttonCount > 0 {
+                results.append(.aux(AuxButtons(buttons: [(header & 0x40) != 0, (header & 0x80) != 0])))
+            }
         }
         return results
     }

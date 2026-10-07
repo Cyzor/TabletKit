@@ -1774,6 +1774,8 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0319, name: "Wacom CTH-300",  // ⚠ from OTD
             parser: .bamboo, maxX: 10690, maxY: 6680, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            // Touch range: kernel wacom_features_0x319.
+            hasFingerTouch: true, maxTouchContacts: 4, touchMaxX: 4095, touchMaxY: 4095,
             // dimensions: libwacom wacom-bamboo-pad-wireless.tablet (Width=102, Height=76)
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 102, activeHeightMM: 76),
@@ -1781,6 +1783,8 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0318, name: "Wacom CTH-301",  // ⚠ from OTD
             parser: .bamboo, maxX: 10690, maxY: 6680, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            // Touch range: kernel wacom_features_0x318.
+            hasFingerTouch: true, maxTouchContacts: 4, touchMaxX: 4095, touchMaxY: 4095,
             // dimensions: libwacom wacom-bamboo-pad.tablet (Width=102, Height=76)
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 102, activeHeightMM: 76),
