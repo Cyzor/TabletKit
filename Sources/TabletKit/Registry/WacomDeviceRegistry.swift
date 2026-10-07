@@ -869,7 +869,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Not in libwacom; the kernel WACOM_VOLITO_RES=50 constant proved
             // ~25% off for 0x0060 — these values may be similarly low.
             seizeUSB: false,
-            activeWidthMM: 65, activeHeightMM: 46.4),
+            confidence: .crossReferenced, activeWidthMM: 65, activeHeightMM: 46.4),
         .init(
             productID: 0x0062, name: "Volito 2",  // ⚠ estimated
             parser: .graphire, maxX: 5104, maxY: 3712, maxPressure: 511,
@@ -2196,7 +2196,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 152, activeHeightMM: 95),
+            confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         // The M's three PIDs mirror the S's: USB PC, Bluetooth, USB Android.
         // Transport roles come from libwacom's wacom-one-pen-m.tablet
         // (`usb|0531|0102;bluetooth|0531|0103;usb|0531|0105`); OTD carries
@@ -2205,7 +2205,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0102, name: "Wacom One M (CTC-6110WL)",  // ⚠ from OTD + libwacom
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x0103, name: "Wacom One M (CTC-6110WL, Bluetooth)",  // ⚠ from OTD + libwacom
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
@@ -2219,7 +2219,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0105, name: "Wacom One M (CTC-6110WL, Android)",  // ⚠ from libwacom
             parser: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 216, activeHeightMM: 135),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
 
         // ── Cintiq pen-display additional models ──────────────────────────────
         .init(
@@ -2702,6 +2702,10 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: true, maxTouchContacts: 10,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], touchCompanionPID: 0x005E, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .crossReferenced, activeWidthMM: 483, activeHeightMM: 279),
+        // 0x03CF and 0x03F2 are deliberately not rows. They are the USB-C
+        // Billboard devices of the DTC121 and Movink 13, which announce
+        // DisplayPort Alt Mode and carry no HID interface. Do not re-add
+        // from a PID-only sweep.
         .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
             productID: 0x03D0, name: "Wacom Cintiq Pro 22 (DTH-227)",  // cross-referenced: linuxwacom + libwacom + OTD
@@ -3097,14 +3101,6 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 294, activeHeightMM: 165),
         .init(
-            productID: 0x03CF, name: "Wacom DTC121 (alt)",  // ⚠ recognition-only
-            parser: .intuosV2, maxX: 29434, maxY: 16036, maxPressure: 4095,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            tiltMaxDegrees: 64.0,  // descriptor: vendor 0x1E tilt [-64,63] degrees
-            isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 279, activeHeightMM: 152),
-        .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
             // Pen range and pressure: vendor model properties (2026-09-29).
             // Matches the vendor pen report 0x1E in linuxwacom/wacom-hid-descriptors.
@@ -3130,14 +3126,6 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 256, activeHeightMM: 144),
-        .init(
-            productID: 0x03F2, name: "Wacom Movink 13 (DTH-135, alt)",  // ⚠ recognition-only; buttonCount 3 per libwacom
-            parser: .intuosV3, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 3, hasTouchRing: false, hasEraser: true,
-            tiltMaxDegrees: 64.0,  // same as 0x03F0, measured
-            hasFingerTouch: false, maxTouchContacts: 0,
-            isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294.6, activeHeightMM: 165.1),
         // ── 0x4900 — deliberately NOT a row (removed 2026-09-11) ──────────────
         // Previously present as "Wacom DTC121 (alt 2)", recognition-only. It is
         // neither a DTC121 nor a USB device. The sysinfo dump it came from is
