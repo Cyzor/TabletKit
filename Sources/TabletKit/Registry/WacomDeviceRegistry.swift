@@ -2837,6 +2837,13 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 12372, touchMaxY: 6960, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174),
 
+        // ── Business and signature displays — out of scope ───────────────────
+        // The DTU, DTI, and DTK-1651 rows below, plus DTH-1152 (0x035A),
+        // DTH-2452 (0x037D), DTU-1141B (0x0359), and DTU-710/1931 in the PL
+        // group, are Wacom's business line. They stay recognized and decode
+        // where a format is known, but they are not a drawing focus: no
+        // further research, testing, or promotion is planned.
+
         // ── DTUS family (Linux input-wacom DTUS / DTUSX) ──────────────────────
         // Small entry-level pen displays sharing wacom_dtus_irq.  Dimensions
         // and button counts from input-wacom 4.18 wacom_wac.c, decoded by
