@@ -178,7 +178,8 @@ public enum InitStep: Equatable, Sendable {
 /// "Experimental — please report issues" hint when the active device is
 /// `.experimental`) and informs which entries are safe to promote.
 ///
-/// - `.verified`: Hand-tested on real hardware in this project.
+/// - `.verified`: Confirmed working on real hardware, either ours or a
+///   user's submitted diagnostics.
 /// - `.crossReferenced`: Dimensions/parser agree between two independent
 ///   sources (Linux input-wacom, OpenTabletDriver, or Wacom model
 ///   data); not personally hardware-tested.
@@ -954,7 +955,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0021, name: "Intuos 6×8",
             parser: .intuosV1, maxX: 40640, maxY: 32480, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 203, activeHeightMM: 162),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .verified, activeWidthMM: 203, activeHeightMM: 162),
         .init(
             productID: 0x0022, name: "Intuos 9×12",
             parser: .intuosV1, maxX: 60960, maxY: 48120, maxPressure: 1023,
@@ -1655,7 +1656,7 @@ public enum WacomDeviceRegistry: Sendable {
             hasFingerTouch: true, maxTouchContacts: 16,
             touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
+            confidence: .verified, activeWidthMM: 224, activeHeightMM: 140),
 
         // ── Intuos Pro second-gen Bluetooth Classic PIDs (PTH-460/660/860) ──────
         // These PIDs appear when the tablet connects over BT Classic (transport="Bluetooth").
@@ -1724,15 +1725,15 @@ public enum WacomDeviceRegistry: Sendable {
             activeWidthMM: 159.6, activeHeightMM: 99.75),
 
         // ── Bamboo / Graphire-era CTE / CTF consumer line ─────────────────────
-        // Graphire-era: intuosV1 8-byte format.
+        // Graphire-era: graphire 8-byte format.
         .init(
             // activeWidthMM/Height added (148/92) — this row had none. Shares
             // its exact maxX/maxY with CTE-450 (0x0017), whose active area is
             // confirmed against Wacom's Bamboo Fun manual — see that row's
             // note. Confirmed 2026-08-03.
-            productID: 0x006A, name: "Wacom CTE-460",  // ⚠ from kernel
-            parser: .intuosV1, maxX: 14760, maxY: 9225, maxPressure: 1023,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            productID: 0x006A, name: "Wacom CTE-460",  // ⚠ from kernel; parser per kernel and Wacom family, not OTD
+            parser: .graphire, maxX: 14760, maxY: 9225, maxPressure: 1023,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             activeWidthMM: 148, activeHeightMM: 92),
         .init(
@@ -1742,8 +1743,8 @@ public enum WacomDeviceRegistry: Sendable {
             // manual (see that row's comment). This row's 203/127 didn't
             // match its own coordinate range at any plausible resolution.
             // Confirmed 2026-08-03.
-            productID: 0x006B, name: "Wacom CTE-660",  // ⚠ from kernel
-            parser: .bamboo, maxX: 21648, maxY: 13530, maxPressure: 1023,
+            productID: 0x006B, name: "Wacom CTE-660",  // ⚠ from kernel; parser per kernel and Wacom family, not OTD
+            parser: .graphire, maxX: 21648, maxY: 13530, maxPressure: 1023,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
@@ -1768,8 +1769,8 @@ public enum WacomDeviceRegistry: Sendable {
             // that family's note above). Not directly covered by the Bamboo
             // Fun manual; inferred from the shared coordinate range instead.
             // Confirmed 2026-08-03.
-            productID: 0x0069, name: "Wacom CTF-430",  // ⚠ from OTD
-            parser: .bamboo, maxX: 5104, maxY: 3712, maxPressure: 511,
+            productID: 0x0069, name: "Wacom CTF-430",  // ⚠ from OTD; parser per kernel and Wacom family, not OTD
+            parser: .graphire, maxX: 5104, maxY: 3712, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
@@ -1960,16 +1961,16 @@ public enum WacomDeviceRegistry: Sendable {
             // Y — a full-surface swipe crossed a third of the screen.
             touchMaxX: 2160, touchMaxY: 1350,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
+            confidence: .verified, activeWidthMM: 216, activeHeightMM: 135),
 
         // ── Wacom One / Intuos (CTL) pen-only line ────────────────────────────
         .init(
             // mm matched to this row's own maxX/maxY, same 147.2×92.0mm
             // chassis as the CTH-460 group — see 0x00D1's note. Confirmed
             // 2026-08-03; same open parser-family caveat as 0x00D2 applies.
-            productID: 0x00DD, name: "Wacom CTL-470",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 14720, maxY: 9200, maxPressure: 1023,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            productID: 0x00DD, name: "Wacom CTL-470",  // ⚠ from OTD; parser per kernel and Wacom family, not OTD
+            parser: .bamboo, maxX: 14720, maxY: 9200, maxPressure: 1023,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
@@ -2014,9 +2015,9 @@ public enum WacomDeviceRegistry: Sendable {
             // by Wacom (CTL-472/672) Important Product Information booklet.
             // 9500÷100=95, matching maxY exactly; width was already right.
             // Confirmed 2026-08-03.
-            productID: 0x037A, name: "Wacom CTL-472",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 15200, maxY: 9500, maxPressure: 2047,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            productID: 0x037A, name: "Wacom CTL-472",  // ⚠ from OTD; parser per kernel and Wacom family, not OTD
+            parser: .bamboo, maxX: 15200, maxY: 9500, maxPressure: 2047,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
@@ -2049,9 +2050,9 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
-            productID: 0x037B, name: "Wacom CTL-672",  // ⚠ from OTD
-            parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
-            buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            productID: 0x037B, name: "Wacom CTL-672",  // ⚠ from OTD; parser per kernel and Wacom family, not OTD
+            parser: .bamboo, maxX: 21600, maxY: 13500, maxPressure: 2047,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
@@ -2178,7 +2179,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            activeWidthMM: 152, activeHeightMM: 95),
+            confidence: .verified, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Bluetooth LE personality. Raw vendor report 0x1F is 19 bytes
             // here (one trailing vendor byte) vs. 18 on USB — same parser,
@@ -2391,7 +2392,7 @@ public enum WacomDeviceRegistry: Sendable {
             // and is read-only. Confirmed accepted, with multi-touch streaming
             // (issue #19, 2026-10-05).
             touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])],
-            activeWidthMM: 348, activeHeightMM: 198),
+            confidence: .verified, activeWidthMM: 348, activeHeightMM: 198),
         .init(
             // Pen range and pressure: vendor model properties (2026-09-29).
             // libwacom wacom-cintiq-pro-24-p.tablet: Width=508 Height=305mm,
@@ -3198,7 +3199,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 479, activeHeightMM: 271),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 479, activeHeightMM: 271),
         .init(
             // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch (wacom_sys.c).
             // Touch wiring and range: vendor model properties (2026-09-29).
@@ -3225,7 +3226,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 86680, maxY: 54180, maxPressure: 1023,
             buttonCount: 10, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 433, activeHeightMM: 271),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 433, activeHeightMM: 271),
         .init(
             // Onboard bezel panel has its own 3 buttons, separate from the
             // ExpressKey Remote accessory (0x0331) — decoded by
@@ -3249,7 +3250,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .cintiqV1, maxX: 120140, maxY: 67920, maxPressure: 2047,
             buttonCount: 3, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 597, activeHeightMM: 336),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Pen interface of the touch model; finger touch arrives on the
             // separate 0x032C interface.
@@ -3313,7 +3314,7 @@ public enum WacomDeviceRegistry: Sendable {
             // the driver, "basic touch movement will be recognized, but other
             // actions and gestures will not".
             touchCompanionInitSteps: [.featureReport([0x83, 0x02, 0x00])],
-            activeWidthMM: 597, activeHeightMM: 336),
+            confidence: .verified, activeWidthMM: 597, activeHeightMM: 336),
         .init(
             // Touch init 0x12 = 2: Linux's WACOM_24HDT mode switch (wacom_sys.c).
             // Touch wiring and range: vendor model properties (2026-09-29).
@@ -3426,7 +3427,7 @@ public enum WacomDeviceRegistry: Sendable {
             parser: .pl, maxX: 6758, maxY: 5406, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true, seizeUSB: true,
-            initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental),
+            initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced),
         .init(
             productID: 0x0038, name: "PL510",
             parser: .pl, maxX: 6282, maxY: 4762, maxPressure: 511,
@@ -3523,7 +3524,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x032C, name: "Cintiq 27QHD Touch sensor (pairs 0x032B)",  // ⚠ name-only, decoder routed generically from its own descriptor
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
-            seizeUSB: false),
+            seizeUSB: false, confidence: .verified),
         .init(
             // Emits report 0x0C: a Digitizer Touch Screen collection with five
             // finger slots, plus Contact Count and Scan Time — decoded
@@ -3534,7 +3535,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x03B3, name: "Cintiq Pro 16 Touch sensor (pairs 0x03B2)",  // ⚠ name-only, decoder routed generically from its own descriptor
             parser: .intuosV2, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false),
+            seizeUSB: false, confidence: .verified),
         .init(
             productID: 0x005D, name: "Cintiq 22 Touch sensor (pairs 0x0059)",  // ⚠ name-only, decoder routed by PID, unverified
             parser: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
@@ -3572,7 +3573,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0331, name: "ExpressKey Remote (EKR-100)",
             parser: .expressKeyRemote, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 17, hasTouchRing: true, ringSlotCount: 3, hasEraser: false, tiltMaxDegrees: 64.0,
-            seizeUSB: false, confidence: .crossReferenced),
+            seizeUSB: false, confidence: .verified),
         .init(
             // Firmware-update (DFU) mode. Never attach a driver to this.
             productID: 0x0094, name: "Wacom Bootloader (DFU mode)",  // ⚠ name-only

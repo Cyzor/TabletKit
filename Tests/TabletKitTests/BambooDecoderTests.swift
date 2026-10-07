@@ -424,3 +424,22 @@ final class BambooDecoderTests: XCTestCase {
         XCTAssertNil(auxResult, "pen-only CTL-460 spec should produce no aux event")
     }
 }
+
+// MARK: - Registry rows the kernel and Wacom both class as Bamboo PT
+
+extension BambooDecoderTests {
+    func testBambooPTFamilyRowsUseBambooParserAndDecodePen() throws {
+        for pid in [0x00DD, 0x037A, 0x037B] {
+            let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
+            XCTAssertEqual(row.parser, .bamboo, "0x\(String(pid, radix: 16))")
+            var st = DecoderState()
+            let r = decode(makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x0567, pressure: 900),
+                           state: &st, spec: row.digitizerSpec)
+            guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
+            else { return XCTFail("expected .pen for 0x\(String(pid, radix: 16))") }
+            XCTAssertEqual(pt.x, 0x1234)
+            XCTAssertEqual(pt.pressure, 900)
+            XCTAssertTrue(pt.inProximity)
+        }
+    }
+}
