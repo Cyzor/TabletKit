@@ -763,31 +763,31 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             productID: 0x0004, name: "Graphire",
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0010, name: "Graphire",  // cross-referenced: linuxwacom + OTD
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire-usb.tablet (Width=127, Height=102)
             seizeUSB: false, confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0011, name: "Graphire 2 (4×5)",  // ⚠ estimated; kernel 0x11 = Graphire2 4×5
             parser: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire2-4x5.tablet (Width=127, Height=102)
             seizeUSB: false,
             activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0012, name: "Graphire 2 (5×7)",  // ⚠ estimated; kernel 0x12 = Graphire2 5×7
             parser: .graphire, maxX: 13918, maxY: 10206, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, activeWidthMM: 178, activeHeightMM: 127),
         .init(
             productID: 0x0013, name: "Graphire 3 (4×5)",  // ⚠ estimated
             parser: .graphire, maxX: 10208, maxY: 7424, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire3-4x5.tablet (Width=127, Height=102)
             seizeUSB: false,
             confidence: .crossReferenced,
@@ -799,7 +799,7 @@ public enum WacomDeviceRegistry: Sendable {
             // 209/151. Confirmed 2026-08-03.
             productID: 0x0014, name: "Graphire 3 (6×8)",  // ⚠ estimated
             parser: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
-            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
