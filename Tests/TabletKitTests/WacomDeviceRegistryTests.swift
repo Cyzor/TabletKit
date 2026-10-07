@@ -175,10 +175,10 @@ final class WacomDeviceRegistryTests: XCTestCase {
     /// Rows spell "Intuos4"/"Intuos5" without a space, so the old name tokens
     /// misfiled PTH-450/650, PTH-851 and PTK-450/650.
     func testIntuos4And5AndProGen1ClassifyByPID() {
-        let expected: [(ClosedRange<Int>, DeviceFamily)] = [
-            (0x00B8...0x00BD, .intuos4),
-            (0x0026...0x002A, .intuos5),
-            (0x0314...0x0317, .intuosProGen1),
+        let expected: [([Int], DeviceFamily)] = [
+            (Array(0x00B8...0x00BD), .intuos4),
+            (Array(0x0026...0x002A), .intuos5),
+            ([0x0314, 0x0315, 0x0317], .intuosProGen1),
         ]
         for (pids, family) in expected {
             for pid in pids {

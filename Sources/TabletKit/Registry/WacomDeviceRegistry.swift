@@ -1222,16 +1222,8 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
-        .init(
-            // ⚠ estimated, and NOT the PID PTH-651 hardware was observed to
-            // use — see 0x0315 below, confirmed by capture 2026-08-19. Kept
-            // rather than deleted because some later boards are reported to
-            // enumerate here; treat as an unconfirmed variant, not the
-            // canonical row for this model.
-            productID: 0x0316, name: "Intuos Pro M (PTH-651)",  // ⚠ estimated
-            parser: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 224, activeHeightMM: 140),
+        // 0x0316 is deliberately not a row. No kernel, Wacom driver, or
+        // recording knows it; the PTH-651 enumerates as 0x0315.
         .init(
             // Dimensions corrected to kernel wacom_features_0x317 (65024×40640).
             // Previous values (44704×27940) were the PTH-651 M-size by mistake.

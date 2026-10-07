@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "vendorID": "0x056A",
   "note": "Generated from WacomDeviceRegistry.swift by tools/export_registry_json.py \u2014 do not hand-edit. Field meanings match the doc comments on WacomDeviceSpec in that file.",
-  "deviceCount": 197,
+  "deviceCount": 196,
   "devices": [
     {
       "productID": "0x0003",
@@ -906,27 +906,6 @@
       "seizeUSB": false,
       "activeWidthMM": 157.0,
       "activeHeightMM": 98.0
-    },
-    {
-      "productID": "0x0316",
-      "name": "Intuos Pro M (PTH-651)",
-      "parser": "intuosV1",
-      "confidence": "experimental",
-      "productStringMatch": null,
-      "maxX": 44704,
-      "maxY": 27940,
-      "maxPressure": 2047,
-      "buttonCount": 8,
-      "maxTouchContacts": 0,
-      "touchMaxX": 0,
-      "touchMaxY": 0,
-      "hasTouchRing": true,
-      "hasEraser": true,
-      "hasFingerTouch": false,
-      "isPenDisplay": false,
-      "seizeUSB": false,
-      "activeWidthMM": 224.0,
-      "activeHeightMM": 140.0
     },
     {
       "productID": "0x0317",
