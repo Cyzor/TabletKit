@@ -213,6 +213,9 @@ def parse_kernel(path: Path | str = DEFAULT_KERNEL) -> dict[int, dict]:
             f"Clone linuxwacom/input-wacom into {UPSTREAM}."
         )
     text = path.read_text(encoding="utf-8", errors="ignore")
+    # Some entries carry a comment mid-list, such as "/* Pen */" after the
+    # numbers, which the pattern can't step over.
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
     out: dict[int, dict] = {}
     for m in _KERNEL_RE.finditer(text):
         out[int(m.group(1), 16)] = {
