@@ -3037,7 +3037,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0379, name: "Wacom Intuos BT M (CTL-6100WL)",
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
+            seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             // Touch wiring and range: vendor model properties (2026-09-29).
@@ -3635,15 +3635,20 @@ public enum WacomDeviceRegistry: Sendable {
         // Bluetooth PID of the USB 0x00BC entry. Decode over BT untested.
         0x00BD: 0x00BC,
 
-        // Intuos BT S/M (CTL-4100WL/6100WL): kernel 0x3C6/0x3C8 are the
-        // INTUOSHT3_BT Bluetooth PIDs of the USB entries.
+        // Intuos BT S/M (CTL-4100WL/6100WL), two hardware generations, each
+        // pairing its own USB and Bluetooth PIDs (libwacom DeviceMatch):
+        // 0x0376/0x0377 and 0x03C5/0x03C6 (S), 0x0378/0x0379 and
+        // 0x03C7/0x03C8 (M). Pairing across generations gave one tablet a
+        // second identity, window, and settings over Bluetooth.
         //
         // All four of 0x377/0x379/0x3C6/0x3C8 are kernel type `INTUOSHT3_BT`
         // and send report `0x81`, which had no handler until 2026-09-10 — pen
         // data over Bluetooth decoded to nothing. Now handled by
         // `decodeIntuosHT3BTFrames`, verified against a CTL-4100WL capture.
-        0x03C6: 0x0376,
-        0x03C8: 0x0378,
+        0x0377: 0x0376,
+        0x0379: 0x0378,
+        0x03C6: 0x03C5,
+        0x03C8: 0x03C7,
     ]
 
     // MARK: Lookups
