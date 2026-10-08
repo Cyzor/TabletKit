@@ -218,10 +218,13 @@ func describe(_ o: Outcome) -> String {
     return "pen=\(o.penEvents)  max \(o.maxX)x\(o.maxY) p\(o.maxPressure)   \(note)"
 }
 
-/// Families that fit better than the assigned one: in range, with more exact hits.
+/// Families that fit better than the assigned one: in range, with more exact
+/// hits, and reading at least as many pen reports. A family that reads only a
+/// fraction of them is misreading bytes, and can pin a value at its ceiling.
 func betterFits(_ outcomes: [Outcome], than assigned: Outcome) -> [Outcome] {
     outcomes.filter {
         $0.parser != assigned.parser && !$0.falsified && $0.exactHits > assigned.exactHits
+            && $0.penEvents >= assigned.penEvents
     }
 }
 
