@@ -32,18 +32,22 @@ public final class HIDThread: @unchecked Sendable {
     public let runLoop: CFRunLoop
 
     private init() {
-        var captured: CFRunLoop?
+        let captured = RunLoopHandoff()
         let sema = DispatchSemaphore(value: 0)
 
         let thread = Thread {
-            captured = CFRunLoopGetCurrent()
+            captured.runLoop = CFRunLoopGetCurrent()
             sema.signal()
             HIDThread.promoteToTimeConstraintPolicy()
-            // Add a keep-alive source so the run loop doesn't exit when idle.
-            let source = CFRunLoopSourceCreate(
-                nil, 0,
-                // UnsafeMutablePointer to CFRunLoopSourceContext — use a blank one.
-                &HIDThread.blankSourceContext)
+            // Add a do-nothing source so the run loop doesn't exit when idle.
+            // CFRunLoopSourceCreate copies the context, so a local is enough.
+            var context = CFRunLoopSourceContext(
+                version: 0, info: nil,
+                retain: nil, release: nil, copyDescription: nil,
+                equal: nil, hash: nil,
+                schedule: nil, cancel: nil,
+                perform: { _ in })
+            let source = CFRunLoopSourceCreate(nil, 0, &context)
             if let source {
                 CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
             }
@@ -54,7 +58,7 @@ public final class HIDThread: @unchecked Sendable {
         thread.start()
 
         sema.wait()
-        guard let rl = captured else {
+        guard let rl = captured.runLoop else {
             fatalError("HIDThread: run loop capture failed — thread never started")
         }
         runLoop = rl
@@ -93,12 +97,10 @@ public final class HIDThread: @unchecked Sendable {
             log.warning("time-constraint policy rejected (kern \(result)); staying at userInteractive QoS")
         }
     }
+}
 
-    // A do-nothing CFRunLoopSourceContext used to keep the run loop alive.
-    private static var blankSourceContext = CFRunLoopSourceContext(
-        version: 0, info: nil,
-        retain: nil, release: nil, copyDescription: nil,
-        equal: nil, hash: nil,
-        schedule: nil, cancel: nil,
-        perform: { _ in })
+/// Carries the new thread's run loop back to `HIDThread.init`. The semaphore
+/// orders the one write before the one read, so it needs no lock.
+private final class RunLoopHandoff: @unchecked Sendable {
+    var runLoop: CFRunLoop?
 }
