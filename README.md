@@ -6,10 +6,10 @@
 
 ```swift
 // Package.swift
-.package(url: "https://github.com/Cyzor/TabletKit.git", from: "0.5.0")
+.package(url: "https://github.com/Cyzor/TabletKit.git", branch: "main")
 ```
 
-Then add `"TabletKit"` to your target's dependencies and `import TabletKit`.
+Then add `"TabletKit"` to your target's dependencies and `import TabletKit`. The examples here need the latest code on `main`, which is newer than the 0.5.0 release.
 
 ## Quick Start
 
