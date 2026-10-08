@@ -49,6 +49,7 @@ Beyond MockTab's own recording, a few command-line tools in the [MockTab reposit
 - **`hid_input_capture.c`** logs every report from any USB device. It runs alongside the tablet maker's own driver, so you can see what a tablet sends when its own software is in charge. Build it with `clang`, as its comments describe.
 - **`hid_traffic_capture.d`** logs the commands a driver sends to a tablet, including the setup commands that switch it on, and the replies to its requests. It uses dtrace, which only works with System Integrity Protection turned off. Turn it back on when you're done.
 - **`triage_discovery.py`**, in TabletKit's `tools/` folder, reads a recording's `summary.json`, compares the tablet with the kernel and OpenTabletDriver, and drafts a registry entry.
+- **`hid-trace-sweep`**, one of TabletKit's samples, replays hid-recorder files, like those in public recording collections, through every decoder. It shows which one fits and whether the pen reached the registry's limits. Run `swift run hid-trace-sweep --summary *.hid` for one line per tablet.
 
 If you get stuck, open an issue with what you've found so far. Every little bit helps.
 
