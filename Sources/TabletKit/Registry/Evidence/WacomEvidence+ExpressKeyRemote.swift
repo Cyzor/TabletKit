@@ -4,5 +4,10 @@
 
 extension WacomEvidence {
     /// Rows using the `.expressKeyRemote` report format.
-    static let expressKeyRemote: Table = [:]
+    static let expressKeyRemote: Table = [
+        0x0331: [  // ExpressKey Remote (EKR-100)
+            .tabletButtons: .init(.hardware, [.testerHardware, .libwacom]),
+            .ring: .init(.hardware, [.testerHardware, .libwacom]),
+        ],
+    ]
 }

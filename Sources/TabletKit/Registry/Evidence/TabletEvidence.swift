@@ -97,19 +97,29 @@ extension WacomDeviceSpec {
         return features
     }
 
+    /// Pen tablets always report pressure. A touch-only tablet, such as the
+    /// Bamboo Touch, keeps its touch range in the pen fields with none.
+    var hasPen: Bool { maxX > 0 && maxPressure > 0 }
+
     /// The features implied by the row's own flags.
     var flagFeatures: Set<TabletFeature> {
         var features = Set<TabletFeature>()
-        if maxX > 0 { features.insert(.penPosition) }
-        if maxPressure > 0 { features.insert(.pressure) }
-        if hasTilt && maxX > 0 { features.insert(.tilt) }
+        if hasPen {
+            features.insert(.penPosition)
+            features.insert(.pressure)
+            if hasTilt { features.insert(.tilt) }
+        }
         if hasEraser { features.insert(.eraser) }
         if buttonCount > 0 || bezelButtonCount > 0 { features.insert(.tabletButtons) }
         if hasTouchRing { features.insert(.ring) }
         if hasTouchStrips { features.insert(.strips) }
         if hasMechanicalDial { features.insert(.dial) }
         if hasKeyOLEDs { features.insert(.keyDisplays) }
-        if hasFingerTouch { features.insert(.touch) }
+        // A touch sensor row has no flags of its own; the pen row it pairs
+        // with describes its touch.
+        if hasFingerTouch || WacomDeviceRegistry.touchCompanionPIDs.contains(productID) {
+            features.insert(.touch)
+        }
         if WacomEvidence.bluetoothModels.contains(productID) { features.insert(.bluetooth) }
         if WacomEvidence.receiverModels.contains(productID) { features.insert(.wirelessReceiver) }
         return features
@@ -127,13 +137,17 @@ extension WacomDeviceSpec {
         WacomEvidence.outOfScope[productID].map(SupportScope.outOfScope) ?? .inScope
     }
 
-    /// The tier this row's evidence supports. Pen position and pressure are
-    /// the core: both proven on hardware means verified, and both at least
-    /// matching a public source means cross-referenced. A recording alone
-    /// doesn't raise the tier, so the public status errs low.
+    /// The tier this row's evidence supports. For a pen tablet, pen position
+    /// and pressure decide it. A row without a pen, such as a touch sensor or
+    /// a remote, is judged on everything it claims. All of them proven on
+    /// hardware means verified, and all of them at least matching a public
+    /// source means cross-referenced. A recording alone doesn't raise the
+    /// tier, so the public status errs low.
     public var evidenceTier: ConfidenceTier {
-        let core = [TabletFeature.penPosition, .pressure].compactMap { evidence[$0] }
-        guard core.count == 2 else { return .experimental }
+        let deciding: [TabletFeature] =
+            hasPen ? [.penPosition, .pressure] : Array(claimedFeatures)
+        let core = deciding.compactMap { evidence[$0] }
+        guard !core.isEmpty, core.count == deciding.count else { return .experimental }
         if core.allSatisfy({ $0.level == .hardware }) { return .verified }
         if core.allSatisfy({ $0.level == .hardware || $0.hasNonRecordingSource }) {
             return .crossReferenced
