@@ -99,6 +99,7 @@ Problems with the MockTab app itself, like its settings window or installing it,
 - `Sources/TabletKit/HID/` is the only code that talks to macOS about tablets: reading their descriptions of their reports, switching them on, and setting lights and screens.
 - `Sources/TabletKit/Output/` builds the reports sent to tablets, such as LED colors and button labels.
 - `Sources/TabletKit/Smoothing/` holds the cursor and pressure filters.
+- `registry.json` copies the registry for scripts and other platforms. After you edit the registry, run `python3 tools/export_registry_json.py` and commit the updated file.
 
 ### If CI Reports an API Break
 

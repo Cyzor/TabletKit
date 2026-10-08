@@ -14,7 +14,7 @@ The basic flow:
 4. When the device sends a HID report, pass its bytes to the matching `TabletReportDecoder`.
 5. Handle the returned `DecodeResult` values.
 
-See the [README](https://github.com/Cyzor/TabletKit#usage) for a complete example using a Wacom Intuos Pro M (`PTH-660`) over USB.
+Use `ReportParser.makeDecoder()` to get the right decoder for a tablet. Most Wacom tablets also need their `initSteps` sent before they report pressure and tilt. <doc:BuildingAMinimalDriver> covers both with a working sample.
 
 TabletKit is an independent community project. Wacom Co., Ltd. and other device vendors do not sponsor, endorse, or affiliate with it. Product names identify compatible hardware only.
 
