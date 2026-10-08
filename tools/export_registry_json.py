@@ -23,11 +23,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import registry_lib as rl
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # 2 adds outOfScope
+
+# Business and signature displays, read from the evidence file so the list
+# lives in one place.
+_EVIDENCE = Path(__file__).resolve().parent.parent / "Sources/TabletKit/Registry/Evidence/WacomEvidence.swift"
+
+
+def parse_out_of_scope(path: Path = _EVIDENCE) -> dict[int, str]:
+    text = path.read_text(encoding="utf-8")
+    block = re.search(r"static let outOfScope: \[Int: String\] = \[(.*?)\n    \]", text, re.S)
+    if not block:
+        raise SystemExit(f"outOfScope table not found in {path}")
+    return {int(pid, 16): reason for pid, reason in re.findall(r'(0x[0-9A-Fa-f]+): "([^"]+)"', block.group(1))}
 
 # Fields carried through verbatim from registry_lib's parsed entry dict.
 # "line" and "hasInitSteps" are maintenance-script bookkeeping, not part of
@@ -60,6 +73,7 @@ _SWIFT_DEFAULTS = {
 
 
 def build_document(entries: list[dict]) -> dict:
+    out_of_scope = parse_out_of_scope()
     devices = []
     for e in entries:
         device = {"productID": f"0x{e['pid']:04X}"}
@@ -68,6 +82,8 @@ def build_document(entries: list[dict]) -> dict:
             if value is None and f in _SWIFT_DEFAULTS:
                 value = _SWIFT_DEFAULTS[f]
             device[f] = value
+        # Null when the model is in scope; otherwise a public-facing reason.
+        device["outOfScope"] = out_of_scope.get(e["pid"])
         devices.append(device)
     return {
         "schemaVersion": SCHEMA_VERSION,
