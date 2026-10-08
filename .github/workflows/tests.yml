@@ -50,7 +50,8 @@ jobs:
           xcode-version: "26.3"
       - name: Diagnose API breaking changes
         run: |
-          LATEST_TAG=$(git tag --sort=-v:refname | head -1)
+          # Release tags only; other tags, such as backups, sort above them.
+          LATEST_TAG=$(git tag --list '[0-9]*' --sort=-v:refname | head -1)
           if [ -z "$LATEST_TAG" ]; then
             echo "No tags found; skipping API breakage check."
             exit 0
