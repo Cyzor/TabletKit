@@ -647,10 +647,11 @@ def bluetooth_link_section(doc: dict) -> list[str]:
             "as unreliable rather than correcting for them.",
             "",
         ]
+    lines += ["| Metric | Value |", "|---|---:|"]
+    # Captures before version 26 carry the address.
+    if "addressCandidate" in link:
+        lines.append(f"| Address used (best-effort match) | `{link['addressCandidate']}` |")
     lines += [
-        "| Metric | Value |",
-        "|---|---:|",
-        f"| Address used (best-effort match) | `{link.get('addressCandidate', '?')}` |",
         f"| Samples | {link.get('sampleCount', 0)} |",
         f"| Samples where the device read as disconnected | {link.get('disconnectedSampleCount', 0)} |",
     ]
