@@ -15,6 +15,17 @@ jobs:
       - name: Test
         run: swift test
 
+  # Decoders read reports through unchecked pointers. Under the address
+  # sanitizer, the fuzz test fails on any read past the end of a report.
+  fuzz:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fuzz decoders under the address sanitizer
+        env:
+          FUZZ_ITERS: "3000"
+        run: swift test --sanitize=address --filter DecoderFuzzTests
+
   # The library compiles with no concurrency warnings at the strictest
   # checking level. Keeping it there means consumers on Swift 6 language
   # mode never inherit a data-race warning from TabletKit. Samples aren't

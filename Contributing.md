@@ -79,6 +79,12 @@ Run the tests from the `TabletKit` folder:
 swift test
 ```
 
+If you changed a decoder, also run the fuzz test under the address sanitizer. It feeds random and cut-short reports to every decoder and fails on any read past the end of a report. CI runs it too.
+
+```
+swift test --sanitize=address --filter DecoderFuzzTests
+```
+
 ### Open a Pull Request
 
 In the description, include:
