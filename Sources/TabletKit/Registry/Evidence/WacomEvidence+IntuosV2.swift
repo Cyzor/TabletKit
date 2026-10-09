@@ -29,6 +29,9 @@ extension WacomEvidence {
             .pressure: .init(.sourced, [.openTabletDriver]),
             .touch: .init(.sourced, [.libwacom]),
         ],
+        0x0354: [  // Cintiq Pro 16 Touch sensor (pairs 0x0350)
+            .touch: .init(.sourced, [.libwacom]),
+        ],
         0x0357: [  // Intuos Pro M (PTH-660)
             .penPosition: .init(.hardware, [.maintainerHardware, .openTabletDriver]),
             .pressure: .init(.hardware, [.maintainerHardware, .openTabletDriver]),
@@ -142,7 +145,7 @@ extension WacomEvidence {
             .touch: .init(.hardware, [.testerHardware, .libwacom]),
         ],
         0x03B3: [  // Cintiq Pro 16 Touch sensor (pairs 0x03B2)
-            .touch: .init(.hardware, [.testerHardware]),
+            .touch: .init(.hardware, [.testerHardware, .libwacom]),
         ],
         0x03C0: [  // Wacom Cintiq Pro 27 (DTH-271)
             .penPosition: .init(.sourced, [.openTabletDriver]),
