@@ -55,6 +55,55 @@ final class EvidenceTests: XCTestCase {
         }
     }
 
+    /// A kernel or OpenTabletDriver citation for the pen must match the
+    /// committed audit exactly, so an edit can't cite a source that disagrees.
+    /// `tools/verify_registry.py` regenerates the audit.
+    func testPenCitationsMatchTheAudit() throws {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("registry_audit.csv")
+        let lines = try String(contentsOf: url, encoding: .utf8).split(whereSeparator: \.isNewline)
+        let header = csvFields(lines[0])
+        var audit: [Int: [String: String]] = [:]
+        for line in lines.dropFirst() {
+            let row = Dictionary(zip(header, csvFields(line)), uniquingKeysWith: { first, _ in first })
+            if let pid = row["pid"].flatMap({ Int($0.dropFirst(2), radix: 16) }) { audit[pid] = row }
+        }
+        for row in rows {
+            let audited = audit[row.productID] ?? [:]
+            let label = String(format: "0x%04X %@", row.productID, row.name)
+            for (source, prefix) in [(EvidenceSource.linuxKernel, "kernel"), (.openTabletDriver, "otd")] {
+                func value(_ field: String) -> Int? {
+                    audited["\(prefix)_\(field)"].flatMap(Double.init).map { Int($0) }
+                }
+                if row.evidence[.penPosition]?.sources.contains(source) == true {
+                    XCTAssertEqual(value("maxX"), row.maxX, "\(label): \(source) position")
+                    XCTAssertEqual(value("maxY"), row.maxY, "\(label): \(source) position")
+                }
+                if row.evidence[.pressure]?.sources.contains(source) == true {
+                    XCTAssertEqual(value("maxP"), row.maxPressure, "\(label): \(source) pressure")
+                }
+            }
+        }
+    }
+
+    private func csvFields(_ line: Substring) -> [String] {
+        var fields: [String] = []
+        var field = ""
+        var quoted = false
+        for character in line {
+            switch character {
+            case "\"": quoted.toggle()
+            case "," where !quoted:
+                fields.append(field)
+                field = ""
+            default: field.append(character)
+            }
+        }
+        fields.append(field)
+        return fields
+    }
+
     func testRecordingAloneDoesNotRaiseTheTier() {
         XCTAssertFalse(FeatureEvidence(.recorded, [.publicRecording]).hasNonRecordingSource)
         XCTAssertTrue(FeatureEvidence(.recorded, [.publicRecording, .linuxKernel]).hasNonRecordingSource)
