@@ -111,6 +111,7 @@ public struct BambooDecoder: TabletReportDecoder {
         // report and a 64-byte touch/pad container share it, distinguished only
         // by length. Dispatch on length before anything else — without this the
         // container would be decoded as pen coordinates.
+        guard report.count > 0 else { return [] }
         if report[0] == 0x02, report.count == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
         }

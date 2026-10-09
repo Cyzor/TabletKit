@@ -196,6 +196,9 @@ public struct XencelabsDecoder: TabletReportDecoder {
             ]
         }
 
+        // The coordinates' high bytes sit at [10] and [11].
+        guard report.count >= 12 else { return [] }
+
         let isEraser = tag & Self.eraserBit != 0
         let toolCode: UInt16 =
             tag & Self.threeButtonPenBit != 0
