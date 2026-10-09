@@ -71,10 +71,10 @@ public final class LatencyProbe: @unchecked Sendable {
     public private(set) var totalAverageMs: Double = 0
     public private(set) var totalWorstMs: Double = 0
 
-    /// Mach deadline until which reports count as connect-phase. Written on
-    /// the main thread by `noteDeviceConnected()`, read on HIDThread — same
-    /// tolerated-torn-read pattern as the counters above; a stale read just
-    /// misattributes a handful of reports.
+    /// Mach deadline until which reports count as connect-phase. Written by
+    /// `noteDeviceConnected()` and read on HIDThread, so call that there too.
+    /// From another thread it's the tolerated race the counters above
+    /// accept: a stale read just misattributes a handful of reports.
     private var settlingDeadline: UInt64 = 0
 
     /// Call when a device connects (or reconnects) to open the settling
