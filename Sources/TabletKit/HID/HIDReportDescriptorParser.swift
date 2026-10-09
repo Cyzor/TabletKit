@@ -200,6 +200,9 @@ private struct Walker {
 
     // Local state (resets on every main item).
     var usageQueue: [UInt32] = []
+    /// Next unread entry in `usageQueue`. An index, not `removeFirst()`, which
+    /// is linear and made a wide usage range quadratic.
+    var usageQueueHead = 0
     var lastUsage: UInt32?
     var usageMinPending: UInt32?
 
@@ -211,10 +214,19 @@ private struct Walker {
     private var fieldsByReport: [ReportKey: [DescriptorField]] = [:]
     private var reportOrder: [ReportKey] = []
 
+    /// Ceilings no real descriptor comes near: 64 KiB per report, and 64 Ki
+    /// fields or queued usages in all. A Report Count of 0xFFFFFFFF would
+    /// otherwise allocate a field per count, so past these the descriptor is
+    /// malformed or hostile and the walk stops where it is.
+    static let maxReportBits = 65_536 * 8
+    static let maxEntries = 65_536
+    private var fieldCount = 0
+    private var exceededLimits = false
+
     init(bytes: [UInt8]) { self.bytes = bytes }
 
     mutating func run() throws {
-        while offset < bytes.count {
+        while offset < bytes.count && !exceededLimits {
             try step()
         }
     }
@@ -314,6 +326,10 @@ private struct Walker {
         switch tag {
         case 0x0: // Usage
             let extended = normalizedUsage(value, byteCount: byteCount)
+            guard usageQueue.count < Self.maxEntries else {
+                exceededLimits = true
+                return
+            }
             usageQueue.append(extended)
             lastUsage = extended
         case 0x1: // Usage Minimum
@@ -324,6 +340,10 @@ private struct Walker {
                 let lowUsage = low & 0xFFFF
                 let highUsage = high & 0xFFFF
                 if lowUsage <= highUsage {
+                    guard usageQueue.count + Int(highUsage - lowUsage) < Self.maxEntries else {
+                        exceededLimits = true
+                        return
+                    }
                     for u in lowUsage...highUsage {
                         usageQueue.append((low & 0xFFFF0000) | u)
                     }
@@ -379,13 +399,22 @@ private struct Walker {
 
         let count = max(globals.reportCount, 0)
         let size = max(globals.reportSize, 0)
+        let (bits, overflow) = count.multipliedReportingOverflow(by: size)
+        guard !overflow, bits <= Self.maxReportBits - (cursors[key] ?? 0),
+              count <= Self.maxEntries - fieldCount
+        else {
+            exceededLimits = true
+            return
+        }
+        fieldCount += count
 
         for i in 0..<count {
             let usage: UInt32
             if isConstant {
                 usage = 0
-            } else if !usageQueue.isEmpty {
-                usage = usageQueue.removeFirst()
+            } else if usageQueueHead < usageQueue.count {
+                usage = usageQueue[usageQueueHead]
+                usageQueueHead += 1
             } else if let last = lastUsage {
                 usage = last
             } else {
@@ -418,7 +447,8 @@ private struct Walker {
     }
 
     private mutating func resetLocals() {
-        usageQueue.removeAll()
+        usageQueue.removeAll(keepingCapacity: true)
+        usageQueueHead = 0
         lastUsage = nil
         usageMinPending = nil
     }

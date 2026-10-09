@@ -213,6 +213,40 @@ final class HIDReportDescriptorParserTests: XCTestCase {
         }
     }
 
+    // MARK: - Size limits
+
+    /// A Report Count of 0xFFFFFFFF used to allocate a field per count, which
+    /// froze the caller for minutes. The walk now stops at the bad item and
+    /// keeps what came before it.
+    func testHugeReportCountStopsTheWalk() throws {
+        // Report ID 1, one 8-bit field, then Report Count 0xFFFFFFFF of 1-bit fields.
+        let hex = "0901" + "8501" + "750895018102" + "750197FFFFFFFF8102"
+        let start = Date()
+        let layout = try HIDReportDescriptorParser.parse(hex: hex)
+        XCTAssertLessThan(Date().timeIntervalSince(start), 1)
+        let report = try XCTUnwrap(layout.reports.first)
+        XCTAssertEqual(report.fields.count, 1)
+        XCTAssertEqual(report.totalBits, 8)
+    }
+
+    func testReportCountTimesSizeOverflowStopsTheWalk() throws {
+        // Report Size and Report Count both 0xFFFFFFFF: their product overflows.
+        let hex = "0901" + "77FFFFFFFF97FFFFFFFF8102"
+        let layout = try HIDReportDescriptorParser.parse(hex: hex)
+        XCTAssertTrue(layout.reports.allSatisfy { $0.fields.isEmpty })
+    }
+
+    func testWideUsageRangeParsesQuickly() throws {
+        // Usage Minimum 1, Usage Maximum 0xFFFF, then 0xFFFF one-bit fields.
+        let hex = "0509" + "1901" + "2AFFFF" + "7501" + "96FFFF" + "8102"
+        let start = Date()
+        let layout = try HIDReportDescriptorParser.parse(hex: hex)
+        XCTAssertLessThan(Date().timeIntervalSince(start), 1)
+        let report = try XCTUnwrap(layout.reports.first)
+        XCTAssertEqual(report.fields.count, 0xFFFF)
+        XCTAssertEqual(report.fields.last?.usage, 0xFFFF)
+    }
+
     // MARK: - Push/pop
 
     func testPushPopRestoresGlobalState() throws {
