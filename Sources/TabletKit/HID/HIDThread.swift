@@ -14,9 +14,10 @@ import os
 /// a CFRunLoop spinning on a `.userInteractive` background thread, so reports
 /// arrive immediately regardless of what the main thread is doing.
 ///
-/// Only IOHIDManager/IOHIDDevice scheduling should use this run loop.
-/// The injection hot path (decode → InputInjector → CGEvent post) runs
-/// inline on this thread; UI mutations hop to the main actor via
+/// Use this run loop for IOHIDManager and IOHIDDevice scheduling, and for
+/// the timers and blocks that share their state. Nothing here should wait on
+/// the main thread. The injection hot path (decode → InputInjector → CGEvent
+/// post) runs inline on this thread; UI mutations hop to the main actor via
 /// Task { @MainActor in … } from callbacks.
 ///
 /// `@unchecked Sendable`: the only public surface, `runLoop`, is a `let`
