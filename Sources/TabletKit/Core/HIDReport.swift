@@ -20,8 +20,16 @@ public struct HIDReport {
     /// The report ID, or 0 for an empty report.
     public var reportID: UInt8 { count > 0 ? pointer[0] : 0 }
 
-    /// The byte at `index`, counting the report-ID byte as index 0.
-    public subscript(index: Int) -> UInt8 { pointer[index] }
+    /// The byte at `index`, counting the report-ID byte as index 0, or 0
+    /// outside the report. Debug builds stop there instead, so tests and the
+    /// fuzzer name the decoder that misread.
+    public subscript(index: Int) -> UInt8 {
+        guard index >= 0, index < count else {
+            assertionFailure("read byte \(index) of a \(count)-byte report")
+            return 0
+        }
+        return pointer[index]
+    }
 
     /// Calls `body` with a report borrowing `bytes`.
     public static func withReport<R>(
