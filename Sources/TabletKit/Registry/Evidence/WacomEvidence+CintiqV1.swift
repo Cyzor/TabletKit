@@ -39,9 +39,12 @@ extension WacomEvidence {
             .tabletButtons: .init(.sourced, [.libwacom]),
         ],
         0x00F4: [  // Cintiq 24HD (DTK-2400)
-            .penPosition: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel]),
-            .pressure: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel]),
-            .ring: .init(.sourced, [.libwacom]),
+            .penPosition: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel]),
+            .pressure: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel]),
+            .tilt: .init(.hardware, [.maintainerHardware]),
+            .eraser: .init(.hardware, [.maintainerHardware]),
+            .tabletButtons: .init(.hardware, [.maintainerHardware]),
+            .ring: .init(.hardware, [.maintainerHardware, .libwacom]),
         ],
         0x00F8: [  // Cintiq 24HD Touch (DTH-2400)
             .penPosition: .init(.sourced, [.linuxKernel]),

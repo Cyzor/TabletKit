@@ -31,9 +31,12 @@ extension WacomEvidence {
             .tabletButtons: .init(.sourced, [.libwacom]),
         ],
         0x00B5: [  // Intuos3 WS (PTZ-631W)
-            .penPosition: .init(.hardware, [.testerHardware, .linuxKernel, .openTabletDriver]),
-            .pressure: .init(.hardware, [.testerHardware, .linuxKernel]),
-            .tabletButtons: .init(.sourced, [.libwacom]),
+            .penPosition: .init(.hardware, [.maintainerHardware, .linuxKernel, .openTabletDriver]),
+            .pressure: .init(.hardware, [.maintainerHardware, .linuxKernel]),
+            .tilt: .init(.hardware, [.maintainerHardware]),
+            .eraser: .init(.hardware, [.maintainerHardware]),
+            .tabletButtons: .init(.hardware, [.maintainerHardware, .libwacom]),
+            .strips: .init(.hardware, [.maintainerHardware]),
         ],
         0x00B7: [  // Intuos3 4×6 (PTZ-431W)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),

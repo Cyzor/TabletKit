@@ -36,6 +36,8 @@ extension WacomEvidence {
         0x03F9: [  // Intuos Pro L gen 3 (PTK-870)
             .penPosition: .init(.hardware, [.maintainerHardware, .openTabletDriver]),
             .pressure: .init(.hardware, [.maintainerHardware, .openTabletDriver]),
+            .tilt: .init(.hardware, [.maintainerHardware]),
+            .eraser: .init(.hardware, [.maintainerHardware]),
             .tabletButtons: .init(.hardware, [.maintainerHardware]),
             .dial: .init(.hardware, [.maintainerHardware]),
             .bluetooth: .init(.hardware, [.maintainerHardware, .libwacom]),

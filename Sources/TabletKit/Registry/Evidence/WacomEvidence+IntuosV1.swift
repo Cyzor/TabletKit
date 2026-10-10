@@ -37,8 +37,10 @@ extension WacomEvidence {
         0x0028: [  // Intuos5 L (PTH-850)
             .penPosition: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
-            .tabletButtons: .init(.sourced, [.libwacom]),
-            .ring: .init(.sourced, [.libwacom]),
+            .tilt: .init(.hardware, [.maintainerHardware]),
+            .eraser: .init(.hardware, [.maintainerHardware]),
+            .tabletButtons: .init(.hardware, [.maintainerHardware, .libwacom]),
+            .ring: .init(.hardware, [.maintainerHardware, .libwacom]),
             .touch: .init(.hardware, [.maintainerHardware, .publicRecording]),
             .wirelessReceiver: .init(.hardware, [.maintainerHardware]),
         ],
