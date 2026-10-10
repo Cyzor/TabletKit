@@ -104,6 +104,15 @@ final class EvidenceTests: XCTestCase {
         return fields
     }
 
+    /// libwacom says a tablet has touch, not what range it reports.
+    func testLibwacomDoesNotBackTouch() {
+        for (pid, features) in WacomEvidence.table {
+            XCTAssertFalse(
+                features[.touch]?.sources.contains(.libwacom) ?? false,
+                String(format: "0x%04X cites libwacom for touch", pid))
+        }
+    }
+
     func testRecordingAloneDoesNotRaiseTheTier() {
         XCTAssertFalse(FeatureEvidence(.recorded, [.publicRecording]).hasNonRecordingSource)
         XCTAssertTrue(FeatureEvidence(.recorded, [.publicRecording, .linuxKernel]).hasNonRecordingSource)

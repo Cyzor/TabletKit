@@ -6,19 +6,17 @@ extension WacomEvidence {
     /// Rows using the `.bamboo` report format.
     static let bamboo: Table = [
         0x00D0: [  // Bamboo Touch (CTT-460)
-            .touch: .init(.hardware, [.testerHardware, .publicRecording, .libwacom]),
+            .touch: .init(.hardware, [.testerHardware, .publicRecording]),
         ],
         0x00D1: [  // Bamboo Pen & Touch (CTH-460)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00D2: [  // Wacom CTH-461
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00D3: [  // Wacom CTH-661
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
@@ -37,13 +35,11 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00D7: [  // Bamboo Pen & Touch (small)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00D8: [  // Wacom CTH-661
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
@@ -57,7 +53,6 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00DB: [  // Bamboo Pen & Touch SE (CTH-661SE)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
@@ -75,13 +70,11 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00DF: [  // Wacom CTH-670
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x0300: [  // Wacom CTL-471
             .penPosition: .init(.sourced, [.openTabletDriver]),
@@ -95,13 +88,13 @@ extension WacomEvidence {
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x0303: [  // Wacom CTH-680
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x030E: [  // Wacom CTL-480
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
@@ -112,13 +105,11 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
             .pressure: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x0319: [  // Wacom CTH-300
             .penPosition: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
             .pressure: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x0323: [  // Wacom CTL-680
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),

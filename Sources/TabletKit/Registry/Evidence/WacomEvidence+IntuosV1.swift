@@ -25,21 +25,21 @@ extension WacomEvidence {
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x0027: [  // Intuos5 M (PTH-650)
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x0028: [  // Intuos5 L (PTH-850)
             .penPosition: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.hardware, [.maintainerHardware, .publicRecording, .libwacom]),
+            .touch: .init(.hardware, [.maintainerHardware, .publicRecording]),
             .wirelessReceiver: .init(.hardware, [.maintainerHardware]),
         ],
         0x0029: [  // Wacom PTK-450
@@ -115,27 +115,25 @@ extension WacomEvidence {
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x0315: [  // Intuos Pro M (PTH-651)
             .penPosition: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.recorded, [.publicRecording, .libwacom]),
+            .touch: .init(.recorded, [.publicRecording]),
         ],
         0x0317: [  // Intuos Pro L (PTH-851)
             .penPosition: .init(.hardware, [.testerHardware, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.hardware, [.testerHardware, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x0333: [  // Cintiq 13HD Touch (DTH-1300)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x033B: [  // Wacom CTL-490
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
@@ -146,7 +144,6 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x033D: [  // Wacom CTL-690
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
@@ -157,7 +154,6 @@ extension WacomEvidence {
             .penPosition: .init(.hardware, [.testerHardware, .linuxKernel, .openTabletDriver]),
             .pressure: .init(.hardware, [.testerHardware, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
     ]
 }

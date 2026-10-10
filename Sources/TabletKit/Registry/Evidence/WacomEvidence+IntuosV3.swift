@@ -21,7 +21,6 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.openTabletDriver]),
             .pressure: .init(.sourced, [.openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x03F5: [  // Intuos Pro S gen 3 (PTK-470)
             .penPosition: .init(.sourced, [.openTabletDriver]),

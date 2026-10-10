@@ -19,19 +19,11 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.linuxKernel]),
             .pressure: .init(.sourced, [.linuxKernel]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x005B: [  // Wacom Cintiq 22HD Touch (DTH-2200)
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel]),
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
-        ],
-        0x005D: [  // Cintiq 22 Touch sensor (pairs 0x0059)
-            .touch: .init(.sourced, [.libwacom]),
-        ],
-        0x005E: [  // Cintiq 22HD Touch sensor (pairs 0x005B)
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00C5: [  // Cintiq 20WSX (DTZ-2000W)
             .penPosition: .init(.sourced, [.linuxKernel]),
@@ -51,14 +43,10 @@ extension WacomEvidence {
             .pressure: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel]),
             .ring: .init(.sourced, [.libwacom]),
         ],
-        0x00F6: [  // Cintiq 24HD Touch sensor (pairs 0x00F8)
-            .touch: .init(.sourced, [.libwacom]),
-        ],
         0x00F8: [  // Cintiq 24HD Touch (DTH-2400)
             .penPosition: .init(.sourced, [.linuxKernel]),
             .pressure: .init(.sourced, [.linuxKernel]),
             .ring: .init(.sourced, [.libwacom]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x00FA: [  // Cintiq 22HD (DTK-2200)
             .penPosition: .init(.recorded, [.publicRecording, .linuxKernel]),
@@ -68,10 +56,6 @@ extension WacomEvidence {
         0x0325: [  // Wacom Cintiq Companion 2 (DTH-W1310)
             .penPosition: .init(.sourced, [.linuxKernel]),
             .pressure: .init(.sourced, [.linuxKernel]),
-            .touch: .init(.sourced, [.libwacom]),
-        ],
-        0x0326: [  // Cintiq Companion 2 touch sensor (pairs 0x0325)
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x032A: [  // Cintiq 27QHD (DTK-2700)
             .penPosition: .init(.sourced, [.linuxKernel]),
@@ -80,13 +64,9 @@ extension WacomEvidence {
         0x032B: [  // Cintiq 27QHD Touch (DTH-2700)
             .penPosition: .init(.hardware, [.testerHardware, .linuxKernel]),
             .pressure: .init(.hardware, [.testerHardware, .linuxKernel]),
-            .touch: .init(.sourced, [.libwacom]),
         ],
         0x032C: [  // Cintiq 27QHD Touch sensor (pairs 0x032B)
-            .touch: .init(.hardware, [.testerHardware, .libwacom]),
-        ],
-        0x0335: [  // Cintiq 13HD Touch sensor (pairs 0x0333)
-            .touch: .init(.sourced, [.libwacom]),
+            .touch: .init(.hardware, [.testerHardware]),
         ],
     ]
 }
