@@ -127,7 +127,9 @@ public struct GenericPenLayout: Equatable, Sendable {
             }
         }
 
-        guard let x, let y else { return nil }
+        // A malformed descriptor can declare a zero or negative maximum, and
+        // mapping a position against it divides by zero.
+        guard let x, let y, x.logicalMax > 0, y.logicalMax > 0 else { return nil }
 
         return GenericPenLayout(
             reportID: report.reportID,

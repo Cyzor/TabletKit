@@ -98,6 +98,21 @@ final class GenericPenDecoderTests: XCTestCase {
         XCTAssertTrue(GenericPenLayout.derive(from: parsed).isEmpty)
     }
 
+    /// An axis with no positive maximum can't be mapped to the screen.
+    func testAxisWithoutPositiveMaximumIsNotDerived() throws {
+        // Pen collection with a tip switch, then X with the given logical
+        // maximum and Y up to 0x7FFF, 16 bits each.
+        func descriptor(xMax: String) -> String {
+            "050d0902a101851009421500250175019501810275079501810305010930"
+                + xMax + "7510950181020931" + "26ff7f" + "8102c0"
+        }
+        let valid = try HIDReportDescriptorParser.parse(hex: descriptor(xMax: "26ff7f"))
+        let zero = try HIDReportDescriptorParser.parse(hex: descriptor(xMax: "2500"))
+
+        XCTAssertEqual(GenericPenLayout.derive(from: valid).map(\.reportID), [0x10])
+        XCTAssertTrue(GenericPenLayout.derive(from: zero).isEmpty)
+    }
+
     // MARK: - Decoding
 
     /// Full round trip against the vendor-page layout: every field set to a
