@@ -14,9 +14,11 @@ import Foundation
 ///
 /// **Differs from IntuosV1Decoder (PTH-851/Intuos5) in three ways:**
 ///
-/// 1. Proximity bit — `status & 0x40` (bit 6) instead of bit 5.
-///    Bit 6 is the sole proximity indicator; there is no separate high-confidence
-///    bit, so the low-confidence path used by IntuosV1 does not apply here.
+/// 1. Proximity — bit 5 (`0x20`), as on IntuosV1, but frames with bit 6
+///    clear are ordinary data. Both public Intuos3 recordings send runs of
+///    `0xA0` (pen) and `0xB0` (puck) at zero pressure as the tool rises or
+///    sits at an edge, with real positions; the kernel decodes them too.
+///    Only `0x80` ends proximity. No Art Pen escalation.
 ///
 /// 2. Aux report IDs:
 ///    - `0x03` (10-byte): 8 express keys packed in byte 4. *Not* a BLE pad report.
@@ -118,9 +120,25 @@ public struct Intuos3Decoder: TabletReportDecoder {
             return decodeToolChange(report: report, state: &state, deviceFamily: deviceFamily)
         }
 
-        // Intuos3 proximity: bit 6 (0x40). No separate high-confidence bit.
-        let inProximity = (status & 0x40) != 0
+        let inProximity = (status & 0x20) != 0
         let subtype = (status >> 1) & 0x0F
+
+        // In range but not reporting position (0x20 or 0x21): bytes 6–8 are
+        // zero, so decoding them would peg tilt and hover. Mid-stroke, hold
+        // the position with the tip up, as the kernel does.
+        if (status & 0xFE) == 0x20 {
+            guard state.prevInProximity else { return [] }
+            return [
+                .pen(
+                    TabletPoint(
+                        x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: 0, maxPressure: spec.maxPressure,
+                        tiltX: 0, tiltY: 0, rotation: 0.0,
+                        penButton1: false, penButton2: false,
+                        eraser: state.isEraser, inProximity: true,
+                        hoverDistance: IntuosV1Decoder.maxHoverDistance))
+            ]
+        }
 
         if !inProximity {
             state.prevInProximity = false

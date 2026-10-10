@@ -43,7 +43,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
 
     /// Hover field is `report[9] >> 2`, six bits — the kernel's
     /// `distance_max` equivalent.
-    private static let maxHoverDistance = 63
+    static let maxHoverDistance = 63
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(

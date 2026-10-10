@@ -2,11 +2,12 @@
 //
 // Intuos3 decoder fixtures (PTZ-631W and family).
 //
-// No hardware capture is available; all reports are synthesized from the
-// byte-layout comments in Intuos3Decoder.swift.
+// Reports are synthesized from the byte-layout comments in
+// Intuos3Decoder.swift. Status sequences follow the two public Intuos3
+// recordings (6×8 puck, 9×12 pen), without copying their bytes.
 //
 // Focus: features that differ from IntuosV1Decoder (already tested):
-//   • Proximity bit is bit 6 (0x40) not bit 5 (0x20)
+//   • Low-confidence frames (0xA0, 0xB0) stay in proximity; only 0x80 exits
 //   • Proximity exit does NOT guard on prevInProximity — always emits
 //   • 0x03 aux report: 8 keys packed in byte 4
 //   • 0x0C pad report: touch strips (BE16 one-hot), express keys (4+4 nibble split)
@@ -60,29 +61,58 @@ final class Intuos3DecoderTests: XCTestCase {
         XCTAssertTrue(decode([0x10], state: &st).isEmpty)
     }
 
-    // MARK: - Proximity bit is bit 6 (0x40)
+    // MARK: - Proximity
 
-    func testBit6IsProximityBit() {
-        var st = DecoderState()
-        // status=0x40 → bit 6 set → in proximity
-        let b = makePen(status: 0x40)
-        let r = decode(b, state: &st)
-        XCTAssertFalse(r.isEmpty)
-        let pen = r.first { if case .pen = $0 { return true }; return false }
-        guard case .pen(let pt) = pen else { return XCTFail("expected .pen") }
-        XCTAssertTrue(pt.inProximity)
+    private func pens(_ results: [DecodeResult]) -> [TabletPoint] {
+        results.compactMap { if case .pen(let p) = $0 { return p }; return nil }
     }
 
-    func testBit5DoesNotMeanProximity() {
+    /// A pen rising out of range: full-confidence hover, then a run of
+    /// low-confidence frames with real positions, then the exit frame.
+    func testLowConfidencePenFramesStayInProximity() {
         var st = DecoderState()
-        // status=0x20 → bit 5 set but NOT bit 6 → Intuos3 treats this as out-of-proximity
-        // Decoder will emit a proximity-exit frame (even with prevInProximity=false)
-        let b = makePen(status: 0x20)
-        let r = decode(b, state: &st)
-        // Result should be an exit frame (inProximity=false), not an in-proximity frame
-        let pen = r.first { if case .pen = $0 { return true }; return false }
-        guard case .pen(let pt) = pen else { return XCTFail("expected .pen exit") }
-        XCTAssertFalse(pt.inProximity)
+        var points: [TabletPoint] = []
+        for (i, status) in ([0xE0, 0xE0] + Array(repeating: 0xA0, count: 9) + [0x80] as [UInt8]).enumerated() {
+            let bytes = status == 0x80
+                ? makePen(status: status)
+                : makePen(status: status, xHigh: 0x20, xLow: UInt8(0x10 + i), frac: UInt8(0xC0 + 4 * i))
+            points += pens(decode(bytes, state: &st))
+        }
+        XCTAssertEqual(points.count, 12)
+        XCTAssertTrue(points.dropLast().allSatisfy(\.inProximity), "only 0x80 ends proximity")
+        XCTAssertFalse(points.last!.inProximity)
+        XCTAssertEqual(points[10].x, (0x201A << 1), "low-confidence frames carry position")
+        XCTAssertEqual(points[10].pressure, 0)
+    }
+
+    /// The puck enters with low-confidence frames after its tool-change packet.
+    func testLowConfidencePuckFrameEntersProximity() {
+        var st = DecoderState()
+        var b = [UInt8](repeating: 0, count: 10)
+        b[0] = 0x10
+        b[1] = 0xC2
+        _ = decode(b, state: &st)
+        let first = pens(decode(makePen(status: 0xB0, xHigh: 0x4F, xLow: 0x60), state: &st))
+        XCTAssertEqual(first.count, 1)
+        XCTAssertTrue(first[0].inProximity)
+        XCTAssertEqual(first[0].x, 40640, "the puck's right edge")
+        XCTAssertTrue(st.prevInProximity)
+    }
+
+    /// In range without position (0x20): mid-stroke, hold the position with
+    /// the tip up; otherwise report nothing.
+    func testInRangeOnlyHoldsPosition() {
+        var st = DecoderState()
+        XCTAssertTrue(decode(makePen(status: 0x20), state: &st).isEmpty)
+
+        _ = decode(makePen(status: 0xE0, xHigh: 0x10, pressHigh: 0x40), state: &st)
+        let held = pens(decode(makePen(status: 0x20), state: &st))
+        XCTAssertEqual(held.count, 1)
+        XCTAssertTrue(held[0].inProximity)
+        XCTAssertEqual(held[0].x, 0x1000 << 1)
+        XCTAssertEqual(held[0].pressure, 0)
+        XCTAssertEqual(held[0].tiltX, 0)
+        XCTAssertEqual(held[0].hoverDistance, 63)
     }
 
     // MARK: - Proximity exit: no guard on prevInProximity
@@ -91,7 +121,7 @@ final class Intuos3DecoderTests: XCTestCase {
         var st = DecoderState()
         XCTAssertFalse(st.prevInProximity)
         // Out-of-proximity with prevInProximity=false — Intuos3 still emits exit frame.
-        let b = makePen(status: 0x00)
+        let b = makePen(status: 0x80)
         let r = decode(b, state: &st)
         XCTAssertFalse(r.isEmpty, "Intuos3 should emit exit frame even without prior prox entry")
         let pen = r.first { if case .pen = $0 { return true }; return false }
@@ -103,7 +133,7 @@ final class Intuos3DecoderTests: XCTestCase {
 
     func testUSBPenProxEntryEmitsPenInProximity() {
         var st = DecoderState()
-        let b = makePen(status: 0x40)
+        let b = makePen(status: 0xE0)
         let r = decode(b, state: &st)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
