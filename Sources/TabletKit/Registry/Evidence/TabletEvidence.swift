@@ -120,8 +120,11 @@ extension WacomDeviceSpec {
         if hasTouchStrips { features.insert(.strips) }
         if hasKeyOLEDs { features.insert(.keyDisplays) }
         // A touch sensor row has no flags of its own; the pen row it pairs
-        // with describes its touch.
-        if hasFingerTouch || WacomDeviceRegistry.touchCompanionPIDs.contains(productID) {
+        // with describes its touch. A touch-only tablet keeps its range in
+        // the pen fields.
+        if hasFingerTouch || WacomDeviceRegistry.touchCompanionPIDs.contains(productID)
+            || (!hasPen && maxX > 0)
+        {
             features.insert(.touch)
         }
         if WacomEvidence.bluetoothModels.contains(productID) { features.insert(.bluetooth) }
