@@ -14,9 +14,9 @@ Regenerate after any registry edit:
 
     python3 tools/export_registry_json.py
 
-Output is committed (`registry.json` at the TabletKit repo root), same
-convention as `registry_audit.csv` — a generated artifact checked in so
-consumers without Python/Swift tooling can still read it.
+Output is committed (`registry.json` at the TabletKit repo root), a
+generated artifact checked in so consumers without Python/Swift tooling can
+still read it.
 """
 
 from __future__ import annotations

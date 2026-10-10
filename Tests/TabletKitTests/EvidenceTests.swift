@@ -56,12 +56,16 @@ final class EvidenceTests: XCTestCase {
     }
 
     /// A kernel or OpenTabletDriver citation for the pen must match the
-    /// committed audit exactly, so an edit can't cite a source that disagrees.
-    /// `tools/verify_registry.py` regenerates the audit.
+    /// audit exactly, so an edit can't cite a source that disagrees.
+    /// `tools/verify_registry.py` writes the audit, and git ignores it, so
+    /// the check runs only where someone has generated it.
     func testPenCitationsMatchTheAudit() throws {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("registry_audit.csv")
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw XCTSkip("No registry_audit.csv; tools/verify_registry.py writes it")
+        }
         let lines = try String(contentsOf: url, encoding: .utf8).split(whereSeparator: \.isNewline)
         let header = csvFields(lines[0])
         var audit: [Int: [String: String]] = [:]
