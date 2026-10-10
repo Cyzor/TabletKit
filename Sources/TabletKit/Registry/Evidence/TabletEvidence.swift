@@ -111,9 +111,13 @@ extension WacomDeviceSpec {
         }
         if hasEraser { features.insert(.eraser) }
         if buttonCount > 0 || bezelButtonCount > 0 { features.insert(.tabletButtons) }
-        if hasTouchRing { features.insert(.ring) }
+        // A dial reports through the ring fields, but it isn't a ring.
+        if hasMechanicalDial {
+            features.insert(.dial)
+        } else if hasTouchRing {
+            features.insert(.ring)
+        }
         if hasTouchStrips { features.insert(.strips) }
-        if hasMechanicalDial { features.insert(.dial) }
         if hasKeyOLEDs { features.insert(.keyDisplays) }
         // A touch sensor row has no flags of its own; the pen row it pairs
         // with describes its touch.
