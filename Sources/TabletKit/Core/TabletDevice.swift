@@ -6,6 +6,8 @@ import Foundation
 
 public protocol TabletDevice: AnyObject {
     var spec: DigitizerSpec { get }
+    /// What this device lets the host set. Empty by default.
+    var controls: TabletControls { get }
     func open()
     func close()
     /// Update the physical ring LED to reflect the active mode slot (0-based).
@@ -71,6 +73,7 @@ public protocol TabletDevice: AnyObject {
 }
 
 public extension TabletDevice {
+    var controls: TabletControls { TabletControls() }
     func setRingLED(index: Int) {}
     func setRingModeLabel(_ label: String) {}
     func setAuxKeyLabels(_ labels: [String]) {}
