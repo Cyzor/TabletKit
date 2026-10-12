@@ -17,7 +17,7 @@ import Foundation
 /// device. Treat this the same as `setTouchEnabled`'s commented-out payload
 /// elsewhere in this codebase — believed correct, unconfirmed.
 ///
-/// Intuos4-exclusive: `WacomDeviceSpec.hasKeyOLEDs` gates this, kernel-
+/// Intuos4-exclusive: `TabletSpec.hasKeyOLEDs` gates this, kernel-
 /// confirmed to apply only to `INTUOS4S`/`INTUOS4`/`INTUOS4WL`/`INTUOS4L` —
 /// Intuos5 and Intuos Pro share the same `.intuosV1` wire *decoder* but have
 /// no per-key OLED hardware at all.

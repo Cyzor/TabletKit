@@ -27,7 +27,7 @@ import XCTest
 struct ConformanceFixture {
     /// Free-text device identification, shown in failure messages.
     let device: String
-    /// Matches a `ReportParser` case name exactly (it's a `String` raw-value
+    /// Matches a `ReportFormat` case name exactly (it's a `String` raw-value
     /// enum) — e.g. "bamboo", "intuosV2".
     let parser: String
     let spec: DigitizerSpec
@@ -39,7 +39,7 @@ struct ConformanceFixture {
 }
 
 enum ConformanceDecoderFactory {
-    /// Every `TabletReportDecoder` reachable through the `ReportParser`
+    /// Every `TabletReportDecoder` reachable through the `ReportFormat`
     /// enum. Deliberately excludes `GenericPenDecoder`/`PrecisionTouchDecoder`
     /// — those are descriptor-driven, selected independently of this enum,
     /// and don't fit this harness's (parser name) → decoder mapping.

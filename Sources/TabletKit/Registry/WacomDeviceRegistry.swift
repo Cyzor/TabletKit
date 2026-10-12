@@ -26,7 +26,7 @@ import Foundation
 /// The decoders in `Decoders/` are the live decode path; per-device app-side
 /// glue (`WacomKnownDevice`) still handles device-specific setup such as init
 /// steps, LED writes, and OLED labels, but no longer parses reports.
-public enum ReportParser: String, Sendable {
+public enum ReportFormat: String, Sendable {
     /// Graphire / early consumer line — Report ID 0x02
     /// (kernel `WACOM_REPORT_PENABLED`), 8 bytes.
     /// Covers PenPartner, Graphire 2–4, Volito, Bamboo One (CTF-430).
@@ -83,7 +83,7 @@ public enum ReportParser: String, Sendable {
     /// Intuos3 (PTZ-xxx, 2003–2006) — same 10-byte IntuosV1 payload but with
     /// a different status-byte layout: bit 6 (0x40) is the proximity indicator
     /// (vs. bit 5 in IntuosV1).  Aux reports use IDs 0x03/0x0C, not 0x11.
-    /// No BLE support.  Two-stage feature init (see `WacomDeviceSpec.initSteps`).
+    /// No BLE support.  Two-stage feature init (see `TabletSpec.initSteps`).
     case intuos3
 
     /// CintiqV1 — Wacom Cintiq pen-display family using the IntuosV1 10-byte pen
@@ -129,7 +129,7 @@ public enum ReportParser: String, Sendable {
     case pl
 }
 
-extension ReportParser {
+extension ReportFormat {
     /// Creates a fresh decoder for this report format.
     ///
     /// Use this instead of switching over formats yourself, so a format added
@@ -195,14 +195,14 @@ public enum ConfidenceTier: Sendable {
 // MARK: - Device family
 
 /// Coarse hardware-generation identifier, derived from a device's report
-/// parser and name by ``WacomDeviceSpec/family``. Used to check tool
-/// compatibility against ``WacomToolSpec/supportedFamilies``.
+/// parser and name by ``TabletSpec/family``. Used to check tool
+/// compatibility against ``ToolSpec/supportedFamilies``.
 ///
 /// The set is closed and small: each case is one decoder generation the
 /// project has actually characterised. Adding a case is a source break by
 /// design — a new family that a `switch` fails to handle should not compile,
 /// rather than fall through silently. Raw values are stable strings, kept
-/// for logs and for the `Codable` round-trip on ``WacomToolSpec``.
+/// for logs and for the `Codable` round-trip on ``ToolSpec``.
 public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case graphire
 
@@ -233,7 +233,7 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     case ucLogic
 
     /// ExpressKey Remote (EKR-100) — standalone button/ring accessory, no
-    /// digitizer and no pen. `WacomToolCatalog` has and needs no entries for
+    /// digitizer and no pen. `ToolCatalog` has and needs no entries for
     /// this case; a device with no pen input never reaches tool-compatibility
     /// checking in the first place, so the `supportedFamilies.isEmpty`
     /// fallback documented on `.pl` below is moot here rather than active.
@@ -244,8 +244,8 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     /// contemporaneous — PL was Wacom's professional LCD pen-display line
     /// (ancestor of Cintiq), Graphire was the consumer line; nothing
     /// confirms shared tool compatibility across the two. No
-    /// `WacomToolCatalog` entries reference this case yet, which means
-    /// `WacomToolSpec.compatible(with:)`'s `supportedFamilies.isEmpty`
+    /// `ToolCatalog` entries reference this case yet, which means
+    /// `ToolSpec.compatible(with:)`'s `supportedFamilies.isEmpty`
     /// fallback currently reports every tool as compatible with PL-series
     /// hardware — that is the documented "no data yet" fallback this
     /// project already uses for other under-researched families, not a
@@ -321,13 +321,13 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
 /// hardware; the `⚠ recognition-only` variant additionally means the parser
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
 /// named correctly but pen decode may produce nonsense until verified.
-public struct WacomDeviceSpec: Sendable {
+public struct TabletSpec: Sendable {
     /// USB product ID; Bluetooth and dongle variants have their own entries.
     public let productID: Int
     /// Display name, usually with the model number.
     public let name: String
     /// Which report format the device sends, and so which decoder reads it.
-    public let parser: ReportParser
+    public let parser: ReportFormat
     /// Largest pen X coordinate, in device units.
     public let maxX: Int
     /// Largest pen Y coordinate, in device units.
@@ -521,7 +521,7 @@ public struct WacomDeviceSpec: Sendable {
     /// Creates an entry. Capabilities default to absent; `hasTilt` defaults
     /// from the parser and model when omitted.
     public init(
-        productID: Int, name: String, parser: ReportParser,
+        productID: Int, name: String, parser: ReportFormat,
         maxX: Int, maxY: Int, maxPressure: Int,
         buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
         hasMechanicalDial: Bool = false,
@@ -585,7 +585,7 @@ public struct WacomDeviceSpec: Sendable {
         0x0378, 0x0379, 0x037D, 0x03B3, 0x03C5, 0x03C6, 0x03C7, 0x03C8,
     ]
 
-    static func defaultHasTilt(parser: ReportParser, productID: Int) -> Bool {
+    static func defaultHasTilt(parser: ReportFormat, productID: Int) -> Bool {
         switch parser {
         case .graphire, .bamboo, .pl, .dtu, .dtus, .expressKeyRemote: return false
         default: return !noTiltProductIDs.contains(productID)
@@ -628,7 +628,7 @@ public struct WacomDeviceSpec: Sendable {
     }
 
     /// Derives the device family from parser and name.
-    /// Used to check tool compatibility against `WacomToolSpec.supportedFamilies`.
+    /// Used to check tool compatibility against `ToolSpec.supportedFamilies`.
     ///
     /// The `.intuosV1` branch still sniffs `name` to split one parser across
     /// five families. Intuos 1/2, 4 and 5 are matched by PID; only the Cintiq
@@ -643,7 +643,7 @@ public struct WacomDeviceSpec: Sendable {
         switch parser {
         case .graphire:
             // Graphire / PenPartner / early consumer line. The four
-            // `["graphire"]` tool specs in WacomToolCatalog (PenPartner,
+            // `["graphire"]` tool specs in ToolCatalog (PenPartner,
             // Graphire Pen/Eraser/Mouse) are written for exactly these devices;
             // the previous "bamboo2" pointed them at CTH/Intuos-Pro-Gen2 tools
             // two generations later and left the graphire specs unreachable.
@@ -708,8 +708,8 @@ public struct WacomDeviceSpec: Sendable {
 
 /// Every Wacom device TabletKit recognizes, keyed by USB product ID.
 ///
-/// Look a device up with `spec(for:)`, then use its ``WacomDeviceSpec/parser``
-/// to pick a decoder and ``WacomDeviceSpec/digitizerSpec`` to configure it.
+/// Look a device up with `spec(for:)`, then use its ``TabletSpec/parser``
+/// to pick a decoder and ``TabletSpec/digitizerSpec`` to configure it.
 public enum WacomDeviceRegistry: Sendable {
 
     /// Every USB vendor ID whose PIDs this registry is keyed on.
@@ -727,7 +727,7 @@ public enum WacomDeviceRegistry: Sendable {
     // MARK: Known devices
 
     /// All entries, in family order. Prefer `spec(for:)` for lookups.
-    public static let knownDevices: [WacomDeviceSpec] = [
+    public static let knownDevices: [TabletSpec] = [
 
         // ── PenPartner / Graphire 1–4 ─────────────────────────────────────────
         // graphire parser: 8-byte Report ID 0x01, ≤511 pressure levels.
@@ -3656,7 +3656,7 @@ public enum WacomDeviceRegistry: Sendable {
     /// PID-keyed index over `knownDevices`. `Dictionary(grouping:)` preserves
     /// declaration order within each group, so "first match" semantics are
     /// identical to the previous linear scans.
-    private static let specsByPID: [Int: [WacomDeviceSpec]] =
+    private static let specsByPID: [Int: [TabletSpec]] =
         Dictionary(grouping: knownDevices, by: \.productID)
 
     /// PIDs some other row claims as its touch sensor (`touchCompanionPID`).
@@ -3667,7 +3667,7 @@ public enum WacomDeviceRegistry: Sendable {
         Set(knownDevices.compactMap(\.touchCompanionPID))
 
     /// Returns the spec for `productID`, or nil if unrecognised.
-    public static func spec(for productID: Int) -> WacomDeviceSpec? {
+    public static func spec(for productID: Int) -> TabletSpec? {
         specsByPID[productID]?.first
     }
 
@@ -3685,7 +3685,7 @@ public enum WacomDeviceRegistry: Sendable {
     /// `spec(for:)` for every current device.  The overload exists so the
     /// app-side lookup path is already vendor-neutral when Huion / Xencelabs
     /// support arrives.
-    public static func spec(forProductID productID: Int, productString: String?) -> WacomDeviceSpec? {
+    public static func spec(forProductID productID: Int, productString: String?) -> TabletSpec? {
         let matches = specsByPID[productID] ?? []
         guard !matches.isEmpty else { return nil }
         if let needle = productString?.lowercased() {
@@ -3727,7 +3727,7 @@ public enum WacomDeviceRegistry: Sendable {
     }
 }
 
-extension WacomDeviceSpec {
+extension TabletSpec {
     /// The decoder's view of this device: ranges and capabilities copied into
     /// the ``DigitizerSpec`` a ``TabletReportDecoder`` takes. Use this rather
     /// than building one field by field, so a new capability can't be missed.

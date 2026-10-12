@@ -167,7 +167,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
         // holds this state, and a fabricated exit resets the BPT3
         // arbitration latch, killing touch for the whole hover.
         if isInRangeOnly {
-            let toolHasRotation = WacomToolCatalog.hasRotation(toolCode: state.currentToolCode)
+            let toolHasRotation = ToolCatalog.hasRotation(toolCode: state.currentToolCode)
             state.exitFrameCount += 1
             if toolHasRotation
                 && state.exitFrameCount >= DecoderState.exitThreshold
@@ -332,7 +332,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
                     pressure: pressure, maxPressure: spec.maxPressure,
                     tiltX: Double(tiltXRaw) / 63.0,
                     tiltY: Double(tiltYRaw) / 63.0,
-                    rotation: WacomToolCatalog.hasRotation(toolCode: state.currentToolCode)
+                    rotation: ToolCatalog.hasRotation(toolCode: state.currentToolCode)
                         ? state.lastRotation : 0.0,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,

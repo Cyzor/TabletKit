@@ -204,7 +204,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
                 .map(\.family))
 
         for code in fallbackCodes {
-            guard let spec = WacomToolCatalog.spec(forToolCodeRaw: code) else {
+            guard let spec = ToolCatalog.spec(forToolCodeRaw: code) else {
                 XCTFail("fallback code 0x\(String(code, radix: 16)) is not catalogued")
                 continue
             }
@@ -247,7 +247,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
         ]
         let proFamilies: [DeviceFamily] = [.intuosProGen1, .intuosProGen2, .intuosProGen3]
         for code in accessories {
-            guard let spec = WacomToolCatalog.spec(forToolCodeRaw: code) else {
+            guard let spec = ToolCatalog.spec(forToolCodeRaw: code) else {
                 XCTFail("0x\(String(code, radix: 16)) is not catalogued")
                 continue
             }
@@ -513,8 +513,8 @@ final class WacomDeviceRegistryTests: XCTestCase {
     }
 
     func testMakeDecoderMatchesFormat() {
-        XCTAssertTrue(ReportParser.intuosV2.makeDecoder() is IntuosV2Decoder)
-        XCTAssertTrue(ReportParser.ucLogic.makeDecoder() is UCLogicDecoder)
-        XCTAssertTrue(ReportParser.pl.makeDecoder() is WacomPLDecoder)
+        XCTAssertTrue(ReportFormat.intuosV2.makeDecoder() is IntuosV2Decoder)
+        XCTAssertTrue(ReportFormat.ucLogic.makeDecoder() is UCLogicDecoder)
+        XCTAssertTrue(ReportFormat.pl.makeDecoder() is WacomPLDecoder)
     }
 }

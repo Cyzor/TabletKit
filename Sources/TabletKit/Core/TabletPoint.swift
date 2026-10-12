@@ -138,7 +138,7 @@ public struct ToolIdentity: Sendable {
     /// `0xE000` to `0xEFFF`, outside Wacom's range: `0xE802` for Xencelabs
     /// pens and `0xE902` for Huion, Gaomon, XP-Pen, and UGEE pens. Their
     /// eraser ends add `0x0008`, as Wacom's do. Each has a
-    /// ``WacomToolCatalog`` entry giving its name, buttons, and tilt support.
+    /// ``ToolCatalog`` entry giving its name, buttons, and tilt support.
     public let toolCode: UInt16
     /// True for the eraser end: bit 3 of the tool code, except on Art Pen
     /// codes such as `0x1108` that set it on the tip.

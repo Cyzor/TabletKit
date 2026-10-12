@@ -8,11 +8,11 @@ import Foundation
 
 /// Registry of all known Wacom tool specifications.
 /// Keys are tool codes (UInt16).
-public enum WacomToolCatalog: Sendable {
+public enum ToolCatalog: Sendable {
 
     /// All known tool specifications, keyed by tool code.
-    public static let allTools: [UInt16: WacomToolSpec] = {
-        var catalog: [UInt16: WacomToolSpec] = [:]
+    public static let allTools: [UInt16: ToolSpec] = {
+        var catalog: [UInt16: ToolSpec] = [:]
 
         // MARK: - Intuos Pro / Intuos5 Series (0x08xx family)
 
@@ -29,7 +29,7 @@ public enum WacomToolCatalog: Sendable {
         // factual; without them the fallback logs a spurious "not supported"
         // on working hardware. Guarded by
         // `testSynthesizedFallbackToolCodesAreSupportedOnTheirFamilies`.
-        catalog[0x0802] = WacomToolSpec(
+        catalog[0x0802] = ToolSpec(
             toolCode: 0x0802,
             name: "Grip Pen",
             toolType: .stylus,
@@ -48,7 +48,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Grip Pen Eraser. `.intuos1And2` for the same fallback reason as
         // 0x0802 above.
-        catalog[0x080A] = WacomToolSpec(
+        catalog[0x080A] = ToolSpec(
             toolCode: 0x080A,
             name: "Grip Pen (Eraser)",
             toolType: .eraser,
@@ -67,7 +67,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Art Pen. Identity confirmed on a PTK-870 against a pen of known
         // serial (2026-09-16); rotation decoded on gen 2 and gen 3.
-        catalog[0x0804] = WacomToolSpec(
+        catalog[0x0804] = ToolSpec(
             toolCode: 0x0804,
             name: "Art Pen",
             toolType: .artPen,
@@ -82,7 +82,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Marker Pen Eraser
-        catalog[0x080C] = WacomToolSpec(
+        catalog[0x080C] = ToolSpec(
             toolCode: 0x080C,
             name: "Art Pen (Eraser)",
             toolType: .eraser,
@@ -99,7 +99,7 @@ public enum WacomToolCatalog: Sendable {
         // Art Pen variant (toolCode 0x1108 — confirmed from live BT capture 2026-04-02).
         // Reports over Bluetooth Classic as Art Pen; rotation available over USB only.
         // Bit3 of toolCode (0x0008) is set, but this pen is NOT an eraser.
-        catalog[0x1108] = WacomToolSpec(
+        catalog[0x1108] = ToolSpec(
             toolCode: 0x1108,
             name: "Art Pen",
             toolType: .artPen,
@@ -121,7 +121,7 @@ public enum WacomToolCatalog: Sendable {
         // stock pen report "not fully supported" with pressure and tilt
         // listed missing, and zeroed maxPressure for anything reading
         // capabilities. Same for the eight sibling tools below.
-        catalog[0x1802] = WacomToolSpec(
+        catalog[0x1802] = ToolSpec(
             toolCode: 0x1802,
             name: "Intuos4 Grip Pen",
             toolType: .stylus,
@@ -136,7 +136,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos4 Grip Pen Eraser (0x180A)
-        catalog[0x180A] = WacomToolSpec(
+        catalog[0x180A] = ToolSpec(
             toolCode: 0x180A,
             name: "Intuos4 Grip Pen (Eraser)",
             toolType: .eraser,
@@ -152,7 +152,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Art Pen extended ID (0x1804) - appears on Cintiq 24HD (DTK-2400)
         // This is the Art Pen when used with older IntuosV1 devices
-        catalog[0x1804] = WacomToolSpec(
+        catalog[0x1804] = ToolSpec(
             toolCode: 0x1804,
             name: "Art Pen",
             toolType: .artPen,
@@ -167,7 +167,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Art Pen 0x1804 eraser
-        catalog[0x180C] = WacomToolSpec(
+        catalog[0x180C] = ToolSpec(
             toolCode: 0x180C,
             name: "Art Pen (Eraser)",
             toolType: .eraser,
@@ -184,7 +184,7 @@ public enum WacomToolCatalog: Sendable {
         // Pro Pen (KP-503E), shipped with the Cintiq 13HD and 27QHD. Linux id
         // 0x16802; the 16-bit tool-code fold overlaps its 0x6000 bits onto
         // 0x0802, giving 0x1E02. Seen from two DTH-2700 units (#14).
-        catalog[0x1E02] = WacomToolSpec(
+        catalog[0x1E02] = ToolSpec(
             toolCode: 0x1E02,
             name: "Pro Pen",
             toolType: .stylus,
@@ -198,7 +198,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.cintiq]
         )
 
-        catalog[0x1E0A] = WacomToolSpec(
+        catalog[0x1E0A] = ToolSpec(
             toolCode: 0x1E0A,
             name: "Pro Pen (Eraser)",
             toolType: .eraser,
@@ -213,7 +213,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos Mouse (cordless)
-        catalog[0x0806] = WacomToolSpec(
+        catalog[0x0806] = ToolSpec(
             toolCode: 0x0806,
             name: "Intuos Mouse",
             toolType: .mouse,
@@ -231,7 +231,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Stroke Pen, per the kernel's tool table. Never seen on hardware;
         // properties below are unverified.
-        catalog[0x0832] = WacomToolSpec(
+        catalog[0x0832] = ToolSpec(
             toolCode: 0x0832,
             name: "Stroke Pen",
             toolType: .stylus,
@@ -246,7 +246,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Stroke Pen eraser
-        catalog[0x083A] = WacomToolSpec(
+        catalog[0x083A] = ToolSpec(
             toolCode: 0x083A,
             name: "Stroke Pen (Eraser)",
             toolType: .eraser,
@@ -268,7 +268,7 @@ public enum WacomToolCatalog: Sendable {
         // turn, all three read correct position/pressure/tilt through
         // IntuosV3Decoder's existing gen3 report path. Not the same physical
         // pen as 0x0200 (Pro Pen 3 native to gen3 hardware, see below).
-        catalog[0x0842] = WacomToolSpec(
+        catalog[0x0842] = ToolSpec(
             toolCode: 0x0842,
             name: "Pro Pen 2",
             toolType: .stylus,
@@ -283,7 +283,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Pro Pen 2 Eraser
-        catalog[0x084A] = WacomToolSpec(
+        catalog[0x084A] = ToolSpec(
             toolCode: 0x084A,
             name: "Pro Pen 2 (Eraser)",
             toolType: .eraser,
@@ -299,7 +299,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Intuos2 Grip Pen, per libwacom. Was misnamed "Pen 4K"; not seen on
         // hardware.
-        catalog[0x0852] = WacomToolSpec(
+        catalog[0x0852] = ToolSpec(
             toolCode: 0x0852,
             name: "Intuos2 Grip Pen",
             toolType: .stylus,
@@ -314,7 +314,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos2 Grip Pen eraser
-        catalog[0x085A] = WacomToolSpec(
+        catalog[0x085A] = ToolSpec(
             toolCode: 0x085A,
             name: "Intuos2 Grip Pen (Eraser)",
             toolType: .eraser,
@@ -330,7 +330,7 @@ public enum WacomToolCatalog: Sendable {
 
         // Intuos Pen (Intuos P/PT 2), per libwacom: no tilt, no eraser. Was
         // listed as "Pen 5K" with both, plus an invented 0x086A eraser.
-        catalog[0x0862] = WacomToolSpec(
+        catalog[0x0862] = ToolSpec(
             toolCode: 0x0862,
             name: "Intuos Pen",
             toolType: .stylus,
@@ -348,7 +348,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Art Pen (rotatable, ABS_Z barrel)
 
         // Art Marker / Art Pen (Intuos3 ZP-600 + Intuos4 — same code, same kernel is_art_pen flag)
-        catalog[0x0885] = WacomToolSpec(
+        catalog[0x0885] = ToolSpec(
             toolCode: 0x0885,
             name: "Art Pen",
             toolType: .artPen,
@@ -363,7 +363,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Art Pen Eraser
-        catalog[0x088D] = WacomToolSpec(
+        catalog[0x088D] = ToolSpec(
             toolCode: 0x088D,
             name: "Art Pen (Eraser)",
             toolType: .eraser,
@@ -382,7 +382,7 @@ public enum WacomToolCatalog: Sendable {
         // toolCode must be widened to UInt32 to catalog these extended IDs — tracked separately.
 
         // Art Pen 2 (Intuos5/Intuos Pro gen1)
-        catalog[0x0204] = WacomToolSpec(
+        catalog[0x0204] = ToolSpec(
             toolCode: 0x0204,
             name: "Art Pen 2",
             toolType: .artPen,
@@ -397,7 +397,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Art Pen 2 Eraser
-        catalog[0x020C] = WacomToolSpec(
+        catalog[0x020C] = ToolSpec(
             toolCode: 0x020C,
             name: "Art Pen 2 (Eraser)",
             toolType: .eraser,
@@ -414,7 +414,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Inking Pen
 
         // Inking Pen (fine tip)
-        catalog[0x0812] = WacomToolSpec(
+        catalog[0x0812] = ToolSpec(
             toolCode: 0x0812,
             name: "Inking Pen",
             toolType: .inkingPen,
@@ -429,7 +429,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Inking Pen Eraser
-        catalog[0x081A] = WacomToolSpec(
+        catalog[0x081A] = ToolSpec(
             toolCode: 0x081A,
             name: "Inking Pen (Eraser)",
             toolType: .eraser,
@@ -446,7 +446,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Intuos3 / Graphire Era (0x00xx family)
 
         // Intuos3 Grip Pen
-        catalog[0x0002] = WacomToolSpec(
+        catalog[0x0002] = ToolSpec(
             toolCode: 0x0002,
             name: "Intuos3 Grip Pen",
             toolType: .stylus,
@@ -461,7 +461,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Grip Pen Eraser
-        catalog[0x000A] = WacomToolSpec(
+        catalog[0x000A] = ToolSpec(
             toolCode: 0x000A,
             name: "Intuos3 Grip Pen (Eraser)",
             toolType: .eraser,
@@ -476,7 +476,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Inking Pen
-        catalog[0x0092] = WacomToolSpec(
+        catalog[0x0092] = ToolSpec(
             toolCode: 0x0092,
             name: "Intuos3 Inking Pen",
             toolType: .inkingPen,
@@ -491,7 +491,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Inking Pen Eraser
-        catalog[0x0093] = WacomToolSpec(
+        catalog[0x0093] = ToolSpec(
             toolCode: 0x0093,
             name: "Intuos3 Inking Pen (Eraser)",
             toolType: .eraser,
@@ -506,7 +506,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Airbrush
-        catalog[0x0004] = WacomToolSpec(
+        catalog[0x0004] = ToolSpec(
             toolCode: 0x0004,
             name: "Intuos3 Airbrush",
             toolType: .airbrush,
@@ -521,7 +521,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Intuos3 Airbrush Eraser
-        catalog[0x000C] = WacomToolSpec(
+        catalog[0x000C] = ToolSpec(
             toolCode: 0x000C,
             name: "Intuos3 Airbrush (Eraser)",
             toolType: .eraser,
@@ -538,7 +538,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Mouse and Cursor Tools
 
         // Lens Cursor (Intuos 1/2 era and Intuos4 — kernel maps 0x006 → BTN_TOOL_LENS)
-        catalog[0x0006] = WacomToolSpec(
+        catalog[0x0006] = ToolSpec(
             toolCode: 0x0006,
             name: "Lens Cursor",
             toolType: .mouse,
@@ -553,7 +553,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Cordless Mouse / 4D Mouse (Intuos 1/2 legacy — kernel 0x007/0x094/0x09C → BTN_TOOL_MOUSE)
-        catalog[0x0007] = WacomToolSpec(
+        catalog[0x0007] = ToolSpec(
             toolCode: 0x0007,
             name: "Cordless Mouse",
             toolType: .mouse,
@@ -568,7 +568,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // 4D Mouse Eraser (legacy)
-        catalog[0x000E] = WacomToolSpec(
+        catalog[0x000E] = ToolSpec(
             toolCode: 0x000E,
             name: "4D Mouse (Eraser)",
             toolType: .eraser,
@@ -583,7 +583,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // 2D Mouse (Intuos3 ZC-100)
-        catalog[0x0017] = WacomToolSpec(
+        catalog[0x0017] = ToolSpec(
             toolCode: 0x0017,
             name: "2D Mouse",
             toolType: .mouse,
@@ -601,7 +601,7 @@ public enum WacomToolCatalog: Sendable {
         // `.intuos1And2` because subtype 0x08 is the "Intuos 1–3 cursor"
         // path, so those tablets' 4D Mouse and Lens Cursor land here too.
         // Same spurious-warning reasoning as 0x0802.
-        catalog[0x0016] = WacomToolSpec(
+        catalog[0x0016] = ToolSpec(
             toolCode: 0x0016,
             name: "Mouse",
             toolType: .mouse,
@@ -616,7 +616,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Lens Cursor (Intuos3 — large tablets only: PTZ-930/1231)
-        catalog[0x0097] = WacomToolSpec(
+        catalog[0x0097] = ToolSpec(
             toolCode: 0x0097,
             name: "Lens Cursor",
             toolType: .mouse,
@@ -631,7 +631,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Lens Cursor (Intuos1/2)
-        catalog[0x0096] = WacomToolSpec(
+        catalog[0x0096] = ToolSpec(
             toolCode: 0x0096,
             name: "Lens Cursor",
             toolType: .mouse,
@@ -646,7 +646,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Lens Cursor (unverified legacy code — kept for compatibility)
-        catalog[0x0076] = WacomToolSpec(
+        catalog[0x0076] = ToolSpec(
             toolCode: 0x0076,
             name: "Lens Cursor",
             toolType: .mouse,
@@ -663,7 +663,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Bamboo Series (CTL/CTH)
 
         // Bamboo Pen (CTL-460, CTH-460, etc.)
-        catalog[0x0090] = WacomToolSpec(
+        catalog[0x0090] = ToolSpec(
             toolCode: 0x0090,
             name: "Bamboo Pen",
             toolType: .stylus,
@@ -678,7 +678,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Bamboo Pen Eraser
-        catalog[0x0098] = WacomToolSpec(
+        catalog[0x0098] = ToolSpec(
             toolCode: 0x0098,
             name: "Bamboo Pen (Eraser)",
             toolType: .eraser,
@@ -693,7 +693,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Bamboo Touch (finger input on touch-capable devices)
-        catalog[0x0094] = WacomToolSpec(
+        catalog[0x0094] = ToolSpec(
             toolCode: 0x0094,
             name: "Bamboo Touch",
             toolType: .touch,
@@ -710,7 +710,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Graphire / PenPartner (legacy)
 
         // Graphire Pen
-        catalog[0x0020] = WacomToolSpec(
+        catalog[0x0020] = ToolSpec(
             toolCode: 0x0020,
             name: "Graphire Pen",
             toolType: .stylus,
@@ -725,7 +725,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Graphire Pen Eraser
-        catalog[0x0028] = WacomToolSpec(
+        catalog[0x0028] = ToolSpec(
             toolCode: 0x0028,
             name: "Graphire Pen (Eraser)",
             toolType: .eraser,
@@ -740,7 +740,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Graphire Mouse
-        catalog[0x0024] = WacomToolSpec(
+        catalog[0x0024] = ToolSpec(
             toolCode: 0x0024,
             name: "Graphire Mouse",
             toolType: .mouse,
@@ -755,7 +755,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // PenPartner Pen (no eraser)
-        catalog[0x0010] = WacomToolSpec(
+        catalog[0x0010] = ToolSpec(
             toolCode: 0x0010,
             name: "PenPartner Pen",
             toolType: .stylus,
@@ -772,7 +772,7 @@ public enum WacomToolCatalog: Sendable {
         // MARK: - Airbrush (Intuos1/2/3/4)
 
         // Airbrush (original Intuos)
-        catalog[0x0D12] = WacomToolSpec(
+        catalog[0x0D12] = ToolSpec(
             toolCode: 0x0D12,
             name: "Airbrush",
             toolType: .airbrush,
@@ -786,7 +786,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: []
         )
 
-        catalog[0x0D1A] = WacomToolSpec(
+        catalog[0x0D1A] = ToolSpec(
             toolCode: 0x0D1A,
             name: "Airbrush (Eraser)",
             toolType: .eraser,
@@ -801,7 +801,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Airbrush (Intuos2)
-        catalog[0x0912] = WacomToolSpec(
+        catalog[0x0912] = ToolSpec(
             toolCode: 0x0912,
             name: "Airbrush",
             toolType: .airbrush,
@@ -815,7 +815,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: []
         )
 
-        catalog[0x091A] = WacomToolSpec(
+        catalog[0x091A] = ToolSpec(
             toolCode: 0x091A,
             name: "Airbrush (Eraser)",
             toolType: .eraser,
@@ -830,7 +830,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Airbrush (Intuos3 ZP-400E) — 1 side button, ABS_WHEEL fingerwheel
-        catalog[0x0913] = WacomToolSpec(
+        catalog[0x0913] = ToolSpec(
             toolCode: 0x0913,
             name: "Airbrush",
             toolType: .airbrush,
@@ -844,7 +844,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuos3]
         )
 
-        catalog[0x091B] = WacomToolSpec(
+        catalog[0x091B] = ToolSpec(
             toolCode: 0x091B,
             name: "Airbrush (Eraser)",
             toolType: .eraser,
@@ -859,7 +859,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Airbrush (Intuos4 KP-400E-2) — 1 side button, ABS_WHEEL fingerwheel
-        catalog[0x0902] = WacomToolSpec(
+        catalog[0x0902] = ToolSpec(
             toolCode: 0x0902,
             name: "Airbrush",
             toolType: .airbrush,
@@ -873,7 +873,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
-        catalog[0x090A] = WacomToolSpec(
+        catalog[0x090A] = ToolSpec(
             toolCode: 0x090A,
             name: "Airbrush (Eraser)",
             toolType: .eraser,
@@ -905,7 +905,7 @@ public enum WacomToolCatalog: Sendable {
         // entirely). Per Wacom's own product page, this pen has no eraser
         // end at all and ships with 3 configurable side-switch positions
         // (buttonCount 3), not the traditional 2.
-        catalog[0x0200] = WacomToolSpec(
+        catalog[0x0200] = ToolSpec(
             toolCode: 0x0200,
             name: "Pro Pen 3",
             toolType: .stylus,
@@ -923,7 +923,7 @@ public enum WacomToolCatalog: Sendable {
         // for this family (see IntuosV3Decoder) — WacomKnownDevice synthesizes
         // this code on first proximity as the device's known default, not
         // read from a report.
-        catalog[0x0202] = WacomToolSpec(
+        catalog[0x0202] = ToolSpec(
             toolCode: 0x0202,
             name: "Pro Pen 3E",
             toolType: .stylus,
@@ -937,7 +937,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen3]
         )
 
-        catalog[0x020A] = WacomToolSpec(
+        catalog[0x020A] = ToolSpec(
             toolCode: 0x020A,
             name: "Pro Pen 3E (Eraser)",
             toolType: .eraser,
@@ -959,7 +959,7 @@ public enum WacomToolCatalog: Sendable {
         // the status byte tells them apart; see
         // XencelabsDecoder. 0xE8xx is outside Wacom's code space; each eraser
         // code keeps the Wacom eraser-bit convention (base | 0x0008).
-        catalog[0xE802] = WacomToolSpec(
+        catalog[0xE802] = ToolSpec(
             toolCode: 0xE802,
             name: "Xencelabs 3 Button Pen",
             toolType: .stylus,
@@ -973,7 +973,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.xencelabs]
         )
 
-        catalog[0xE80A] = WacomToolSpec(
+        catalog[0xE80A] = ToolSpec(
             toolCode: 0xE80A,
             name: "Xencelabs 3 Button Pen (Eraser)",
             toolType: .eraser,
@@ -987,7 +987,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.xencelabs]
         )
 
-        catalog[0xE812] = WacomToolSpec(
+        catalog[0xE812] = ToolSpec(
             toolCode: 0xE812,
             name: "Xencelabs Thin Pen",
             toolType: .stylus,
@@ -1001,7 +1001,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.xencelabs]
         )
 
-        catalog[0xE81A] = WacomToolSpec(
+        catalog[0xE81A] = ToolSpec(
             toolCode: 0xE81A,
             name: "Xencelabs Thin Pen (Eraser)",
             toolType: .eraser,
@@ -1019,7 +1019,7 @@ public enum WacomToolCatalog: Sendable {
         // so one entry covers them all. Two barrel buttons and tilt, per the
         // kernel's hid-uclogic report descriptors; pressure comes from the
         // tablet. No family restriction, since every such tablet uses it.
-        catalog[0xE902] = WacomToolSpec(
+        catalog[0xE902] = ToolSpec(
             toolCode: 0xE902,
             name: "Pen",
             toolType: .stylus,
@@ -1033,7 +1033,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: []
         )
 
-        catalog[0xE90A] = WacomToolSpec(
+        catalog[0xE90A] = ToolSpec(
             toolCode: 0xE90A,
             name: "Pen (Eraser)",
             toolType: .eraser,
@@ -1055,7 +1055,7 @@ public enum WacomToolCatalog: Sendable {
         // eraser bit, so 0x882A fell back to 0x8822, itself absent. The
         // decoder's unknown-tool path kept input working, but the pen showed
         // unnamed and the eraser was indistinguishable from the tip.
-        catalog[0x8822] = WacomToolSpec(
+        catalog[0x8822] = ToolSpec(
             toolCode: 0x8822,
             name: "Grip Pen",
             toolType: .stylus,
@@ -1069,7 +1069,7 @@ public enum WacomToolCatalog: Sendable {
             supportedFamilies: [.intuos1And2]
         )
 
-        catalog[0x882A] = WacomToolSpec(
+        catalog[0x882A] = ToolSpec(
             toolCode: 0x882A,
             name: "Grip Pen (Eraser)",
             toolType: .eraser,
@@ -1084,7 +1084,7 @@ public enum WacomToolCatalog: Sendable {
         )
 
         // Inking Pen (Intuos3 ZP-130 — ink cartridge, no eraser end, pressure only)
-        catalog[0x0801] = WacomToolSpec(
+        catalog[0x0801] = ToolSpec(
             toolCode: 0x0801,
             name: "Inking Pen",
             toolType: .inkingPen,
@@ -1105,13 +1105,13 @@ public enum WacomToolCatalog: Sendable {
 
     /// Look up a tool specification by tool code.
     /// Returns nil if the tool code is unknown.
-    public static func spec(forToolCode toolCode: UInt16) -> WacomToolSpec? {
+    public static func spec(forToolCode toolCode: UInt16) -> ToolSpec? {
         return allTools[toolCode]
     }
 
     /// Look up a tool specification by tool code, handling eraser bit.
     /// If the tool code has the eraser bit set (0x0008), looks up the eraser variant.
-    public static func spec(forToolCodeRaw toolCode: UInt16) -> WacomToolSpec? {
+    public static func spec(forToolCodeRaw toolCode: UInt16) -> ToolSpec? {
         // First try exact match
         if let spec = allTools[toolCode] {
             return spec
@@ -1161,7 +1161,7 @@ public enum WacomToolCatalog: Sendable {
     }
 
     /// Returns the tool type for a tool code.
-    public static func toolType(forToolCode toolCode: UInt16) -> WacomToolType {
+    public static func toolType(forToolCode toolCode: UInt16) -> ToolKind {
         if let spec = spec(forToolCodeRaw: toolCode) {
             return spec.toolType
         }
@@ -1204,7 +1204,7 @@ public enum WacomToolCatalog: Sendable {
 
     /// Returns all tool specifications for a given device family.
     /// A `nil` family (device family unknown) matches only universal tools.
-    public static func tools(forFamily family: DeviceFamily?) -> [WacomToolSpec] {
+    public static func tools(forFamily family: DeviceFamily?) -> [ToolSpec] {
         return allTools.values.filter { spec in
             spec.supportedFamilies.isEmpty
                 || (family.map { spec.supportedFamilies.contains($0) } ?? false)
@@ -1229,7 +1229,7 @@ public enum WacomToolCatalog: Sendable {
     }
 
     /// Returns all unique tool specifications.
-    public static var allUniqueTools: [WacomToolSpec] {
+    public static var allUniqueTools: [ToolSpec] {
         return Array(allTools.values)
     }
 }

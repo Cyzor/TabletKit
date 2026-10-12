@@ -60,7 +60,7 @@ if !AXIsProcessTrusted() {
 /// IOKit reports — not known in advance, since this sample matches any
 /// Wacom vendor device rather than one fixed product.
 struct ResolvedDevice {
-    let spec: WacomDeviceSpec
+    let spec: TabletSpec
     let digiSpec: DigitizerSpec
     let deviceUnitsPerMM: Double
     let pinchDominanceRatio: Double
@@ -80,7 +80,7 @@ struct UnsupportedDevice: Error {
 /// — an architecture this sample doesn't implement. Every other
 /// touch-capable device in the registry has a real touch range and uses the
 /// `.intuosV1`, `.intuosV2`, or `.bamboo` parser.
-func resolveDevice(_ spec: WacomDeviceSpec) -> Result<(ResolvedDevice, any TabletReportDecoder), UnsupportedDevice> {
+func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletReportDecoder), UnsupportedDevice> {
     guard spec.hasFingerTouch else {
         return .failure(UnsupportedDevice(reason: "\(spec.name) has no touch sensor per the registry"))
     }

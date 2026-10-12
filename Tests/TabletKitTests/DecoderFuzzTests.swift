@@ -63,7 +63,7 @@ final class DecoderFuzzTests: XCTestCase {
 
     func testEveryParserAgainstEveryFamilyAndOddSpecs() {
         var rng = SplitMix64(state: 2)
-        let parsers: [ReportParser] = [.graphire, .intuosV1, .intuosV2, .intuosV3, .dtus, .dtu, .bamboo,
+        let parsers: [ReportFormat] = [.graphire, .intuosV1, .intuosV2, .intuosV3, .dtus, .dtu, .bamboo,
                                        .intuos3, .cintiqV1, .xencelabs, .ucLogic, .expressKeyRemote, .pl]
         let specs = [
             DigitizerSpec(maxX: 0, maxY: 0, maxPressure: 0),

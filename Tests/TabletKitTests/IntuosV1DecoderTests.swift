@@ -266,7 +266,7 @@ final class IntuosV1DecoderTests: XCTestCase {
             XCTAssertFalse(tool.isMouse)
             XCTAssertEqual(tool.serial, 0x9980_05E5, "both ends share one pen body")
 
-            let spec = WacomToolCatalog.spec(forToolCodeRaw: expected)
+            let spec = ToolCatalog.spec(forToolCodeRaw: expected)
             XCTAssertNotNil(spec, "0x\(String(expected, radix: 16)) should be catalogued")
             XCTAssertEqual(spec?.toolCode, expected, "must match exactly, not via eraser-bit fallback")
             XCTAssertEqual(spec?.toolType, isEraser ? .eraser : .stylus)
@@ -277,7 +277,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// small non-zero pressure on this hardware: the sensor noise behind
     /// Cyzor/tablet-driver#4. The decoder must pass it through unchanged
     /// rather than silently zeroing it — rejecting it is the injector's job,
-    /// via the dead zone in `WacomDeviceSpec.defaultPressureThreshold`.
+    /// via the dead zone in `TabletSpec.defaultPressureThreshold`.
     /// Byte values are the capture's observed A0 extremes.
     func testGD0608HoverNoiseDecodesAsSmallNonZeroPressure() {
         var state = DecoderState()

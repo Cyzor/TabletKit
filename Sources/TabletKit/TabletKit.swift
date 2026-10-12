@@ -17,7 +17,7 @@
 // The core loop, regardless of device:
 //
 // 1. Look up the device in the registry (WacomDeviceRegistry or
-//    VendorDeviceRegistry) to get its WacomDeviceSpec.
+//    VendorDeviceRegistry) to get its TabletSpec.
 // 2. Build a DigitizerSpec from the spec's coordinate and pressure ranges.
 // 3. Allocate a DecoderState for this device instance.
 // 4. On each HID report callback, hand the bytes to the matching

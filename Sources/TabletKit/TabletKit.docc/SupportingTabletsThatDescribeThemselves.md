@@ -75,7 +75,7 @@ let results = decoder.decode(
     report: report, spec: spec, state: &state, deviceFamily: .ucLogic)
 ```
 
-These pens don't identify themselves, so the decoder announces every pen with the same tool code, `0xE902`, and every eraser with `0xE90A`. ``WacomToolCatalog`` names them "Pen" and "Pen (Eraser)". TabletKit, not a manufacturer, assigns tool codes from `0xE000` through `0xEFFF`; see ``ToolIdentity/toolCode``.
+These pens don't identify themselves, so the decoder announces every pen with the same tool code, `0xE902`, and every eraser with `0xE90A`. ``ToolCatalog`` names them "Pen" and "Pen (Eraser)". TabletKit, not a manufacturer, assigns tool codes from `0xE000` through `0xEFFF`; see ``ToolIdentity/toolCode``.
 
 ## Keep Time for Quiet Tablets
 

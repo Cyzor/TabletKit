@@ -335,7 +335,7 @@ public func emitToolCompatibility(
     state: inout DecoderState,
     results: inout [DecodeResult]
 ) {
-    let caps = WacomToolCatalog.capabilities(forToolCode: toolCode, family: deviceFamily)
+    let caps = ToolCatalog.capabilities(forToolCode: toolCode, family: deviceFamily)
     state.toolIsSupported = caps.isSupported
     if !caps.isSupported {
         // These are the capabilities the tool lacks, not the ones it keeps.

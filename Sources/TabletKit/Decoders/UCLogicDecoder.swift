@@ -32,7 +32,7 @@ import Foundation
 /// reports the pen leaving.
 ///
 /// These pens send no serial or tool code, so every pen is announced as
-/// ``WacomToolCatalog``'s shared code `0xE902`.
+/// ``ToolCatalog``'s shared code `0xE902`.
 ///
 /// The tablet's own buttons arrive as a bitmap, lowest bit first: in bytes
 /// 4–5 of a Huion report whose byte 1 is `0xE0`, and in bytes 2–3 of a UGEE

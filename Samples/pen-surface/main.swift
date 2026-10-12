@@ -104,7 +104,7 @@ func describe(_ steps: [InitStep]) -> String {
 
 // MARK: - Decoder choice
 
-func makeDecoder(_ parser: ReportParser) -> (any TabletReportDecoder)? {
+func makeDecoder(_ parser: ReportFormat) -> (any TabletReportDecoder)? {
     switch parser {
     case .xencelabs, .ucLogic, .expressKeyRemote: return nil  // not Wacom pens
     default: return parser.makeDecoder()

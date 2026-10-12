@@ -160,19 +160,19 @@ final class UCLogicTabletInfoTests: XCTestCase {
     // MARK: - The shared pen
 
     func testSharedPenIsInCatalog() throws {
-        let pen = try XCTUnwrap(WacomToolCatalog.spec(forToolCode: 0xE902))
+        let pen = try XCTUnwrap(ToolCatalog.spec(forToolCode: 0xE902))
         XCTAssertEqual(pen.buttonCount, 2)
         XCTAssertTrue(pen.hasTilt)
         XCTAssertFalse(pen.hasRotation)
         XCTAssertEqual(pen.eraserToolCode, 0xE90A)
-        XCTAssertFalse(WacomToolCatalog.isEraser(toolCode: 0xE902))
-        XCTAssertTrue(WacomToolCatalog.isEraser(toolCode: 0xE90A))
-        XCTAssertFalse(WacomToolCatalog.isMouse(toolCode: 0xE902))
+        XCTAssertFalse(ToolCatalog.isEraser(toolCode: 0xE902))
+        XCTAssertTrue(ToolCatalog.isEraser(toolCode: 0xE90A))
+        XCTAssertFalse(ToolCatalog.isMouse(toolCode: 0xE902))
     }
 
     /// No family restriction: the pen works on any tablet that reports it.
     func testSharedPenWorksOnAnyFamily() throws {
-        let pen = try XCTUnwrap(WacomToolCatalog.spec(forToolCode: 0xE902))
+        let pen = try XCTUnwrap(ToolCatalog.spec(forToolCode: 0xE902))
         XCTAssertTrue(pen.isSupported(onFamily: .xencelabs))
         XCTAssertTrue(pen.isSupported(onFamily: nil))
     }

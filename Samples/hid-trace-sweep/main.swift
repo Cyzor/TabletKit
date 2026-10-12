@@ -114,7 +114,7 @@ func loadTraces(_ path: String?) -> [TraceFile] {
 /// Families worth replaying. Xencelabs is excluded: it is the only non-Wacom
 /// parser and its specs are synthesized at connect time rather than stored in
 /// this registry, so replaying a Wacom trace through it is meaningless.
-let candidateParsers: [ReportParser] = [
+let candidateParsers: [ReportFormat] = [
     .intuosV1, .intuosV2, .intuosV3, .intuos3, .bamboo, .cintiqV1, .graphire, .dtu, .dtus,
 ]
 
@@ -122,7 +122,7 @@ let candidateParsers: [ReportParser] = [
 
 /// Everything one hypothesis produced over the whole trace.
 struct Outcome {
-    var parser: ReportParser
+    var parser: ReportFormat
     var maxXBound = 0
     var maxYBound = 0
     var maxPressureBound = 0
@@ -158,7 +158,7 @@ struct Outcome {
     }
 }
 
-func replay(_ parser: ReportParser, _ events: [TraceEvent], against spec: WacomDeviceSpec) -> Outcome {
+func replay(_ parser: ReportFormat, _ events: [TraceEvent], against spec: TabletSpec) -> Outcome {
     var out = Outcome(
         parser: parser, maxXBound: spec.maxX, maxYBound: spec.maxY,
         maxPressureBound: spec.maxPressure)

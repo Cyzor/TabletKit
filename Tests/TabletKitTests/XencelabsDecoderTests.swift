@@ -169,9 +169,9 @@ final class XencelabsDecoderTests: XCTestCase {
     }
 
     func testCatalogNamesBothPens() {
-        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE802)?.buttonCount, 3)
-        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE812)?.buttonCount, 2)
-        XCTAssertEqual(WacomToolCatalog.spec(forToolCode: 0xE81A)?.toolType, .eraser)
+        XCTAssertEqual(ToolCatalog.spec(forToolCode: 0xE802)?.buttonCount, 3)
+        XCTAssertEqual(ToolCatalog.spec(forToolCode: 0xE812)?.buttonCount, 2)
+        XCTAssertEqual(ToolCatalog.spec(forToolCode: 0xE81A)?.toolType, .eraser)
     }
 
     func testPenToEraserFlipReemitsToolEnter() {

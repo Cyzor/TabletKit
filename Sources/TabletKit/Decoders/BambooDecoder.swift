@@ -15,7 +15,7 @@ import Foundation
 /// `wacom_bpt_pen()` decodes for the 2009–2011 Bamboo generation (CTL-460/660,
 /// CTH-460/461/470, CTL-470...). Only emitted after the tablet is switched out
 /// of mouse emulation with feature report `[0x02, 0x02]` (see
-/// `WacomDeviceSpec.initSteps`); in mouse mode these tablets send 4-byte
+/// `TabletSpec.initSteps`); in mouse mode these tablets send 4-byte
 /// relative boot-mouse packets on report ID 0x01 instead. Confirmed against a
 /// user capture of a CTL-460 (PID 0x00D4) on 2026-07-21.
 ///

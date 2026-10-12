@@ -29,7 +29,7 @@ A tablet usually shows up as several devices, called interfaces: one for the pen
 
 The sample also matches Huion, XP-Pen, and other tablets built on UC-Logic chips. Those size themselves instead of using the registry; see <doc:SupportingTabletsThatDescribeThemselves>.
 
-The registry entry, a ``WacomDeviceSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format creates the decoder:
+The registry entry, a ``TabletSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format creates the decoder:
 
 ```swift
 var decoder = spec.parser.makeDecoder()

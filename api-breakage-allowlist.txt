@@ -408,3 +408,14 @@ API breakage: func decodeWirelessReport(report:length:) has parameter 0 type cha
 # changelog-documented.
 API breakage: enumelement ReportParser.ucLogic has been added as a new enum case
 API breakage: enumelement DeviceFamily.ucLogic has been added as a new enum case
+
+# 2026-10-11: WacomDeviceSpec, ReportParser, WacomToolCatalog, WacomToolSpec, and WacomToolType
+# renamed to TabletSpec, ReportFormat, ToolCatalog, ToolSpec, and ToolKind. The old names stay
+# as deprecated typealiases, so source still compiles; these are symbol-level type-name changes.
+API breakage: constructor ToolIdentity.init(spec:serial:) has parameter 0 type change from TabletKit.WacomToolSpec to TabletKit.ToolSpec
+API breakage: var ToolIdentity.toolSpec has declared type change from TabletKit.WacomToolSpec? to TabletKit.ToolSpec?
+API breakage: accessor ToolIdentity.toolSpec.Get() has return type change from TabletKit.WacomToolSpec? to TabletKit.ToolSpec?
+API breakage: var WacomDeviceRegistry.knownDevices has declared type change from [TabletKit.WacomDeviceSpec] to [TabletKit.TabletSpec]
+API breakage: accessor WacomDeviceRegistry.knownDevices.Get() has return type change from [TabletKit.WacomDeviceSpec] to [TabletKit.TabletSpec]
+API breakage: func WacomDeviceRegistry.spec(for:) has return type change from TabletKit.WacomDeviceSpec? to TabletKit.TabletSpec?
+API breakage: func WacomDeviceRegistry.spec(forProductID:productString:) has return type change from TabletKit.WacomDeviceSpec? to TabletKit.TabletSpec?

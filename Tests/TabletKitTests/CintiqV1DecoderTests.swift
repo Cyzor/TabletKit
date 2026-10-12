@@ -553,8 +553,8 @@ final class CintiqV1DecoderTests: XCTestCase {
     }
 
     func testProPenToolCodeIsCataloged() {
-        XCTAssertEqual(WacomToolCatalog.name(forToolCode: 0x1E02), "Pro Pen")
-        XCTAssertEqual(WacomToolCatalog.name(forToolCode: 0x1E0A), "Pro Pen (Eraser)")
-        XCTAssertTrue(WacomToolCatalog.capabilities(forToolCode: 0x1E02, family: .cintiq).isSupported)
+        XCTAssertEqual(ToolCatalog.name(forToolCode: 0x1E02), "Pro Pen")
+        XCTAssertEqual(ToolCatalog.name(forToolCode: 0x1E0A), "Pro Pen (Eraser)")
+        XCTAssertTrue(ToolCatalog.capabilities(forToolCode: 0x1E02, family: .cintiq).isSupported)
     }
 }

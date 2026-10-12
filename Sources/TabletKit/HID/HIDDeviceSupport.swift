@@ -39,7 +39,7 @@ public struct DigitizerSpec: Sendable {
     /// The UI shows this many slots; the model always stores 4 (same pattern as expressKeyBindings).
     public var ringSlotCount: Int = 4
     /// True if this device has capacitive finger touch in addition to the pen.
-    /// Mirrors `WacomDeviceSpec.hasFingerTouch`; gates UI for the Touch pane
+    /// Mirrors `TabletSpec.hasFingerTouch`; gates UI for the Touch pane
     /// and the touch-enable feature report.  See `hasFingerTouch` doc there.
     public var hasFingerTouch: Bool = false
     /// Maximum simultaneous touch contacts the device reports (1 for single-touch
@@ -76,7 +76,7 @@ public struct DigitizerSpec: Sendable {
     }
 
     /// Creates a spec. For a registry device, use
-    /// ``WacomDeviceSpec/digitizerSpec`` instead.
+    /// ``TabletSpec/digitizerSpec`` instead.
     public init(
         maxX: Int,
         maxY: Int,
@@ -135,7 +135,7 @@ public func hidReportDescriptorHex(_ device: IOHIDDevice) -> String? {
 /// `isLargeReport` (true when MaxInputReportSize > 64) to distinguish IntuosV1
 /// from IntuosV2 report families.
 ///
-/// Used by `TabletManager` when building a `WacomDeviceSpec` at runtime —
+/// Used by `TabletManager` when building a `TabletSpec` at runtime —
 /// e.g. for the ACK-40401 wireless dongle whose paired-tablet dimensions are
 /// encoded in its HID descriptor rather than the static registry.
 public func queryHIDDigitizerSpec(_ device: IOHIDDevice)

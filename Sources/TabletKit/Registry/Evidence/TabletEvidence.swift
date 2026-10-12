@@ -87,7 +87,7 @@ public enum SupportScope: Sendable, Equatable {
     case outOfScope(String)
 }
 
-extension WacomDeviceSpec {
+extension TabletSpec {
     /// The features this row says the model has, worked out from its flags.
     public var claimedFeatures: Set<TabletFeature> {
         var features = flagFeatures

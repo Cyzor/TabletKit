@@ -208,7 +208,7 @@ public struct XencelabsDecoder: TabletReportDecoder {
         var results: [DecodeResult] = []
         // Announce the tool on entering range, and whenever the pen or its
         // end changes. The pens carry no serial, so these codes are
-        // TabletKit's own, listed in WacomToolCatalog.
+        // TabletKit's own, listed in ToolCatalog.
         if !state.prevInProximity || toolCode != state.currentToolCode {
             state.prevInProximity = true
             state.isEraser = isEraser
