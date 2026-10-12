@@ -122,9 +122,11 @@ public struct IntuosV3Decoder: TabletReportDecoder {
             return decodeAuxReport(report: report)
         case 0x1A:
             guard report.count >= 20 else { return [] }
-            return decodeBLEReport(
+            var results = decodeBLEReport(
                 report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
+            Self.inferArtPenFromRotation(&results, state: &state)
+            return results
         case 0x1B:
             // Only byte [1] is read, which the length >= 2 guard above covers.
             return decodeBatteryReport(report: report, state: &state)
@@ -748,6 +750,35 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// pens matching their USB identity exactly). Byte [10] has no USB
     /// counterpart and is undecoded. Read before the position guard rejects
     /// the class.
+    /// Barrel rotation decodes on every Bluetooth frame whatever the pen, and
+    /// a pen without a rotation sensor sits at a fixed 180°. So a twisted
+    /// barrel under a pen that isn't announced as an Art Pen means the Art
+    /// Pen's announcement was missed: announce it here. One-directional,
+    /// since a still Art Pen also reads 180°.
+    ///
+    /// `hasValidRotationFrame` is required: a pen with no barrel sensor never
+    /// sets it, and rotation reads 0 until then, which is 180° off neutral.
+    /// Without the check every Pro Pen 3 read as an Art Pen one frame after
+    /// its real announcement.
+    ///
+    /// Writes `currentToolCode` only, never `lastToolCode` or `lastSerial`:
+    /// those detect announcement changes, and setting them made a later real
+    /// Art Pen announcement compare equal and get dropped.
+    static func inferArtPenFromRotation(_ results: inout [DecodeResult], state: inout DecoderState) {
+        let point = results.lazy.compactMap { result -> TabletPoint? in
+            if case .pen(let point) = result { return point } else { return nil }
+        }.first
+        guard state.currentToolCode != 0x0804, state.currentToolCode != 0x1108,
+            let point, point.inProximity,
+            state.hasValidRotationFrame,
+            abs(point.rotation - 180.0) > 2.0
+        else { return }
+        state.currentToolCode = 0x0804
+        results.insert(
+            .toolEnter(ToolIdentity(serial: 0, toolCode: 0x0804, isEraser: false, isMouse: false)),
+            at: 0)
+    }
+
     private func decodeBLEReport(
         report: HIDReport,
         spec: DigitizerSpec,
