@@ -129,7 +129,7 @@ public struct TabletPoint: Sendable {
 
 /// Identity of a physical pen as reported by the tablet firmware.
 /// Fires once per `onToolEnter` callback whenever the active tool changes.
-public struct ToolIdentity: Sendable {
+public struct ToolIdentity: Sendable, Equatable {
     /// Unique 32-bit serial per physical pen body.  0 means not available (IntuosV1).
     public let serial: UInt32
     /// Wacom product code — e.g. 0x0802 Grip Pen, 0x0804 Art Pen, 0x0842 Pro Pen 2.
