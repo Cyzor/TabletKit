@@ -166,6 +166,11 @@ struct PadShape: Sendable {
 }
 
 extension PadState {
+    /// The pad in `aux`, listing the rings and strips it uses.
+    public init(_ aux: AuxButtons) {
+        self.init(aux, shape: PadShape(rings: 0, strips: 0))
+    }
+
     /// The pad in `aux`, with at least the rings and strips `shape` names,
     /// and more if the report uses them.
     init(_ aux: AuxButtons, shape: PadShape) {
