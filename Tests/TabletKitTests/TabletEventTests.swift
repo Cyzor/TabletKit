@@ -105,4 +105,14 @@ final class TabletEventTests: XCTestCase {
         let out = HIDReport.withReport([0x02]) { d.events($0) }
         XCTAssertEqual(out.count, 1, "no leave for a tool the reset forgot")
     }
+
+    func testMovedConstantsKeepTheirValues() {
+        XCTAssertEqual(TouchFrame.deviceTimeMsPerCount, 0.1)
+        XCTAssertEqual(TouchFrame.deviceTimeCountsPerBluetoothFrame, 100)
+        XCTAssertEqual(DecoderState.btTouchMsPerCount, TouchFrame.deviceTimeMsPerCount)
+        XCTAssertEqual(DecoderState.btTouchCountsPerFrame, TouchFrame.deviceTimeCountsPerBluetoothFrame)
+        XCTAssertEqual(ReportFormat.xencelabs.tiltMaxDegrees, 60)
+        XCTAssertEqual(XencelabsDecoder.tiltMaxDegrees, 60)
+        XCTAssertNil(ReportFormat.intuosV2.tiltMaxDegrees)
+    }
 }

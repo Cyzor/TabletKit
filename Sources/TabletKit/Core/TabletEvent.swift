@@ -88,6 +88,12 @@ public struct TouchFrame: Sendable, Equatable {
         self.contacts = contacts
         self.deviceTime = deviceTime
     }
+
+    /// Milliseconds per count of ``deviceTime``.
+    public static let deviceTimeMsPerCount = 0.1
+    /// Counts between consecutive frames in one Bluetooth report (10 ms),
+    /// measured on a PTH-660.
+    public static let deviceTimeCountsPerBluetoothFrame = 100
 }
 
 /// Anything a tablet reports besides input. New kinds are additions, so

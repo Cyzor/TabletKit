@@ -99,10 +99,8 @@ public struct XencelabsDecoder: TabletReportDecoder {
     static let thinPenCode: UInt16 = 0xE812
     static let thinEraserCode: UInt16 = 0xE81A
 
-    /// Full-scale tilt in degrees. The wire unit is 1° per count: a
-    /// stop-to-stop capture saturates at raw ±60 (see `tiltRawScale`) while
-    /// the vendor tool reads ±60° at those same stops.
-    public static let tiltMaxDegrees: Double? = 60.0
+    /// Full-scale tilt in degrees; see ``ReportFormat/tiltMaxDegrees``.
+    public static let tiltMaxDegrees: Double? = ReportFormat.xencelabs.tiltMaxDegrees
 
     /// Divisor for the signed raw tilt bytes, hardware-confirmed 2026-09-04.
     ///
@@ -282,5 +280,15 @@ public struct XencelabsDecoder: TabletReportDecoder {
         default: break
         }
         return results
+    }
+}
+
+extension ReportFormat {
+    /// Full-scale tilt in degrees where the format itself fixes it, else `nil`.
+    ///
+    /// Xencelabs: the wire unit is 1° per count. A stop-to-stop capture
+    /// saturates at raw ±60 while the vendor tool reads ±60° at those stops.
+    public var tiltMaxDegrees: Double? {
+        self == .xencelabs ? 60.0 : nil
     }
 }

@@ -118,9 +118,9 @@ public struct DecoderState: Sendable {
     /// counts and cannot wrap.
     public var btTouchFrameStamps: [UInt16] = []
     /// Milliseconds per count of `btTouchFrameStamps`.
-    public static let btTouchMsPerCount = 0.1
+    public static let btTouchMsPerCount = TouchFrame.deviceTimeMsPerCount
     /// Counts between consecutive sub-frames in one BT touch container.
-    public static let btTouchCountsPerFrame = 100
+    public static let btTouchCountsPerFrame = TouchFrame.deviceTimeCountsPerBluetoothFrame
     /// WACOM_24HDT (`Wacom24HDTDecoder`) multi-packet frame accumulator.
     /// The device's active-contact count describes the whole gesture frame,
     /// not one packet, so contacts collect here across reports until that
