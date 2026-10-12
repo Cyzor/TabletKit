@@ -11,7 +11,7 @@ final class HIDOutputQueueTests: XCTestCase {
     func testSendsInOrderAndReportsResults() {
         let iface = RecordingHIDInterface()
         let queue = HIDOutputQueue(label: "test")
-        let results = Results()
+        let results = Recorded<IOReturn>()
         for i in 0..<5 {
             queue.send(.feature, [0x20, UInt8(i)], to: iface) { results.append($0) }
         }
@@ -44,11 +44,4 @@ final class HIDOutputQueueTests: XCTestCase {
         XCTAssertLessThan(DispatchTime.now().uptimeNanoseconds - start, 10_000_000)
         queue.drain()
     }
-}
-
-private final class Results: @unchecked Sendable {
-    private let lock = NSLock()
-    private var _values: [IOReturn] = []
-    var values: [IOReturn] { lock.withLock { _values } }
-    func append(_ v: IOReturn) { lock.withLock { _values.append(v) } }
 }

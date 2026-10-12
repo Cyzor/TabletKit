@@ -36,12 +36,12 @@ final class InitStepRunnerTests: XCTestCase {
         let iface = RecordingHIDInterface()
         iface.maxOutputReportSize = 5
         iface.strings[200] = [4, 3, 0x41, 0]
-        var outcomes: [InitStepOutcome] = []
-        let lock = NSLock()
+        let recorded = Recorded<InitStepOutcome>()
         InitStepRunner.run(
             [.featureReport([0x02, 0x02]), .outputReport([0x02, 0xB0, 0x04]), .stringDescriptor(200)],
             on: iface
-        ) { o in lock.withLock { outcomes.append(o) } }
+        ) { recorded.append($0) }
+        let outcomes = recorded.values
 
         XCTAssertEqual(iface.log, ["feature 02 02", "output 02 B0 04 00 00", "string 200"])
         XCTAssertEqual(outcomes.map(\.index), [0, 1, 2])
@@ -75,4 +75,12 @@ final class InitStepRunnerTests: XCTestCase {
         ) { _ in }
         XCTAssertEqual(iface.log, ["feature 03 01"])
     }
+}
+
+/// Collects values from a `@Sendable` callback.
+final class Recorded<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _values: [T] = []
+    var values: [T] { lock.withLock { _values } }
+    func append(_ v: T) { lock.withLock { _values.append(v) } }
 }
