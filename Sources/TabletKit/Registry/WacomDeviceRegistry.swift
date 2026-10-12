@@ -134,7 +134,10 @@ extension ReportFormat {
     ///
     /// Use this instead of switching over formats yourself, so a format added
     /// in a later release needs no change in your code.
-    public func makeDecoder() -> any TabletReportDecoder {
+    @available(*, deprecated, message: "Use DeviceDecoder, or TabletSpec.makeDecoder().")
+    public func makeDecoder() -> any TabletReportDecoder { decoder() }
+
+    func decoder() -> any TabletReportDecoder {
         switch self {
         case .graphire: return GraphireDecoder()
         case .intuosV1: return IntuosV1Decoder()

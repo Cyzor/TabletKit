@@ -4,15 +4,10 @@ Turn raw HID input-report bytes into `TabletPoint` values while avoiding coordin
 
 ## Overview
 
-A `TabletReportDecoder` accepts one HID input report as an ``HIDReport`` and returns zero or more `DecodeResult` values. For pen movement, handle the `.pen` case:
+A ``DeviceDecoder`` accepts one HID input report as an ``HIDReport`` and returns zero or more `DecodeResult` values. For pen movement, handle the `.pen` case:
 
 ```swift
-let results = decoder.decode(
-    report: report,
-    spec: spec,
-    state: &state,
-    deviceFamily: family
-)
+let results = decoder.decode(report)
 
 for result in results {
     if case let .pen(point) = result {

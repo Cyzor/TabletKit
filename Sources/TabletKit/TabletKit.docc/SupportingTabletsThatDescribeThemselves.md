@@ -60,19 +60,18 @@ The result holds the coordinate range, pressure levels, resolution, and the numb
 
 ## Decode Each Report
 
-Create one ``UCLogicDecoder`` per tablet, and tell it which protocol answered:
+Create one decoder per tablet, built on a ``UCLogicDecoder`` that knows which protocol answered:
 
 ```swift
-var decoder = UCLogicDecoder(protocol: info.tabletProtocol)
-var state = DecoderState()
-let spec = info.digitizerSpec
+var decoder = DeviceDecoder(
+    UCLogicDecoder(protocol: info.tabletProtocol),
+    digitizer: info.digitizerSpec, family: .ucLogic)
 ```
 
 Then decode each input report as it arrives, as with any other decoder:
 
 ```swift
-let results = decoder.decode(
-    report: report, spec: spec, state: &state, deviceFamily: .ucLogic)
+let results = decoder.decode(report)
 ```
 
 These pens don't identify themselves, so the decoder announces every pen with the same tool code, `0xE902`, and every eraser with `0xE90A`. ``ToolCatalog`` names them "Pen" and "Pen (Eraser)". TabletKit, not a manufacturer, assigns tool codes from `0xE000` through `0xEFFF`; see ``ToolIdentity/toolCode``.
@@ -81,13 +80,12 @@ These pens don't identify themselves, so the decoder announces every pen with th
 
 A Huion tablet never says the pen has left. It just stops sending. Decoders never read the clock, so you watch for the silence.
 
-After each report, check ``TabletReportDecoder/silenceTimeout``. If it isn't `nil`, start a timer for that long, and restart it on every report. When it fires, ask the decoder what the silence means:
+After each report, check ``DeviceDecoder/silenceTimeout``. If it isn't `nil`, start a timer for that long, and restart it on every report. When it fires, ask the decoder what the silence means:
 
 ```swift
 if let timeout = decoder.silenceTimeout {
     silenceTimer.restart(after: timeout) {
-        let results = decoder.decodeSilence(
-            spec: spec, state: &state, deviceFamily: .ucLogic)
+        let results = decoder.decodeSilence()
         handle(results)
     }
 }

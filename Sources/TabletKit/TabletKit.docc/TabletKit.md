@@ -9,12 +9,11 @@ TabletKit does not depend on AppKit or inject system input. It uses IOKit HID on
 The basic flow:
 
 1. Find the device in `WacomDeviceRegistry` or `VendorDeviceRegistry`.
-2. Create a `DigitizerSpec` from the device’s coordinate and pressure ranges.
-3. Create a `DecoderState` for that device.
-4. When the device sends a HID report, pass its bytes to the matching `TabletReportDecoder`.
-5. Handle the returned `DecodeResult` values.
+2. Create a ``DeviceDecoder`` for it with `spec.makeDecoder()`.
+3. When the device sends a HID report, pass its bytes to the decoder.
+4. Handle the returned `DecodeResult` values.
 
-Use `ReportFormat.makeDecoder()` to get the right decoder for a tablet. Most Wacom tablets also need their `initSteps` sent before they report pressure and tilt. <doc:BuildingAMinimalDriver> covers both with a working sample.
+The decoder picks the right report format for the tablet. Most Wacom tablets also need their `initSteps` sent before they report pressure and tilt. <doc:BuildingAMinimalDriver> covers both with a working sample.
 
 TabletKit is an independent community project. Wacom Co., Ltd. and other device vendors do not sponsor, endorse, or affiliate with it. Product names identify compatible hardware only.
 
@@ -35,6 +34,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 
 ### Essentials
 
+- ``DeviceDecoder``
 - ``DecodeResult``
 - ``DecoderState``
 - ``TabletReportDecoder``

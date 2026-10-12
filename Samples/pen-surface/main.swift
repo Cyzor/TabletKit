@@ -104,10 +104,10 @@ func describe(_ steps: [InitStep]) -> String {
 
 // MARK: - Decoder choice
 
-func makeDecoder(_ parser: ReportFormat) -> (any TabletReportDecoder)? {
-    switch parser {
-    case .xencelabs, .ucLogic, .expressKeyRemote: return nil  // not Wacom pens
-    default: return parser.makeDecoder()
+func isWacomPen(_ format: ReportFormat) -> Bool {
+    switch format {
+    case .xencelabs, .ucLogic, .expressKeyRemote: return false
+    default: return true
     }
 }
 
@@ -243,18 +243,13 @@ func switchOnAndDescribe(_ device: IOHIDDevice, vendor: Int) -> UCLogicTabletInf
 @MainActor
 final class Tablet {
     let name: String
-    let spec: DigitizerSpec
-    let family: DeviceFamily
-    var decoder: any TabletReportDecoder
-    var state = DecoderState()
+    var decoder: DeviceDecoder
     var initSent = false
     /// Fires when a tablet that never reports the pen leaving goes quiet.
     var silenceTimer: Timer?
 
-    init(name: String, spec: DigitizerSpec, family: DeviceFamily, decoder: any TabletReportDecoder) {
+    init(name: String, decoder: DeviceDecoder) {
         self.name = name
-        self.spec = spec
-        self.family = family
         self.decoder = decoder
     }
 }
@@ -304,11 +299,10 @@ final class PenSurfaceRunner {
 
     /// Returns the tablet with `id`, adding it if it's new.
     func tablet(
-        id: Int, name: String, spec: DigitizerSpec, family: DeviceFamily,
-        decoder: @autoclosure () -> any TabletReportDecoder
+        id: Int, name: String, decoder: @autoclosure () -> DeviceDecoder
     ) -> (tablet: Tablet, isNew: Bool) {
         if let existing = tablets[id] { return (existing, false) }
-        let added = Tablet(name: name, spec: spec, family: family, decoder: decoder())
+        let added = Tablet(name: name, decoder: decoder())
         tablets[id] = added
         print("Connected: \(name)  (\(String(format: "%04X:%04X", id >> 16, id & 0xFFFF)))")
         return (added, true)
@@ -329,11 +323,10 @@ final class PenSurfaceRunner {
             fputs("PID 0x\(String(pid, radix: 16)) is not in TabletKit's registry — ignoring\n", stderr)
             return
         }
-        guard let decoder = makeDecoder(found.format) else { return }
+        guard isWacomPen(found.format) else { return }
 
         let (tablet, isNew) = tablet(
-            id: wacomVendorID << 16 | pid, name: found.name, spec: found.digitizerSpec,
-            family: found.family, decoder: decoder)
+            id: wacomVendorID << 16 | pid, name: found.name, decoder: found.makeDecoder())
         if isNew {
             print("switch-on sequence: \(describe(initOverride ?? found.initSteps))\(initOverride == nil ? " (registry)" : " (--init)")")
         }
@@ -369,8 +362,10 @@ final class PenSurfaceRunner {
 
         let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "UC-Logic tablet"
         let (tablet, _) = tablet(
-            id: id, name: name, spec: info.digitizerSpec, family: .ucLogic,
-            decoder: UCLogicDecoder(protocol: info.tabletProtocol))
+            id: id, name: name,
+            decoder: DeviceDecoder(
+                UCLogicDecoder(protocol: info.tabletProtocol),
+                digitizer: info.digitizerSpec, family: .ucLogic))
         print("It describes itself (\(info.tabletProtocol)): \(info.maxX) × \(info.maxY), pressure \(info.maxPressure), \(info.lpi) lines per inch")
         if VendorDeviceRegistry.drivableProfile(forVendorID: vendor, productID: id & 0xFFFF) != nil {
             print("TabletKit also has a dedicated decoder for this tablet; this sample uses the self-description anyway.")
@@ -382,9 +377,7 @@ final class PenSurfaceRunner {
 
     func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex, from tablet: Tablet) {
         handle(
-            tablet.decoder.decode(
-                report: HIDReport(pointer: report, count: length), spec: tablet.spec,
-                state: &tablet.state, deviceFamily: tablet.family))
+            tablet.decoder.decode(HIDReport(pointer: report, count: length)))
 
         // Some tablets never say the pen left; they go quiet. Decoders don't
         // read the clock, so watch for the silence here.
@@ -395,8 +388,7 @@ final class PenSurfaceRunner {
                 MainActor.assumeIsolated {  // scheduled on the main run loop
                     guard let self, let tablet else { return }
                     self.handle(
-                        tablet.decoder.decodeSilence(
-                            spec: tablet.spec, state: &tablet.state, deviceFamily: tablet.family))
+                        tablet.decoder.decodeSilence())
                 }
             }
         }

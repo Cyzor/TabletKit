@@ -513,8 +513,8 @@ final class WacomDeviceRegistryTests: XCTestCase {
     }
 
     func testMakeDecoderMatchesFormat() {
-        XCTAssertTrue(ReportFormat.intuosV2.makeDecoder() is IntuosV2Decoder)
-        XCTAssertTrue(ReportFormat.ucLogic.makeDecoder() is UCLogicDecoder)
-        XCTAssertTrue(ReportFormat.pl.makeDecoder() is WacomPLDecoder)
+        XCTAssertTrue(ReportFormat.intuosV2.decoder() is IntuosV2Decoder)
+        XCTAssertTrue(ReportFormat.ucLogic.decoder() is UCLogicDecoder)
+        XCTAssertTrue(ReportFormat.pl.decoder() is WacomPLDecoder)
     }
 }

@@ -162,16 +162,12 @@ func replay(_ parser: ReportFormat, _ events: [TraceEvent], against spec: Tablet
     var out = Outcome(
         parser: parser, maxXBound: spec.maxX, maxYBound: spec.maxY,
         maxPressureBound: spec.maxPressure)
-    var decoder = parser.makeDecoder()
-    var state = DecoderState()
-    let digiSpec = spec.digitizerSpec
+    var decoder = DeviceDecoder(format: parser, digitizer: spec.digitizerSpec, family: spec.family)
 
     for event in events {
         guard let firstByte = event.bytes.first else { continue }
         let results = HIDReport.withReport(event.bytes) { report -> [DecodeResult] in
-            decoder.decode(
-                report: report, spec: digiSpec, state: &state,
-                deviceFamily: spec.family)
+            decoder.decode(report)
         }
         if !results.isEmpty { out.reportIDsDecoded.insert(firstByte) }
 

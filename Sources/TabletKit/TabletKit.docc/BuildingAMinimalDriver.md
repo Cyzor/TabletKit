@@ -29,10 +29,10 @@ A tablet usually shows up as several devices, called interfaces: one for the pen
 
 The sample also matches Huion, XP-Pen, and other tablets built on UC-Logic chips. Those size themselves instead of using the registry; see <doc:SupportingTabletsThatDescribeThemselves>.
 
-The registry entry, a ``TabletSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format creates the decoder:
+The registry entry, a ``TabletSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. It creates the decoder:
 
 ```swift
-var decoder = spec.format.makeDecoder()
+var decoder = spec.makeDecoder()
 ```
 
 ## Switch It On
@@ -50,14 +50,10 @@ To see what switch-on does, run the sample with `--init none` and compare. The s
 Register a callback for input reports on each interface. Every call hands over one report's bytes:
 
 ```swift
-let results = decoder.decode(
-    report: HIDReport(pointer: report, count: length), spec: digitizerSpec,
-    state: &decoderState, deviceFamily: spec.family)
+let results = decoder.decode(HIDReport(pointer: report, count: length))
 ```
 
-Keep one ``DecoderState`` per tablet and pass it back every time. Decoders use it to remember things between reports, such as which pen is in range.
-
-Decoders are value types, so keep the copy that `decode` changed. The results come back as a list, because one report can hold several things. The sample only needs two: `.pen` for movement and `.toolEnter` for a pen coming into range.
+The decoder remembers what it needs between reports, such as which pen is in range. It's a value type, so keep the copy that `decode` changed. The results come back as a list, because one report can hold several things. The sample only needs two: `.pen` for movement and `.toolEnter` for a pen coming into range.
 
 The sample handles reports on the main run loop, which is fine for a demo. A real driver should use ``HIDThread`` instead, so a busy interface never delays the pen.
 

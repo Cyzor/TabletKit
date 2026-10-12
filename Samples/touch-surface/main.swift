@@ -80,7 +80,7 @@ struct UnsupportedDevice: Error {
 /// — an architecture this sample doesn't implement. Every other
 /// touch-capable device in the registry has a real touch range and uses the
 /// `.intuosV1`, `.intuosV2`, or `.bamboo` parser.
-func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletReportDecoder), UnsupportedDevice> {
+func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, DeviceDecoder), UnsupportedDevice> {
     guard spec.hasFingerTouch else {
         return .failure(UnsupportedDevice(reason: "\(spec.name) has no touch sensor per the registry"))
     }
@@ -94,7 +94,6 @@ func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletRepo
 
     let digiSpec = spec.digitizerSpec
 
-    let decoder: any TabletReportDecoder
     // pinchDominanceRatio needs a different value per touch-sensor
     // generation, not one constant — see GestureRecognizer.swift for why.
     // 1.75 is MockTab's own value for the newer BPT3 5-slot sensor
@@ -103,13 +102,8 @@ func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletRepo
     let pinchDominanceRatio: Double
     switch spec.format {
     case .intuosV1:
-        decoder = IntuosV1Decoder()
         pinchDominanceRatio = 5.0
-    case .intuosV2:
-        decoder = IntuosV2Decoder()
-        pinchDominanceRatio = 1.75
-    case .bamboo:
-        decoder = BambooDecoder()
+    case .intuosV2, .bamboo:
         pinchDominanceRatio = 1.75
     default:
         return .failure(UnsupportedDevice(reason: "\(spec.name) uses \(spec.format), which this sample has no decoder mapping for"))
@@ -120,15 +114,14 @@ func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletRepo
     let resolved = ResolvedDevice(
         spec: spec, digiSpec: digiSpec,
         deviceUnitsPerMM: deviceUnitsPerMM, pinchDominanceRatio: pinchDominanceRatio)
-    return .success((resolved, decoder))
+    return .success((resolved, spec.makeDecoder()))
 }
 
 // The HID manager is scheduled on the main run loop, so every callback runs on main.
 @MainActor
 final class TouchSurfaceRunner {
     var resolved: ResolvedDevice?
-    var decoder: (any TabletReportDecoder)?
-    var decoderState = DecoderState()
+    var decoder: DeviceDecoder?
     var recognizer: GestureRecognizer?
     nonisolated(unsafe) let reportBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 512)
 
@@ -163,12 +156,8 @@ final class TouchSurfaceRunner {
     }
 
     func handleReport(length: CFIndex) {
-        guard let resolved, var decoder, let recognizer else { return }
-        let results = decoder.decode(
-            report: HIDReport(pointer: reportBuffer, count: length),
-            spec: resolved.digiSpec,
-            state: &decoderState,
-            deviceFamily: resolved.spec.family)
+        guard resolved != nil, var decoder, let recognizer else { return }
+        let results = decoder.decode(HIDReport(pointer: reportBuffer, count: length))
         self.decoder = decoder  // decoders are value types — write the mutated copy back
 
         for result in results {

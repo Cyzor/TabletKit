@@ -24,10 +24,7 @@ guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else {
     Foundation.exit(1)
 }
 
-let digiSpec = spec.digitizerSpec
-
-var state = DecoderState()
-var decoder = IntuosV2Decoder()
+var decoder = spec.makeDecoder()
 
 print("tablet-decode — TabletKit fixture replay")
 print("Device : \(spec.name)  (PID \(String(format: "0x%04X", spec.productID)))")
@@ -80,12 +77,7 @@ let reports: [(label: String, bytes: [UInt8])] = [
 
 for (label, bytes) in reports {
     let results = HIDReport.withReport(bytes) { report in
-        decoder.decode(
-            report: report,
-            spec: digiSpec,
-            state: &state,
-            deviceFamily: spec.family
-        )
+        decoder.decode(report)
     }
 
     for result in results {

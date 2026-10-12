@@ -19,20 +19,13 @@ import TabletKit
 // Look up the tablet by its USB product ID (0x0357 is the Intuos Pro M).
 guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else { fatalError("unknown tablet") }
 
-// The registry knows which decoder each tablet needs.
-var decoder = spec.format.makeDecoder()
-
-// Keep one state per connected tablet.
-var state = DecoderState()
+// One decoder per connected tablet. It knows the tablet's report format
+// and remembers what it needs between reports.
+var decoder = spec.makeDecoder()
 
 // Call this from your HID report callback.
 func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
-    let results = decoder.decode(
-        report: HIDReport(pointer: report, count: length),
-        spec: spec.digitizerSpec,
-        state: &state,
-        deviceFamily: spec.family
-    )
+    let results = decoder.decode(HIDReport(pointer: report, count: length))
     for result in results {
         switch result {
         case .pen(let point):
