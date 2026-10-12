@@ -120,27 +120,27 @@ public struct DeviceEvent: Sendable {
 
     init(kind: Kind) { self.kind = kind }
 
-    static func battery(percent: Int, charging: Bool) -> DeviceEvent {
+    public static func battery(percent: Int, charging: Bool) -> DeviceEvent {
         var e = DeviceEvent(kind: .battery)
         e.battery = Battery(percent: percent, charging: charging)
         return e
     }
-    static func wireless(_ status: WirelessStatus) -> DeviceEvent {
+    public static func wireless(_ status: WirelessStatus) -> DeviceEvent {
         var e = DeviceEvent(kind: .wireless)
         e.wireless = status
         return e
     }
-    static func remotePairing(_ slots: [RemotePairingSlot]) -> DeviceEvent {
+    public static func remotePairing(_ slots: [RemotePairingSlot]) -> DeviceEvent {
         var e = DeviceEvent(kind: .remotePairing)
         e.remotePairing = slots
         return e
     }
-    static func toolSupport(note: String) -> DeviceEvent {
+    public static func toolSupport(note: String) -> DeviceEvent {
         var e = DeviceEvent(kind: .toolSupport)
         e.unsupportedToolNote = note
         return e
     }
-    static func mouseButtons(_ bits: UInt8) -> DeviceEvent {
+    public static func mouseButtons(_ bits: UInt8) -> DeviceEvent {
         var e = DeviceEvent(kind: .mouseButtons)
         e.mouseButtons = bits
         return e
