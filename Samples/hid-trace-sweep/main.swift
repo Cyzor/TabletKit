@@ -238,8 +238,8 @@ func summaryLine(_ name: String, _ trace: TraceFile) -> String {
     }
     let events = trace.events.sorted(by: { $0.t < $1.t })
     let outcomes = candidateParsers.map { replay($0, events, against: spec) }
-    let assigned = outcomes.first(where: { $0.parser == spec.parser })
-        ?? replay(spec.parser, events, against: spec)
+    let assigned = outcomes.first(where: { $0.parser == spec.format })
+        ?? replay(spec.format, events, against: spec)
 
     let verdict: String
     if assigned.penEvents == 0 {
@@ -252,7 +252,7 @@ func summaryLine(_ name: String, _ trace: TraceFile) -> String {
     } else {
         verdict = "in range"
     }
-    var line = "\(name) \(pid) [\(spec.parser.rawValue) \(spec.confidence)] \(verdict)"
+    var line = "\(name) \(pid) [\(spec.format.rawValue) \(spec.confidence)] \(verdict)"
     if assigned.penEvents > 0 { line += " — \(describe(assigned))" }
     let others = assigned.decodedCounts.filter { !["pen", "toolEnter", "none"].contains($0.key) }
     if !others.isEmpty {
@@ -275,13 +275,13 @@ func printFullReport(_ trace: TraceFile) {
     let events = trace.events.sorted(by: { $0.t < $1.t })
     let reportIDsSeen = Set(events.compactMap(\.bytes.first))
     let outcomes = candidateParsers.map { replay($0, events, against: spec) }
-    guard let assigned = outcomes.first(where: { $0.parser == spec.parser }) else {
-        fputs("error: assigned parser \(spec.parser) missing from candidate list\n", stderr)
+    guard let assigned = outcomes.first(where: { $0.parser == spec.format }) else {
+        fputs("error: assigned parser \(spec.format) missing from candidate list\n", stderr)
         return
     }
 
     print("hid-trace-sweep — \(spec.name)  (PID 0x\(String(format: "%04X", trace.pid)))")
-    print("Registry: parser=\(spec.parser) maxX=\(spec.maxX) maxY=\(spec.maxY) "
+    print("Registry: parser=\(spec.format) maxX=\(spec.maxX) maxY=\(spec.maxY) "
         + "maxPressure=\(spec.maxPressure)  confidence: \(spec.confidence)")
     print("Trace: \(trace.events.count) raw reports")
     print(String(repeating: "-", count: 72))
@@ -310,7 +310,7 @@ func printFullReport(_ trace: TraceFile) {
         return $0.penEvents > $1.penEvents
     }
     for o in ranked {
-        let marker = o.parser == spec.parser ? "→" : " "
+        let marker = o.parser == spec.format ? "→" : " "
         let verdict: String
         if o.penEvents == 0 {
             verdict = "  ·"
@@ -346,9 +346,9 @@ func printFullReport(_ trace: TraceFile) {
         }
     } else if let best = better.max(by: { $0.exactHits < $1.exactHits }) {
         print("*** REASSIGNMENT CANDIDATE: \(best.parser) fits better than the assigned "
-            + "\(spec.parser).")
+            + "\(spec.format).")
         print("*** \(best.parser) → \(describe(best))")
-        print("*** \(spec.parser) → \(describe(assigned))")
+        print("*** \(spec.format) → \(describe(assigned))")
         print("*** An exact max hit under a different family is strong evidence the row is")
         print("*** on the wrong parser. Check report IDs and lengths before acting.")
     } else if assigned.falsified {
@@ -356,7 +356,7 @@ func printFullReport(_ trace: TraceFile) {
         print("*** Either the registry bounds are wrong, or the bug is inside this decoder")
         print("*** rather than in the choice of decoder. See the pressure check below.")
     } else if assigned.exactHits > 0 {
-        print("CONFIRMED: assigned parser \(spec.parser) hits the registry maximum exactly "
+        print("CONFIRMED: assigned parser \(spec.format) hits the registry maximum exactly "
             + "on \(assigned.exactHits) axis/axes.")
         print("A real stroke reached the true edge — positive evidence, not just absence of")
         print("contradiction.")

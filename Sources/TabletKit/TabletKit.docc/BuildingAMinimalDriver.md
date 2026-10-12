@@ -32,7 +32,7 @@ The sample also matches Huion, XP-Pen, and other tablets built on UC-Logic chips
 The registry entry, a ``TabletSpec``, gives the tablet's coordinate range, pressure levels, button count, and report format. The report format creates the decoder:
 
 ```swift
-var decoder = spec.parser.makeDecoder()
+var decoder = spec.format.makeDecoder()
 ```
 
 ## Switch It On

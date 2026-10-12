@@ -329,7 +329,7 @@ final class PenSurfaceRunner {
             fputs("PID 0x\(String(pid, radix: 16)) is not in TabletKit's registry — ignoring\n", stderr)
             return
         }
-        guard let decoder = makeDecoder(found.parser) else { return }
+        guard let decoder = makeDecoder(found.format) else { return }
 
         let (tablet, isNew) = tablet(
             id: wacomVendorID << 16 | pid, name: found.name, spec: found.digitizerSpec,
@@ -351,7 +351,7 @@ final class PenSurfaceRunner {
         }
         // Intuos Pro (PTH-x60) also needs its input mode set on USB, or it
         // sends touch but no pen. Part of switch-on, so --init none skips it.
-        if found.parser == .intuosV2, initOverride?.isEmpty != true {
+        if found.format == .intuosV2, initOverride?.isEmpty != true {
             sendWacomInputModeInit(device, tag: found.name)
         }
     }

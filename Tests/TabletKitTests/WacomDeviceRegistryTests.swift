@@ -200,7 +200,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
         let fallbackCodes: [UInt16] = [0x0802, 0x080A, 0x0016, 0x0806]
         let intuosV1Families = Set(
             WacomDeviceRegistry.knownDevices
-                .filter { $0.parser == .intuosV1 }
+                .filter { $0.format == .intuosV1 }
                 .map(\.family))
 
         for code in fallbackCodes {

@@ -47,7 +47,7 @@ final class DecoderFuzzTests: XCTestCase {
     func testRegistryDecoders() {
         var rng = SplitMix64(state: 1)
         for spec in WacomDeviceRegistry.knownDevices {
-            var decoder = spec.parser.makeDecoder()
+            var decoder = spec.format.makeDecoder()
             var state = DecoderState()
             for _ in 0..<Self.iterations {
                 let bytes = randomReport(&rng, ids: Self.ids)

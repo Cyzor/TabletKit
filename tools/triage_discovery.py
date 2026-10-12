@@ -837,7 +837,7 @@ def draft_entry(doc: dict, pid: Optional[int]) -> list[str]:
         "        .init(",
         f'            productID: 0x{pid:04X}, name: {rl.swift_string(name)},'
         f'  // ⚠ from submitted capture {captured}',
-        f"            parser: .REVIEW, maxX: {max_x}, maxY: {max_y}, "
+        f"            format: .REVIEW, maxX: {max_x}, maxY: {max_y}, "
         f"maxPressure: {max_p},",
         "            buttonCount: 0, hasTouchRing: false, hasEraser: false,",
         "            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],",

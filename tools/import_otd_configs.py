@@ -398,7 +398,7 @@ def process_config(path: str, include_existing: bool) -> list[str]:
 
         lines = [
             f'        .init(productID: 0x{pid:04X}, name: "{name}",  // ⚠ from OTD',
-            f'              parser: .{parser}, maxX: {max_x:6d}, maxY: {max_y:6d}, '
+            f'              format: .{parser}, maxX: {max_x:6d}, maxY: {max_y:6d}, '
             f'maxPressure: {max_p:5d},',
             f'              buttonCount: {button_count}, hasTouchRing: '
             f'{swift_bool(has_touch)}, hasEraser: {swift_bool(has_eraser)},',

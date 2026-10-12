@@ -101,7 +101,7 @@ func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletRepo
     // (intuosV2, bamboo); 5.0 is this sample's own estimate for the older
     // 16-slot sensor (intuosV1), tuned against a PTH-850.
     let pinchDominanceRatio: Double
-    switch spec.parser {
+    switch spec.format {
     case .intuosV1:
         decoder = IntuosV1Decoder()
         pinchDominanceRatio = 5.0
@@ -112,7 +112,7 @@ func resolveDevice(_ spec: TabletSpec) -> Result<(ResolvedDevice, any TabletRepo
         decoder = BambooDecoder()
         pinchDominanceRatio = 1.75
     default:
-        return .failure(UnsupportedDevice(reason: "\(spec.name) uses \(spec.parser), which this sample has no decoder mapping for"))
+        return .failure(UnsupportedDevice(reason: "\(spec.name) uses \(spec.format), which this sample has no decoder mapping for"))
     }
 
     let deviceUnitsPerMM = Double(spec.touchMaxX) / (spec.activeWidthMM ?? Double(spec.touchMaxX) / 40.0)

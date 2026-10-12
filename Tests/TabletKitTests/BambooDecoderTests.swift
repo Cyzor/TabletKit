@@ -431,7 +431,7 @@ extension BambooDecoderTests {
     func testBambooPTFamilyRowsUseBambooParserAndDecodePen() throws {
         for pid in [0x00DD, 0x037A, 0x037B] {
             let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
-            XCTAssertEqual(row.parser, .bamboo, "0x\(String(pid, radix: 16))")
+            XCTAssertEqual(row.format, .bamboo, "0x\(String(pid, radix: 16))")
             var st = DecoderState()
             let r = decode(makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x0567, pressure: 900),
                            state: &st, spec: row.digitizerSpec)

@@ -279,7 +279,7 @@ extension GraphireDecoderTests {
     func testGraphireFamilyRowsUseGraphireParserAndDecodePen() throws {
         for pid in [0x0069, 0x006A, 0x006B] {
             let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
-            XCTAssertEqual(row.parser, .graphire, "0x\(String(pid, radix: 16))")
+            XCTAssertEqual(row.format, .graphire, "0x\(String(pid, radix: 16))")
             var st = DecoderState()
             let tip = pen(decode([0x02, 0x91, 0x42, 0x0F, 0x92, 0x0A, 0x40, 0x01],
                                  state: &st, spec: row.digitizerSpec))

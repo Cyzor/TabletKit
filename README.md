@@ -20,7 +20,7 @@ import TabletKit
 guard let spec = WacomDeviceRegistry.spec(for: 0x0357) else { fatalError("unknown tablet") }
 
 // The registry knows which decoder each tablet needs.
-var decoder = spec.parser.makeDecoder()
+var decoder = spec.format.makeDecoder()
 
 // Keep one state per connected tablet.
 var state = DecoderState()

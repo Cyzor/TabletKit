@@ -58,7 +58,7 @@ WACOM_VID = 0x056A
 _INIT_OPEN = re.compile(r"^\s*\.init\(\s*$")
 _PID = re.compile(r"\bproductID:\s*(0x[0-9A-Fa-f]+|\d+)")
 _NAME = re.compile(r'\bname:\s*"([^"]+)"')
-_PARSER = re.compile(r"\bparser:\s*\.([A-Za-z0-9_]+)")
+_PARSER = re.compile(r"\b(?:format|parser):\s*\.([A-Za-z0-9_]+)")
 _CONFIDENCE = re.compile(r"\bconfidence:\s*\.([A-Za-z0-9_]+)")
 _STRING_MATCH = re.compile(r'\bproductStringMatch:\s*"([^"]+)"')
 

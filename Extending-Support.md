@@ -102,7 +102,7 @@ Search the registry for a model close to yours, ideally from the family you foun
 ```swift
 .init(
     productID: 0x033E, name: "Wacom CTH-690",
-    parser: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
+    format: .intuosV1, maxX: 21600, maxY: 13500, maxPressure: 2047,
     buttonCount: 4, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
     hasFingerTouch: true, maxTouchContacts: 16,
     touchMaxX: 2160, touchMaxY: 1350,
