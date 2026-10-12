@@ -35,19 +35,17 @@ The two protocols switch on differently, and keep their answer in different stri
 
 The vendor ID tells you which to try: Huion v2 for `0x256C`, UGEE v2 for `0x28BD`, and either for `0x5543`. Don't send one protocol's switch-on to the other's tablets.
 
-For a Huion tablet, reading the answer is the switch. For a UGEE tablet, send the output report to the interface that declares report `0x02`, then read descriptor 100. Pad the report with zeros to the interface's declared output size. The firmware ignores a three-byte write, even when the write itself succeeds:
+For a Huion tablet, reading the answer is the switch. For a UGEE tablet, send the output report to the interface that declares report `0x02`, then read descriptor 100. ``UCLogicTabletInfo/init(readingFrom:vendorID:)`` does both, and returns `nil` until it's given the interface that answers:
 
 ```swift
-let size = hidIntProperty(device, kIOHIDMaxOutputReportSizeKey)
-let command: [UInt8] = [0x02, 0xB0, 0x04] + Array(repeating: 0, count: max(size - 3, 0))
-IOHIDDeviceSetReport(device, kIOHIDReportTypeOutput, 0x02, command, command.count)
+guard let info = UCLogicTabletInfo(readingFrom: device, vendorID: vendorID) else { return }
 ```
 
-String descriptors come from the USB device, not the HID interface, so read them with a standard `GET_DESCRIPTOR` control request through IOKit's USB device interface. You don't need to open the device for this, so it works while your own HID connection is open. Ask for US English (`0x0409`) and up to 255 bytes, and keep the whole reply, including its two-byte header.
+Doing it by hand takes two things to get right. Pad the output report with zeros to the interface's declared size, as ``hidSetOutputReport(_:bytes:)`` does: the firmware ignores a three-byte write, even when the write itself succeeds. And read string descriptors from the USB device, not the HID interface; ``readStringDescriptor(_:index:)`` does that without opening the device, so it works while your own HID connection is open, and keeps the reply's two-byte header.
 
 ## Build a Spec
 
-Pass the reply to ``UCLogicTabletInfo``. It returns `nil` if the reply isn't a self-description, which is how you tell which protocol the tablet speaks:
+If you read the descriptors yourself, pass the reply to ``UCLogicTabletInfo``. It returns `nil` if the reply isn't a self-description, which is how you tell which protocol the tablet speaks:
 
 ```swift
 let info = UCLogicTabletInfo(huionDescriptor200: reply200)

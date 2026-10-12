@@ -43,7 +43,6 @@ import ApplicationServices
 import CoreGraphics
 import Foundation
 @preconcurrency import IOKit.hid
-import IOKit.usb.IOUSBLib
 import TabletKit
 
 // MARK: - Arguments
@@ -153,92 +152,9 @@ let wacomVendorID = 0x056A
 /// Huion and Gaomon; XP-Pen, UGEE, and Parblo; older UC-Logic tablets.
 let ucLogicVendorIDs = [0x256C, 0x28BD, 0x5543]
 
-/// Reads a USB string descriptor, header included, without opening the
-/// device, so it works alongside our own HID connection.
-func readStringDescriptor(_ device: IOHIDDevice, index: UInt8) -> [UInt8]? {
-    // String descriptors belong to the USB device, a few levels above the
-    // HID interface.
-    var entry = IOHIDDeviceGetService(device)
-    IOObjectRetain(entry)
-    while entry != 0, IOObjectConformsTo(entry, "IOUSBHostDevice") == 0 {
-        var parent: io_registry_entry_t = 0
-        let kr = IORegistryEntryGetParentEntry(entry, kIOServicePlane, &parent)
-        IOObjectRelease(entry)
-        entry = kr == KERN_SUCCESS ? parent : 0
-    }
-    guard entry != 0 else { return nil }
-    defer { IOObjectRelease(entry) }
-
-    // IOUSBLib's IDs are C macros Swift can't import.
-    let userClientType = CFUUIDGetConstantUUIDWithBytes(
-        nil, 0x9D, 0xC7, 0xB7, 0x80, 0x9E, 0xC0, 0x11, 0xD4, 0xA5, 0x4F, 0x00, 0x0A, 0x27, 0x05, 0x28, 0x61)
-    let plugInInterface = CFUUIDGetConstantUUIDWithBytes(
-        nil, 0xC2, 0x44, 0xE8, 0x58, 0x10, 0x9C, 0x11, 0xD4, 0x91, 0xD4, 0x00, 0x50, 0xE4, 0xC6, 0x42, 0x6F)
-    let deviceInterface = CFUUIDGetConstantUUIDWithBytes(
-        nil, 0x5C, 0x81, 0x87, 0xD0, 0x9E, 0xF3, 0x11, 0xD4, 0x8B, 0x45, 0x00, 0x0A, 0x27, 0x05, 0x28, 0x61)
-
-    var plugIn: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?
-    var score: Int32 = 0
-    guard IOCreatePlugInInterfaceForService(entry, userClientType, plugInInterface, &plugIn, &score)
-        == kIOReturnSuccess, let plugIn, let plugInTable = plugIn.pointee?.pointee
-    else { return nil }
-    defer { _ = plugInTable.Release(plugIn) }
-
-    var raw: LPVOID?
-    guard plugInTable.QueryInterface(plugIn, CFUUIDGetUUIDBytes(deviceInterface), &raw) == S_OK, let raw
-    else { return nil }
-    let usb = raw.assumingMemoryBound(to: UnsafeMutablePointer<IOUSBDeviceInterface100>.self).pointee.pointee
-    defer { _ = usb.Release(raw) }
-
-    var buffer = [UInt8](repeating: 0, count: 255)
-    var length = 0
-    let result = buffer.withUnsafeMutableBytes { bytes -> IOReturn in
-        var request = IOUSBDevRequest(
-            bmRequestType: 0x80,  // device to host, standard, device
-            bRequest: 6,  // GET_DESCRIPTOR
-            wValue: 0x0300 | UInt16(index),  // string descriptor
-            wIndex: 0x0409,  // US English
-            wLength: UInt16(bytes.count), pData: bytes.baseAddress, wLenDone: 0)
-        let kr = usb.DeviceRequest(raw, &request)
-        length = Int(request.wLenDone)
-        return kr
-    }
-    return result == kIOReturnSuccess ? Array(buffer.prefix(length)) : nil
-}
-
-/// True if `device` declares output report `reportID`.
-func declaresOutputReport(_ device: IOHIDDevice, _ reportID: UInt8) -> Bool {
-    guard let hex = hidReportDescriptorHex(device),
-        let layout = try? HIDReportDescriptorParser.parse(hex: hex)
-    else { return false }
-    return layout.reports.contains { $0.direction == .output && $0.reportID == reportID }
-}
-
-/// Switches a UC-Logic tablet on and reads what it says about itself.
-///
-/// Huion tablets switch on when descriptor 200 is read. UGEE tablets need
-/// output report `02 B0 04` first, sent to the interface that declares it,
-/// so for those this returns `nil` until that interface turns up. The
-/// vendor ID says which to try, so neither tablet gets the other's command.
-func switchOnAndDescribe(_ device: IOHIDDevice, vendor: Int) -> UCLogicTabletInfo? {
-    if vendor != 0x28BD,
-        let reply = readStringDescriptor(device, index: 200),
-        let info = UCLogicTabletInfo(huionDescriptor200: reply)
-    {
-        return info
-    }
-    guard vendor != 0x256C, declaresOutputReport(device, 0x02) else { return nil }
-    // The firmware ignores a short write; pad to the declared report size.
-    let size = max(hidIntProperty(device, kIOHIDMaxOutputReportSizeKey), 3)
-    let command: [UInt8] = [0x02, 0xB0, 0x04] + [UInt8](repeating: 0, count: size - 3)
-    let ret = IOHIDDeviceSetReport(device, kIOHIDReportTypeOutput, 0x02, command, command.count)
-    print("switch-on: output 02 B0 04, padded to \(size) bytes → \(ret == kIOReturnSuccess ? "OK" : String(format: "failed 0x%08X", ret))")
-    return readStringDescriptor(device, index: 100).flatMap(UCLogicTabletInfo.init(ugeeDescriptor100:))
-}
-
 // MARK: - Runner
 
-/// One connected tablet: its spec, its decoder, and the decoder's state.
+/// One connected tablet: its name and its decoder.
 /// Every tablet gets its own, so two tablets never share a decoder.
 @MainActor
 final class Tablet {
@@ -358,7 +274,7 @@ final class PenSurfaceRunner {
         // Interfaces arrive one at a time, and only one can switch a UGEE
         // tablet on. Hold the others until the tablet answers.
         waiting[id, default: []].append(device)
-        guard let info = switchOnAndDescribe(device, vendor: vendor) else { return }
+        guard let info = UCLogicTabletInfo(readingFrom: device, vendorID: vendor) else { return }
 
         let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "UC-Logic tablet"
         let (tablet, _) = tablet(
