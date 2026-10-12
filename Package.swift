@@ -57,3 +57,9 @@ let package = Package(
         ),
     ]
 )
+
+// Complete concurrency checking on every target, so a data-race warning
+// shows up in the ordinary build. Warnings only; it changes no behavior.
+for target in package.targets {
+    target.swiftSettings = (target.swiftSettings ?? []) + [.enableExperimentalFeature("StrictConcurrency")]
+}

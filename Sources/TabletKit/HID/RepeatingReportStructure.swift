@@ -11,7 +11,7 @@ import Foundation
 /// no truncation flag): the detector only ever buckets `distinctCount` and
 /// `max`, so callers can build this straight from whatever summary they
 /// already keep rather than reshaping one.
-@_spi(TabletKitInternals) public struct ByteVarianceSignature: Equatable {
+@_spi(TabletKitInternals) public struct ByteVarianceSignature: Equatable, Sendable {
     public let distinctCount: Int
     public let max: Int
 
