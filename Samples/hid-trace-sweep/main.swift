@@ -166,8 +166,8 @@ func replay(_ parser: ReportFormat, _ events: [TraceEvent], against spec: Tablet
 
     for event in events {
         guard let firstByte = event.bytes.first else { continue }
-        let results = HIDReport.withReport(event.bytes) { report -> [DecodeResult] in
-            decoder.decode(report)
+        let results = HIDReport.withReport(event.bytes) { report -> [TabletEvent] in
+            decoder.events(report)
         }
         if !results.isEmpty { out.reportIDsDecoded.insert(firstByte) }
 
@@ -182,19 +182,23 @@ func replay(_ parser: ReportFormat, _ events: [TraceEvent], against spec: Tablet
                     if pt.pressure % 2 == 0 { out.pressureEven += 1 } else { out.pressureOdd += 1 }
                 }
                 out.decodedCounts["pen", default: 0] += 1
-            case .toolEnter(let tool):
+            case .tool(let tool):
+                guard tool.phase == .enter else {
+                    out.decodedCounts["toolLeave", default: 0] += 1
+                    continue
+                }
                 out.decodedCounts["toolEnter", default: 0] += 1
-                out.toolCodes.insert(String(format: "0x%X", tool.toolCode) + (tool.isEraser ? " eraser" : ""))
-            case .aux:         out.decodedCounts["aux", default: 0] += 1
-            case .touch:       out.decodedCounts["touch", default: 0] += 1
-            case .wireless:    out.decodedCounts["wireless", default: 0] += 1
-            case .battery:     out.decodedCounts["battery", default: 0] += 1
-            case .mouseButton: out.decodedCounts["mouseButton", default: 0] += 1
-            case .wheel:       out.decodedCounts["wheel", default: 0] += 1
-            case .remotePairing: out.decodedCounts["remotePairing", default: 0] += 1
-            case .none:        out.decodedCounts["none", default: 0] += 1
-            case .toolCompatibility(let msg):
-                out.decodedCounts["toolCompatibility(\(msg))", default: 0] += 1
+                let id = tool.identity
+                out.toolCodes.insert(String(format: "0x%X", id.toolCode) + (id.isEraser ? " eraser" : ""))
+            case .pad:   out.decodedCounts["pad", default: 0] += 1
+            case .dial:  out.decodedCounts["dial", default: 0] += 1
+            case .touch: out.decodedCounts["touch", default: 0] += 1
+            case .device(let device):
+                if device.kind == .toolSupport {
+                    out.decodedCounts["toolSupport(\(device.unsupportedToolNote ?? ""))", default: 0] += 1
+                } else {
+                    out.decodedCounts[device.kind.rawValue, default: 0] += 1
+                }
             }
         }
     }

@@ -293,7 +293,7 @@ final class PenSurfaceRunner {
 
     func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex, from tablet: Tablet) {
         handle(
-            tablet.decoder.decode(HIDReport(pointer: report, count: length)))
+            tablet.decoder.events(HIDReport(pointer: report, count: length)))
 
         // Some tablets never say the pen left; they go quiet. Decoders don't
         // read the clock, so watch for the silence here.
@@ -304,17 +304,17 @@ final class PenSurfaceRunner {
                 MainActor.assumeIsolated {  // scheduled on the main run loop
                     guard let self, let tablet else { return }
                     self.handle(
-                        tablet.decoder.decodeSilence())
+                        tablet.decoder.eventsForSilence())
                 }
             }
         }
     }
 
-    func handle(_ results: [DecodeResult]) {
-        for result in results {
-            switch result {
+    func handle(_ events: [TabletEvent]) {
+        for event in events {
+            switch event {
             case .pen(let point): handlePen(point)
-            case .toolEnter: seenTool = true
+            case .tool(let tool) where tool.phase == .enter: seenTool = true
             default: break
             }
         }

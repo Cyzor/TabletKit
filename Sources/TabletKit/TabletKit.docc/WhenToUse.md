@@ -6,7 +6,7 @@ TabletKit is for applications that need to understand drawing-tablet input. It i
 
 TabletKit reads raw HID reports from drawing tablets and turns them into structured pen, button, and touch events. It does not communicate with AppKit, move the system cursor, inject input, or manage a driver’s lifecycle. Your app handles those jobs.
 
-TabletKit produces `TabletPoint`, `TouchContact`, and other `DecodeResult` values from the bytes that a tablet sends. MockTab is one example of an app that uses TabletKit.
+TabletKit produces `TabletPoint`, `TouchContact`, and other ``TabletEvent`` values from the bytes that a tablet sends. MockTab is one example of an app that uses TabletKit.
 
 Use TabletKit when you need a reliable way to interpret tablet reports. Do not use it by itself when you need a finished driver.
 

@@ -69,7 +69,7 @@ var decoder = DeviceDecoder(
 Then decode each input report as it arrives, as with any other decoder:
 
 ```swift
-let results = decoder.decode(report)
+let events = decoder.events(report)
 ```
 
 These pens don't identify themselves, so the decoder announces every pen with the same tool code, `0xE902`, and every eraser with `0xE90A`. ``ToolCatalog`` names them "Pen" and "Pen (Eraser)". TabletKit, not a manufacturer, assigns tool codes from `0xE000` through `0xEFFF`; see ``ToolIdentity/toolCode``.
@@ -93,7 +93,7 @@ For a Huion tablet the timeout is 100 ms, and the result is a pen sample with `i
 
 ## What's Not Covered Yet
 
-The decoder reads pen reports and the tablet's buttons, which arrive as ``AuxButtons``. It ignores dials, rings, and touch strips, and doesn't support older UC-Logic protocols that don't describe themselves. Some XP-Pen tablets switch on with `02 B0 02` instead of `02 B0 04`; that variant is untested. If you have one of these tablets, a recording of its reports would help. See the Extending Support guide in the repository.
+The decoder reads pen reports and the tablet's buttons, which arrive as a ``PadState``. It ignores dials, rings, and touch strips, and doesn't support older UC-Logic protocols that don't describe themselves. Some XP-Pen tablets switch on with `02 B0 02` instead of `02 B0 04`; that variant is untested. If you have one of these tablets, a recording of its reports would help. See the Extending Support guide in the repository.
 
 ## See Also
 

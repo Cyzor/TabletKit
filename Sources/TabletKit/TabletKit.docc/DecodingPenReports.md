@@ -4,19 +4,19 @@ Turn raw HID input-report bytes into `TabletPoint` values while avoiding coordin
 
 ## Overview
 
-A ``DeviceDecoder`` accepts one HID input report as an ``HIDReport`` and returns zero or more `DecodeResult` values. For pen movement, handle the `.pen` case:
+A ``DeviceDecoder`` accepts one HID input report as an ``HIDReport`` and returns zero or more ``TabletEvent`` values. For pen movement, handle the `.pen` case:
 
 ```swift
-let results = decoder.decode(report)
+let events = decoder.events(report)
 
-for result in results {
-    if case let .pen(point) = result {
+for event in events {
+    if case let .pen(point) = event {
         canvas.draw(at: point)
     }
 }
 ```
 
-One HID report can produce several results, such as a tool-enter event and a pen position. Always iterate over the array rather than assuming that each call returns one event.
+One HID report can produce several events, such as a tool entering range and a pen position. Always iterate over the array rather than assuming that each call returns one event.
 
 ## Coordinates Stay Raw
 
@@ -46,7 +46,7 @@ Do not try to infer tilt direction by reading `NSEvent.tilt` from a live pen whi
 
 ## Rotation and Buttons
 
-`rotation` represents pen-barrel twist, such as an Art Pen’s rotation. It ranges from 0.0 to 360.0 degrees and has meaning only when the connected tool supports rotation. Check `DecodeResult.toolCompatibility` for a warning when it does not.
+`rotation` represents pen-barrel twist, such as an Art Pen’s rotation. It ranges from 0.0 to 360.0 degrees and has meaning only when the connected tool supports rotation. A ``DeviceEvent`` of kind `toolSupport` says when it does not.
 
 Button state appears on the same `TabletPoint`, not as a separate event. `penButton1` and `penButton2` represent the two side buttons that most pens provide; `penButton3` through `penButton5` support pens with additional buttons.
 
@@ -56,5 +56,5 @@ Button state appears on the same `TabletPoint`, not as a separate event. `penBut
 
 - ``TabletReportDecoder``
 - ``TabletPoint``
-- ``DecodeResult``
+- ``TabletEvent``
 - ``DigitizerSpec``

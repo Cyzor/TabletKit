@@ -25,7 +25,9 @@ public enum InterfaceRouting {
     ///   0xFF00 carries only a periodic status report, so it defers.
     ///
     /// - Parameters:
+    ///   - spec: the tablet the interface belongs to.
     ///   - usagePage: the interface's primary usage page.
+    ///   - isBLE: whether the interface is on Bluetooth.
     ///   - pairs: every top-level collection the interface declares.
     public static func shouldDefer(
         spec: TabletSpec, usagePage: Int, isBLE: Bool, pairs: [UsagePair]
@@ -108,6 +110,7 @@ public enum InterfaceRouting {
     /// Decides what to do with a connecting interface.
     ///
     /// - Parameters:
+    ///   - facts: what the interface says about itself.
     ///   - attachedProductIDs: product IDs of tablets already driven.
     ///   - holdTouchCompanion: false once a held sensor's wait has run out.
     ///   - probe: reads the descriptor; called only for unregistered devices.

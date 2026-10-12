@@ -76,15 +76,17 @@ let reports: [(label: String, bytes: [UInt8])] = [
 // MARK: - Replay
 
 for (label, bytes) in reports {
-    let results = HIDReport.withReport(bytes) { report in
-        decoder.decode(report)
+    let decoded = HIDReport.withReport(bytes) { report -> [TabletEvent] in
+        decoder.events(report)
     }
 
-    for result in results {
-        switch result {
-        case .toolEnter(let identity):
+    for event in decoded {
+        switch event {
+        case .tool(let tool):
+            let identity = tool.identity
             let kind = identity.isEraser ? "eraser" : identity.isMouse ? "mouse" : "pen"
-            print("[\(label)] tool-enter  code=\(String(format: "0x%04X", identity.toolCode))  serial=\(String(format: "0x%08X", identity.serial))  kind=\(kind)")
+            let phase = tool.phase == .enter ? "tool-enter" : "tool-leave"
+            print("[\(label)] \(phase)  code=\(String(format: "0x%04X", identity.toolCode))  serial=\(String(format: "0x%08X", identity.serial))  kind=\(kind)")
 
         case .pen(let point):
             let px  = String(format: "%6d", point.x)
@@ -96,42 +98,42 @@ for (label, bytes) in reports {
             let prox = point.inProximity ? "in " : "out"
             print("[\(label)] pen         x=\(px)  y=\(py)  pressure=\(pr) (\(pct))  tilt=(\(tx), \(ty))  prox=\(prox)")
 
-        case .aux(let buttons):
-            let held = buttons.buttons.enumerated().compactMap { $0.element ? "\($0.offset)" : nil }.joined(separator: ",")
-            let ring = buttons.touchRingActive ? "pos=\(buttons.touchRingPosition)" : "idle"
-            print("[\(label)] aux         keys=[\(held.isEmpty ? "none" : held)]  ring=\(ring)")
+        case .pad(let pad):
+            let held = pad.buttons.enumerated().compactMap { $0.element ? "\($0.offset)" : nil }.joined(separator: ",")
+            let ring = pad.rings.first?.position.map { "pos=\($0)" } ?? "idle"
+            print("[\(label)] pad         keys=[\(held.isEmpty ? "none" : held)]  ring=\(ring)")
 
-        case .touch(let contacts):
-            if contacts.isEmpty {
+        case .dial(let index, let delta):
+            print("[\(label)] dial        index=\(index)  delta=\(String(format: "%+d", delta))")
+
+        case .touch(let frame):
+            if frame.contacts.isEmpty {
                 print("[\(label)] touch       all-lifted")
             } else {
-                for c in contacts {
+                for c in frame.contacts {
                     print("[\(label)] touch       id=\(c.id)  x=\(c.x)  y=\(c.y)")
                 }
             }
 
-        case .wireless(let status):
-            print("[\(label)] wireless    \(status)")
-
-        case .battery(let percent, let charging):
-            print("[\(label)] battery     \(percent)%\(charging ? " (charging)" : "")")
-
-        case .remotePairing(let slots):
-            let paired = slots.filter { $0.connected }
-                .map { "\($0.index):\($0.serial)" }.joined(separator: ",")
-            print("[\(label)] pairing     \(paired.isEmpty ? "none" : paired)")
-
-        case .mouseButton(let mask):
-            print("[\(label)] mouse-btn   mask=\(String(format: "0x%02X", mask))")
-
-        case .wheel(let index, let delta):
-            print("[\(label)] wheel       index=\(index)  delta=\(String(format: "%+d", delta))")
-
-        case .toolCompatibility(let note):
-            print("[\(label)] compat-warn \(note)")
-
-        case .none:
-            break
+        case .device(let device):
+            switch device.kind {
+            case .wireless:
+                print("[\(label)] wireless    \(device.wireless.map { "\($0)" } ?? "?")")
+            case .battery:
+                if let b = device.battery {
+                    print("[\(label)] battery     \(b.percent)%\(b.charging ? " (charging)" : "")")
+                }
+            case .remotePairing:
+                let paired = (device.remotePairing ?? []).filter { $0.connected }
+                    .map { "\($0.index):\($0.serial)" }.joined(separator: ",")
+                print("[\(label)] pairing     \(paired.isEmpty ? "none" : paired)")
+            case .mouseButtons:
+                print("[\(label)] mouse-btn   mask=\(String(format: "0x%02X", device.mouseButtons ?? 0))")
+            case .toolSupport:
+                print("[\(label)] compat-warn \(device.unsupportedToolNote ?? "")")
+            default:
+                print("[\(label)] device      \(device.kind.rawValue)")
+            }
         }
     }
 }

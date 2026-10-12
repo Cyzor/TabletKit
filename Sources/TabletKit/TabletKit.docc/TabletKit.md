@@ -11,7 +11,7 @@ The basic flow:
 1. Find the device in `WacomDeviceRegistry` or `VendorDeviceRegistry`.
 2. Create a ``DeviceDecoder`` for it with `spec.makeDecoder()`.
 3. When the device sends a HID report, pass its bytes to the decoder.
-4. Handle the returned `DecodeResult` values.
+4. Handle the returned ``TabletEvent`` values.
 
 The decoder picks the right report format for the tablet. Most Wacom tablets also need their `initSteps` sent before they report pressure and tilt. <doc:BuildingAMinimalDriver> covers both with a working sample.
 
@@ -35,6 +35,11 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 ### Essentials
 
 - ``DeviceDecoder``
+- ``TabletEvent``
+- ``ToolEvent``
+- ``PadState``
+- ``TouchFrame``
+- ``DeviceEvent``
 - ``DecodeResult``
 - ``DecoderState``
 - ``TabletReportDecoder``

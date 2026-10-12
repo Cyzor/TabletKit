@@ -68,7 +68,7 @@ Some pen displays, such as the Cintiq Pro 22, send pen data on report `0x1E` ins
 
 - ``IntuosV2Decoder``
 - ``TabletPoint``
-- ``AuxButtons``
+- ``PadState``
 - ``TouchContact``
 - <doc:DecodingPenReports>
 - <doc:IntuosProGen3Reports>

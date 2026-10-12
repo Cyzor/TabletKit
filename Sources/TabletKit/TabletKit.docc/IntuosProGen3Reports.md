@@ -91,5 +91,5 @@ These tablets keep reporting after the tip leaves the drawing area, over both US
 
 - ``IntuosV3Decoder``
 - ``TabletPoint``
-- ``AuxButtons``
+- ``PadState``
 - <doc:DecodingPenReports>

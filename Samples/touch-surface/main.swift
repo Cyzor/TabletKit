@@ -157,11 +157,12 @@ final class TouchSurfaceRunner {
 
     func handleReport(length: CFIndex) {
         guard resolved != nil, var decoder, let recognizer else { return }
-        let results = decoder.decode(HIDReport(pointer: reportBuffer, count: length))
+        let events = decoder.events(HIDReport(pointer: reportBuffer, count: length))
         self.decoder = decoder  // decoders are value types — write the mutated copy back
 
-        for result in results {
-            guard case .touch(let contacts) = result else { continue }
+        for event in events {
+            guard case .touch(let frame) = event else { continue }
+            let contacts = frame.contacts
             if ProcessInfo.processInfo.environment["TOUCH_SURFACE_DEBUG"] != nil {
                 let desc = contacts.map { "id=\($0.id) x=\($0.x) y=\($0.y)" }.joined(separator: " | ")
                 print("[touch] \(contacts.count) contact(s): \(desc)")

@@ -17,7 +17,9 @@ public final class HIDOutputQueue: @unchecked Sendable {
     private let minimumGapNanos: UInt64
     private var lastPacedWrite: UInt64 = 0
 
-    /// - Parameter minimumGap: the least time between two paced writes.
+    /// - Parameters:
+    ///   - label: names the queue in debuggers and crash logs.
+    ///   - minimumGap: the least time between two paced writes.
     public init(label: String, minimumGap: TimeInterval = 0) {
         queue = DispatchQueue(label: label, qos: .userInitiated)
         minimumGapNanos = UInt64(max(0, minimumGap) * 1_000_000_000)

@@ -50,10 +50,10 @@ To see what switch-on does, run the sample with `--init none` and compare. The s
 Register a callback for input reports on each interface. Every call hands over one report's bytes:
 
 ```swift
-let results = decoder.decode(HIDReport(pointer: report, count: length))
+let events = decoder.events(HIDReport(pointer: report, count: length))
 ```
 
-The decoder remembers what it needs between reports, such as which pen is in range. It's a value type, so keep the copy that `decode` changed. The results come back as a list, because one report can hold several things. The sample only needs two: `.pen` for movement and `.toolEnter` for a pen coming into range.
+The decoder remembers what it needs between reports, such as which pen is in range. It's a value type, so keep the copy that `events` changed. The events come back as a list, because one report can hold several things. The sample only needs two: `.pen` for movement and `.tool` for a pen coming into range.
 
 The sample handles reports on the main run loop, which is fine for a demo. A real driver should use ``HIDThread`` instead, so a busy interface never delays the pen.
 

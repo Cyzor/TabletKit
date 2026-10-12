@@ -25,16 +25,16 @@ var decoder = spec.makeDecoder()
 
 // Call this from your HID report callback.
 func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
-    let results = decoder.decode(HIDReport(pointer: report, count: length))
-    for result in results {
-        switch result {
+    let events = decoder.events(HIDReport(pointer: report, count: length))
+    for event in events {
+        switch event {
         case .pen(let point):
             // x and y are in tablet units; pressure runs 0 to 1.
             print("pen at (\(point.x), \(point.y)), pressure \(point.normalizedPressure)")
-        case .aux(let buttons):
-            print("keys held: \(buttons.buttons.indices.filter { buttons.buttons[$0] })")
-        case .touch(let contacts):
-            print("\(contacts.count) fingers down")
+        case .pad(let pad):
+            print("keys held: \(pad.buttons.indices.filter { pad.buttons[$0] })")
+        case .touch(let frame):
+            print("\(frame.contacts.count) fingers down")
         default:
             break
         }
@@ -42,7 +42,7 @@ func handleReport(_ report: UnsafePointer<UInt8>, length: CFIndex) {
 }
 ```
 
-Besides pen, buttons, and touch, a decoder reports when a pen comes into range (`.toolEnter`), mouse buttons and wheels, battery level, and wireless status.
+Besides pen, pad, and touch, a decoder reports a pen coming into range and leaving (`.tool`), dials turning (`.dial`), and device events such as battery level and wireless status (`.device`).
 
 ### Switch the Tablet On
 
