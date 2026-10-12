@@ -522,6 +522,9 @@ public struct TabletSpec: Sendable {
     /// cover dozens of distinct models, discriminated only by firmware
     /// string).  Case-insensitive substring match.  Nil = match any.
     public let productStringMatch: String?
+    /// How this tablet departs from the plain open-and-read path. Family
+    /// defaults unless the entry overrides them.
+    public internal(set) var quirks: TabletQuirks
 
     /// Creates an entry. Capabilities default to absent; `hasTilt` defaults
     /// from the parser and model when omitted.
@@ -577,6 +580,7 @@ public struct TabletSpec: Sendable {
         self.productStringMatch = productStringMatch
         self.activeWidthMM = activeWidthMM
         self.activeHeightMM = activeHeightMM
+        self.quirks = TabletQuirks.defaults(for: format)
     }
 
     @available(*, deprecated, message: "Use the format: label.")
@@ -2237,7 +2241,9 @@ public enum WacomDeviceRegistry: Sendable {
             format: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .verified, activeWidthMM: 152, activeHeightMM: 95),
+            confidence: .verified, activeWidthMM: 152, activeHeightMM: 95)
+            // Report 0x06 is this family's real pen report, not an idle frame.
+            .withQuirks { $0.usbIdleReport = nil },
         .init(
             // Bluetooth LE personality. Raw vendor report 0x1F is 19 bytes
             // here (one trailing vendor byte) vs. 18 on USB — same parser,
@@ -2254,7 +2260,9 @@ public enum WacomDeviceRegistry: Sendable {
             format: .intuosV3, maxX: 15200, maxY: 9500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .experimental, activeWidthMM: 152, activeHeightMM: 95),
+            confidence: .experimental, activeWidthMM: 152, activeHeightMM: 95)
+            // Report 0x06 is this family's real pen report, not an idle frame.
+            .withQuirks { $0.usbIdleReport = nil },
         // The M's three PIDs mirror the S's: USB PC, Bluetooth, USB Android.
         // Transport roles come from libwacom's wacom-one-pen-m.tablet
         // (`usb|0531|0102;bluetooth|0531|0103;usb|0531|0105`); OTD carries
@@ -2263,7 +2271,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0102, name: "Wacom One M (CTC-6110WL)",  // ⚠ from OTD + libwacom
             format: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135)
+            // Report 0x06 is this family's real pen report, not an idle frame.
+            .withQuirks { $0.usbIdleReport = nil },
         .init(
             productID: 0x0103, name: "Wacom One M (CTC-6110WL, Bluetooth)",  // ⚠ from OTD + libwacom
             format: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
