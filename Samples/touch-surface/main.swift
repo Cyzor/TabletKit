@@ -40,7 +40,7 @@
 
 import ApplicationServices
 import Foundation
-import IOKit.hid
+@preconcurrency import IOKit.hid
 import CoreGraphics
 import TabletKit
 
@@ -123,12 +123,14 @@ func resolveDevice(_ spec: WacomDeviceSpec) -> Result<(ResolvedDevice, any Table
     return .success((resolved, decoder))
 }
 
+// The HID manager is scheduled on the main run loop, so every callback runs on main.
+@MainActor
 final class TouchSurfaceRunner {
     var resolved: ResolvedDevice?
     var decoder: (any TabletReportDecoder)?
     var decoderState = DecoderState()
     var recognizer: GestureRecognizer?
-    let reportBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 512)
+    nonisolated(unsafe) let reportBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 512)
 
     deinit {
         reportBuffer.deallocate()
@@ -180,14 +182,20 @@ final class TouchSurfaceRunner {
         }
     }
 
-    static let deviceCallback: IOHIDDeviceCallback = { context, result, sender, device in
+    nonisolated(unsafe) static let deviceCallback: IOHIDDeviceCallback = { context, result, sender, device in
         guard let context else { return }
-        Unmanaged<TouchSurfaceRunner>.fromOpaque(context).takeUnretainedValue().handleDeviceConnected(device)
+        let runner = Unmanaged<TouchSurfaceRunner>.fromOpaque(context)
+        MainActor.assumeIsolated {
+            runner.takeUnretainedValue().handleDeviceConnected(device)
+        }
     }
 
-    static let reportCallback: IOHIDReportCallback = { context, result, sender, type, reportID, report, length in
+    nonisolated(unsafe) static let reportCallback: IOHIDReportCallback = { context, result, sender, type, reportID, report, length in
         guard let context else { return }
-        Unmanaged<TouchSurfaceRunner>.fromOpaque(context).takeUnretainedValue().handleReport(length: length)
+        let runner = Unmanaged<TouchSurfaceRunner>.fromOpaque(context)
+        MainActor.assumeIsolated {
+            runner.takeUnretainedValue().handleReport(length: length)
+        }
     }
 }
 
@@ -251,6 +259,7 @@ enum GesturePhase: Int64 {
     case ended = 4
 }
 
+@MainActor
 func postGestureScroll(dx: Double, dy: Double, phase: GesturePhase, at location: CGPoint) {
     guard let e = CGEvent(source: nil) else { return }
     e.type = nsEventTypeGesture
@@ -262,6 +271,7 @@ func postGestureScroll(dx: Double, dy: Double, phase: GesturePhase, at location:
     e.post(tap: .cghidEventTap)
 }
 
+@MainActor
 func postGestureMagnify(magnification: Double, phase: GesturePhase, at location: CGPoint) {
     guard let e = CGEvent(source: nil) else { return }
     e.type = nsEventTypeGesture
@@ -272,6 +282,7 @@ func postGestureMagnify(magnification: Double, phase: GesturePhase, at location:
     e.post(tap: .cghidEventTap)
 }
 
+@MainActor
 func postGestureRotate(degrees: Double, phase: GesturePhase, at location: CGPoint) {
     guard let e = CGEvent(source: nil) else { return }
     e.type = nsEventTypeGesture
@@ -282,6 +293,7 @@ func postGestureRotate(degrees: Double, phase: GesturePhase, at location: CGPoin
     e.post(tap: .cghidEventTap)
 }
 
+@MainActor
 func dispatch(_ gesture: Gesture) {
     if ProcessInfo.processInfo.environment["TOUCH_SURFACE_DEBUG"] != nil {
         print("[gesture] \(gesture)")
@@ -413,7 +425,7 @@ print(String(repeating: "─", count: 64))
 // device is left to the consumer, same as MockTab, just far smaller here:
 // one device at a time, one report type, no reconnect handling, no BT.
 
-let runner = TouchSurfaceRunner()
+let runner = MainActor.assumeIsolated { TouchSurfaceRunner() }  // top-level code runs on main
 let runnerContext = Unmanaged.passUnretained(runner).toOpaque()
 
 let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))

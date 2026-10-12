@@ -42,7 +42,7 @@
 import ApplicationServices
 import CoreGraphics
 import Foundation
-import IOKit.hid
+@preconcurrency import IOKit.hid
 import IOKit.usb.IOUSBLib
 import TabletKit
 
@@ -240,6 +240,7 @@ func switchOnAndDescribe(_ device: IOHIDDevice, vendor: Int) -> UCLogicTabletInf
 
 /// One connected tablet: its spec, its decoder, and the decoder's state.
 /// Every tablet gets its own, so two tablets never share a decoder.
+@MainActor
 final class Tablet {
     let name: String
     let spec: DigitizerSpec
@@ -260,6 +261,7 @@ final class Tablet {
 
 /// The context for one interface's report callback, so each report reaches
 /// the tablet it came from.
+@MainActor
 final class Listener {
     let tablet: Tablet
     unowned let runner: PenSurfaceRunner
@@ -270,6 +272,8 @@ final class Listener {
     }
 }
 
+// The HID manager is scheduled on the main run loop, so every callback runs on main.
+@MainActor
 final class PenSurfaceRunner {
     /// Connected tablets, keyed by vendor and product ID.
     var tablets: [Int: Tablet] = [:]
@@ -388,10 +392,12 @@ final class PenSurfaceRunner {
             tablet.silenceTimer?.invalidate()
             tablet.silenceTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) {
                 [weak self, weak tablet] _ in
-                guard let self, let tablet else { return }
-                self.handle(
-                    tablet.decoder.decodeSilence(
-                        spec: tablet.spec, state: &tablet.state, deviceFamily: tablet.family))
+                MainActor.assumeIsolated {  // scheduled on the main run loop
+                    guard let self, let tablet else { return }
+                    self.handle(
+                        tablet.decoder.decodeSilence(
+                            spec: tablet.spec, state: &tablet.state, deviceFamily: tablet.family))
+                }
             }
         }
     }
@@ -469,15 +475,20 @@ final class PenSurfaceRunner {
         fflush(stdout)
     }
 
-    static let deviceCallback: IOHIDDeviceCallback = { context, _, _, device in
+    nonisolated(unsafe) static let deviceCallback: IOHIDDeviceCallback = { context, _, _, device in
         guard let context else { return }
-        Unmanaged<PenSurfaceRunner>.fromOpaque(context).takeUnretainedValue().handleInterface(device)
+        let runner = Unmanaged<PenSurfaceRunner>.fromOpaque(context)
+        MainActor.assumeIsolated { runner.takeUnretainedValue().handleInterface(device) }
     }
 
-    static let reportCallback: IOHIDReportCallback = { context, _, _, _, _, report, length in
+    nonisolated(unsafe) static let reportCallback: IOHIDReportCallback = { context, _, _, _, _, report, length in
         guard let context else { return }
-        let listener = Unmanaged<Listener>.fromOpaque(context).takeUnretainedValue()
-        listener.runner.handleReport(report, length: length, from: listener.tablet)
+        let listener = Unmanaged<Listener>.fromOpaque(context)
+        nonisolated(unsafe) let report = report
+        MainActor.assumeIsolated {
+            let listener = listener.takeUnretainedValue()
+            listener.runner.handleReport(report, length: length, from: listener.tablet)
+        }
     }
 }
 
@@ -490,7 +501,7 @@ if !AXIsProcessTrusted() {
 print("Tip: left click. Lower barrel button: right click. Upper: middle click. Ctrl-C quits.")
 print("Waiting for a Wacom, Huion, Gaomon, XP-Pen, or UGEE tablet over USB…")
 
-let runner = PenSurfaceRunner()
+let runner = MainActor.assumeIsolated { PenSurfaceRunner() }  // top-level code runs on main
 let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
 let matching = ([wacomVendorID] + ucLogicVendorIDs).map { [kIOHIDVendorIDKey: $0] }
 IOHIDManagerSetDeviceMatchingMultiple(manager, matching as CFArray)
