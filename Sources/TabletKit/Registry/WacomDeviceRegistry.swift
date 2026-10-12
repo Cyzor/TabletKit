@@ -2074,21 +2074,21 @@ public enum WacomDeviceRegistry: Sendable {
             // already right. Confirmed 2026-08-03.
             productID: 0x0374, name: "Wacom CTL-4100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, confidence: .crossReferenced,
             activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0376, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
             // Same correction as 0x0374 above. Confirmed 2026-08-03.
             productID: 0x0377, name: "Wacom CTL-4100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 15200, maxY: 9500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 95),
         .init(
@@ -2113,12 +2113,12 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             productID: 0x0375, name: "Wacom CTL-6100",  // ⚠ from OTD
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x0378, name: "Wacom CTL-6100WL",  // ⚠ from OTD
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
             productID: 0x03C7, name: "Wacom CTL-6100WL",  // ⚠ from OTD
@@ -3036,7 +3036,7 @@ public enum WacomDeviceRegistry: Sendable {
             // on this model — same INTUOSHT3_BT protocol, different dimensions.
             productID: 0x0379, name: "Wacom Intuos BT M (CTL-6100WL)",
             parser: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             seizeUSB: false,
             confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
         .init(
