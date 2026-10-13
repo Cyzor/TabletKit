@@ -204,6 +204,46 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         XCTAssertFalse(state.prevInProximity, "Three boundary frames should exit proximity")
     }
 
+    /// From a PTH-860 trace: right after a clean exit, one report carried a
+    /// 0xC0 frame and then 0x80. That read as a returning, hovering pen that
+    /// never left, which blocked touch until the stale-pen timeout.
+    func testEdgeNoiseAfterExitIsNotAReturn() {
+        var state = DecoderState()
+        state.prevInProximity = false
+        state.lastToolCode = 0
+        state.lastX = 47563
+        state.lastY = 8856
+
+        var bytes = make361(toolCode: 0x0804, frame0Flags: 0xC0)
+        bytes[1 + 14] = 0x80
+        let results = decode(bytes, state: &state)
+
+        XCTAssertFalse(results.contains { if case .toolEnter = $0 { true } else { false } })
+        XCTAssertFalse(results.contains { if case .pen(let p) = $0 { p.inProximity } else { false } })
+        XCTAssertFalse(state.prevInProximity)
+    }
+
+    /// The tool code repeats in every report, pen or no pen.
+    func testToolCodeAloneDoesNotAnnounceAPen() {
+        var state = DecoderState()
+        let results = decode(make361(toolCode: 0x0842, frame0Flags: 0x00), state: &state)
+        XCTAssertFalse(results.contains { if case .toolEnter = $0 { true } else { false } })
+    }
+
+    /// The pen comes back on its first in-range frame, after any edge noise.
+    func testInRangeFrameAfterEdgeNoiseAnnouncesThePen() {
+        var state = DecoderState()
+        var bytes = make361(toolCode: 0x0842, frame0Flags: 0xC0)
+        bytes[1 + 14] = 0xE0
+        let results = decode(bytes, state: &state)
+
+        XCTAssertTrue(results.contains { if case .toolEnter = $0 { true } else { false } })
+        let pens = results.compactMap { if case .pen(let p) = $0 { p } else { nil } }
+        XCTAssertEqual(pens.count, 1, "the edge-noise frame emits nothing")
+        XCTAssertEqual(pens.first?.inProximity, true)
+        XCTAssertTrue(state.prevInProximity)
+    }
+
     // MARK: - 361-byte path: eraser and barrel buttons
 
     func testEraserBitSetInFrameFlagsEmittedOnPen() {
