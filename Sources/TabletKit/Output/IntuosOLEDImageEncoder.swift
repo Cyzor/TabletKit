@@ -6,15 +6,13 @@ import Foundation
 import CoreGraphics
 import CoreText
 
-/// Encodes bitmap data for the Wacom Intuos4's per-key OLED, USB transport.
+/// Encodes images for the Intuos4's per-key OLEDs over USB: 64×32 pixels,
+/// 4-bit grayscale, 1024 bytes per key. Bluetooth uses a different, 1-bit
+/// format that this doesn't produce.
 ///
-/// **Not hardware-verified.** Encoding rules sourced from the Linux
-/// kernel's sysfs ABI documentation (quoted in `sanette/intuos4-oled`'s
-/// `intuos4oled.py`, which independently implements the same documented
-/// format): 64×32 pixels, 4-bit grayscale, packed 1024 bytes total. Only
-/// the USB encoding is implemented — Bluetooth additionally bit-scrambles
-/// the packed bytes (`76543210`→`GECA6420`) on top of a different (1-bit)
-/// bit depth, which this encoder does not produce.
+/// Not hardware-verified. The layout follows the kernel's sysfs ABI doc; the
+/// column order and the left-handed rotation follow the public Intuos4 OLED
+/// tools.
 public enum IntuosOLEDImageEncoder: Sendable {
 
     /// OLED width in pixels.
@@ -22,29 +20,29 @@ public enum IntuosOLEDImageEncoder: Sendable {
     /// OLED height in pixels.
     public static let height = 32
 
-    /// Row-interleaves a 64×32 8-bit grayscale buffer into the Intuos4's
-    /// USB wire format: 1024 bytes, where each byte packs two vertically
-    /// adjacent pixels from the SAME column — low nibble from row `2n`, high
-    /// nibble from row `2n+1` — not two horizontally adjacent pixels. This
-    /// matches the kernel doc's "each 64-byte chunk encodes two consecutive
-    /// lines... low nibble contains the first line, high nibble the second."
+    /// Packs a 64×32 8-bit grayscale image into the USB wire format.
     ///
-    /// - Parameter grayscale: exactly `width * height` (2048) bytes, one
-    ///   8-bit grayscale sample per pixel in row-major order (row 0 first).
-    ///   Only the top 4 bits of each sample are used — callers should
-    ///   already have quantized to 4-bit depth, or accept the precision
-    ///   loss from truncation here.
-    /// - Returns: 1024 bytes in Intuos4 USB wire order, or `nil` if
-    ///   `grayscale.count != width * height`.
-    public static func interleaveRows(_ grayscale: [UInt8]) -> [UInt8]? {
+    /// Each byte holds two vertically adjacent pixels of one column: the low
+    /// nibble from the upper row, the high nibble from the one below. Columns
+    /// go right to left. With `rotated180`, for a tablet turned around for
+    /// left-handed use, rows go bottom up and columns left to right.
+    ///
+    /// - Parameter grayscale: `width * height` samples, row-major, top row
+    ///   first. Only the top 4 bits of each are used.
+    /// - Returns: 1024 bytes, or `nil` if `grayscale` is the wrong size.
+    public static func interleaveRows(_ grayscale: [UInt8], rotated180: Bool) -> [UInt8]? {
         guard grayscale.count == width * height else { return nil }
 
         var packed = [UInt8](repeating: 0, count: width * height / 2)
         var pos = 0
-        for rowPair in stride(from: 0, to: height, by: 2) {
-            for x in 0..<width {
-                let low = grayscale[rowPair * width + x] >> 4
-                let high = grayscale[(rowPair + 1) * width + x] & 0xF0
+        for pair in 0..<(height / 2) {
+            let (lowRow, highRow) = rotated180
+                ? (height - 1 - 2 * pair, height - 2 - 2 * pair)
+                : (2 * pair, 2 * pair + 1)
+            for i in 0..<width {
+                let x = rotated180 ? i : width - 1 - i
+                let low = grayscale[lowRow * width + x] >> 4
+                let high = grayscale[highRow * width + x] & 0xF0
                 packed[pos] = high | low
                 pos += 1
             }
@@ -52,15 +50,13 @@ public enum IntuosOLEDImageEncoder: Sendable {
         return packed
     }
 
-    /// Renders a short text label to a 64×32 8-bit grayscale buffer
-    /// (white text on black, matching the OLED's own look), suitable for
-    /// passing to `interleaveRows`.
-    ///
-    /// This is phase 1 of the design plan — reusing existing per-key label
-    /// text (`WacomKnownDevice.setAuxKeyLabels`'s existing input) rather
-    /// than requiring a new image-import UI. Text is centered, single line,
-    /// clipped rather than wrapped or scaled to fit — a key OLED is 64×32
-    /// pixels, there is no room for real typography here.
+    /// ``interleaveRows(_:rotated180:)`` for the right-handed layout.
+    public static func interleaveRows(_ grayscale: [UInt8]) -> [UInt8]? {
+        interleaveRows(grayscale, rotated180: false)
+    }
+
+    /// Renders a short label as white-on-black 64×32 grayscale for
+    /// `interleaveRows`: one centered line, clipped rather than wrapped.
     public static func renderTextLabel(_ text: String) -> [UInt8] {
         guard !text.isEmpty else {
             return [UInt8](repeating: 0, count: width * height)
