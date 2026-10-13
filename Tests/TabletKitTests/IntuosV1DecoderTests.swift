@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // First snapshot tests for the IntuosV1 decoder family.
 // These exist to catch regressions in dispatch and proximity-state logic;

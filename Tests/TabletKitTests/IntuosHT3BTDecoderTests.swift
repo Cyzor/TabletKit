@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // INTUOSHT3_BT (Report ID 0x81) decoder fixtures — consumer Intuos BT S/M
 // over Bluetooth: CTL-4100WL (0x0377, 0x03C6) and CTL-6100WL (0x0379, 0x03C8).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // DTUS decoder fixtures (DTK-1651, DTU-1031/1031X/1141).
 //

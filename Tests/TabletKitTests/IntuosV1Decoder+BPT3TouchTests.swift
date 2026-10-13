@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // BPT3 touch/pad container fixtures (Report ID 0x02, 64 bytes) for the
 // IntuosV1 decoder path — CTH-690 Intuos Art (PID 0x033E), INTUOSHT2 family.

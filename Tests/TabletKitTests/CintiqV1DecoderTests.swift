@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // CintiqV1 decoder fixtures — pen-display family (DTK-2400 et al).
 //

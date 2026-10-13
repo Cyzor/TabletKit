@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Tests for the shared wireless-status helper used by the IntuosV1 family
 // over the ACK-40401 RF dongle.

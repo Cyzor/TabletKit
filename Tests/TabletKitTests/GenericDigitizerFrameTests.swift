@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Tests for the vendor-agnostic universal floor decode logic. No hardware: we
 // drive GenericDigitizerFrame with synthesized (usagePage, usage, value) tuples

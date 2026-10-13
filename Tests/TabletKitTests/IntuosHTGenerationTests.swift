@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // INTUOSHT generation (2013: CTH-480/680, CTL-480/680) — pen reports on
 // ID 0x02 / 10 bytes / little-endian, plus the 64-byte BPT3 container shared

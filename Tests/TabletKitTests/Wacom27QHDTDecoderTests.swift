@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Wacom27QHDTDecoder fixtures (Cintiq 27QHD Touch / DTH-2700 touch sensor).
 //

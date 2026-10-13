@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Extended IntuosV1 decoder fixtures — USB pen path detail.
 //

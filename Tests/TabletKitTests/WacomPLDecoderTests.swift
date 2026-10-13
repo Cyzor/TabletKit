@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // WacomPLDecoder fixtures (PL-400 through PL-800 pen displays).
 //

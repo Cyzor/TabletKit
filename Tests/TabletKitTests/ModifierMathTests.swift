@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Pure-math tests for the synthetic-modifier bit logic extracted from
 // InputInjector. These cover the algebra; the surrounding state machine

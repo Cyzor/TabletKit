@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // IntuosV3 decoder fixtures (PTK-470/670/870 — Intuos Pro gen3).
 //

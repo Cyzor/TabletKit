@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Wacom24HDTDecoder fixtures (DTH-1300/DTH-2400 touch sensors).
 //

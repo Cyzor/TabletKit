@@ -1,6 +1,6 @@
 // TabletKit — HID decoder layer for drawing tablets
 // SPDX-FileCopyrightText: 2026 Jay Petronis (Cyzor)
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 
 import XCTest
 
