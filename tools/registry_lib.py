@@ -35,16 +35,11 @@ DEFAULT_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "WacomDeviceReg
 #: Non-Wacom recognition-only registry.
 DEFAULT_VENDOR_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "VendorDeviceRegistry.swift"
 
-#: Upstream clones (gitignored local checkouts of input-wacom / OpenTabletDriver,
-#: used only to cross-check registry entries — nothing here is wired into a
-#: build). These aren't part of TabletKit; they live one level up, in whichever
-#: app repo has TabletKit checked out as a submodule.
-#: Override with TABLETKIT_UPSTREAM_DIR if your checkout layout differs, or if
-#: you're running these scripts against a standalone TabletKit clone.
-UPSTREAM = Path(
-    os.environ.get("TABLETKIT_UPSTREAM_DIR")
-    or (ROOT.parent / "Notes" / "Scratch" / "upstream")
-)
+#: Upstream clones (local checkouts of input-wacom / OpenTabletDriver, used
+#: only to cross-check registry entries — nothing here is wired into a build).
+#: They default to TabletKit's own `upstream/` folder, which git ignores; set
+#: TABLETKIT_UPSTREAM_DIR to use clones kept elsewhere.
+UPSTREAM = Path(os.environ.get("TABLETKIT_UPSTREAM_DIR") or (ROOT / "upstream"))
 DEFAULT_KERNEL = UPSTREAM / "input-wacom" / "4.18" / "wacom_wac.c"
 DEFAULT_OTD = (
     UPSTREAM / "OpenTabletDriver" / "OpenTabletDriver.Configurations" / "Configurations"

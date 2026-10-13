@@ -14,7 +14,9 @@ build/
 .swiftpm/
 Package.resolved
 
-Notes/Scratch/
+# Local clones for the registry audit scripts (see tools/registry_lib.py).
+# No trailing slash, so a symlink to clones kept elsewhere is ignored too.
+/upstream
 
 # Python registry tooling
 __pycache__/
