@@ -27,8 +27,10 @@ public enum IntuosOLEDImageEncoder: Sendable {
     /// go right to left. With `rotated180`, for a tablet turned around for
     /// left-handed use, rows go bottom up and columns left to right.
     ///
-    /// - Parameter grayscale: `width * height` samples, row-major, top row
-    ///   first. Only the top 4 bits of each are used.
+    /// - Parameters:
+    ///   - grayscale: `width * height` samples, row-major, top row first.
+    ///     Only the top 4 bits of each are used.
+    ///   - rotated180: Whether to turn the image for upside-down use.
     /// - Returns: 1024 bytes, or `nil` if `grayscale` is the wrong size.
     public static func interleaveRows(_ grayscale: [UInt8], rotated180: Bool) -> [UInt8]? {
         guard grayscale.count == width * height else { return nil }
