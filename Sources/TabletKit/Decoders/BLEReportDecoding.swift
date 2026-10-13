@@ -111,9 +111,11 @@ public func decodeBLEPenReport(
 /// [4] Keys 1–8 bitmask
 /// [5] Mirrors byte[4]
 /// [6–9] Reserved
-public func decodeBLEPadReport(
-    report: HIDReport
-) -> AuxButtons? {
+public func decodeBLEPadReport(report: HIDReport) -> PadState? {
+    decodeBLEPadAux(report: report).map(PadState.init)
+}
+
+package func decodeBLEPadAux(report: HIDReport) -> AuxButtons? {
     guard report.count >= 5 else { return nil }
     let keys = report[4]
     let ringByte = report[2]

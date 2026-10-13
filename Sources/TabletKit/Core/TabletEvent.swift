@@ -173,7 +173,7 @@ struct PadShape: Sendable {
 
 extension PadState {
     /// The pad in `aux`, listing the rings and strips it uses.
-    public init(_ aux: AuxButtons) {
+    package init(_ aux: AuxButtons) {
         self.init(aux, shape: PadShape(rings: 0, strips: 0))
     }
 

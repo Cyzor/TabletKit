@@ -442,3 +442,6 @@ API breakage: struct WacomToolSpec has been renamed to struct ToolSpec
 API breakage: var WacomToolCatalog.allTools has declared type change from [Swift.UInt16 : TabletKit.WacomToolSpec] to [Swift.UInt16 : TabletKit.ToolSpec]
 API breakage: var WacomToolCatalog.allUniqueTools has declared type change from [TabletKit.WacomToolSpec] to [TabletKit.ToolSpec]
 API breakage: var WacomToolSpec.toolType has declared type change from TabletKit.WacomToolType to TabletKit.ToolKind
+
+# On next, decodeBLEPadReport returns a PadState; AuxButtons is package-only.
+API breakage: func decodeBLEPadReport(report:length:) has return type change from TabletKit.AuxButtons? to TabletKit.PadState?

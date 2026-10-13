@@ -58,7 +58,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                 report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x03:
-            guard let aux = decodeBLEPadReport(report: report) else { return [] }
+            guard let aux = decodeBLEPadAux(report: report) else { return [] }
             return [.aux(aux)]
         case 0x10:
             // Body reads through report[16] (hover distance / mouse scroll counter)

@@ -144,7 +144,6 @@ func queryHIDDigitizerSpec(_:)
 func readStringDescriptor(_:index:)
 func sendWacomInputModeInit(_:tag:)
 func.op EvidenceLevel.<(_:_:)
-init AuxButtons.init(buttons:mechanicalMask:touchRingActive:touchRingButtonDown:touchRingPosition:touchRing2Active:touchRing2ButtonDown:touchRing2Position:touchStrip1Active:touchStrip1Position:touchStrip2Active:touchStrip2Position:)
 init CursorSmoother.init()
 init DeviceDecoder.init(format:digitizer:family:)
 init DeviceDecoder.init(spec:)
@@ -169,7 +168,6 @@ init InterfaceRouting.DescriptorProbe.init(hasXY:kind:)
 init InterfaceRouting.Facts.init(vendorID:productID:usagePage:usagePairs:isBluetooth:overrideSpec:)
 init LEDColor.init(r:g:b:)
 init LiveButtonState.init(tipDown:eraserDown:button1Down:button2Down:button3Down:button4Down:button5Down:expressKeys:bezelButtons:touchRingActive:touchRingButtonDown:touchRing2Active:touchRing2ButtonDown:touchStrip1Active:touchStrip2Active:)
-init PadState.init(_:)
 init PadState.init(buttons:pressedThisReport:rings:strips:hardwareMode:)
 init PanSmoother.init()
 init PrecisionTouchDecoder.init(layout:)
@@ -273,19 +271,6 @@ method ToolSpec.isSupported(onFamily:)
 method UCLogicTabletInfo.makeDecoder()
 method XencelabsRelayWatcher.observe(_:productID:)
 method XencelabsRelayWatcher.relinkSent(succeeded:)
-property AuxButtons.buttons
-property AuxButtons.mechanicalMask
-property AuxButtons.touchRing2Active
-property AuxButtons.touchRing2ButtonDown
-property AuxButtons.touchRing2Position
-property AuxButtons.touchRingActive
-property AuxButtons.touchRingButtonDown
-property AuxButtons.touchRingHardwareMode
-property AuxButtons.touchRingPosition
-property AuxButtons.touchStrip1Active
-property AuxButtons.touchStrip1Position
-property AuxButtons.touchStrip2Active
-property AuxButtons.touchStrip2Position
 property BLEPenResult.isMouse
 property BLEPenResult.point
 property BLEPenResult.serial
@@ -322,7 +307,6 @@ property DeviceDecoder.digitizer
 property DeviceDecoder.family
 property DeviceDecoder.penInRange
 property DeviceDecoder.silenceTimeout
-property DeviceDecoder.touchFrameStamps
 property DeviceEvent.Battery.charging
 property DeviceEvent.Battery.percent
 property DeviceEvent.Kind.rawValue
@@ -643,7 +627,6 @@ protocol LabelControl
 protocol QuickKeysControl
 protocol RingLEDControl
 protocol TabletDevice
-struct AuxButtons
 struct BLEPenResult
 struct CursorSmoother
 struct DescriptorField
@@ -702,7 +685,6 @@ struct UCLogicTabletInfo
 struct VendorDeviceProfile
 struct XencelabsRelayWatcher
 struct XencelabsRelayWatcher.Outcome
-subscript AuxButtons.subscript(_:)
 subscript HIDReport.subscript(_:)
 type.method BrandHeuristic.likelyBrand(manufacturer:product:)
 type.method DeviceDecoder.fixedLayoutTouch(productID:digitizer:family:)

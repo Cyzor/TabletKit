@@ -43,7 +43,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``HIDReport``
 - ``TabletPoint``
 - ``ToolIdentity``
-- ``AuxButtons``
 - ``TouchContact``
 - ``DigitizerSpec``
 - ``WirelessStatus``

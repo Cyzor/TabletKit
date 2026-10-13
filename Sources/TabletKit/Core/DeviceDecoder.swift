@@ -120,7 +120,7 @@ public struct DeviceDecoder: Sendable {
     /// The device's own clock for each touch frame in the last report, when
     /// it sends one (Bluetooth batches only), in the order the frames were
     /// decoded.
-    public var touchFrameStamps: [UInt16] { state.btTouchFrameStamps }
+    package var touchFrameStamps: [UInt16] { state.btTouchFrameStamps }
 }
 
 extension TabletSpec {

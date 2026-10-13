@@ -160,7 +160,7 @@ public struct ToolIdentity: Sendable, Equatable {
 ///
 /// Rings and strips report an absolute position while touched; dials and
 /// wheels arrive separately, as ``TabletEvent/dial(index:delta:)`` events.
-public struct AuxButtons: Sendable {
+package struct AuxButtons: Sendable {
     /// Creates a pad state. Positions default to "no contact".
     public init(
         buttons: [Bool],

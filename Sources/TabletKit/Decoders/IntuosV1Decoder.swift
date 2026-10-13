@@ -67,7 +67,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
             return decodeIntuos4WLAggregated(report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
         }
         if id == 0x03 && report.count >= 5 {
-            guard let aux = decodeBLEPadReport(report: report) else { return [] }
+            guard let aux = decodeBLEPadAux(report: report) else { return [] }
             return [.aux(aux)]
         }
         if id == 0x11 {
