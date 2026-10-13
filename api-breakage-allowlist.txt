@@ -462,3 +462,62 @@ API breakage: func TabletDevice.setRingLED(index:) has been removed
 API breakage: func TabletDevice.setRingLEDColors(_:) has been removed
 API breakage: func TabletDevice.setRingModeLabel(_:) has been removed
 API breakage: var TabletDevice.hasDisplayBrightnessControl has been removed
+
+# On next, each decoder has its own State in place of the shared DecoderState
+# struct. These declarations are package-only; the digester still sees them.
+API breakage: accessor DecoderState.btTouchFrameStamps.Get() has generic signature change from  to <Self where Self : TabletKit.DecoderState>
+API breakage: accessor DecoderState.btTouchFrameStamps.Set() has been removed
+API breakage: accessor DecoderState.prevInProximity.Get() has generic signature change from  to <Self where Self : TabletKit.DecoderState>
+API breakage: accessor DecoderState.prevInProximity.Set() has been removed
+API breakage: associatedtype TabletReportDecoder.State has been added as a protocol requirement
+API breakage: constructor DecoderState.init() has generic signature change from  to <Self where Self : TabletKit.DecoderState>
+API breakage: constructor DecoderState.init() has return type change from TabletKit.DecoderState to Self
+API breakage: func BambooDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.BambooDecoder.State
+API breakage: func CintiqV1Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.CintiqV1Decoder.State
+API breakage: func DTUDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.DTUDecoder.State
+API breakage: func DTUSDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.DTUSDecoder.State
+API breakage: func ExpressKeyRemoteDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.ExpressKeyRemoteDecoder.State
+API breakage: func GraphireDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.GraphireDecoder.State
+API breakage: func Intuos3Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.Intuos3Decoder.State
+API breakage: func IntuosV1Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.IntuosV1Decoder.State
+API breakage: func IntuosV2Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.IntuosV2Decoder.State
+API breakage: func IntuosV3Decoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.IntuosV3Decoder.State
+API breakage: func TabletReportDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to Self.State
+API breakage: func Wacom24HDTDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.Wacom24HDTDecoder.State
+API breakage: func Wacom27QHDTDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.Wacom27QHDTDecoder.State
+API breakage: func WacomPLDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.WacomPLDecoder.State
+API breakage: func XencelabsDecoder.decode(report:length:spec:state:deviceFamily:) has parameter 2 type change from TabletKit.DigitizerSpec to TabletKit.XencelabsDecoder.State
+API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) has been renamed to func emitToolCompatibility(toolCode:deviceFamily:toolIsSupported:results:)
+API breakage: func emitToolCompatibility(toolCode:deviceFamily:state:results:) has parameter 2 type change from TabletKit.DecoderState to Swift.Bool
+API breakage: protocol TabletReportDecoder has generic signature change from <Self : Swift.Sendable> to <Self : Swift.Sendable, Self.State : TabletKit.DecoderState>
+API breakage: struct DecoderState has been changed to a protocol
+API breakage: struct DecoderState has generic signature change from  to <Self : Swift.Sendable>
+API breakage: var DecoderState.bleBarrelDropCount has been removed
+API breakage: var DecoderState.bleOutsideSurface has been removed
+API breakage: var DecoderState.bpt3TouchSlots has been removed
+API breakage: var DecoderState.btTouchCountsPerFrame has been removed
+API breakage: var DecoderState.btTouchMsPerCount has been removed
+API breakage: var DecoderState.currentToolCode has been removed
+API breakage: var DecoderState.exitFrameCount has been removed
+API breakage: var DecoderState.exitThreshold has been removed
+API breakage: var DecoderState.framesSinceProximityEnter has been removed
+API breakage: var DecoderState.hasValidRotationFrame has been removed
+API breakage: var DecoderState.hasValidTiltFrame has been removed
+API breakage: var DecoderState.isEraser has been removed
+API breakage: var DecoderState.lastAirbrushWheel has been removed
+API breakage: var DecoderState.lastBTPadBtn has been removed
+API breakage: var DecoderState.lastBTPadKeys has been removed
+API breakage: var DecoderState.lastBTPadRing has been removed
+API breakage: var DecoderState.lastBatteryByte has been removed
+API breakage: var DecoderState.lastRotation has been removed
+API breakage: var DecoderState.lastScrollPos has been removed
+API breakage: var DecoderState.lastSerial has been removed
+API breakage: var DecoderState.lastTiltX has been removed
+API breakage: var DecoderState.lastTiltY has been removed
+API breakage: var DecoderState.lastToolCode has been removed
+API breakage: var DecoderState.lastX has been removed
+API breakage: var DecoderState.lastY has been removed
+API breakage: var DecoderState.toolIsMouse has been removed
+API breakage: var DecoderState.toolIsSupported has been removed
+API breakage: var DecoderState.wacom24HDTPendingContacts has been removed
+API breakage: var DecoderState.wacom24HDTRemainingContacts has been removed
