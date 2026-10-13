@@ -5,12 +5,11 @@
 // into structured events, using nothing but the public decode loop — no
 // decoder-internals knowledge required.
 //
-// This is the mechanism the API design notes ask for: publish the fixture
-// format so a contributor with hardware can prove a device works by adding
-// one entry below, pasting a capture log body (the same format
-// `CaptureLogParser` reads — see its own doc comment for the exact shape)
-// and the registry fields the device would carry. No new Swift test code,
-// no touching any decoder file.
+// The fixture format is public, so a contributor with hardware can prove a
+// device works by adding one entry below: a capture log body (the format
+// `CaptureLogParser` reads; its doc comment gives the shape) and the
+// registry fields the device would carry. No new test code, and no decoder
+// changes.
 //
 // What "proves a device works" means here, deliberately kept minimal: the
 // whole log replays through the named decoder without throwing, and at

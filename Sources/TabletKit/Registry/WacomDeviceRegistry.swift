@@ -264,9 +264,8 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
 /// All hardware parameters for a single Wacom USB or BLE product.
 ///
 /// This table is the single source of truth for device names, coordinate
-/// ranges, pressure depth, and initialisation requirements.  It drives
-/// device-name display today and will route `WacomKnownDevice` once
-/// Phase 3 decoders are in place.
+/// ranges, pressure depth, and initialization requirements, and it picks
+/// each device's decoder.
 ///
 /// Data sources, in descending priority for *physical dimensions*:
 ///   1. Live measurement on owned hardware (PTH-851, PTH-660, PTH-860, PTZ-631W, DTK-2400).
@@ -3769,10 +3768,8 @@ public enum WacomDeviceRegistry: Sendable {
             ?? "Wacom 0x\(String(productID, radix: 16, uppercase: true))"
     }
 
-    /// True when a real decoder exists for this device.
-    /// All five parser families have decoders as of Phase 4 (2026-05-07).
-    /// `.graphire` is wired up but routes carry `confidence: .experimental` —
-    /// the decoder is kernel-canonical but not yet hardware-validated.
+    /// True when a real decoder exists for this device. Every parser family
+    /// has one, so this is true for every registry row.
     public static func hasLiveDecoder(for productID: Int) -> Bool {
         spec(for: productID) != nil
     }
