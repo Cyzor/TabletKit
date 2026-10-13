@@ -58,12 +58,10 @@ The result holds the coordinate range, pressure levels, resolution, and the numb
 
 ## Decode Each Report
 
-Create one decoder per tablet, built on a ``UCLogicDecoder`` that knows which protocol answered:
+Create one decoder per tablet. ``UCLogicTabletInfo/makeDecoder()`` sets it up for the protocol that answered:
 
 ```swift
-var decoder = DeviceDecoder(
-    UCLogicDecoder(protocol: info.tabletProtocol),
-    digitizer: info.digitizerSpec, family: .ucLogic)
+var decoder = info.makeDecoder()
 ```
 
 Then decode each input report as it arrives, as with any other decoder:
@@ -83,8 +81,8 @@ After each report, check ``DeviceDecoder/silenceTimeout``. If it isn't `nil`, st
 ```swift
 if let timeout = decoder.silenceTimeout {
     silenceTimer.restart(after: timeout) {
-        let results = decoder.decodeSilence()
-        handle(results)
+        let events = decoder.eventsForSilence()
+        handle(events)
     }
 }
 ```
@@ -99,5 +97,4 @@ The decoder reads pen reports and the tablet's buttons, which arrive as a ``PadS
 
 - <doc:BuildingAMinimalDriver>
 - ``UCLogicTabletInfo``
-- ``UCLogicDecoder``
-- ``TabletReportDecoder/silenceTimeout``
+- ``DeviceDecoder/silenceTimeout``

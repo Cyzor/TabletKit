@@ -29,6 +29,17 @@ final class UCLogicTabletInfoTests: XCTestCase {
         XCTAssertEqual(info.tabletButtonCount, 8)
     }
 
+    func testMakeDecoderUsesTheProtocolThatAnswered() throws {
+        let info = try XCTUnwrap(UCLogicTabletInfo(ugeeDescriptor100: decoL))
+        let decoder = info.makeDecoder()
+        XCTAssertEqual(decoder.family, .ucLogic)
+        XCTAssertEqual(decoder.digitizer.maxX, info.maxX)
+        // Only Huion's protocol needs a silence timer.
+        XCTAssertNil(decoder.silenceTimeout)
+        let huionInfo = try XCTUnwrap(UCLogicTabletInfo(huionDescriptor200: huion))
+        XCTAssertEqual(huionInfo.makeDecoder().silenceTimeout, 0.1)
+    }
+
     func testParbloA610Pro() throws {
         let info = try XCTUnwrap(UCLogicTabletInfo(ugeeDescriptor100: parbloA610Pro))
         XCTAssertEqual(info.maxX, 0xC796)

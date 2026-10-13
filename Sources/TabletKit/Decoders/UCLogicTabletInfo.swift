@@ -53,6 +53,12 @@ public struct UCLogicTabletInfo: Sendable, Equatable {
         lpi > 0 ? Double(units) / Double(lpi) * 25.4 : nil
     }
 
+    /// A decoder for this tablet, set up for the protocol that answered.
+    public func makeDecoder() -> DeviceDecoder {
+        DeviceDecoder(
+            UCLogicDecoder(protocol: tabletProtocol), digitizer: digitizerSpec, family: .ucLogic)
+    }
+
     /// The spec a decoder needs. Both protocols report tilt from −60° to 60°.
     public var digitizerSpec: DigitizerSpec {
         DigitizerSpec(
