@@ -29,6 +29,9 @@ public struct TabletQuirks: Sendable, Equatable {
     public var seizesTouchSensor = false
     /// Over USB, a report that means "not switched on yet" when it repeats.
     public var usbIdleReport: IdleReportRule?
+    /// Over USB, a mode switch that can be ignored without an error, so it's
+    /// read back and resent until it takes.
+    public var usbModeReadBack: ModeReadBack?
     /// Over Bluetooth, reports to wait for the pen's identity before
     /// assuming a generic pen.
     public var toolAnnounceGraceFrames: Int?
@@ -46,6 +49,26 @@ public struct TabletQuirks: Sendable, Equatable {
             self.reportID = reportID
             self.liveReportIDs = liveReportIDs
             self.timeout = timeout
+        }
+    }
+
+    /// A feature report that switches the tablet's mode and reads back as
+    /// `[id, mode, …]`.
+    public struct ModeReadBack: Sendable, Equatable {
+        /// The switch, `[id, mode]`.
+        public var report: [UInt8]
+        /// When to resend if the read-back doesn't match, in seconds after
+        /// the first send.
+        public var resendAfter: [TimeInterval]
+
+        public init(report: [UInt8], resendAfter: [TimeInterval]) {
+            self.report = report
+            self.resendAfter = resendAfter
+        }
+
+        /// Whether a read-back shows the mode took.
+        public func matches(_ reply: [UInt8]) -> Bool {
+            report.count >= 2 && reply.count >= 2 && reply[0] == report[0] && reply[1] == report[1]
         }
     }
 

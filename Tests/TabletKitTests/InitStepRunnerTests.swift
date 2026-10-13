@@ -6,11 +6,13 @@ import IOKit
 import XCTest
 @testable import TabletKit
 
-/// Records writes and answers string reads from a table.
+/// Records writes and reads; answers string reads from a table and feature
+/// reads from a queue of replies.
 final class RecordingHIDInterface: HIDInterface, @unchecked Sendable {
     let vendorID = 0x056A, productID = 0x0001, usagePage = 0xFF00, usage = 0x01
     var maxOutputReportSize = 0
     var strings: [UInt8: [UInt8]] = [:]
+    var featureReplies: [(IOReturn, [UInt8])] = []
     private let lock = NSLock()
     private var _log: [String] = []
     var log: [String] { lock.withLock { _log } }
@@ -22,7 +24,8 @@ final class RecordingHIDInterface: HIDInterface, @unchecked Sendable {
         return kIOReturnSuccess
     }
     func getReport(_ kind: HIDReportKind, id: UInt8, length: Int) -> (IOReturn, [UInt8]) {
-        (kIOReturnUnsupported, [])
+        record("get \(kind) \(String(format: "%02X", id))")
+        return lock.withLock { featureReplies.isEmpty ? (kIOReturnUnsupported, []) : featureReplies.removeFirst() }
     }
     func readString(index: UInt8) -> [UInt8]? {
         record("string \(index)")
@@ -74,6 +77,50 @@ final class InitStepRunnerTests: XCTestCase {
             [.featureReport([0x02, 0x02]), .featureReport([0x03, 0x01])], on: iface, from: 1
         ) { _ in }
         XCTAssertEqual(iface.log, ["feature 03 01"])
+    }
+}
+
+final class ModeReadBackTests: XCTestCase {
+    private let rule = TabletQuirks.ModeReadBack(report: [0x02, 0x02], resendAfter: [0.01, 0.03])
+
+    private func run(_ replies: [(IOReturn, [UInt8])]) -> (RecordingHIDInterface, [ModeReadBackOutcome]) {
+        let iface = RecordingHIDInterface()
+        iface.featureReplies = replies
+        let outcomes = Recorded<ModeReadBackOutcome>()
+        let done = expectation(description: "last attempt")
+        InitStepRunner.confirmMode(rule, on: iface, queue: DispatchQueue(label: "mode-test")) { o in
+            outcomes.append(o)
+            if o.isLast { done.fulfill() }
+        }
+        wait(for: [done], timeout: 2)
+        return (iface, outcomes.values)
+    }
+
+    func testStopsWhenTheFirstReadMatches() {
+        let (iface, outcomes) = run([(kIOReturnSuccess, [0x02, 0x02])])
+        XCTAssertEqual(iface.log, ["get feature 02"])
+        XCTAssertEqual(outcomes.map(\.matched), [true])
+    }
+
+    func testResendsUntilTheModeTakes() {
+        let (iface, outcomes) = run([(kIOReturnSuccess, [0x02, 0x01]), (kIOReturnSuccess, [0x02, 0x02])])
+        XCTAssertEqual(iface.log, ["get feature 02", "feature 02 02", "get feature 02"])
+        XCTAssertEqual(outcomes.map(\.matched), [false, true])
+        XCTAssertEqual(outcomes.last?.writeResult, kIOReturnSuccess)
+    }
+
+    func testGivesUpAfterTheLastResend() {
+        let stuck = (kIOReturnSuccess, [UInt8]([0x02, 0x01]))
+        let (iface, outcomes) = run([stuck, stuck, stuck])
+        XCTAssertEqual(iface.log.filter { $0 == "feature 02 02" }.count, 2)
+        XCTAssertEqual(outcomes.map(\.attempt), [0, 1, 2])
+        XCTAssertEqual(outcomes.map(\.isLast), [false, false, true])
+        XCTAssertFalse(outcomes.contains { $0.matched })
+    }
+
+    func testAFailedReadCountsAsNotTaken() {
+        let (_, outcomes) = run([(kIOReturnNotResponding, []), (kIOReturnSuccess, [0x02, 0x02])])
+        XCTAssertEqual(outcomes.map(\.matched), [false, true])
     }
 }
 

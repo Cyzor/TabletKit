@@ -790,6 +790,12 @@ public enum WacomDeviceRegistry: Sendable {
 
     // MARK: Known devices
 
+    /// Intuos4 over USB. A cold tablet can ignore the mode switch without an
+    /// error, so it's read back and resent.
+    private static func intuos4USB(_ q: inout TabletQuirks) {
+        q.usbModeReadBack = TabletQuirks.ModeReadBack(report: [0x02, 0x02], resendAfter: [0.15, 0.4])
+    }
+
     /// All entries, in family order. Prefer `spec(for:)` for lookups.
     public static let knownDevices: [TabletSpec] = [
 
@@ -1138,52 +1144,45 @@ public enum WacomDeviceRegistry: Sendable {
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
 
         // ── Intuos4 (PTK-xxx, 2009–2012) — intuosV1 parser ───────────────────
-        // OLED display on each express key; 2048-level pressure (11-bit).
-        //
-        // Unlike the Intuos 1/2 family, maxX/maxY here were already correct —
-        // Intuos4's own native resolution (200 lpmm) is exactly double the
-        // classic 100 lpmm, so the decoder's `<<1 | fractional bit` folds in
-        // cleanly and these rows already carried the right doubled values,
-        // confirmed against OpenTabletDriver's PTK-*.json (exact match) and
-        // Wacom's own Intuos4 User's Manual (technical specifications table).
-        // What was wrong instead: activeWidthMM/activeHeightMM on four of the
-        // five rows didn't match their own maxX/maxY (e.g. PTK-640 claimed
-        // 152mm tall against a maxY that means 140mm) — a self-consistency
-        // bug independent of the doubling question, caught by cross-checking
-        // against the manual's active-area table. PTK-540WL was already
-        // self-consistent and needed no change. Confirmed 2026-08-03.
+        // Key OLEDs; 2048 pressure levels. maxX/maxY are the native 200 lpmm
+        // values (OTD and Wacom's manual agree), and active areas follow them.
         .init(
             productID: 0x00B8, name: "Intuos4 S (PTK-440)",
             format: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
             buttonCount: 6, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
+            confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98)
+            .withQuirks(intuos4USB),
         .init(
             productID: 0x00B9, name: "Intuos4 M (PTK-640)",
             format: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
+            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140)
+            .withQuirks(intuos4USB),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBA (65024×40640).
             productID: 0x00BA, name: "Intuos4 L (PTK-840)",  // dims kernel + OTD
             format: .intuosV1, maxX: 65024, maxY: 40640, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203),
+            confidence: .crossReferenced, activeWidthMM: 325, activeHeightMM: 203)
+            .withQuirks(intuos4USB),
         .init(
             productID: 0x00BB, name: "Intuos4 XL (PTK-1240)",
             format: .intuosV1, maxX: 97536, maxY: 60960, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305),
+            confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305)
+            .withQuirks(intuos4USB),
         .init(
             // Dimensions corrected to kernel wacom_features_0xBC (40640×25400).
             productID: 0x00BC, name: "Intuos4 WL (PTK-540WL)",  // dims kernel + OTD
             format: .intuosV1, maxX: 40640, maxY: 25400, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 127),
+            confidence: .crossReferenced, activeWidthMM: 203, activeHeightMM: 127)
+            .withQuirks(intuos4USB),
         .init(
             // BT Classic PID for the same PTK-540WL: libwacom
             // wacom-intuos4-6x9-wl.tablet lists DeviceMatch

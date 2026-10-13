@@ -17,6 +17,19 @@ public struct InitStepOutcome: Sendable {
     public let reply: [UInt8]?
 }
 
+/// One read-back of a mode switch.
+public struct ModeReadBackOutcome: Sendable {
+    /// 0 for the read right after init, then one per resend.
+    public let attempt: Int
+    /// The resend's result; `nil` on attempt 0.
+    public let writeResult: IOReturn?
+    public let readResult: IOReturn
+    public let reply: [UInt8]
+    public let matched: Bool
+    /// Nothing follows this outcome.
+    public let isLast: Bool
+}
+
 /// Runs a tablet's ``InitStep``s in order against one interface.
 ///
 /// Output reports are padded to the interface's declared size. Steps run on
@@ -50,6 +63,38 @@ public enum InitStepRunner {
                 return
             }
             i += 1
+        }
+    }
+
+    /// Reads back a mode switch that init already sent, and resends it on
+    /// the rule's schedule until the tablet reports the mode. The first read
+    /// runs on the caller's thread, the rest on `queue`.
+    public static func confirmMode(
+        _ rule: TabletQuirks.ModeReadBack, on interface: any HIDInterface,
+        queue: DispatchQueue = .main,
+        onAttempt: @escaping @Sendable (ModeReadBackOutcome) -> Void
+    ) {
+        confirmMode(rule, on: interface, queue: queue, attempt: 0, writeResult: nil, onAttempt: onAttempt)
+    }
+
+    private static func confirmMode(
+        _ rule: TabletQuirks.ModeReadBack, on interface: any HIDInterface,
+        queue: DispatchQueue, attempt: Int, writeResult: IOReturn?,
+        onAttempt: @escaping @Sendable (ModeReadBackOutcome) -> Void
+    ) {
+        guard let id = rule.report.first else { return }
+        let (readResult, reply) = interface.getReport(.feature, id: id, length: 16)
+        let matched = readResult == kIOReturnSuccess && rule.matches(reply)
+        let isLast = matched || attempt >= rule.resendAfter.count
+        onAttempt(ModeReadBackOutcome(
+            attempt: attempt, writeResult: writeResult, readResult: readResult,
+            reply: reply, matched: matched, isLast: isLast))
+        guard !isLast else { return }
+        let previous = attempt == 0 ? 0 : rule.resendAfter[attempt - 1]
+        queue.asyncAfter(deadline: .now() + max(0, rule.resendAfter[attempt] - previous)) {
+            let written = interface.setReport(.feature, bytes: rule.report)
+            confirmMode(rule, on: interface, queue: queue, attempt: attempt + 1,
+                        writeResult: written, onAttempt: onAttempt)
         }
     }
 }
