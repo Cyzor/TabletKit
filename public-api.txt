@@ -248,19 +248,6 @@ method RingLEDControl.setRingLEDColors(_:)
 method TabletDevice.close()
 method TabletDevice.open()
 method TabletDevice.reawaken()
-method TabletDevice.setAuxKeyLabels(_:)
-method TabletDevice.setBezelLEDColor(r:g:b:)
-method TabletDevice.setColorMode(_:)
-method TabletDevice.setDebugButton2Source(_:)
-method TabletDevice.setDisplayBrightness(_:)
-method TabletDevice.setDisplayContrast(_:)
-method TabletDevice.setDisplayGamma(_:)
-method TabletDevice.setQuickKeysOledBrightness(_:)
-method TabletDevice.setQuickKeysOrientation(steps:)
-method TabletDevice.setQuickKeysSleepMinutes(_:)
-method TabletDevice.setRingLED(index:)
-method TabletDevice.setRingLEDColors(_:)
-method TabletDevice.setRingModeLabel(_:)
 method TabletQuirks.ModeReadBack.matches(_:)
 method TabletSpec.makeDecoder()
 method TabletSpec.with(quirks:)
@@ -471,7 +458,6 @@ property TabletControls.labels
 property TabletControls.quickKeys
 property TabletControls.ringLED
 property TabletDevice.controls
-property TabletDevice.hasDisplayBrightnessControl
 property TabletDevice.spec
 property TabletFeature.description
 property TabletFeature.rawValue

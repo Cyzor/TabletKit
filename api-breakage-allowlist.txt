@@ -445,3 +445,20 @@ API breakage: var WacomToolSpec.toolType has declared type change from TabletKit
 
 # On next, decodeBLEPadReport returns a PadState; AuxButtons is package-only.
 API breakage: func decodeBLEPadReport(report:length:) has return type change from TabletKit.AuxButtons? to TabletKit.PadState?
+
+# On next, TabletDevice keeps open, close, reawaken, and controls; the
+# per-feature setters moved to TabletControls.
+API breakage: func TabletDevice.setAuxKeyLabels(_:) has been removed
+API breakage: func TabletDevice.setBezelLEDColor(r:g:b:) has been removed
+API breakage: func TabletDevice.setColorMode(_:) has been removed
+API breakage: func TabletDevice.setDebugButton2Source(_:) has been removed
+API breakage: func TabletDevice.setDisplayBrightness(_:) has been removed
+API breakage: func TabletDevice.setDisplayContrast(_:) has been removed
+API breakage: func TabletDevice.setDisplayGamma(_:) has been removed
+API breakage: func TabletDevice.setQuickKeysOledBrightness(_:) has been removed
+API breakage: func TabletDevice.setQuickKeysOrientation(steps:) has been removed
+API breakage: func TabletDevice.setQuickKeysSleepMinutes(_:) has been removed
+API breakage: func TabletDevice.setRingLED(index:) has been removed
+API breakage: func TabletDevice.setRingLEDColors(_:) has been removed
+API breakage: func TabletDevice.setRingModeLabel(_:) has been removed
+API breakage: var TabletDevice.hasDisplayBrightnessControl has been removed
