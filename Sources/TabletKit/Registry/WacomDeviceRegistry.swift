@@ -130,13 +130,6 @@ public enum ReportFormat: String, Sendable {
 }
 
 extension ReportFormat {
-    /// Creates a fresh decoder for this report format.
-    ///
-    /// Use this instead of switching over formats yourself, so a format added
-    /// in a later release needs no change in your code.
-    @available(*, deprecated, message: "Use DeviceDecoder, or TabletSpec.makeDecoder().")
-    public func makeDecoder() -> any TabletReportDecoder { decoder() }
-
     func decoder() -> any TabletReportDecoder {
         switch self {
         case .graphire: return GraphireDecoder()
@@ -330,8 +323,6 @@ public struct TabletSpec: Sendable {
     public let name: String
     /// Which report format the device sends, and so which decoder reads it.
     public let format: ReportFormat
-    @available(*, deprecated, renamed: "format")
-    public var parser: ReportFormat { format }
     /// Largest pen X coordinate, in device units.
     public let maxX: Int
     /// Largest pen Y coordinate, in device units.
@@ -582,62 +573,6 @@ public struct TabletSpec: Sendable {
         self.quirks = TabletQuirks.defaults(for: format)
     }
 
-    @available(*, deprecated, message: "Use the format: label.")
-    public init(
-        productID: Int, name: String, parser: ReportFormat,
-        maxX: Int, maxY: Int, maxPressure: Int,
-        buttonCount: Int, bezelButtonCount: Int = 0, hasTouchRing: Bool, hasDualRings: Bool = false,
-        hasMechanicalDial: Bool = false,
-        hasKeyOLEDs: Bool = false,
-        hasTouchStrips: Bool = false, ringSlotCount: Int = 4, hasEraser: Bool, hasTilt: Bool? = nil,
-        tiltMaxDegrees: Double? = nil,
-        hasFingerTouch: Bool = false, maxTouchContacts: Int = 0,
-        touchMaxX: Int = 0, touchMaxY: Int = 0,
-        isPenDisplay: Bool = false,
-        seizeUSB: Bool,
-        initSteps: [InitStep] = [],
-        ledCompanionPID: Int? = nil,
-        touchCompanionPID: Int? = nil,
-        touchCompanionInitSteps: [InitStep] = [],
-        confidence: ConfidenceTier = .experimental,
-        productStringMatch: String? = nil,
-        activeWidthMM: Double? = nil,
-        activeHeightMM: Double? = nil
-    ) {
-        self.init(
-            productID: productID,
-            name: name,
-            format: parser,
-            maxX: maxX,
-            maxY: maxY,
-            maxPressure: maxPressure,
-            buttonCount: buttonCount,
-            bezelButtonCount: bezelButtonCount,
-            hasTouchRing: hasTouchRing,
-            hasDualRings: hasDualRings,
-            hasMechanicalDial: hasMechanicalDial,
-            hasKeyOLEDs: hasKeyOLEDs,
-            hasTouchStrips: hasTouchStrips,
-            ringSlotCount: ringSlotCount,
-            hasEraser: hasEraser,
-            hasTilt: hasTilt,
-            tiltMaxDegrees: tiltMaxDegrees,
-            hasFingerTouch: hasFingerTouch,
-            maxTouchContacts: maxTouchContacts,
-            touchMaxX: touchMaxX,
-            touchMaxY: touchMaxY,
-            isPenDisplay: isPenDisplay,
-            seizeUSB: seizeUSB,
-            initSteps: initSteps,
-            ledCompanionPID: ledCompanionPID,
-            touchCompanionPID: touchCompanionPID,
-            touchCompanionInitSteps: touchCompanionInitSteps,
-            confidence: confidence,
-            productStringMatch: productStringMatch,
-            activeWidthMM: activeWidthMM,
-            activeHeightMM: activeHeightMM)
-    }
-
     /// Products without tilt in formats that otherwise carry it: consumer
     /// Intuos (CTL/CTH-x90, CTL-x100), CTE-460, CTL-470, DTU-class business
     /// displays, and entries with no pen (touch sensors, receivers,
@@ -771,8 +706,8 @@ public struct TabletSpec: Sendable {
 
 /// Every Wacom device TabletKit recognizes, keyed by USB product ID.
 ///
-/// Look a device up with `spec(for:)`, then use its ``TabletSpec/parser``
-/// to pick a decoder and ``TabletSpec/digitizerSpec`` to configure it.
+/// Look a device up with `spec(for:)`, then call its
+/// ``TabletSpec/makeDecoder()``.
 public enum WacomDeviceRegistry: Sendable {
 
     /// Every USB vendor ID whose PIDs this registry is keyed on.
@@ -3789,7 +3724,7 @@ public enum WacomDeviceRegistry: Sendable {
 
 extension TabletSpec {
     /// The decoder's view of this device: ranges and capabilities copied into
-    /// the ``DigitizerSpec`` a ``TabletReportDecoder`` takes. Use this rather
+    /// the ``DigitizerSpec`` a decoder reads against. Use this rather
     /// than building one field by field, so a new capability can't be missed.
     public var digitizerSpec: DigitizerSpec {
         DigitizerSpec(

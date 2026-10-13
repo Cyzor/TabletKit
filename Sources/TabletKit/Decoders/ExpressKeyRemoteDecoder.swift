@@ -69,7 +69,7 @@ import Foundation
 /// all), destructive and nothing drives it. Nor the 0x11 frame's embedded
 /// serial (bytes 3–5) or active ring mode (byte 11 bits 6–7) — add when a
 /// caller needs them.
-public struct ExpressKeyRemoteDecoder: TabletReportDecoder {
+package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
 
     static let remoteReportID: UInt8 = 0x11
     static let deviceListReportID: UInt8 = 0x10

@@ -36,21 +36,21 @@ public struct DeviceDecoder: Sendable {
 
     /// Wraps a decoder that isn't chosen by format, such as a fixed-layout
     /// touch sensor's.
-    public init(_ decoder: any TabletReportDecoder, digitizer: DigitizerSpec, family: DeviceFamily) {
+    package init(_ decoder: any TabletReportDecoder, digitizer: DigitizerSpec, family: DeviceFamily) {
         self.decoder = decoder
         self.digitizer = digitizer
         self.family = family
     }
 
-    public mutating func decode(_ report: HIDReport) -> [DecodeResult] {
+    package mutating func decode(_ report: HIDReport) -> [DecodeResult] {
         decoder.decode(report: report, spec: digitizer, state: &state, deviceFamily: family)
     }
 
     /// How long without a report means the pen has left, or `nil` if the
-    /// tablet says so itself. After this long, call ``decodeSilence()``.
+    /// tablet says so itself. After this long, call ``eventsForSilence()``.
     public var silenceTimeout: TimeInterval? { decoder.silenceTimeout }
 
-    public mutating func decodeSilence() -> [DecodeResult] {
+    package mutating func decodeSilence() -> [DecodeResult] {
         decoder.decodeSilence(spec: digitizer, state: &state, deviceFamily: family)
     }
 
@@ -60,7 +60,8 @@ public struct DeviceDecoder: Sendable {
         events(from: decode(report))
     }
 
-    /// ``decodeSilence()`` as events.
+    /// What a stretch of silence as long as ``silenceTimeout`` means, such as
+    /// the pen leaving.
     public mutating func eventsForSilence() -> [TabletEvent] {
         events(from: decodeSilence())
     }

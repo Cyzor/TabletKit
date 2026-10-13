@@ -43,7 +43,7 @@ import Foundation
 /// The UGEE v2 pen path is tested on a Xencelabs Pen Display 24. The Huion v2
 /// paths are tested against recordings of Huion tablets, but not yet on
 /// hardware under macOS.
-public struct UCLogicDecoder: TabletReportDecoder {
+package struct UCLogicDecoder: TabletReportDecoder {
 
     static let huionPenReportID: UInt8 = 0x08
     static let ugeePenReportID: UInt8 = 0x02

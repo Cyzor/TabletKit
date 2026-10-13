@@ -21,7 +21,7 @@ UC-Logic support in TabletKit is new. The UGEE v2 path works on a Xencelabs Pen 
 
 UC-Logic tablets don't share a vendor ID. Huion and Gaomon use `0x256C`, XP-Pen, UGEE, and Parblo use `0x28BD`, and many older and smaller brands use UC-Logic's own `0x5543`. Match on all three, and treat each match as a candidate until it answers.
 
-Xencelabs also uses `0x28BD`. Its tablets speak UGEE v2, but TabletKit has a dedicated decoder for them, ``XencelabsDecoder``, that also handles their buttons and dials. Check ``VendorDeviceRegistry`` first, and fall back to this article's path only for tablets it doesn't list.
+Xencelabs also uses `0x28BD`. Its tablets speak UGEE v2, but TabletKit has a dedicated format for them, ``ReportFormat/xencelabs``, that also handles their buttons and dials. Check ``VendorDeviceRegistry`` first, and fall back to this article's path only for tablets it doesn't list.
 
 ## Switch It On and Read the Answer
 

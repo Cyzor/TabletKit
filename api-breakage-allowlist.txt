@@ -419,3 +419,26 @@ API breakage: var WacomDeviceRegistry.knownDevices has declared type change from
 API breakage: accessor WacomDeviceRegistry.knownDevices.Get() has return type change from [TabletKit.WacomDeviceSpec] to [TabletKit.TabletSpec]
 API breakage: func WacomDeviceRegistry.spec(for:) has return type change from TabletKit.WacomDeviceSpec? to TabletKit.TabletSpec?
 API breakage: func WacomDeviceRegistry.spec(forProductID:productString:) has return type change from TabletKit.WacomDeviceSpec? to TabletKit.TabletSpec?
+
+# The deprecated Wacom-prefixed names (WacomDeviceSpec, ReportParser,
+# WacomToolCatalog, WacomToolSpec, WacomToolType) were removed on next.
+API breakage: accessor WacomToolCatalog.allTools.Get() has return type change from [Swift.UInt16 : TabletKit.WacomToolSpec] to [Swift.UInt16 : TabletKit.ToolSpec]
+API breakage: accessor WacomToolCatalog.allUniqueTools.Get() has return type change from [TabletKit.WacomToolSpec] to [TabletKit.ToolSpec]
+API breakage: accessor WacomToolSpec.toolType.Get() has return type change from TabletKit.WacomToolType to TabletKit.ToolKind
+API breakage: constructor WacomToolSpec.init(from:) has return type change from TabletKit.WacomToolSpec to TabletKit.ToolSpec
+API breakage: constructor WacomToolSpec.init(toolCode:name:toolType:buttonCount:maxPressure:hasTilt:hasRotation:hasWheel:hasEraserVariant:eraserToolCode:supportedFamilies:) has parameter 2 type change from TabletKit.WacomToolType to TabletKit.ToolKind
+API breakage: constructor WacomToolSpec.init(toolCode:name:toolType:buttonCount:maxPressure:hasTilt:hasRotation:hasWheel:hasEraserVariant:eraserToolCode:supportedFamilies:) has return type change from TabletKit.WacomToolSpec to TabletKit.ToolSpec
+API breakage: enum ReportParser has been removed
+API breakage: enum WacomToolCatalog has been renamed to enum ToolCatalog
+API breakage: enum WacomToolType has been removed
+API breakage: func WacomToolCatalog.spec(forToolCode:) has return type change from TabletKit.WacomToolSpec? to TabletKit.ToolSpec?
+API breakage: func WacomToolCatalog.spec(forToolCodeRaw:) has return type change from TabletKit.WacomToolSpec? to TabletKit.ToolSpec?
+API breakage: func WacomToolCatalog.toolType(forToolCode:) has return type change from TabletKit.WacomToolType to TabletKit.ToolKind
+API breakage: func WacomToolCatalog.tools(forFamily:) has return type change from [TabletKit.WacomToolSpec] to [TabletKit.ToolSpec]
+API breakage: func WacomToolSpec.__derived_struct_equals(_:_:) has parameter 0 type change from TabletKit.WacomToolSpec to TabletKit.ToolSpec
+API breakage: func WacomToolSpec.__derived_struct_equals(_:_:) has parameter 1 type change from TabletKit.WacomToolSpec to TabletKit.ToolSpec
+API breakage: struct WacomDeviceSpec has been removed
+API breakage: struct WacomToolSpec has been renamed to struct ToolSpec
+API breakage: var WacomToolCatalog.allTools has declared type change from [Swift.UInt16 : TabletKit.WacomToolSpec] to [Swift.UInt16 : TabletKit.ToolSpec]
+API breakage: var WacomToolCatalog.allUniqueTools has declared type change from [TabletKit.WacomToolSpec] to [TabletKit.ToolSpec]
+API breakage: var WacomToolSpec.toolType has declared type change from TabletKit.WacomToolType to TabletKit.ToolKind

@@ -40,9 +40,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``PadState``
 - ``TouchFrame``
 - ``DeviceEvent``
-- ``DecodeResult``
-- ``DecoderState``
-- ``TabletReportDecoder``
 - ``HIDReport``
 - ``TabletPoint``
 - ``ToolIdentity``
@@ -71,25 +68,10 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 
 ### Decoders
 
-- ``IntuosV1Decoder``
-- ``IntuosV2Decoder``
-- ``IntuosV3Decoder``
-- ``Intuos3Decoder``
-- ``BambooDecoder``
-- ``CintiqV1Decoder``
-- ``GraphireDecoder``
-- ``DTUDecoder``
-- ``DTUSDecoder``
 - ``GenericPenDecoder``
 - ``PrecisionTouchDecoder``
-- ``XencelabsDecoder``
-- ``UCLogicDecoder``
 - ``UCLogicTabletInfo``
 - ``UCLogicProtocol``
-- ``ExpressKeyRemoteDecoder``
-- ``WacomPLDecoder``
-- ``Wacom24HDTDecoder``
-- ``Wacom27QHDTDecoder``
 - ``BLEPenResult``
 
 ### HID mechanics

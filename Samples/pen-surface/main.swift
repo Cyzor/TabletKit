@@ -279,9 +279,7 @@ final class PenSurfaceRunner {
         let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "UC-Logic tablet"
         let (tablet, _) = tablet(
             id: id, name: name,
-            decoder: DeviceDecoder(
-                UCLogicDecoder(protocol: info.tabletProtocol),
-                digitizer: info.digitizerSpec, family: .ucLogic))
+            decoder: info.makeDecoder())
         print("It describes itself (\(info.tabletProtocol)): \(info.maxX) × \(info.maxY), pressure \(info.maxPressure), \(info.lpi) lines per inch")
         if VendorDeviceRegistry.drivableProfile(forVendorID: vendor, productID: id & 0xFFFF) != nil {
             print("TabletKit also has a dedicated decoder for this tablet; this sample uses the self-description anyway.")

@@ -70,7 +70,7 @@ import Foundation
 /// consumer (palm rejection, orientation-aware gestures) and a capture to
 /// verify the derivation against — adding fields to `TouchContact`
 /// speculatively would be scope creep past what this pass needs.
-public struct Wacom24HDTDecoder: TabletReportDecoder {
+package struct Wacom24HDTDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

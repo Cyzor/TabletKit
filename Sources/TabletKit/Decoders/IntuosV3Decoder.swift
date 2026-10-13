@@ -28,7 +28,7 @@ import Foundation
 /// 0x11 and 0x1E are hardware-confirmed against real PTK-870 and Movink 13
 /// captures — see `decodeAuxReport`/`decodeExtendedPenReport`. 0x1F is still
 /// synthesized from OTD source tables; no capture uses that report ID.
-public struct IntuosV3Decoder: TabletReportDecoder {
+package struct IntuosV3Decoder: TabletReportDecoder {
 
     /// Largest single-frame move, in device units, still treated as the pen
     /// tip while the barrel-takeover gate is armed — see `decodeBLEReport`.

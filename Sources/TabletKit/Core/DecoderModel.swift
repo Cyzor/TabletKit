@@ -24,7 +24,7 @@ public enum WirelessStatus: Sendable {
 /// Create one per physical device and pass the same instance to every call.
 /// The fields are the decoders' own bookkeeping; treat them as opaque and
 /// read decoded values from ``DecodeResult`` instead.
-public struct DecoderState: Sendable {
+package struct DecoderState: Sendable {
     /// Last decoded X, held for frames that carry no position.
     public var lastX: Int = 0
     /// Last decoded Y, held for frames that carry no position.
@@ -168,7 +168,7 @@ public struct RemotePairingSlot: Sendable, Equatable {
 /// One event decoded from a report. A single report can produce several,
 /// such as a tool announcement and a pen sample, so always handle the whole
 /// array a decoder returns.
-public enum DecodeResult: Sendable {
+package enum DecodeResult: Sendable {
     /// Nothing to report.
     case none
     /// A pen sample.
@@ -254,12 +254,10 @@ public struct TouchContact: Equatable, Sendable {
     }
 }
 
-/// Vendor-neutral decoder protocol.  One per HID report family.
-///
-/// G3 publish surface for the `TabletKit` Swift package.  Implementors translate
-/// a raw HID input report into a sequence of high-level `DecodeResult` events.
-/// Stateless across calls except for the `inout DecoderState` the host owns.
-public protocol TabletReportDecoder: Sendable {
+/// One HID report family's decoder. Turns a raw input report into
+/// `DecodeResult`s; anything it remembers between reports lives in the
+/// `DecoderState` its caller owns. Apps use ``DeviceDecoder`` instead.
+package protocol TabletReportDecoder: Sendable {
     /// Decode one raw HID report into zero or more results.
     /// Mutating to allow decoder structs with their own cached state if needed.
     /// - Parameters:
@@ -324,12 +322,7 @@ public struct BLEPenResult: Sendable {
 
 /// Emit a toolCompatibility warning if the tool code is not fully supported on the device.
 /// Updates `state.toolIsSupported` and appends `.toolCompatibility(msg)` to results if needed.
-///
-/// Internal decoder plumbing, not part of the public contract — every
-/// in-tree decoder calls this directly, but a consumer building on
-/// `TabletReportDecoder` doesn't need to.
-@_spi(TabletKitInternals)
-public func emitToolCompatibility(
+package func emitToolCompatibility(
     toolCode: UInt16,
     deviceFamily: DeviceFamily,
     state: inout DecoderState,

@@ -95,7 +95,7 @@ import Foundation
 /// Pad proximity signal (ABS_MISC = PAD_DEVICE_ID) fires when any button bit
 /// is non-zero; clears on all-zero.  We emit `AuxButtons` every time since
 /// InputInjector handles idempotent button state.
-public struct BambooDecoder: TabletReportDecoder {
+package struct BambooDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

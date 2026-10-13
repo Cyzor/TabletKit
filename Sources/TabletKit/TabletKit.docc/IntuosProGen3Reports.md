@@ -4,7 +4,7 @@ Read the 2025 Intuos Pro (PTK-470, PTK-670, PTK-870) over USB and Bluetooth, and
 
 ## Overview
 
-``IntuosV3Decoder`` handles these tablets and the Movink 13, which shares their USB pen report. The Linux driver had no support for them when this decoder was written, so the layouts here come from captures of a PTK-870. Where something hasn't been seen on hardware, this article says so. Annotated excerpts from those captures back the [dial steps](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Dial-Steps.md), [edge behavior](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Edge-and-Groove.md), and [tilt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Tilt.md).
+TabletKit reads these tablets, and the Movink 13, which shares their USB pen report, as ``ReportFormat/intuosV3``. The Linux driver had no support for them when TabletKit's decoder was written, so the layouts here come from captures of a PTK-870. Where something hasn't been seen on hardware, this article says so. Annotated excerpts from those captures back the [dial steps](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Dial-Steps.md), [edge behavior](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Edge-and-Groove.md), and [tilt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTK-870-Tilt.md).
 
 The PTK-870's surface is 69,800 × 39,000 units at 200 units per millimeter. Pressure runs from 0 to 8,191, and tilt from −64° to 64°. Multi-byte values are little-endian, and byte offsets count the report ID as byte 0.
 
@@ -85,11 +85,11 @@ These tablets keep reporting after the tip leaves the drawing area, over both US
 
 - Report `0x1F`, a 16-bit USB pen report, comes from OpenTabletDriver's sources. No capture contains it.
 - Bluetooth side button 1 hasn't been pressed in a capture.
-- On USB, ``IntuosV3Decoder`` reads status bit `0x40` as the tip switch, but the bit is also set on every hover frame that has real tilt. It may mean "in range", as it does in Wacom's later pen-display reports.
+- On USB, TabletKit reads status bit `0x40` as the tip switch, but the bit is also set on every hover frame that has real tilt. It may mean "in range", as it does in Wacom's later pen-display reports.
 
 ## See Also
 
-- ``IntuosV3Decoder``
+- ``ReportFormat``
 - ``TabletPoint``
 - ``PadState``
 - <doc:DecodingPenReports>

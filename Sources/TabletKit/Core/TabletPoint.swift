@@ -159,7 +159,7 @@ public struct ToolIdentity: Sendable, Equatable {
 /// ExpressKey, touch ring, dial, and touch strip state from one pad report.
 ///
 /// Rings and strips report an absolute position while touched; dials and
-/// wheels arrive separately as ``DecodeResult/wheel(index:delta:)``.
+/// wheels arrive separately, as ``TabletEvent/dial(index:delta:)`` events.
 public struct AuxButtons: Sendable {
     /// Creates a pad state. Positions default to "no contact".
     public init(

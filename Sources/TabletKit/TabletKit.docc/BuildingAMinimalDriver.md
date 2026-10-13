@@ -89,5 +89,5 @@ MockTab is built the same way, with more around it. It handles several tablets a
 
 - <doc:DecodingPenReports>
 - ``WacomDeviceRegistry``
-- ``TabletReportDecoder``
+- ``DeviceDecoder``
 - ``HIDThread``

@@ -54,7 +54,7 @@ Button state appears on the same `TabletPoint`, not as a separate event. `penBut
 
 ## See Also
 
-- ``TabletReportDecoder``
+- ``DeviceDecoder``
 - ``TabletPoint``
 - ``TabletEvent``
 - ``DigitizerSpec``

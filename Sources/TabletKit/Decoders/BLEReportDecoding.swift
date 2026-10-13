@@ -132,7 +132,7 @@ public func decodeBLEPadReport(
 
 /// Decode wireless status for V1/Intuos3 dongles (ACK-4040 / basic protocol).
 /// Protocol: report[1] bit 0 = connection state (1 = active, 0 = lost).
-public func decodeWirelessReport(report: HIDReport) -> [DecodeResult] {
+package func decodeWirelessReport(report: HIDReport) -> [DecodeResult] {
     guard report.count >= 2 else { return [] }
     if (report[1] & 0x01) != 0 { return [.wireless(.active)] }
     return [.wireless(.lost)]

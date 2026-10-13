@@ -76,7 +76,7 @@ import Foundation
 /// Requires a tablet-mode init first: output report `[0x02, 0xB0, 0x04]`
 /// (`InitStep.outputReport`), zero-padded to MaxOutputReportSize; without
 /// it the device stays in mouse-emulation mode.
-public struct XencelabsDecoder: TabletReportDecoder {
+package struct XencelabsDecoder: TabletReportDecoder {
 
     /// Vendor-tunnel report carrying all live pen and puck data.
     static let penReportID: UInt8 = 0x02

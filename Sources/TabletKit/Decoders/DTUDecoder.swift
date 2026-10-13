@@ -23,7 +23,7 @@ import Foundation
 /// pad report.
 ///
 /// Experimental: not yet validated on hardware.
-public struct DTUDecoder: TabletReportDecoder {
+package struct DTUDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

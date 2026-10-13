@@ -4,7 +4,7 @@ Read the 10-byte pen report shared by Intuos 1 through 5, Intuos Pro gen 1, olde
 
 ## Overview
 
-``IntuosV1Decoder`` handles this format, ``CintiqV1Decoder`` handles it on the Cintiq 12WX through 27QHD, and ``Intuos3Decoder`` handles the Intuos3's variant. Layouts were confirmed on an Intuos5 L (PTH-850), Intuos Pro L (PTH-851), Cintiq 24HD (DTK-2400), and a first-generation Intuos 6×8 (GD-0608-U).
+TabletKit reads this format as ``ReportFormat/intuosV1``, as ``ReportFormat/cintiqV1`` on the Cintiq 12WX through 27QHD, and as ``ReportFormat/intuos3`` for the Intuos3's variant. Layouts were confirmed on an Intuos5 L (PTH-850), Intuos Pro L (PTH-851), Cintiq 24HD (DTK-2400), and a first-generation Intuos 6×8 (GD-0608-U).
 
 Unlike later Wacom formats, multi-byte values here are big-endian. Byte offsets count the report ID as byte 0.
 
@@ -74,8 +74,6 @@ Until the tablet receives feature report `[0x02, 0x02]`, it acts as a mouse. On 
 
 ## See Also
 
-- ``IntuosV1Decoder``
-- ``CintiqV1Decoder``
-- ``Intuos3Decoder``
+- ``ReportFormat``
 - ``ToolIdentity``
 - <doc:DecodingPenReports>

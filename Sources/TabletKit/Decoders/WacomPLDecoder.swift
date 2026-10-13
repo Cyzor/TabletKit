@@ -50,7 +50,7 @@ import Foundation
 /// `state.prevInProximity` fields `Intuos3Decoder`/`GraphireDecoder`
 /// already use for their own tool-enter/proximity-session patterns — no
 /// new `DecoderState` field needed.
-public struct WacomPLDecoder: TabletReportDecoder {
+package struct WacomPLDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

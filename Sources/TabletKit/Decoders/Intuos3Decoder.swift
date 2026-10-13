@@ -30,7 +30,7 @@ import Foundation
 ///
 /// Everything else (USB pen coordinates, pressure, tilt, tool-change packets,
 /// wireless status, mouse subtypes) is identical to IntuosV1Decoder.
-public struct Intuos3Decoder: TabletReportDecoder {
+package struct Intuos3Decoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

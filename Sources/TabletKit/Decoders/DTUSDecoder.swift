@@ -21,7 +21,7 @@ import Foundation
 /// the status byte each frame.
 ///
 /// Experimental: not yet validated on hardware.
-public struct DTUSDecoder: TabletReportDecoder {
+package struct DTUSDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

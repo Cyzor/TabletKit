@@ -53,7 +53,7 @@ import Foundation
 /// The kernel also handles GRAPHIRE_BT inside `wacom_graphire_irq`;
 /// that path is not reproduced here. If a future RFCOMM-aware transport layer
 /// lands, GraphireBT can be added as a sibling decoder.
-public struct GraphireDecoder: TabletReportDecoder {
+package struct GraphireDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}

@@ -57,7 +57,7 @@ import Foundation
 /// in its full vendor touch mode; `decode(...)` below still gates on it
 /// defensively, matching every other decoder in this package's convention
 /// of checking `report[0]` before trusting a byte layout.
-public struct Wacom27QHDTDecoder: TabletReportDecoder {
+package struct Wacom27QHDTDecoder: TabletReportDecoder {
 
     /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
     public init() {}
