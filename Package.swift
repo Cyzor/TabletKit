@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 //
 // TabletKit — pure-logic Wacom (and vendor-neutral) HID decoder layer
 // extracted from the MockTab macOS driver. MPL-2.0; see LICENSES/MPL-2.0.txt.
@@ -55,7 +55,8 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/pen-surface"
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
 
 // Complete concurrency checking on every target, so a data-race warning
