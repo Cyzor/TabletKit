@@ -126,3 +126,26 @@ extension TabletSpec {
     /// A decoder for one device of this model.
     public func makeDecoder() -> DeviceDecoder { DeviceDecoder(spec: self) }
 }
+
+extension DeviceDecoder {
+    /// Touch sensors whose finger reports use a fixed vendor layout rather
+    /// than one their descriptor describes, by the sensor's own product ID.
+    private static let fixedLayoutTouchProductIDs: Set<Int> = [
+        0x0335,  // Cintiq 13HD Touch (DTH-1300)
+        0x00F6,  // Cintiq 24HD Touch (DTH-2400)
+        0x005E,  // Cintiq 22HD Touch
+        0x005D,  // Cintiq 22 Touch (DTH-2242)
+    ]
+
+    /// A decoder for a touch sensor with a fixed vendor layout, and the
+    /// report ID its finger frames arrive on, or `nil` when `productID`
+    /// isn't one. Read every other touch sensor from its descriptor.
+    ///
+    /// The layout comes from the Linux kernel and isn't checked on hardware.
+    public static func fixedLayoutTouch(
+        productID: Int, digitizer: DigitizerSpec, family: DeviceFamily
+    ) -> (reportID: UInt8, decoder: DeviceDecoder)? {
+        guard fixedLayoutTouchProductIDs.contains(productID) else { return nil }
+        return (0x01, DeviceDecoder(Wacom24HDTDecoder(), digitizer: digitizer, family: family))
+    }
+}

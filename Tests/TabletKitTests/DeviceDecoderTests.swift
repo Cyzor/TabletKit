@@ -59,4 +59,21 @@ final class DeviceDecoderTests: XCTestCase {
         XCTAssertEqual(decoder.digitizer.maxX, spec.maxX)
         XCTAssertNil(decoder.silenceTimeout)
     }
+
+    func testFixedLayoutTouchCoversOnlyItsSensors() throws {
+        let touch = DigitizerSpec(maxX: 100, maxY: 100, maxPressure: 0, hasFingerTouch: true)
+        XCTAssertNil(DeviceDecoder.fixedLayoutTouch(productID: 0x00F4, digitizer: touch, family: .cintiq))
+        var entry = try XCTUnwrap(
+            DeviceDecoder.fixedLayoutTouch(productID: 0x00F6, digitizer: touch, family: .cintiq))
+        XCTAssertEqual(entry.reportID, 0x01)
+        // One active contact, id 5, at (100, 200); the frame count is last.
+        var report = [UInt8](repeating: 0, count: 62)
+        report[0] = 0x01
+        report[1] = 0x01; report[2] = 5
+        report[3] = 100; report[7] = 200
+        report[61] = 1
+        let events = HIDReport.withReport(report) { entry.decoder.events($0) }
+        guard case .touch(let frame)? = events.first else { return XCTFail("expected a touch frame") }
+        XCTAssertEqual(frame.contacts.map { [$0.id, $0.x, $0.y] }, [[5, 100, 200]])
+    }
 }
