@@ -32,7 +32,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     private func decode(
         _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
     ) -> [DecodeResult] {
-        var decoder = IntuosV2Decoder()
+        let decoder = IntuosV2Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
                 report: report,

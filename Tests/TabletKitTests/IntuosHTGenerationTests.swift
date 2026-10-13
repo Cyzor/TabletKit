@@ -171,7 +171,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     func testSameContainerDecodesTouchOnTouchCapableSpec() {
         var state = DecoderState()
         let touchMsg: [UInt8] = [0x05, 0x80, 0x51, 0x53, 0x57, 3, 3, 0]
-        var decoder = IntuosV1Decoder()
+        let decoder = IntuosV1Decoder()
         let container = makeContainer([touchMsg])
         let results = HIDReport.withReport(container) { report in
             decoder.decode(

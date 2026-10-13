@@ -20,7 +20,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     private func decode(
         _ bytes: [UInt8], spec: DigitizerSpec? = nil, state: inout DecoderState
     ) -> [DecodeResult] {
-        var decoder = IntuosV1Decoder()
+        let decoder = IntuosV1Decoder()
         let spec = spec ?? cth690
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(

@@ -133,7 +133,7 @@ final class CaptureLogParserTests: XCTestCase {
             Self.pth860SampleLog, requireHeader: false)
         XCTAssertEqual(records.count, 6, "All six sample frames should parse")
 
-        var decoder = IntuosV2Decoder()
+        let decoder = IntuosV2Decoder()
         var state   = DecoderState()
         var allResults: [DecodeResult] = []
         for record in records {
@@ -225,7 +225,7 @@ final class CaptureLogParserTests: XCTestCase {
         let records = try CaptureLogParser.parseHidRecorder(Self.hidRecorderSample)
         XCTAssertEqual(records.count, 3)
 
-        var decoder = IntuosV2Decoder()
+        let decoder = IntuosV2Decoder()
         var state   = DecoderState()
         var results: [DecodeResult] = []
         for record in records {

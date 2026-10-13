@@ -37,7 +37,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState,
         family: DeviceFamily = .intuosProGen2, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
-        var decoder = IntuosV2Decoder()
+        let decoder = IntuosV2Decoder()
         let spec = spec ?? pth660
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(

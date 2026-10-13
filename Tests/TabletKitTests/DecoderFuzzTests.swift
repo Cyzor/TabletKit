@@ -94,7 +94,7 @@ final class DecoderFuzzTests: XCTestCase {
     func testTouchDecoders() {
         var rng = SplitMix64(state: 3)
         let spec = DigitizerSpec(maxX: 100, maxY: 100, maxPressure: 2047, hasFingerTouch: true, maxTouchContacts: 10)
-        var a = Wacom24HDTDecoder(), b = Wacom27QHDTDecoder()
+        let a = Wacom24HDTDecoder(), b = Wacom27QHDTDecoder()
         var sa = DecoderState(), sb = DecoderState()
         for _ in 0..<(Self.iterations * 4) {
             withExactReport(randomReport(&rng, ids: Self.ids)) { report in

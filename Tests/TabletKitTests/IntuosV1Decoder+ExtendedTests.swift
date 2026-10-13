@@ -33,7 +33,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         spec: DigitizerSpec? = nil, family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
         let s = spec ?? pth851
-        var decoder = IntuosV1Decoder()
+        let decoder = IntuosV1Decoder()
         return HIDReport.withReport(bytes) { report in
             decoder.decode(
                 report: report,

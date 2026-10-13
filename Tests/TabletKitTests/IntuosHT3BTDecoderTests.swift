@@ -25,7 +25,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 0)
 
     private func decode(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
-        var decoder = IntuosV2Decoder()
+        let decoder = IntuosV2Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
                 report: report,

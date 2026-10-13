@@ -30,7 +30,7 @@ final class Intuos3DecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState,
         family: DeviceFamily = .intuos3
     ) -> [DecodeResult] {
-        var decoder = Intuos3Decoder()
+        let decoder = Intuos3Decoder()
         return HIDReport.withReport(bytes) { report in
             decoder.decode(
                 report: report,
@@ -199,7 +199,7 @@ final class Intuos3DecoderTests: XCTestCase {
     func test0x0CTouchStripLeftPosition0() {
         var st = DecoderState()
         // leftRaw = (bytes[1] << 8) | bytes[2] = 0x0001 → bit 0 set → position = trailingZeroBitCount(1) = 0
-        var b: [UInt8] = [0x0C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
+        let b: [UInt8] = [0x0C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
         guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
         XCTAssertTrue(aux.touchStrip1Active)
@@ -209,7 +209,7 @@ final class Intuos3DecoderTests: XCTestCase {
     func test0x0CTouchStripLeftPosition5() {
         var st = DecoderState()
         // leftRaw = 0x0020 = bit 5 set → position = trailingZeroBitCount(0x20) = 5
-        var b: [UInt8] = [0x0C, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00]
+        let b: [UInt8] = [0x0C, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
         guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
         XCTAssertTrue(aux.touchStrip1Active)

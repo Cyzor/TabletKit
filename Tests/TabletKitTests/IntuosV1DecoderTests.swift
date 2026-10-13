@@ -19,7 +19,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         _ bytes: [UInt8], state: inout DecoderState,
         family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
-        var decoder = IntuosV1Decoder()
+        let decoder = IntuosV1Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
                 report: report,
@@ -238,7 +238,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 4)
 
     private func decodeGD0608(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
-        var decoder = IntuosV1Decoder()
+        let decoder = IntuosV1Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
                 report: report,
