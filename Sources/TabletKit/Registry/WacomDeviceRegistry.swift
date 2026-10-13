@@ -791,9 +791,11 @@ public enum WacomDeviceRegistry: Sendable {
     // MARK: Known devices
 
     /// Intuos4 over USB. A cold tablet can ignore the mode switch without an
-    /// error, so it's read back and resent.
+    /// error, so it's read back and resent. A tablet that falls back to
+    /// mouse mode (report 0x01) gets init again.
     private static func intuos4USB(_ q: inout TabletQuirks) {
         q.usbModeReadBack = TabletQuirks.ModeReadBack(report: [0x02, 0x02], resendAfter: [0.15, 0.4])
+        q.usbIdleReport = TabletQuirks.IdleReportRule(reportID: 0x01, liveReportIDs: [0x02, 0x0C], timeout: 1)
     }
 
     /// All entries, in family order. Prefer `spec(for:)` for lookups.
