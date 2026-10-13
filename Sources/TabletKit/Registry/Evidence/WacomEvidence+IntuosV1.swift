@@ -44,13 +44,13 @@ extension WacomEvidence {
             .touch: .init(.hardware, [.maintainerHardware, .publicRecording]),
             .wirelessReceiver: .init(.hardware, [.maintainerHardware]),
         ],
-        0x0029: [  // Wacom PTK-450
+        0x0029: [  // Intuos5 S (PTK-450)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),
             .ring: .init(.sourced, [.libwacom]),
         ],
-        0x002A: [  // Wacom PTK-650
+        0x002A: [  // Intuos5 M (PTK-650)
             .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
             .tabletButtons: .init(.sourced, [.libwacom]),

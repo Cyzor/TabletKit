@@ -172,8 +172,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
         }
     }
 
-    /// Rows spell "Intuos4"/"Intuos5" without a space, so the old name tokens
-    /// misfiled PTH-450/650, PTH-851 and PTK-450/650.
+    /// Names don't separate these generations, so family goes by product ID.
     func testIntuos4And5AndProGen1ClassifyByPID() {
         let expected: [([Int], DeviceFamily)] = [
             (Array(0x00B8...0x00BD), .intuos4),

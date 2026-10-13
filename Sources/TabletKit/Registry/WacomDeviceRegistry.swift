@@ -737,9 +737,8 @@ public struct TabletSpec: Sendable {
             if name.contains("Cintiq") || name.contains("DTK") || name.contains("DTH") {
                 return .cintiq
             }
-            // Intuos4/5 by PID too: the rows spell it "Intuos4"/"Intuos5" (or
-            // just "Wacom PTK-450"), so name tokens misfiled PTH-450/650 as
-            // Pro gen 1, PTH-851 as Intuos5, and PTK-450/650 as Intuos4.
+            // Intuos4/5 by product ID: their names don't separate the
+            // generations reliably.
             if (0x00B8...0x00BD).contains(productID) {
                 return .intuos4
             }
@@ -1634,27 +1633,19 @@ public enum WacomDeviceRegistry: Sendable {
         // small entry-level DTUS pen display). The DTZ-2100B name was an
         // estimation error; corrected during the 2026-05-15 DTUS pass.
 
-        // ── Intuos4 (PTK) additional variants ────────────────────────────────
-        // activeWidthMM/HeightMM on both rows were rounded spec-sheet figures
-        // rather than the digitizer's real extent. Checking every intuosV1 row
-        // against `maxX / 5080 × 25.4` (the family's native resolution), all of
-        // them agree to within ±0.5mm except these two and 0x0315 — the three
-        // rows sourced from OTD. On 0x0029 the declared height moved the
-        // opposite direction from its width, so this is a different source
-        // rather than rounding. Corrected to match each row's PTH twin
-        // (0x0026 and 0x0027), which carry identical maxX/maxY. Buttons and
-        // coordinates untouched. See feedback on manual specs not being
-        // authoritative. Corrected 2026-08-22.
+        // ── Intuos5 without touch (PTK-450/650) ──────────────────────────────
+        // Kernel INTUOS5S/INTUOS5: no key OLEDs. Active areas match their PTH
+        // twins (0x0026, 0x0027), which carry the same maxX/maxY.
         .init(
-            productID: 0x0029, name: "Wacom PTK-450",  // ⚠ from OTD
+            productID: 0x0029, name: "Intuos5 S (PTK-450)",  // ⚠ from OTD
             format: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 6, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
-            productID: 0x002A, name: "Wacom PTK-650",  // ⚠ from OTD
+            productID: 0x002A, name: "Intuos5 M (PTK-650)",  // ⚠ from OTD
             format: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
 
