@@ -18,8 +18,8 @@ final class IntuosV3ArtPenInferenceTests: XCTestCase {
 
     private func infer(
         _ result: DecodeResult, currentTool: UInt16 = 0x0842, validRotation: Bool = true
-    ) -> (results: [DecodeResult], state: DecoderState) {
-        var state = DecoderState()
+    ) -> (results: [DecodeResult], state: IntuosV3Decoder.State) {
+        var state = IntuosV3Decoder.State()
         state.currentToolCode = currentTool
         state.hasValidRotationFrame = validRotation
         var results = [result]

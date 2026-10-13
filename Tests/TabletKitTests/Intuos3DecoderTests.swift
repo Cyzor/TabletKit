@@ -27,7 +27,7 @@ final class Intuos3DecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout Intuos3Decoder.State,
         family: DeviceFamily = .intuos3
     ) -> [DecodeResult] {
         let decoder = Intuos3Decoder()
@@ -57,7 +57,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - Length guard
 
     func testTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         XCTAssertTrue(decode([0x10], state: &st).isEmpty)
     }
 
@@ -70,7 +70,7 @@ final class Intuos3DecoderTests: XCTestCase {
     /// A pen rising out of range: full-confidence hover, then a run of
     /// low-confidence frames with real positions, then the exit frame.
     func testLowConfidencePenFramesStayInProximity() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         var points: [TabletPoint] = []
         for (i, status) in ([0xE0, 0xE0] + Array(repeating: 0xA0, count: 9) + [0x80] as [UInt8]).enumerated() {
             let bytes = status == 0x80
@@ -87,7 +87,7 @@ final class Intuos3DecoderTests: XCTestCase {
 
     /// The puck enters with low-confidence frames after its tool-change packet.
     func testLowConfidencePuckFrameEntersProximity() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         var b = [UInt8](repeating: 0, count: 10)
         b[0] = 0x10
         b[1] = 0xC2
@@ -102,7 +102,7 @@ final class Intuos3DecoderTests: XCTestCase {
     /// In range without position (0x20): mid-stroke, hold the position with
     /// the tip up; otherwise report nothing.
     func testInRangeOnlyHoldsPosition() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         XCTAssertTrue(decode(makePen(status: 0x20), state: &st).isEmpty)
 
         _ = decode(makePen(status: 0xE0, xHigh: 0x10, pressHigh: 0x40), state: &st)
@@ -118,7 +118,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - Proximity exit: no guard on prevInProximity
 
     func testProximityExitAlwaysEmitsFrameEvenWhenPrevInProximityFalse() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         XCTAssertFalse(st.prevInProximity)
         // Out-of-proximity with prevInProximity=false — Intuos3 still emits exit frame.
         let b = makePen(status: 0x80)
@@ -132,7 +132,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - USB pen: prox entry emits .pen(inProximity:true)
 
     func testUSBPenProxEntryEmitsPenInProximity() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         let b = makePen(status: 0xE0)
         let r = decode(b, state: &st)
         let pen = r.first { if case .pen = $0 { return true }; return false }
@@ -144,7 +144,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - Tool-change packet
 
     func testToolChangePacketEmitsToolEnter() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // Tool-change: status & 0xFC == 0xC0 → status = 0xC0 (bits 7:2 = 0b110000)
         // Craft a minimal valid tool-change packet: all-zero data bytes are fine for
         // the serial/toolCode decode — we just check that .toolEnter is emitted.
@@ -159,14 +159,14 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - 0x03 aux report (8 express keys in byte 4)
 
     func test0x03AuxShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // Need length >= 10; 9 bytes should be rejected
         let b = [UInt8](repeating: 0, count: 9)
         XCTAssertTrue(decode([0x03] + Array(b.dropFirst()), state: &st).isEmpty)
     }
 
     func test0x03AuxAllEightKeysSet() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // byte 4 = 0xFF → all 8 keys
         var b = [UInt8](repeating: 0, count: 10)
         b[0] = 0x03
@@ -180,7 +180,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x03AuxSingleKeyButton3() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // byte 4 = 0x08 = bit 3 → only button[3]
         var b = [UInt8](repeating: 0, count: 10)
         b[0] = 0x03
@@ -197,7 +197,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - 0x0C pad report: touch strips
 
     func test0x0CTouchStripLeftPosition0() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // leftRaw = (bytes[1] << 8) | bytes[2] = 0x0001 → bit 0 set → position = trailingZeroBitCount(1) = 0
         let b: [UInt8] = [0x0C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -207,7 +207,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x0CTouchStripLeftPosition5() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // leftRaw = 0x0020 = bit 5 set → position = trailingZeroBitCount(0x20) = 5
         let b: [UInt8] = [0x0C, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -217,7 +217,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x0CTouchStripLeftInactive() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // leftRaw = 0x0000 → inactive, position=0xFF
         let b: [UInt8] = [0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -229,7 +229,7 @@ final class Intuos3DecoderTests: XCTestCase {
     // MARK: - 0x0C pad report: express keys
 
     func test0x0CExpressKeysLowNibbleAllSet() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // bytes[5] = 0x0F → buttons[0..3] all true
         let b: [UInt8] = [0x0C, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x00]
         let r = decode(b, state: &st)
@@ -242,7 +242,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x0CExpressKeysHighNibbleAllSet() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // bytes[6] = 0x0F → buttons[4..7] all true
         let b: [UInt8] = [0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F]
         let r = decode(b, state: &st)
@@ -255,7 +255,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x0CExpressKeysAbsentWhenLengthUnder7() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         // length=5 → no bytes[5..6] → all buttons false
         let b: [UInt8] = [0x0C, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -266,7 +266,7 @@ final class Intuos3DecoderTests: XCTestCase {
     }
 
     func test0x0CShortUnder5BytesRejected() {
-        var st = DecoderState()
+        var st = Intuos3Decoder.State()
         let b: [UInt8] = [0x0C, 0x00, 0x00, 0x00]
         XCTAssertTrue(decode(b, state: &st).isEmpty)
     }

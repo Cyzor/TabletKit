@@ -109,7 +109,7 @@ final class ConformanceHarnessTests: XCTestCase {
 
     func testFixturesDecodeToNonTrivialResults() throws {
         for fixture in Self.fixtures {
-            guard var decoder = ConformanceDecoderFactory.make(for: fixture.parser) else {
+            guard let made = ConformanceDecoderFactory.make(for: fixture.parser) else {
                 XCTFail("\(fixture.device): unknown parser '\(fixture.parser)' — " +
                         "add it to ConformanceDecoderFactory.make(for:)")
                 continue
@@ -124,16 +124,11 @@ final class ConformanceHarnessTests: XCTestCase {
             }
             XCTAssertFalse(records.isEmpty, "\(fixture.device): fixture has no records")
 
-            var state = DecoderState()
+            var decoder = DeviceDecoder(made, digitizer: fixture.spec, family: fixture.deviceFamily)
             var sawNonTrivialResult = false
 
             for record in records {
-                let results = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in
-                    decoder.decode(
-                        report: report,
-                        spec: fixture.spec, state: &state,
-                        deviceFamily: fixture.deviceFamily)
-                }
+                let results = HIDReport.withReport(record.bytes) { decoder.decode($0) }
                 for result in results {
                     if case .none = result { continue }
                     sawNonTrivialResult = true

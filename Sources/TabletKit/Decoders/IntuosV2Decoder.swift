@@ -33,14 +33,14 @@ import Foundation
 ///      without a live capture.
 package struct IntuosV2Decoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
@@ -119,7 +119,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     private func decodePenReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
@@ -171,7 +171,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         // resolves to a 0° snap when the exit threshold fires.
         if !highConfidence {
             state.exitFrameCount += 1
-            if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+            if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
                 state.exitFrameCount = 0
                 state.prevInProximity = false
                 state.lastSerial = 0  // force toolEnter on re-entry
@@ -269,7 +269,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     // Check tool compatibility and emit warning if unsupported
                     emitToolCompatibility(
                         toolCode: toolCode, deviceFamily: deviceFamily,
-                        state: &state, results: &results)
+                        toolIsSupported: &state.toolIsSupported, results: &results)
                 }
             }
         }
@@ -397,7 +397,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     private func decodeOffsetPenReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         // 20 bytes covers through the height byte at 19. Real devices send 192;
         // the shortest capture on hand is exactly 20.
@@ -476,7 +476,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     private func decodeBLEPen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard
@@ -580,4 +580,53 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         return [.touch(contacts)]
     }
 
+}
+
+extension IntuosV2Decoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Serial at the last tool change.
+        package var lastSerial: UInt32 = 0
+        /// Tool code at the last tool change.
+        package var lastToolCode: UInt16 = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// The mouse's scroll counter, for deltas.
+        package var lastScrollPos: UInt8 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+        /// Whether the tool in range is a mouse.
+        package var toolIsMouse: Bool = false
+        /// Last ExpressKey byte from the Bluetooth `0x80` container.
+        package var lastBTPadKeys: UInt8 = 0
+        /// Last ring byte from the Bluetooth `0x80` container.
+        package var lastBTPadRing: UInt8 = 0x7F
+        /// Last ring-button byte from the Bluetooth `0x80` container.
+        package var lastBTPadBtn: UInt8 = 0
+        /// Consecutive weak frames. The pen leaves at `proximityExitFrames`.
+        package var exitFrameCount: Int = 0
+        /// Whether this family fully supports the tool in range.
+        package var toolIsSupported: Bool = true
+        /// Last valid Art Pen rotation, in degrees.
+        package var lastRotation: Double = 0
+        /// Whether a real rotation has arrived since the pen entered.
+        package var hasValidRotationFrame: Bool = false
+        /// Whether real tilt has arrived since the pen entered.
+        package var hasValidTiltFrame: Bool = false
+        /// Last valid tilt, held through low-confidence frames.
+        package var lastTiltX: Double = 0
+        package var lastTiltY: Double = 0
+        /// Last battery byte, so unchanged readings aren't sent again. 0xFF until one arrives.
+        package var lastBatteryByte: UInt8 = 0xFF
+        /// The device clock for each touch frame in the last report.
+        package var btTouchFrameStamps: [UInt16] = []
+
+        package init() {}
+    }
 }

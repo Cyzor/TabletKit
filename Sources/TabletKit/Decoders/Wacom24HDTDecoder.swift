@@ -59,7 +59,7 @@ import Foundation
 /// Byte 61 describes the total contact count across a whole gesture update,
 /// which can span more than one 4-contact packet. A nonzero byte 61 starts a
 /// new frame; this decoder accumulates contacts in
-/// `DecoderState.wacom24HDTPendingContacts` until that many have arrived,
+/// `State.wacom24HDTPendingContacts` until that many have arrived,
 /// then emits one `.touch(_)` result. A packet whose count is satisfied by
 /// its own four records (≤4 fingers) completes and emits immediately.
 ///
@@ -72,14 +72,14 @@ import Foundation
 /// speculatively would be scope creep past what this pass needs.
 package struct Wacom24HDTDecoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 62, report[0] == 0x01 else { return [] }
@@ -101,7 +101,7 @@ package struct Wacom24HDTDecoder: TabletReportDecoder {
 
     private func decodeMultitouchReport(
         report: HIDReport,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         let frameCount = min(Int(report[Self.frameCountOffset]), Self.maxPlausibleContacts)
 
@@ -170,5 +170,17 @@ package struct Wacom24HDTDecoder: TabletReportDecoder {
         // than surfacing the two axes separately.
         let major = min(width, height)
         return TouchContact(id: id, x: x, y: y, contactArea: major, contactMinor: major)
+    }
+}
+
+extension Wacom24HDTDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Contacts collected toward the current frame.
+        package var wacom24HDTPendingContacts: [TouchContact] = []
+        /// Contacts still expected before the frame is complete.
+        package var wacom24HDTRemainingContacts: Int = 0
+
+        package init() {}
     }
 }

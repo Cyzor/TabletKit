@@ -27,7 +27,7 @@ final class GraphireDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout GraphireDecoder.State,
         spec: DigitizerSpec? = nil, family: DeviceFamily = .graphire
     ) -> [DecodeResult] {
         var decoder = GraphireDecoder()
@@ -53,21 +53,21 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Report gating
 
     func testWrongReportIDReturnsEmpty() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // report[0]=0x01 — decoder requires 0x02
         let b: [UInt8] = [0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         XCTAssertTrue(decode(b, state: &st).isEmpty)
     }
 
     func testTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         XCTAssertTrue(decode([0x02, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00], state: &st).isEmpty)
     }
 
     // MARK: - Coordinate decode (LE16)
 
     func testLE16XYDecoded() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // X = 0x1234 = 4660 (low byte first), Y = 0x5678 = 22136
         let b = makePen(status: 0x80, xLow: 0x34, xHigh: 0x12, yLow: 0x78, yHigh: 0x56)
         let r = decode(b, state: &st)
@@ -80,7 +80,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Pressure (10-bit pen path)
 
     func test10BitPressureAssembled() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // rawPressure = d[6] | ((d[7] & 0x03) << 8)
         // d[6]=0xFF, d[7]=0x01 → 0xFF | (0x01 << 8) = 0x1FF = 511
         let b = makePen(status: 0x80, byte6: 0xFF, byte7: 0x01)
@@ -91,7 +91,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testPressureCappedAtMaxPressure() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // PenPartner: maxPressure=255; d[6]=0xFF, d[7]=0x03 → raw=0x3FF=1023, capped to 255
         let b = makePen(status: 0x80, byte6: 0xFF, byte7: 0x03)
         let r = decode(b, state: &st, spec: penPartner)
@@ -103,7 +103,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Tool enter
 
     func testToolEnterEmittedForPenOnFirstProximity() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // toolField = (status >> 5) & 0x03; status=0x80 → toolField=0 → pen
         let b = makePen(status: 0x80)
         let r = decode(b, state: &st)
@@ -115,7 +115,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testToolEnterForEraser() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // toolField = 1 → status bits 6:5 = 0b01 → status = 0x80 | 0x20
         let b = makePen(status: 0x80 | 0x20)
         let r = decode(b, state: &st)
@@ -126,7 +126,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testToolEnterForMouseWithWheel() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // toolField = 2 (mouse w/wheel) → status bits 6:5 = 0b10 → status = 0x80 | 0x40
         let b = makePen(status: 0x80 | 0x40)
         let r = decode(b, state: &st)
@@ -139,7 +139,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Mouse wheel
 
     func testMouseWheelPositiveByte() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // toolField=2 → mouse path; d[6]=0x01 → Int8(bitPattern:0x01)=1, * -1 = -1
         let b = makePen(status: 0x80 | 0x40, byte6: 0x01)
         let r = decode(b, state: &st)
@@ -149,7 +149,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testMouseWheelNegativeByte() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // d[6]=0xFF → Int8(bitPattern:0xFF) = -1, * -1 = +1
         let b = makePen(status: 0x80 | 0x40, byte6: 0xFF)
         let r = decode(b, state: &st)
@@ -161,7 +161,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Hover distance
 
     func testHoverDistanceFromByte7Low6Bits() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // Padless models only: d[7] & 0x3F; 0x2A → 42. Pad models carry button bits there.
         let b = makePen(status: 0x80, byte7: 0x2A)
         let r = decode(b, state: &st, spec: penPartner)
@@ -173,7 +173,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - Proximity exit
 
     func testProximityExitEmitsCachedCoords() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // Enter at known position.
         _ = decode(makePen(status: 0x80, xLow: 0x34, xHigh: 0x12, yLow: 0x78, yHigh: 0x56), state: &st)
         XCTAssertTrue(st.prevInProximity)
@@ -192,7 +192,7 @@ final class GraphireDecoderTests: XCTestCase {
     // MARK: - G4 pad buttons
 
     func testG4PadBothButtonsSet() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // d[7]: bit 6=BTN_BACK, bit 7=BTN_FORWARD → 0xC0 sets both
         let b = makePen(status: 0x00, byte7: 0xC0)
         let r = decode(b, state: &st, spec: graphire4)
@@ -203,7 +203,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testG4PadSingleButtonBack() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // Only bit 6 set
         let b = makePen(status: 0x00, byte7: 0x40)
         let r = decode(b, state: &st, spec: graphire4)
@@ -214,7 +214,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testNoPadOnPenPartner() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // PenPartner has buttonCount=0 → no pad even when not in proximity
         let b = makePen(status: 0x00, byte7: 0xC0)
         let r = decode(b, state: &st, spec: penPartner)
@@ -236,7 +236,7 @@ final class GraphireDecoderTests: XCTestCase {
 
     func testCTE650TipIsPenAndEraserIsEraser() {
         // Status 0x91 = in range, pen, tip down; 0xB1 = eraser down.
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         let tip = pen(decode([0x02, 0x91, 0x42, 0x1F, 0x92, 0x1A, 0xFE, 0x01, 0x00],
                              state: &st, spec: bambooFun))
         XCTAssertEqual(tip?.inProximity, true)
@@ -244,7 +244,7 @@ final class GraphireDecoderTests: XCTestCase {
         XCTAssertEqual(tip?.pressure, 510)
         XCTAssertEqual(tip?.x, 0x1F42)
 
-        var st2 = DecoderState()
+        var st2 = GraphireDecoder.State()
         let eraser = pen(decode([0x02, 0xB1, 0x42, 0x1F, 0x92, 0x1A, 0x20, 0x00, 0x00],
                                 state: &st2, spec: bambooFun))
         XCTAssertEqual(eraser?.inProximity, true)
@@ -252,7 +252,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
 
     func testCTE650PadButtonsAndRing() {
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         // Out of range; lower-left FN (0x20) held, finger on ring at position 71.
         let r = decode([0x02, 0x00, 0, 0, 0, 0, 0, 0x20, 0xC7], state: &st, spec: bambooFun)
         let auxResult = r.first { if case .aux = $0 { return true }; return false }
@@ -263,7 +263,7 @@ final class GraphireDecoderTests: XCTestCase {
     }
     func testCTE650PadWhilePenHovers() {
         // Status 0x90 = pen hovering; > (0x10) held in d[7].
-        var st = DecoderState()
+        var st = GraphireDecoder.State()
         let r = decode([0x02, 0x90, 0x42, 0x1F, 0x92, 0x1A, 0x00, 0x10, 0x00],
                        state: &st, spec: bambooFun)
         XCTAssertEqual(pen(r)?.hoverDistance, 0)
@@ -280,7 +280,7 @@ extension GraphireDecoderTests {
         for pid in [0x0069, 0x006A, 0x006B] {
             let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
             XCTAssertEqual(row.format, .graphire, "0x\(String(pid, radix: 16))")
-            var st = DecoderState()
+            var st = GraphireDecoder.State()
             let tip = pen(decode([0x02, 0x91, 0x42, 0x0F, 0x92, 0x0A, 0x40, 0x01],
                                  state: &st, spec: row.digitizerSpec))
             XCTAssertEqual(tip?.inProximity, true)

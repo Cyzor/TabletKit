@@ -134,7 +134,7 @@ final class CaptureLogParserTests: XCTestCase {
         XCTAssertEqual(records.count, 6, "All six sample frames should parse")
 
         let decoder = IntuosV2Decoder()
-        var state   = DecoderState()
+        var state   = IntuosV2Decoder.State()
         var allResults: [DecodeResult] = []
         for record in records {
             let results = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in
@@ -226,7 +226,7 @@ final class CaptureLogParserTests: XCTestCase {
         XCTAssertEqual(records.count, 3)
 
         let decoder = IntuosV2Decoder()
-        var state   = DecoderState()
+        var state   = IntuosV2Decoder.State()
         var results: [DecodeResult] = []
         for record in records {
             let r = HIDReport.withReport(record.bytes) { report -> [DecodeResult] in

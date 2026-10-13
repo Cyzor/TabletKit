@@ -32,14 +32,14 @@ import Foundation
 /// wireless status, mouse subtypes) is identical to IntuosV1Decoder.
 package struct Intuos3Decoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
@@ -109,7 +109,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
     private func decodeUSBPen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
@@ -247,7 +247,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
 
     private func decodeToolChange(
         report: HIDReport,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let serial =
@@ -275,4 +275,26 @@ package struct Intuos3Decoder: TabletReportDecoder {
         ]
     }
 
+}
+
+extension Intuos3Decoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Serial at the last tool change.
+        package var lastSerial: UInt32 = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+        /// Whether the tool in range is a mouse.
+        package var toolIsMouse: Bool = false
+
+        package init() {}
+    }
 }

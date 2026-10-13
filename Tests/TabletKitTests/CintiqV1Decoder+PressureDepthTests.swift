@@ -28,8 +28,8 @@ final class CintiqV1DecoderPressureDepthTests: XCTestCase {
         maxX: 87200, maxY: 65600, maxPressure: 2047,
         buttonCount: 8, hasTilt: true, isPenDisplay: true)
 
-    private func seededState() -> DecoderState {
-        var state = DecoderState()
+    private func seededState() -> CintiqV1Decoder.State {
+        var state = CintiqV1Decoder.State()
         state.currentToolCode = 0x0842
         state.toolIsSupported = true
         return state

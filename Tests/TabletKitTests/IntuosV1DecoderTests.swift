@@ -16,7 +16,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 4)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV1Decoder.State,
         family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
         let decoder = IntuosV1Decoder()
@@ -30,7 +30,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     // MARK: - Dispatch & rejection
 
     func testEmptyReportReturnsNoResults() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         XCTAssertTrue(decode([], state: &state).isEmpty)
         XCTAssertTrue(decode([0x10], state: &state).isEmpty)
     }
@@ -39,7 +39,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         // 0x02 with length != 10 must be ignored — PTH-850 Interface 1 emits a
         // 63-byte vendor-specific touch payload using the same report ID; the
         // decoder must not interpret those bytes as pen coordinates.
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let touchSizedPayload = [UInt8](repeating: 0xAA, count: 63)
         XCTAssertTrue(decode([0x02] + touchSizedPayload.dropFirst(), state: &state).isEmpty)
     }
@@ -50,7 +50,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         // status & 0xFC == 0xC0 marks a tool-identity packet.
         // Layout (per Linux wacom_intuos_inout): byte 1 = 0xC0..0xC3 (entering),
         // bytes 2..5 hold the 32-bit serial, bytes 6..7 hold the tool code.
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 10)
         bytes[0] = 0x10
         bytes[1] = 0xC2          // tool entering, low bits 0x02
@@ -70,7 +70,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         // After the pen has been in proximity, a status byte with both prox (bit 5)
         // and confidence (bit 6) clear must produce a final .pen with inProximity=false
         // and pressure 0 — the kernel "wacom out" model.
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         state.prevInProximity = true
         state.lastX = 1000
         state.lastY = 2000
@@ -102,7 +102,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     }
 
     func testBT0x03UnwrapsTwoPenFramesAndBattery() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let report: [UInt8] = [0x03] + penFrame(x: 1000) + penFrame(x: 2000) + [0x6A]
         // power 0x6A = 0b1101010: index 2 → 30%, bit3 charging set, bit4 ext-power set
         let results = decode(report, state: &state)
@@ -121,7 +121,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     }
 
     func testBT0x04UnwrapsThreePenFramesAndBattery() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let report: [UInt8] = [0x04] + penFrame(x: 100) + penFrame(x: 200) + penFrame(x: 300) + [0x07]
         // power 0x07: index 7 → 100%, not charging
         let results = decode(report, state: &state)
@@ -140,7 +140,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     }
 
     func testBTAggregatedPadFrameDecodes() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         var pad = [UInt8](repeating: 0, count: 10)
         pad[0] = 0x0C
         pad[1] = 0x80 | 42   // ring active, position 42
@@ -166,7 +166,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         // Below the kernel-pinned minimums (22 / 32): must not read the power
         // byte out of bounds. A short 0x03 still falls through to the BLE pad
         // path; a short 0x04 decodes to nothing.
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         XCTAssertTrue(decode([0x04] + [UInt8](repeating: 0, count: 20), state: &state).isEmpty)
     }
 
@@ -177,7 +177,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// No pressure in this packet, so a `.pen` here would read as a tip release.
     func testAirbrushWheelPacketEmitsNoPenPoint() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         _ = decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state)
         let wheel = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
         XCTAssertFalse(wheel.contains { if case .pen = $0 { return true }; return false })
@@ -185,7 +185,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// Kernel: `(data[6] << 2) | ((data[7] >> 6) & 3)` — absolute 0...1023.
     func testAirbrushWheelValueMatchesKernelFormula() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         _ = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
         let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state))
         XCTAssertEqual(p?.airbrushWheel, 1023)
@@ -202,7 +202,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// Wheel and pressure arrive in different packets; the cache must survive.
     func testAirbrushWheelPersistsAcrossPenReports() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         _ = decode([0x02, 0x74, 0, 0, 0, 0, 0x40, 0x00, 0, 0], state: &state)
         for _ in 0..<3 {
             let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0x20, 0, 0, 0], state: &state))
@@ -212,7 +212,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// A wheel position must not follow the next tool into proximity.
     func testAirbrushWheelClearsOnProximityExit() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         _ = decode([0x02, 0x74, 0, 0, 0, 0, 0xFF, 0xC0, 0, 0], state: &state)
         _ = decode([0x02, 0x60, 0, 100, 0, 100, 0, 0, 0, 0], state: &state)
         _ = decode([0x02, 0x00, 0, 0, 0, 0, 0, 0, 0, 0], state: &state)  // exit
@@ -222,7 +222,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// nil, not 0 — lets a consumer tell "no wheel" from "wheel at zero".
     func testNonAirbrushToolsReportNilWheel() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let p = penPoint(decode([0x02, 0x60, 0, 100, 0, 100, 0x40, 0, 0, 0], state: &state))
         XCTAssertNil(p?.airbrushWheel)
     }
@@ -237,7 +237,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         buttonCount: 0, hasTilt: true, hasDualRings: false,
         isPenDisplay: false, ringSlotCount: 4)
 
-    private func decodeGD0608(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
+    private func decodeGD0608(_ bytes: [UInt8], state: inout IntuosV1Decoder.State) -> [DecodeResult] {
         let decoder = IntuosV1Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
@@ -256,7 +256,7 @@ final class IntuosV1DecoderTests: XCTestCase {
             (UInt8(41), UInt16(0x8822), false),
             (UInt8(169), UInt16(0x882A), true),
         ] {
-            var state = DecoderState()
+            var state = IntuosV1Decoder.State()
             let bytes: [UInt8] = [0x02, 0xC2, 130, byte3, 152, 0, 94, 88, 0, 168]
             guard case .toolEnter(let tool)? = decodeGD0608(bytes, state: &state).first else {
                 return XCTFail("expected .toolEnter for 0x\(String(expected, radix: 16))")
@@ -280,7 +280,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// via the dead zone in `TabletSpec.defaultPressureThreshold`.
     /// Byte values are the capture's observed A0 extremes.
     func testGD0608HoverNoiseDecodesAsSmallNonZeroPressure() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         // b6=2, b7=174 — the loudest hover sample in the capture.
         let loudest = penPoint(
             decodeGD0608([0x02, 0xA0, 0, 100, 0, 100, 2, 174, 0, 0], state: &state))
@@ -288,7 +288,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         XCTAssertEqual(loudest?.inProximity, true, "hover is still proximity")
 
         // b6=0, b7=34 — a quiet hover sample, genuinely zero.
-        var quietState = DecoderState()
+        var quietState = IntuosV1Decoder.State()
         let quiet = penPoint(
             decodeGD0608([0x02, 0xA0, 0, 100, 0, 100, 0, 34, 0, 0], state: &quietState))
         XCTAssertEqual(quiet?.pressure, 0)
@@ -298,7 +298,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// 1023 channel — a 10-bit shift bug would put it near 1734, well past
     /// `maxPressure`, and clip every firm stroke.
     func testGD0608MaxObservedPressureStaysInRange() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let p = penPoint(decodeGD0608([0x02, 0xE0, 0, 100, 0, 100, 216, 241, 0, 0], state: &state))
         XCTAssertEqual(p?.pressure, 867)
         XCTAssertLessThanOrEqual(p!.pressure, gd0608.maxPressure)
@@ -309,7 +309,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// Without it, a full-scale sample decodes to half of `maxX`/`maxY` and
     /// only the tablet's top-left quadrant reaches the whole screen.
     func testGD0608CoordinatesUseFractionalExtension() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         // X bytes 0x4F/0x60 = 20320 (maxX/2), Y bytes 0x3F/0x70 = 16240 (maxY/2).
         // Byte 9 bit 1 sets X's fractional bit, bit 0 sets Y's.
         let p = penPoint(
@@ -318,7 +318,7 @@ final class IntuosV1DecoderTests: XCTestCase {
         XCTAssertEqual(p?.y, 32481, "2×16240 + 1 — spans the full maxY, not half of it")
 
         // Same coordinate bytes, fractional bits clear: still full-scale.
-        var evenState = DecoderState()
+        var evenState = IntuosV1Decoder.State()
         let even = penPoint(
             decodeGD0608([0x02, 0xE0, 0x4F, 0x60, 0x3F, 0x70, 0, 0, 0, 0], state: &evenState))
         XCTAssertEqual(even?.x, 40640)
@@ -335,7 +335,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// In-range frames carry zeroed tilt/hover bytes; decoding them produced
     /// tilt -1.02 and hover 63 — the PTH-850 wireless chatter.
     func testInRangeFrameDoesNotDecodeItsZeroedFields() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         // Enter proximity with a real frame first, so there's a position to hold.
         _ = decode([0x02, 0xE0, 0x57, 0xF3, 0x1E, 0xAF, 0x00, 0x17, 0xCB, 0xA1], state: &state)
         let held = penPoint(
@@ -356,7 +356,7 @@ final class IntuosV1DecoderTests: XCTestCase {
 
     /// Before proximity entry, nothing to flush — the kernel's `return 1`.
     func testInRangeFrameWithNoPriorProximityReportsNothing() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let results = decode(
             [0x02, 0x20, 0x51, 0xA9, 0x20, 0x06, 0x00, 0x00, 0x00, 0xFC], state: &state)
         XCTAssertNil(penPoint(results), "no stroke in progress, nothing to flush")
@@ -365,7 +365,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// 0xA0 is also proximity-set/confidence-clear but carries real data —
     /// only bit 7 separates it from in-range.
     func testOrdinaryHoverIsNotTreatedAsInRange() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let hover = penPoint(
             decode([0x02, 0xA0, 0x57, 0xF3, 0x1E, 0xAF, 0x02, 0xAE, 0x00, 0xA1], state: &state))
         XCTAssertNotNil(hover, "0xA0 still decodes normally")
@@ -380,7 +380,7 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// packets; read as pen packets they pressed barrel 1 and set pressure
     /// from the angle bytes.
     func testArtPenRotationPacketSetsAngleWithoutPenOutput() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let enter = decode([0x02, 0xC2, 0x80, 0x42, 0x48, 0x09, 0x08, 0x11, 0x00, 0x00], state: &state)
         guard case .toolEnter(let tool)? = enter.first else { return XCTFail("expected .toolEnter") }
         XCTAssertEqual(tool.toolCode, 0x1804)

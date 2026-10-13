@@ -97,14 +97,14 @@ import Foundation
 /// InputInjector handles idempotent button state.
 package struct BambooDecoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // Report ID 0x02 is overloaded on INTUOSHT hardware: a 9/10-byte pen
@@ -113,7 +113,7 @@ package struct BambooDecoder: TabletReportDecoder {
         // container would be decoded as pen coordinates.
         guard report.count > 0 else { return [] }
         if report[0] == 0x02, report.count == BPT3ContainerDecoder.reportLength {
-            return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
+            return BPT3ContainerDecoder.decode(report: report, spec: spec, slots: &state.bpt3TouchSlots)
         }
         if report[0] == 0x02, report.count == 20 {
             return decodeBPTTouch(report: report, spec: spec)
@@ -227,7 +227,7 @@ package struct BambooDecoder: TabletReportDecoder {
     private mutating func decodeBPT(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         let status = report[1]
         let inProximity = (status & 0x20) != 0
@@ -326,7 +326,7 @@ package struct BambooDecoder: TabletReportDecoder {
     private func decodeBambooPad(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         var results: [DecodeResult] = []
         let parts = report[1]
@@ -411,5 +411,23 @@ package struct BambooDecoder: TabletReportDecoder {
             ]
         }
         return [.aux(AuxButtons(buttons: buttons))]
+    }
+}
+
+extension BambooDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+        /// Active BPT3 touch contacts by slot. Containers carry only changes.
+        package var bpt3TouchSlots: [Int: TouchContact] = [:]
+
+        package init() {}
     }
 }

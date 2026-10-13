@@ -13,7 +13,7 @@ final class UCLogicDecoderTests: XCTestCase {
         maxX: 0x01FFFF, maxY: 0x01FFFF, maxPressure: 8191, hasTilt: true, tiltMaxDegrees: 60)
 
     private func decode(
-        _ bytes: [UInt8], _ decoder: inout UCLogicDecoder, _ state: inout DecoderState
+        _ bytes: [UInt8], _ decoder: inout UCLogicDecoder, _ state: inout UCLogicDecoder.State
     ) -> [DecodeResult] {
         HIDReport.withReport(bytes) { report in
             decoder.decode(report: report, spec: spec, state: &state, deviceFamily: .ucLogic)
@@ -42,7 +42,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testHuionPenReport() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let results = decode(huionContact, &decoder, &state)
         XCTAssertEqual(toolCodes(results), [0xE902])
         let pen = try XCTUnwrap(pens(results).first)
@@ -57,14 +57,14 @@ final class UCLogicDecoderTests: XCTestCase {
     /// The kernel reverses tilt Y too.
     func testHuionTiltYIsReversed() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let pen = try XCTUnwrap(pens(decode(huionContact, &decoder, &state)).first)
         XCTAssertEqual(pen.tiltY, -10.0 / 60, accuracy: 1e-9)
     }
 
     func testHuionBarrelButtons() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[1] = 0x82
         var pen = try XCTUnwrap(pens(decode(bytes, &decoder, &state)).first)
@@ -79,7 +79,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// Announced once on arrival, not on every report.
     func testPenIsAnnouncedOnce() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         XCTAssertEqual(toolCodes(decode(huionContact, &decoder, &state)), [0xE902])
         XCTAssertEqual(toolCodes(decode(huionContact, &decoder, &state)), [])
     }
@@ -87,7 +87,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// Dials and touch strips, 0xF0 and up, aren't decoded yet.
     func testHuionDialReportIsIgnored() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[1] = 0xF1
         XCTAssertTrue(decode(bytes, &decoder, &state).isEmpty)
@@ -96,7 +96,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// With no button count in the spec, all 16 bits are reported.
     func testButtonsWithoutCountReportAllSixteen() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[1] = 0xE0
         bytes[4] = 0x00
@@ -112,7 +112,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// Huion tablets never set the in-range bit, so a hovering pen reads 0x80.
     func testHuionHoverWithoutInRangeBit() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[1] = 0x80
         bytes[6] = 0x00
@@ -129,7 +129,7 @@ final class UCLogicDecoderTests: XCTestCase {
             hasTilt: true, tiltMaxDegrees: 60)
         for index in 0..<13 {
             var decoder = UCLogicDecoder()
-            var state = DecoderState()
+            var state = UCLogicDecoder.State()
             var bytes = huionContact
             bytes[1] = 0xE0
             bytes[4] = index < 8 ? UInt8(1 << index) : 0
@@ -147,13 +147,13 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testShortHuionReportIsIgnored() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         XCTAssertTrue(decode(Array(huionContact.prefix(11)), &decoder, &state).isEmpty)
     }
 
     func testCoordinatesAreClampedToSpec() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[8] = 0x05
         let pen = try XCTUnwrap(pens(decode(bytes, &decoder, &state)).first)
@@ -170,7 +170,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testHuionReportSetsTimeout() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         _ = decode(huionContact, &decoder, &state)
         XCTAssertEqual(decoder.tabletProtocol, .huionV2)
         XCTAssertEqual(decoder.silenceTimeout, 0.1)
@@ -178,7 +178,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testSilenceReportsPenLeavingOnce() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         _ = decode(huionContact, &decoder, &state)
         let left = decoder.decodeSilence(spec: spec, state: &state, deviceFamily: .ucLogic)
         let pen = try XCTUnwrap(pens(left).first)
@@ -190,7 +190,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testPenIsAnnouncedAgainAfterSilence() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         _ = decode(huionContact, &decoder, &state)
         _ = decoder.decodeSilence(spec: spec, state: &state, deviceFamily: .ucLogic)
         XCTAssertEqual(toolCodes(decode(huionContact, &decoder, &state)), [0xE902])
@@ -210,7 +210,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testUGEEPenReport() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let results = decode(ugeeContact, &decoder, &state)
         XCTAssertEqual(toolCodes(results), [0xE902])
         let pen = try XCTUnwrap(pens(results).first)
@@ -225,7 +225,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// UGEE tablets report leaving, so they need no timeout.
     func testUGEEReportsLeaving() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         _ = decode(ugeeContact, &decoder, &state)
         XCTAssertNil(decoder.silenceTimeout)
         var bytes = ugeeContact
@@ -239,7 +239,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// wrapped at 65535 without it.
     func testUGEEWideTabletReadsThirdXByte() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let pen = try XCTUnwrap(pens(decode(ugeeContact + [0x01, 0x00], &decoder, &state)).first)
         XCTAssertEqual(pen.x, 0x1B270)
     }
@@ -247,7 +247,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// Tablets whose X fits in 16 bits don't use byte 10 for X.
     func testUGEENarrowTabletIgnoresByte10() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let narrow = DigitizerSpec(maxX: 0xFFFF, maxY: 0xFFFF, maxPressure: 8191, hasTilt: true, tiltMaxDegrees: 60)
         let results = HIDReport.withReport(ugeeContact + [0x01, 0x00]) { report in
             decoder.decode(report: report, spec: narrow, state: &state, deviceFamily: .ucLogic)
@@ -261,7 +261,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testUGEEPenWithoutBit7IsPen() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = ugeeContact
         bytes[1] = 0x21
         let pen = try XCTUnwrap(pens(decode(bytes, &decoder, &state)).first)
@@ -271,7 +271,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testUGEEThirdButton() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = ugeeContact
         bytes[1] = 0xA8
         let pen = try XCTUnwrap(pens(decode(bytes, &decoder, &state)).first)
@@ -282,7 +282,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testUGEEEraser() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         _ = decode(ugeeContact, &decoder, &state)
         var bytes = ugeeContact
         bytes[1] = 0xE1
@@ -295,7 +295,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testUGEEBatteryReportIsIgnored() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = ugeeContact
         bytes[1] = 0xF2
         XCTAssertTrue(decode(bytes, &decoder, &state).isEmpty)
@@ -304,7 +304,7 @@ final class UCLogicDecoderTests: XCTestCase {
     /// Layout from the kernel; the Xencelabs Quick Keys use the same one.
     func testUGEEButtons() throws {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         let bytes: [UInt8] = [0x02, 0xF0, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let results = HIDReport.withReport(bytes) { report in
             decoder.decode(
@@ -322,7 +322,7 @@ final class UCLogicDecoderTests: XCTestCase {
 
     func testOtherReportIDsAreIgnored() {
         var decoder = UCLogicDecoder()
-        var state = DecoderState()
+        var state = UCLogicDecoder.State()
         var bytes = huionContact
         bytes[0] = 0x07
         XCTAssertTrue(decode(bytes, &decoder, &state).isEmpty)

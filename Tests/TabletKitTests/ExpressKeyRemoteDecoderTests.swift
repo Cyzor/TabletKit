@@ -17,7 +17,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
         maxX: 0, maxY: 0, maxPressure: 0, buttonCount: 18)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState
+        _ bytes: [UInt8], state: inout ExpressKeyRemoteDecoder.State
     ) -> [DecodeResult] {
         var decoder = ExpressKeyRemoteDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -67,7 +67,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// `ekr.ring-button.hid`). Byte 9 bit 0; the remote's firmware switches
     /// ring modes on it, so it comes out as the ring's center button.
     func testCapturedButtonPressAndRelease() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         let pressed = auxButtons(decode(
             frame("11 01 00 43 b2 01 00 64 00 01 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state))
@@ -85,7 +85,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     // MARK: - Buttons
 
     func testSeventeenKeysDecodeAcrossThreeBytes() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         let a = auxButtons(decode(makeRemote(buttons9: 0x02), state: &state))
         XCTAssertEqual(a?.buttons.count, 17)
         XCTAssertEqual(a?.buttons[0], true)
@@ -106,7 +106,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     }
 
     func testRingModeComesFromByteElevenTopBits() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x00), state: &state))?.touchRingHardwareMode, 0)
         XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x40), state: &state))?.touchRingHardwareMode, 1)
         XCTAssertEqual(auxButtons(decode(makeRemote(byte11: 0x81), state: &state))?.touchRingHardwareMode, 2)
@@ -114,7 +114,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     }
 
     func testAllZeroFrameIsRelease() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         _ = decode(makeRemote(buttons9: 0xFF), state: &state)
         let release = auxButtons(decode(makeRemote(), state: &state))
         XCTAssertEqual(release?.buttons.contains(true), false)
@@ -126,7 +126,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// pad report (see `IntuosV1Decoder.decodeIntuos4PadReport`) — same
     /// physical ring family.
     func testRingPositionDecodesWhenTouched() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         // 0x8D = touched, raw low 7 bits = 0x0D = 13; kernel's
         // `(data[12] & 0x7f) - 1` (wire is 1-indexed) gives position 12.
         let a = auxButtons(decode(makeRemote(ringByte: 0x8D), state: &state))
@@ -141,7 +141,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     }
 
     func testRingPositionIsIdleSentinelWhenNotTouched() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         let idle = auxButtons(decode(makeRemote(ringByte: 0x00), state: &state))
         XCTAssertEqual(idle?.touchRingActive, false)
         XCTAssertEqual(idle?.touchRingPosition, 0x7F)
@@ -150,7 +150,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     // MARK: - Battery
 
     func testBatteryEmitsOnceThenDedupesUnchangedReports() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         let first = battery(decode(makeRemote(battery: 0x64), state: &state))
         XCTAssertEqual(first?.percent, 100)
         XCTAssertEqual(first?.charging, false)
@@ -168,13 +168,13 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     // MARK: - Robustness
 
     func testShortReportsRejected() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         XCTAssertTrue(decode([0x11], state: &state).isEmpty)
         XCTAssertTrue(decode([UInt8](repeating: 0, count: 12), state: &state).isEmpty)
     }
 
     func testWrongReportIDIsIgnored() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         var wrong = makeRemote()
         wrong[0] = 0x7F  // neither 0x10 nor 0x11
         XCTAssertTrue(decode(wrong, state: &state).isEmpty)
@@ -195,7 +195,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// credited the kernel for it, so pin the real rule: a slot carrying a
     /// nonzero j+2 but no serial is empty.
     func testSlotOccupancyFollowsSerialNotByteTwo() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         var bytes = [UInt8](repeating: 0, count: 32)
         bytes[0] = 0x10
         bytes[2] = 0x01  // would have read as "occupied" under the old rule
@@ -211,7 +211,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// remote paired in slot 0, which shows the pairing was healthy while
     /// report 0x11 never fired.
     func testCapturedFrameDecodesOnePairedRemote() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         var bytes = [UInt8](repeating: 0, count: 32)
         bytes[0] = 0x10
         bytes[2] = 0x01
@@ -229,7 +229,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
 
     /// Slot stride is 6 bytes, so slot N's serial sits at 6N+4...6N+6.
     func testAllFiveSlotsDecodeIndependently() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         var bytes = [UInt8](repeating: 0, count: 32)
         bytes[0] = 0x10
         for index in 0..<5 {
@@ -252,7 +252,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     /// A frame too short for all five slots yields only the slots it can hold,
     /// rather than reading past the end or inventing empty ones.
     func testShortPairingFrameTruncatesRatherThanGuessing() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         var bytes = [UInt8](repeating: 0, count: 15)
         bytes[0] = 0x10
         bytes[2] = 0x01
@@ -267,7 +267,7 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
     }
 
     func testPairingFrameTooShortForAnySlotEmitsNothing() {
-        var state = DecoderState()
+        var state = ExpressKeyRemoteDecoder.State()
         XCTAssertTrue(decode([0x10, 0x00, 0x01], state: &state).isEmpty)
     }
 }

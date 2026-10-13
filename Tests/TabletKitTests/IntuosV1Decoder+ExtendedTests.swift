@@ -29,7 +29,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV1Decoder.State,
         spec: DigitizerSpec? = nil, family: DeviceFamily = .intuosProGen1
     ) -> [DecodeResult] {
         let s = spec ?? pth851
@@ -61,7 +61,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - 17-bit coordinate decode
 
     func testCoordinatesDecodedAsBE16ShiftedLeft1() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // X: (report[2]<<8 | report[3]) << 1 | ((report[9]>>1) & 1)
         // Y: (report[4]<<8 | report[5]) << 1 | (report[9] & 1)
         // With xHigh=0x01, xLow=0x00, yHigh=0x00, yLow=0x80, frac=0:
@@ -74,7 +74,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testFractionalBitFromByte9AppendsToCoords() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // With xHigh=0, xLow=0, yHigh=0, yLow=0, frac=0x03:
         // X = 0 | ((0x03 >> 1) & 1) = 1; Y = 0 | (0x03 & 1) = 1
         let b = makePen(status: 0x60, frac: 0x03)
@@ -87,7 +87,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - 11-bit pressure formula
 
     func testPressureMaxFor2047Device() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // maxPressure=2047: rawPressure = report[6]<<3 | (report[7] & 0xC0)>>5 | (status & 1)
         // report[6]=0xFF → 0x7F8; report[7]=0xC0 → 0x06; status bit0=1 → total=2047
         let b = makePen(status: 0x61, pressHigh: 0xFF, pressTiltLow: 0xC0)
@@ -97,7 +97,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testPressureShiftedRightFor1023Device() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // maxPressure=1023: statusBit=0, rawPressure = report[6]<<3 | (report[7]&0xC0)>>5, then >>1.
         // report[6]=0x7F → 127<<3=1016; report[7]=0xC0 → (0xC0>>5)=6; raw=1022; pressure=511.
         let b = makePen(status: 0x60, pressHigh: 0x7F, pressTiltLow: 0xC0)
@@ -109,7 +109,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Tilt decode (biased-64)
 
     func testTiltZeroAtNeutralBytes() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // tiltXRaw = ((report[7]<<1 & 0x7E) | report[8]>>7) - 64
         // tiltYRaw = (report[8] & 0x7F) - 64
         // report[7]=0x20, report[8]=0x40 → tiltXRaw=0, tiltYRaw=0
@@ -121,7 +121,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testTiltMaxPositiveX() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // tiltXRaw=63 → tiltX=1.0: need ((report[7]<<1 & 0x7E) | report[8]>>7) = 127
         // report[7]=0x7F → 0x7E; report[8]=0xC0 → bit7=1 + tiltYRaw=(0x40-64)=0
         let b = makePen(status: 0x60, pressTiltLow: 0x7F, tiltY: 0xC0)
@@ -132,7 +132,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testTiltYPositive() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // tiltYRaw=63 → tiltY=1.0: report[8] & 0x7F = 127 → report[8]=0x7F
         // tiltXRaw: report[7]=0x20, report[8]=0x7F → bit7=0, tiltXRaw=(0x40)-64=0
         let b = makePen(status: 0x60, pressTiltLow: 0x20, tiltY: 0x7F)
@@ -145,7 +145,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Hover distance
 
     func testHoverDistanceFromByte9High6Bits() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // hoverDistance = report[9] >> 2; frac=0xFC → hover=63
         let b = makePen(status: 0x60, frac: 0xFC)
         let r = decode(b, state: &st)
@@ -156,7 +156,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Pen buttons
 
     func testPenButton1FromStatusBit1() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         let b = makePen(status: 0x60 | 0x02)  // prox+conf+btn1
         let r = decode(b, state: &st)
         let pt = r.compactMap { if case .pen(let p) = $0 { return p } else { return nil } }.first!
@@ -165,7 +165,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testPenButton2FromStatusBit2() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         let b = makePen(status: 0x60 | 0x04)
         let r = decode(b, state: &st)
         let pt = r.compactMap { if case .pen(let p) = $0 { return p } else { return nil } }.first!
@@ -176,7 +176,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Eraser state (from prior tool-change)
 
     func testEraserFlagCarriedFromToolChange() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // Tool-change packet with eraser tool code (bit3 set).
         // Tool code extraction: UInt16(report[2])<<4 | UInt16(report[3])>>4 | ...
         // Simplest: set state.isEraser directly to simulate a prior tool-change.
@@ -192,7 +192,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Fallback toolEnter on first proximity
 
     func testFallbackToolEnterEmittedOnFirstProximityWithoutPriorToolChange() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // state.currentToolCode=0 and !prevInProximity → decoder synthesizes toolEnter
         let b = makePen(status: 0x60)
         let r = decode(b, state: &st)
@@ -201,7 +201,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testNoFallbackToolEnterOnSubsequentFrames() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0802  // already registered
         let b = makePen(status: 0x60)
@@ -213,7 +213,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Boundary-noise exit state machine
 
     func testBoundaryNoiseBelowThresholdDoesNotExit() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0804  // Art Pen — the tool this heuristic is for
         // Boundary noise: bit5=prox=1, bit6=highConf=0 → status=0x20.
@@ -228,12 +228,12 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         // Art Pen (0x0804, hasRotation): the rotation sensor makes the
         // confidence bit oscillate at the tracking boundary, so a sustained
         // run of low-confidence frames really is the pen leaving.
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0804
         let b = makePen(status: 0x20)  // prox=1, conf=0
         var lastR: [DecodeResult] = []
-        for _ in 0..<DecoderState.exitThreshold {
+        for _ in 0..<proximityExitFrames {
             lastR = decode(b, state: &st)
         }
         let hasExit = lastR.contains {
@@ -248,12 +248,12 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
         // pressure zero is a high hover that can persist indefinitely while a
         // hand rests with the pen above the tablet. It must NOT be read as the
         // pen leaving — only the genuine both-bits-clear signal ends proximity.
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0802
         let b = makePen(status: 0x20, xHigh: 0x12, xLow: 0x34, yHigh: 0x22, yLow: 0x45)
         var sawExit = false
-        for _ in 0..<(DecoderState.exitThreshold * 4) {
+        for _ in 0..<(proximityExitFrames * 4) {
             let r = decode(b, state: &st)
             if r.contains(where: { if case .pen(let p) = $0 { return !p.inProximity }; return false }) {
                 sawExit = true
@@ -266,12 +266,12 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     func testUnknownToolCodeTreatedAsNonRotation() {
         // No tool-change packet seen, currentToolCode still 0: the rotation
         // lookup returns false, so sustained 0x20 does not synthesize an exit.
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0
         let b = makePen(status: 0x20, xHigh: 0x10, yHigh: 0x20)
         var sawExit = false
-        for _ in 0..<(DecoderState.exitThreshold * 3) {
+        for _ in 0..<(proximityExitFrames * 3) {
             let r = decode(b, state: &st)
             if r.contains(where: { if case .pen(let p) = $0 { return !p.inProximity }; return false }) {
                 sawExit = true
@@ -283,7 +283,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     func testGenuineExitStillEndsProximityForPlainStylus() {
         // Both bits clear (status 0x00) is the real "pen out" signal and must
         // still work regardless of the rotation-pen gate above.
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0802
         st.lastX = 1000; st.lastY = 2000
@@ -296,7 +296,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testHighConfidenceResetsExitFrameCount() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         st.prevInProximity = true
         st.currentToolCode = 0x0804  // Art Pen — exitFrameCount only accrues meaningfully here
         let noisy = makePen(status: 0x20)  // prox=1, conf=0
@@ -312,7 +312,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Mouse subtype 0x06 (KC-100 cordless mouse)
 
     func testMouseSubtype06EmitsPenWithMouseButtons() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // subtype = (status >> 1) & 0x0F = 0x06 → status = 0x40 | 0x20 | (0x06 << 1) = 0x6C
         // report[6]: bit0=left, bit1=middle, bit2=right → 0x05 = left+right
         let b: [UInt8] = [0x10, 0x6C, 0, 0, 0, 0, 0x05, 0x00, 0x00, 0x00]
@@ -325,7 +325,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testMouseSubtype06WheelUp() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // report[7]: bit7=1 → wheelDelta = 1 - 0 = +1
         let b: [UInt8] = [0x10, 0x6C, 0, 0, 0, 0, 0x00, 0x80, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -334,7 +334,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testMouseSubtype06WheelDown() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // report[7]: bit6=1 → wheelDelta = 0 - 1 = -1
         let b: [UInt8] = [0x10, 0x6C, 0, 0, 0, 0, 0x00, 0x40, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -343,7 +343,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testMouseSubtype06MiddleButton() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // report[6] bit1 = middle button
         let b: [UInt8] = [0x10, 0x6C, 0, 0, 0, 0, 0x02, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -354,7 +354,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Mouse subtype 0x08 (2D cursor)
 
     func testMouseSubtype08ButtonsAndWheel() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // subtype=0x08 → status = 0x40 | 0x20 | (0x08 << 1) = 0x70
         // report[8]: penButton1=bit2, penButton2=bit4, middle=bit3, wheel bits [1:0]
         // btnByte=0x15 = 0001_0101: bit0=1(wheelUp), bit1=0, bit2=1(btn1), bit4=1(btn2)
@@ -368,7 +368,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testMouseSubtype08WheelDown() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // btnByte=0x02: bit1=1 → wheelDelta = 0 - 1 = -1
         let b: [UInt8] = [0x10, 0x70, 0, 0, 0, 0, 0, 0, 0x02, 0x00]
         let r = decode(b, state: &st)
@@ -379,7 +379,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     // MARK: - Aux report (0x11)
 
     func testAuxReportDecodesAllEightBits() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // report[1] = 0xFF → all 8 buttons true
         let r = decode([0x11, 0xFF], state: &st)
         XCTAssertEqual(r.count, 1)
@@ -388,7 +388,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testAuxReportSingleButton() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         let r = decode([0x11, 0x08], state: &st)  // bit 3
         guard case .aux(let aux) = r[0] else { return XCTFail() }
         XCTAssertFalse(aux.buttons[2])
@@ -397,7 +397,7 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testCintiq13HDPadReadsBytes3And4() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // Captured DTH-1300 frame: byte 1 is the 0x80 marker, not a key.
         let r = decode([0x11, 0x80, 0x00, 0x01, 0x08, 0, 0, 0, 0, 0], state: &st, family: .cintiq)
         guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
@@ -406,21 +406,21 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
     }
 
     func testCintiq13HDPadIdleHasNoButtons() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         let r = decode([0x11, 0x80, 0, 0, 0, 0, 0, 0, 0, 0], state: &st, family: .cintiq)
         guard case .aux(let aux) = r[0] else { return XCTFail("expected .aux") }
         XCTAssertFalse(aux.buttons.contains(true))
     }
 
     func testAuxTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         XCTAssertTrue(decode([0x11], state: &st).isEmpty)
     }
 
     // MARK: - Tool-change serial and tool-code decode
 
     func testToolChangeDecodesMungedSerialAndCode() {
-        var st = DecoderState()
+        var st = IntuosV1Decoder.State()
         // Build a tool-change packet with known bytes and verify serial/code extraction.
         // status=0xC2 → (status & 0xFC)==0xC0 ✓
         // Serial = report[3][4:7]<<4 packed into 32 bits; tool code spread across [2][3][7][8].

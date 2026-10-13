@@ -22,7 +22,7 @@ final class WacomPLDecoderTests: XCTestCase {
         isPenDisplay: true, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
+        _ bytes: [UInt8], spec: DigitizerSpec, state: inout WacomPLDecoder.State
     ) -> [DecodeResult] {
         let decoder = WacomPLDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -62,7 +62,7 @@ final class WacomPLDecoderTests: XCTestCase {
     // MARK: - Coordinates
 
     func testCoordinatesRoundTripAtMaximum() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let report = makeReport(proximity: true, x: 5408, y: 4056)
         guard case .pen(let point)? = decode(report, spec: pl400, state: &state).last else {
             return XCTFail("expected a .pen result")
@@ -72,7 +72,7 @@ final class WacomPLDecoderTests: XCTestCase {
     }
 
     func testCoordinatesAtOrigin() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let report = makeReport(proximity: true, x: 0, y: 0)
         guard case .pen(let point)? = decode(report, spec: pl400, state: &state).last else {
             return XCTFail("expected a .pen result")
@@ -89,7 +89,7 @@ final class WacomPLDecoderTests: XCTestCase {
     /// actually uses. This value would have decoded wrong under the buggy
     /// version.
     func testPressureCoreAboveOneTwentyEightMatchesKernelIntPromotion() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         // pressureCore = 200 (0xC8). Kernel: (200 << 1) | bit = 400 | bit,
         // as a full-width int, THEN cast to signed char (truncate to 8
         // bits, sign-extend): 400 & 0xFF = 0x90 = -112 as Int8. Then
@@ -105,7 +105,7 @@ final class WacomPLDecoderTests: XCTestCase {
     func testPressureLowBitAlwaysApplied() {
         let withoutBit = makeReport(proximity: true, pressureCore: 0, pressureBit4Low: false)
         let withBit = makeReport(proximity: true, pressureCore: 0, pressureBit4Low: true)
-        var s1 = DecoderState(); var s2 = DecoderState()
+        var s1 = WacomPLDecoder.State(); var s2 = WacomPLDecoder.State()
         guard case .pen(let p1)? = decode(withoutBit, spec: pl400, state: &s1).last,
             case .pen(let p2)? = decode(withBit, spec: pl400, state: &s2).last
         else { return XCTFail("expected .pen results") }
@@ -116,16 +116,16 @@ final class WacomPLDecoderTests: XCTestCase {
         let withHighBit = makeReport(proximity: true, pressureCore: 0, pressureBit4High: true)
         let withoutHighBit = makeReport(proximity: true, pressureCore: 0, pressureBit4High: false)
 
-        var state255with = DecoderState()
-        var state255without = DecoderState()
+        var state255with = WacomPLDecoder.State()
+        var state255without = WacomPLDecoder.State()
         guard case .pen(let p255with)? = decode(withHighBit, spec: pl400, state: &state255with).last,
             case .pen(let p255without)? = decode(withoutHighBit, spec: pl400, state: &state255without).last
         else { return XCTFail("expected .pen results") }
         // 255-max device: bit 6 is never consulted.
         XCTAssertEqual(p255with.pressure, p255without.pressure)
 
-        var state511with = DecoderState()
-        var state511without = DecoderState()
+        var state511with = WacomPLDecoder.State()
+        var state511without = WacomPLDecoder.State()
         guard case .pen(let p511with)? = decode(withHighBit, spec: pl800, state: &state511with).last,
             case .pen(let p511without)? = decode(withoutHighBit, spec: pl800, state: &state511without).last
         else { return XCTFail("expected .pen results") }
@@ -136,7 +136,7 @@ final class WacomPLDecoderTests: XCTestCase {
     // MARK: - Proximity
 
     func testProximityExitEmitsZeroPressureAtLastPosition() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, x: 100, y: 200), spec: pl400, state: &state)
         let exit = decode(makeReport(proximity: false), spec: pl400, state: &state)
         guard case .pen(let point)? = exit.last else {
@@ -149,12 +149,12 @@ final class WacomPLDecoderTests: XCTestCase {
     }
 
     func testProximityExitWithNoPriorEntryEmitsNothing() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         XCTAssertTrue(decode(makeReport(proximity: false), spec: pl400, state: &state).isEmpty)
     }
 
     func testToolEnterFiresOnceOnRisingEdge() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let results1 = decode(makeReport(proximity: true, x: 1, y: 1), spec: pl400, state: &state)
         XCTAssertTrue(results1.contains { if case .toolEnter = $0 { return true }; return false })
         let results2 = decode(makeReport(proximity: true, x: 2, y: 2), spec: pl400, state: &state)
@@ -164,7 +164,7 @@ final class WacomPLDecoderTests: XCTestCase {
     // MARK: - Eraser / button-2 classification — the corrected behavior
 
     func testEraserBitAtEntryClassifiesAsEraser() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let results = decode(
             makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
         guard case .pen(let point)? = results.last else {
@@ -175,7 +175,7 @@ final class WacomPLDecoderTests: XCTestCase {
     }
 
     func testEraserHeldAcrossSessionWhileBitStaysSet() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
         let results = decode(
             makeReport(proximity: true, x: 5, y: 5, eraserOrButton2: true), spec: pl400, state: &state)
@@ -189,7 +189,7 @@ final class WacomPLDecoderTests: XCTestCase {
     /// found only by reading wacom_pl_irq() directly: an eraser
     /// classification made at entry is revoked if the bit later clears.
     func testEraserClassificationSelfCorrectsWhenBitClearsMidSession() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
         XCTAssertTrue(state.isEraser)
 
@@ -203,7 +203,7 @@ final class WacomPLDecoderTests: XCTestCase {
     }
 
     func testBitClearAtEntryClassifiesAsPenAndLaterActivityIsButton2() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, eraserOrButton2: false), spec: pl400, state: &state)
         XCTAssertFalse(state.isEraser)
 
@@ -217,7 +217,7 @@ final class WacomPLDecoderTests: XCTestCase {
     }
 
     func testClassificationResetsOnNewProximityEntry() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
         _ = decode(makeReport(proximity: false), spec: pl400, state: &state)
 
@@ -232,7 +232,7 @@ final class WacomPLDecoderTests: XCTestCase {
     // MARK: - Buttons
 
     func testButton1AndTipDecodeIndependently() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let report = makeReport(proximity: true, button1: true, tip: true)
         guard case .pen(let point)? = decode(report, spec: pl400, state: &state).last else {
             return XCTFail("expected a .pen result")
@@ -243,14 +243,14 @@ final class WacomPLDecoderTests: XCTestCase {
     // MARK: - Robustness
 
     func testWrongReportIDIsIgnored() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         var report = makeReport(proximity: true)
         report[0] = 0x01
         XCTAssertTrue(decode(report, spec: pl400, state: &state).isEmpty)
     }
 
     func testShortReportIsIgnored() {
-        var state = DecoderState()
+        var state = WacomPLDecoder.State()
         let short = [UInt8](repeating: 0, count: 7)
         XCTAssertTrue(decode(short, spec: pl400, state: &state).isEmpty)
     }

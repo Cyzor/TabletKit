@@ -16,7 +16,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
         isPenDisplay: true, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState
+        _ bytes: [UInt8], state: inout Wacom24HDTDecoder.State
     ) -> [DecodeResult] {
         let decoder = Wacom24HDTDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -59,7 +59,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     // MARK: - Single-packet frames (≤4 fingers)
 
     func testSingleContactCompletesImmediately() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         let report = makeReport(
             frameCount: 1,
             contacts: [Contact(active: true, id: 5, x: 100, y: 200, width: 10, height: 12)])
@@ -80,7 +80,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     }
 
     func testFourContactsInOnePacketCompleteImmediately() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         let report = makeReport(
             frameCount: 4,
             contacts: [
@@ -98,7 +98,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     }
 
     func testInactiveRecordIsOmittedFromTheFrame() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         let report = makeReport(
             frameCount: 2,
             contacts: [
@@ -119,7 +119,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     // MARK: - Multi-packet frames (>4 fingers)
 
     func testSevenFingerFrameSplitsAcrossTwoPackets() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
 
         let packet1 = makeReport(
             frameCount: 7,
@@ -144,7 +144,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     }
 
     func testTenFingerFrameSplitsAcrossThreePackets() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
 
         _ = decode(
             makeReport(frameCount: 10, contacts: (0..<4).map { Contact(active: true, id: UInt8($0), x: 0, y: 0) }),
@@ -168,7 +168,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     // MARK: - Robustness
 
     func testFreshNonzeroCountResetsAStalledAccumulation() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         // Start a 7-finger frame but only ever deliver the first packet
         // (simulating a dropped packet mid-frame).
         _ = decode(
@@ -189,7 +189,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     }
 
     func testGarbageFrameCountByteIsClampedToPlausibleMax() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         // A corrupt byte 61 (e.g. 255) must not be trusted as a legitimate
         // frame size — this hardware family tops out at 10 fingers per the
         // kernel, and an unclamped count would accumulate state across many
@@ -206,7 +206,7 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     /// previous contacts. This used to assert `results.isEmpty`, which left
     /// them latched — nothing downstream times contacts out.
     func testZeroFrameCountWithNoAccumulationEmitsEmptyFrame() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         let results = decode(makeReport(frameCount: 0, contacts: []), state: &state)
         XCTAssertEqual(results.count, 1)
         guard case .touch(let contacts)? = results.first else {
@@ -216,14 +216,14 @@ final class Wacom24HDTDecoderTests: XCTestCase {
     }
 
     func testWrongReportIDIsIgnored() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         var report = makeReport(frameCount: 1, contacts: [Contact(active: true, id: 0, x: 1, y: 1)])
         report[0] = 0x02
         XCTAssertTrue(decode(report, state: &state).isEmpty)
     }
 
     func testShortReportIsIgnored() {
-        var state = DecoderState()
+        var state = Wacom24HDTDecoder.State()
         let short = [UInt8](repeating: 0, count: 61)
         XCTAssertTrue(decode(short, state: &state).isEmpty)
     }

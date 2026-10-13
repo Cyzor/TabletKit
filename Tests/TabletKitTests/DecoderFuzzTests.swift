@@ -47,15 +47,14 @@ final class DecoderFuzzTests: XCTestCase {
     func testRegistryDecoders() {
         var rng = SplitMix64(state: 1)
         for spec in WacomDeviceRegistry.knownDevices {
-            var decoder = spec.format.decoder()
-            var state = DecoderState()
+            var decoder = DeviceDecoder(spec.format.decoder(), digitizer: spec.digitizerSpec, family: spec.family)
             for _ in 0..<Self.iterations {
                 let bytes = randomReport(&rng, ids: Self.ids)
                 withExactReport(bytes) { report in
-                    _ = decoder.decode(report: report, spec: spec.digitizerSpec, state: &state, deviceFamily: spec.family)
+                    _ = decoder.decode(report)
                 }
                 if rng.int(50) == 0 {
-                    _ = decoder.decodeSilence(spec: spec.digitizerSpec, state: &state, deviceFamily: spec.family)
+                    _ = decoder.decodeSilence()
                 }
             }
         }
@@ -76,14 +75,13 @@ final class DecoderFuzzTests: XCTestCase {
         for parser in parsers {
             for family in DeviceFamily.allCases {
                 for spec in specs {
-                    var decoder = parser.decoder()
-                    var state = DecoderState()
+                    var decoder = DeviceDecoder(parser.decoder(), digitizer: spec, family: family)
                     for _ in 0..<(Self.iterations / 8) {
                         withExactReport(randomReport(&rng, ids: Self.ids)) { report in
-                            _ = decoder.decode(report: report, spec: spec, state: &state, deviceFamily: family)
+                            _ = decoder.decode(report)
                         }
                         if rng.int(50) == 0 {
-                            _ = decoder.decodeSilence(spec: spec, state: &state, deviceFamily: family)
+                            _ = decoder.decodeSilence()
                         }
                     }
                 }
@@ -95,7 +93,7 @@ final class DecoderFuzzTests: XCTestCase {
         var rng = SplitMix64(state: 3)
         let spec = DigitizerSpec(maxX: 100, maxY: 100, maxPressure: 2047, hasFingerTouch: true, maxTouchContacts: 10)
         let a = Wacom24HDTDecoder(), b = Wacom27QHDTDecoder()
-        var sa = DecoderState(), sb = DecoderState()
+        var sa = Wacom24HDTDecoder.State(), sb = Wacom27QHDTDecoder.State()
         for _ in 0..<(Self.iterations * 4) {
             withExactReport(randomReport(&rng, ids: Self.ids)) { report in
                 _ = a.decode(report: report, spec: spec, state: &sa, deviceFamily: .cintiq)

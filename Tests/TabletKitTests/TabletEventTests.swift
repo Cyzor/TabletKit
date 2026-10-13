@@ -7,11 +7,15 @@ import XCTest
 
 /// Returns scripted results, one batch per report.
 private struct ScriptedDecoder: TabletReportDecoder {
+    struct State: DecoderState {
+        var btTouchFrameStamps: [UInt16] = []
+    }
+
     var batches: [[DecodeResult]]
     var stamps: [[UInt16]] = []
 
     mutating func decode(
-        report: HIDReport, spec: DigitizerSpec, state: inout DecoderState, deviceFamily: DeviceFamily
+        report: HIDReport, spec: DigitizerSpec, state: inout State, deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         state.btTouchFrameStamps = stamps.isEmpty ? [] : stamps.removeFirst()
         return batches.isEmpty ? [] : batches.removeFirst()
@@ -109,8 +113,6 @@ final class TabletEventTests: XCTestCase {
     func testMovedConstantsKeepTheirValues() {
         XCTAssertEqual(TouchFrame.deviceTimeMsPerCount, 0.1)
         XCTAssertEqual(TouchFrame.deviceTimeCountsPerBluetoothFrame, 100)
-        XCTAssertEqual(DecoderState.btTouchMsPerCount, TouchFrame.deviceTimeMsPerCount)
-        XCTAssertEqual(DecoderState.btTouchCountsPerFrame, TouchFrame.deviceTimeCountsPerBluetoothFrame)
         XCTAssertEqual(ReportFormat.xencelabs.tiltMaxDegrees, 60)
         XCTAssertEqual(XencelabsDecoder.tiltMaxDegrees, 60)
         XCTAssertNil(ReportFormat.intuosV2.tiltMaxDegrees)

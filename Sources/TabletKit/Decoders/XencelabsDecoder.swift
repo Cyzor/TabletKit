@@ -119,14 +119,14 @@ package struct XencelabsDecoder: TabletReportDecoder {
     /// so it offers no independent check on the divisor.
     static let tiltRawScale = 60.0
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // Frame length varies across the family — there is no single padded
@@ -290,5 +290,23 @@ extension ReportFormat {
     /// saturates at raw ±60 while the vendor tool reads ±60° at those stops.
     public var tiltMaxDegrees: Double? {
         self == .xencelabs ? 60.0 : nil
+    }
+}
+
+extension XencelabsDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+
+        package init() {}
     }
 }

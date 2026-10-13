@@ -18,130 +18,26 @@ public enum WirelessStatus: Sendable {
     case unknown(UInt8)
 }
 
-/// All mutable state shared between reports for a single decoder session.
-/// Passed `inout` through every `decode` call so decoders can be pure structs.
-///
-/// Create one per physical device and pass the same instance to every call.
-/// The fields are the decoders' own bookkeeping; treat them as opaque and
-/// read decoded values from ``DecodeResult`` instead.
-package struct DecoderState: Sendable {
-    /// Last decoded X, held for frames that carry no position.
-    public var lastX: Int = 0
-    /// Last decoded Y, held for frames that carry no position.
-    public var lastY: Int = 0
-    /// Serial number at the last tool-identity change.
-    public var lastSerial: UInt32 = 0
-    /// Tool code at the last tool-identity change (V2 change detection).
-    public var lastToolCode: UInt16 = 0
-    /// Currently active tool code.
-    public var currentToolCode: UInt16 = 0
-    /// Absolute scroll-position counter for mouse-tool reports (V2).
-    public var lastScrollPos: UInt8 = 0
-    /// Whether the previous report left the pen in proximity.
-    public var prevInProximity: Bool = false
-    /// Frames decoded since the current proximity-enter, saturating at a
-    /// small cap rather than counting indefinitely. Not touched by any
-    /// decoder itself — exists purely so app-side code (WacomKnownDevice's
-    /// synthesized-.toolEnter fallback) can give a one-shot announcement
-    /// frame a short grace window to arrive before falling back to a
-    /// generic identity, rather than synthesizing on literally the first
-    /// frame after re-entry and risking a race it usually wins.
-    public var framesSinceProximityEnter: Int = 0
-    /// Whether the tool in range is the eraser end, held through weak frames.
-    public var isEraser: Bool = false
-    /// Whether the tool in range is a mouse or cursor.
-    public var toolIsMouse: Bool = false
-    /// Active finger contacts for the BPT3 touch container (IntuosV1 path,
-    /// CTH-690). Keyed by slot ID; containers carry only changed contacts,
-    /// so the full active set lives here between reports.
-    ///
-    /// `BPT3ContainerDecoder` no longer does pen/touch arbitration — it emits
-    /// every contact and `InputInjector` decides, same as the `.intuosV2`
-    /// families. See that decoder's header for why the old `prevInProximity`
-    /// gate was removed.
-    public var bpt3TouchSlots: [Int: TouchContact] = [:]
-    /// Last ExpressKey byte from the Bluetooth `0x80` container; the pad is
-    /// emitted only when this or the next two change.
-    public var lastBTPadKeys: UInt8 = 0
-    /// Last touch-ring byte from the Bluetooth `0x80` container.
-    public var lastBTPadRing: UInt8 = 0x7F
-    /// Last ring center-button byte from the Bluetooth `0x80` container.
-    public var lastBTPadBtn: UInt8 = 0
-    /// Consecutive frames/reports with low-confidence or out-of-range signal.
-    /// Exit proximity only after this reaches exitThreshold, bridging transient
-    /// boundary oscillations (confirmed: Art Pen rotation sensor causes these).
-    /// Reset to 0 on any valid in-proximity frame.
-    public var exitFrameCount: Int = 0
-    /// Consecutive weak frames that count as leaving range.
-    public static let exitThreshold = 3
-    /// Whether the current tool is supported on this device family.
-    /// Used to show UI warnings for incompatible tools and adjust feature decoding.
-    public var toolIsSupported: Bool = true
-    /// Last airbrush fingerwheel value (0–1023). Held across reports because
-    /// the wheel and pressure arrive in different packets (`0x0a` vs 0x00–03);
-    /// without it every pen report would blank the wheel. Cleared on exit.
-    public var lastAirbrushWheel: Int?
-    /// Last valid rotation reading (Art Pen), in degrees. Held through frames
-    /// that carry none; reset to 0 when the pen leaves.
-    public var lastRotation: Double = 0.0
-    /// True once at least one valid rotation frame has been decoded since tool-enter.
-    /// Prevents emitting stale 0.0 during boundary oscillations at re-entry.
-    public var hasValidRotationFrame: Bool = false
-    /// True once a frame with real tilt has been decoded since the pen entered.
-    public var hasValidTiltFrame: Bool = false
-    /// Last valid tilt readings. Used to hold state during boundary-noise frames
-    /// where !highConfidence (USB) or !inRange (BT) so that apps receive a continuous
-    /// azimuth angle rather than a zero-snapped value on every low-confidence frame.
-    /// Reset to 0.0 on proximity exit alongside lastRotation.
-    public var lastTiltX: Double = 0.0
-    public var lastTiltY: Double = 0.0
-    /// Last raw battery byte seen (INTUOSP2_BT 361-byte path). 0xFF = not yet received.
-    /// Used to suppress redundant .battery emissions on every pen report.
-    public var lastBatteryByte: UInt8 = 0xFF
-    /// Device-clock stamp for each `.touch` result the INTUOSP2_BT 361-byte
-    /// container emitted on the most recent decode, in the same order those
-    /// results were appended — one entry per emitted frame, so entries line up
-    /// after the decoder's skip filters (invalid frames and `count == 0`
-    /// continuations produce no result and no entry).
-    ///
-    /// Each Bluetooth touch sub-frame carries a 16-bit little-endian stamp
-    /// from the tablet's own clock in its trailing two bytes, at
-    /// `btTouchMsPerCount` (0.1 ms) per count. Consecutive sub-frames are
-    /// stamped exactly `btTouchCountsPerFrame` (100 counts = 10 ms) apart,
-    /// measured on a PTH-660 over runs of more than 1,000 frames. The host
-    /// only learns when the *container* arrived; this is when the tablet
-    /// actually sampled, which is what velocity `dt` wants.
-    ///
-    /// Consume only differences *within* one container. The field wraps every
-    /// 6.55 s, so a difference across containers is not recoverable from the
-    /// value alone; within a container the span is at most a few hundred
-    /// counts and cannot wrap.
-    public var btTouchFrameStamps: [UInt16] = []
-    /// Milliseconds per count of `btTouchFrameStamps`.
-    public static let btTouchMsPerCount = TouchFrame.deviceTimeMsPerCount
-    /// Counts between consecutive sub-frames in one BT touch container.
-    public static let btTouchCountsPerFrame = TouchFrame.deviceTimeCountsPerBluetoothFrame
-    /// WACOM_24HDT (`Wacom24HDTDecoder`) multi-packet frame accumulator.
-    /// The device's active-contact count describes the whole gesture frame,
-    /// not one packet, so contacts collect here across reports until that
-    /// count is satisfied.
-    public var wacom24HDTPendingContacts: [TouchContact] = []
-    /// Remaining contact records expected before `wacom24HDTPendingContacts`
-    /// can be emitted as a completed touch frame.
-    public var wacom24HDTRemainingContacts: Int = 0
-    /// True once an `IntuosV3Decoder` BLE point has reached the sensing
-    /// surface's limit, meaning the pen tip is at or past the edge and any
-    /// discontinuous sample that follows is the pen's barrel rather than its
-    /// tip. Cleared by a continuous sample landing back inside the surface,
-    /// or by a proximity exit. See `decodeBLEReport`'s barrel-takeover gate.
-    public var bleOutsideSurface: Bool = false
-    /// Consecutive samples the barrel gate has rejected. Bounds the gate so
-    /// it cannot latch permanently against a stale reference position — see
-    /// `IntuosV3Decoder`'s `bleBarrelMaxConsecutiveDrops`.
-    public var bleBarrelDropCount: Int = 0
-    /// Creates empty state for a new device or session.
-    public init() {}
+/// What a decoder remembers between reports. Each decoder declares its own
+/// `State` with just the fields it needs.
+package protocol DecoderState: Sendable {
+    init()
+    /// Whether the last report had the pen in range.
+    var prevInProximity: Bool { get }
+    /// The device clock for each touch frame in the last report, in the
+    /// order they were emitted. See ``TouchFrame/deviceTime``.
+    var btTouchFrameStamps: [UInt16] { get }
 }
+
+extension DecoderState {
+    package var prevInProximity: Bool { false }
+    package var btTouchFrameStamps: [UInt16] { [] }
+}
+
+/// Consecutive weak frames after which a pen counts as having left. Bridges
+/// brief dropouts at the edge of range, such as an Art Pen's rotation sensor
+/// causes.
+package let proximityExitFrames = 3
 
 /// One slot of a wireless receiver's pairing table. `serial` is the remote's
 /// own 24-bit identifier, the same one its event frames carry.
@@ -256,57 +152,41 @@ public struct TouchContact: Equatable, Sendable {
 
 /// One HID report family's decoder. Turns a raw input report into
 /// `DecodeResult`s; anything it remembers between reports lives in the
-/// `DecoderState` its caller owns. Apps use ``DeviceDecoder`` instead.
+/// decoder's own `State`, which its caller keeps. Apps use ``DeviceDecoder``,
+/// which keeps both.
 package protocol TabletReportDecoder: Sendable {
+    associatedtype State: DecoderState
+
     /// Decode one raw HID report into zero or more results.
-    /// Mutating to allow decoder structs with their own cached state if needed.
-    /// - Parameters:
-    ///   - report: The raw report as delivered by the IOKit HID input report
-    ///     callback, valid only for the duration of this call.
-    ///   - spec: The device's digitizer dimensions (coordinate/pressure ranges,
-    ///     button count, touch capability) used to interpret raw values.
-    ///   - state: Per-device decoder state, carried by the caller across calls
-    ///     for this physical device instance.
-    ///   - deviceFamily: The device family (e.g. `.intuosProGen2`, `.cintiq`)
-    ///     used to check tool compatibility and adjust feature decoding.
     mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult]
 
     /// How long without a report means the pen has left, or `nil` if the
     /// tablet says so itself.
-    ///
-    /// Some tablets never report the pen leaving; they just stop sending.
-    /// Decoders don't read clocks, so the caller keeps time: after this long
-    /// with no report, it calls ``decodeSilence(spec:state:deviceFamily:)``.
     var silenceTimeout: TimeInterval? { get }
 
-    /// Called when ``silenceTimeout`` has passed with no report. Returns what
-    /// a "pen left" report would, usually a `.pen` point with `inProximity`
-    /// false, or nothing if the pen had already left.
+    /// What a silence of `silenceTimeout` means.
     mutating func decodeSilence(
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult]
 }
 
 extension TabletReportDecoder {
-    /// Most tablets report the pen leaving, so there's no timeout by default.
-    public var silenceTimeout: TimeInterval? { nil }
+    package var silenceTimeout: TimeInterval? { nil }
 
-    /// Does nothing by default.
-    public mutating func decodeSilence(
+    package mutating func decodeSilence(
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] { [] }
 }
 
-/// Decoded BLE HOGP pen report. See `decodeBLEPenReport` for the wire layout.
 public struct BLEPenResult: Sendable {
     /// The pen sample.
     public let point: TabletPoint
@@ -321,15 +201,15 @@ public struct BLEPenResult: Sendable {
 // MARK: - Tool compatibility checking
 
 /// Emit a toolCompatibility warning if the tool code is not fully supported on the device.
-/// Updates `state.toolIsSupported` and appends `.toolCompatibility(msg)` to results if needed.
+/// Updates `toolIsSupported` and appends `.toolCompatibility(msg)` to results if needed.
 package func emitToolCompatibility(
     toolCode: UInt16,
     deviceFamily: DeviceFamily,
-    state: inout DecoderState,
+    toolIsSupported: inout Bool,
     results: inout [DecodeResult]
 ) {
     let caps = ToolCatalog.capabilities(forToolCode: toolCode, family: deviceFamily)
-    state.toolIsSupported = caps.isSupported
+    toolIsSupported = caps.isSupported
     if !caps.isSupported {
         // These are the capabilities the tool lacks, not the ones it keeps.
         var missing: [String] = []

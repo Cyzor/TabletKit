@@ -38,7 +38,7 @@ extension IntuosV2Decoder {
     /// Proximity-exit threshold, used by every pen-frame loop in this file: an Art Pen's
     /// rotation sensor causes transient signal loss at the detection boundary (bursts of
     /// invalid frames, or `prox=1`/`inRange=0` oscillation) that isn't a real exit. Only
-    /// confirm exit after `DecoderState.exitThreshold` consecutive bad frames; reset the
+    /// confirm exit after `proximityExitFrames` consecutive bad frames; reset the
     /// counter on any good one. A genuine firmware exit (`!prox && !inRange`) fires
     /// immediately instead, since the kernel doesn't threshold that case.
     func decodeBTFrame(_ f: UnsafePointer<UInt8>, spec: DigitizerSpec)
@@ -82,7 +82,7 @@ extension IntuosV2Decoder {
     func decodeBTPen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 15 else { return [] }
@@ -139,7 +139,7 @@ extension IntuosV2Decoder {
 
             emitToolCompatibility(
                 toolCode: toolCode, deviceFamily: deviceFamily,
-                state: &state, results: &results)
+                toolIsSupported: &state.toolIsSupported, results: &results)
         }
 
         // Process up to 7 pen frames (oldest first), 14 bytes each. Exit
@@ -157,7 +157,7 @@ extension IntuosV2Decoder {
             // as the !inRange path below.
             if (flags & 0x80) == 0 {
                 state.exitFrameCount += 1
-                if i == 0 && state.exitFrameCount >= DecoderState.exitThreshold
+                if i == 0 && state.exitFrameCount >= proximityExitFrames
                     && state.prevInProximity
                 {
                     state.exitFrameCount = 0
@@ -220,7 +220,7 @@ extension IntuosV2Decoder {
             // the exit itself is suppressed.
             if !inRange {
                 state.exitFrameCount += 1
-                if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+                if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
                     state.isEraser = false
@@ -379,7 +379,7 @@ extension IntuosV2Decoder {
     // (wacom_intuos_pro2_bt_touch) nor earlier versions of this decoder read
     // them. Hardware-measured on a PTH-660 over two live captures,
     // 2026-09-03; unverified on the PTH-860. Recorded into
-    // `DecoderState.btTouchFrameStamps` — see that property for how to use it.
+    // `State.btTouchFrameStamps`; see `TouchFrame.deviceTime` for how to use them.
     //
     // Emits one `.touch` per valid frame so `TouchStateTracker` sees per-time-
     // slice snapshots, mirroring the cadence of the USB 0x21 path (one frame
@@ -388,7 +388,7 @@ extension IntuosV2Decoder {
     // the lift by seeing the absence on the next emission.
     func decodeBTTouch(
         report: HIDReport,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         let frameBase = 109
         let frameLen = 43
@@ -476,8 +476,8 @@ extension IntuosV2Decoder {
     /// doesn't report it, unlike the Pro path above.
     ///
     /// Status bits match the Pro frames (bit 7 valid, 6 proximity, 5 range,
-    /// 4 eraser, 2/1 barrel buttons), which is what lets both share
-    /// `DecoderState`'s exit-threshold handling.
+    /// 4 eraser, 2/1 barrel buttons), which is what lets both share the
+    /// exit-threshold handling.
     ///
     /// Replaying the capture through this layout reproduced OTD's own decoded
     /// position, pressure, and hover for 613 of 616 pen records; the three
@@ -486,7 +486,7 @@ extension IntuosV2Decoder {
     func decodeIntuosHT3BTFrames(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         // Kernel accepts this family from 46 bytes; bytes 44/45 must exist
         // before the pad and battery reads below.
@@ -523,7 +523,7 @@ extension IntuosV2Decoder {
 
             if !inRange {
                 state.exitFrameCount += 1
-                if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+                if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
                     results.append(
@@ -581,7 +581,7 @@ extension IntuosV2Decoder {
     func decodeBTClassicFrames(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 99 else { return [] }
@@ -629,7 +629,7 @@ extension IntuosV2Decoder {
             // Boundary noise (0xC0): threshold before exiting.
             if !inRange {
                 state.exitFrameCount += 1
-                if state.exitFrameCount >= DecoderState.exitThreshold && state.prevInProximity {
+                if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
                     state.exitFrameCount = 0
                     state.prevInProximity = false
                     state.isEraser = false

@@ -47,9 +47,8 @@ import Foundation
 /// Byte 63 is the frame's total active-contact count, same semantic as
 /// WACOM_24HDT's byte 61 — but because up to 10 contacts (the hardware's
 /// full ceiling) fit in one 64-byte packet, a legitimate frame never needs
-/// more than one packet, unlike WACOM_24HDT's 4-per-packet cap. No
-/// cross-packet accumulator state is needed in `DecoderState` for this
-/// decoder.
+/// more than one packet, unlike WACOM_24HDT's 4-per-packet cap, so this
+/// decoder keeps no state between reports.
 ///
 /// The report ID itself (0x05) is not something the kernel's decode
 /// function inspects — dispatch happens by device-family type, fixed at
@@ -59,14 +58,14 @@ import Foundation
 /// of checking `report[0]` before trusting a byte layout.
 package struct Wacom27QHDTDecoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 64, report[0] == 0x05 else { return [] }
@@ -112,5 +111,12 @@ package struct Wacom27QHDTDecoder: TabletReportDecoder {
 
         // No width/height on this wire format — see the type doc comment.
         return TouchContact(id: id, x: x, y: y, contactArea: nil, contactMinor: nil)
+    }
+}
+
+extension Wacom27QHDTDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        package init() {}
     }
 }

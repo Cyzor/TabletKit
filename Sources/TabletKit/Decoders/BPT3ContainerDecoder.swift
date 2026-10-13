@@ -38,8 +38,8 @@ import Foundation
 ///            bits firing but not which physical key is which)
 /// ```
 ///
-/// Containers carry only *changed* contacts, so slot state persists in
-/// `DecoderState` across reports and the full active set is re-emitted
+/// Containers carry only *changed* contacts, so the caller keeps the slots
+/// across reports and the full active set is re-emitted
 /// each time.
 ///
 /// Pen/touch arbitration is **not** done here. It used to be — contacts were
@@ -73,7 +73,7 @@ enum BPT3ContainerDecoder {
     static func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        slots: inout [Int: TouchContact]
     ) -> [DecodeResult] {
         var results: [DecodeResult] = []
         var touchChanged = false
@@ -86,13 +86,13 @@ enum BPT3ContainerDecoder {
             guard spec.hasFingerTouch else { return [] }
             let mask = UInt16(report[3]) | (UInt16(report[4]) << 8)
             // Collect first — can't remove while iterating.
-            let ended = state.bpt3TouchSlots.keys.filter { !slotIsDown($0, in: mask) }
+            let ended = slots.keys.filter { !slotIsDown($0, in: mask) }
             for slot in ended {
-                state.bpt3TouchSlots.removeValue(forKey: slot)
+                slots.removeValue(forKey: slot)
                 touchChanged = true
             }
             guard touchChanged else { return [] }
-            return [.touch(state.bpt3TouchSlots.values.sorted { $0.id < $1.id })]
+            return [.touch(slots.values.sorted { $0.id < $1.id })]
         }
 
         let messageCount = min(Int(report[1] & 0x07), 7)
@@ -109,10 +109,10 @@ enum BPT3ContainerDecoder {
                     // Width/height arrive as raw bytes; pass the larger one so
                     // contactArea stays on the same scale as IntuosV2's major byte.
                     let area = Int(max(report[base + 5], report[base + 6]))
-                    state.bpt3TouchSlots[msgID] = TouchContact(
+                    slots[msgID] = TouchContact(
                         id: msgID, x: x, y: y, contactArea: area)
                 } else {
-                    state.bpt3TouchSlots.removeValue(forKey: msgID)
+                    slots.removeValue(forKey: msgID)
                 }
                 touchChanged = true
             } else if msgID == 0x80 && spec.buttonCount > 0 {
@@ -129,7 +129,7 @@ enum BPT3ContainerDecoder {
         }
 
         if touchChanged {
-            results.append(.touch(state.bpt3TouchSlots.values.sorted { $0.id < $1.id }))
+            results.append(.touch(slots.values.sorted { $0.id < $1.id }))
         }
         return results
     }

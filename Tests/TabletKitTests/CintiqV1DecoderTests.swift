@@ -42,7 +42,7 @@ final class CintiqV1DecoderTests: XCTestCase {
     private func decode(
         _ bytes: [UInt8],
         decoder: inout CintiqV1Decoder,
-        state: inout DecoderState,
+        state: inout CintiqV1Decoder.State,
         spec: DigitizerSpec? = nil,
         family: DeviceFamily = .cintiq
     ) -> [DecodeResult] {
@@ -53,12 +53,12 @@ final class CintiqV1DecoderTests: XCTestCase {
         }
     }
 
-    /// Pre-seeded DecoderState that bypasses the first-prox fallback toolEnter.
+    /// Pre-seeded CintiqV1Decoder.State that bypasses the first-prox fallback toolEnter.
     /// Avoids exercising `emitToolCompatibility`, which would mark the fallback
     /// Grip Pen as unsupported on cintiq and suppress button output via the
     /// `!state.toolIsSupported` guard in the pen-emit line.
-    private func seededState() -> DecoderState {
-        var state = DecoderState()
+    private func seededState() -> CintiqV1Decoder.State {
+        var state = CintiqV1Decoder.State()
         state.currentToolCode = 0x0842  // Pro Pen 2 — fully supported on DTK-2400
         state.toolIsSupported = true
         return state
@@ -89,14 +89,14 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testEmptyReportReturnsEmpty() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         XCTAssertTrue(decode([], decoder: &decoder, state: &state).isEmpty)
         XCTAssertTrue(decode([0x02], decoder: &decoder, state: &state).isEmpty)
     }
 
     func testUnknownReportIDIgnored() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let bytes = [UInt8](repeating: 0xFF, count: 10)  // report[0] = 0xFF
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
@@ -104,7 +104,7 @@ final class CintiqV1DecoderTests: XCTestCase {
     func testShortPenReportRejected() {
         // Report 0x02 with length < 10 must be rejected (avoids decoding garbage).
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let bytes: [UInt8] = [0x02, 0xE0, 0, 0, 0]
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
@@ -113,7 +113,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testGeneralPacketDecodesCoordinatesAndPressure() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
 
         let bytes = generalPacket()   // x=1000, y=4000, pressure = 0x40 << 3 = 512
         let results = decode(bytes, decoder: &decoder, state: &state)
@@ -158,7 +158,7 @@ final class CintiqV1DecoderTests: XCTestCase {
     func testBarrelButton1ReleasedAtClearThreshold() {
         // 7 consecutive clear frames is the documented threshold.
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         _ = decode(generalPacket(btn1: true), decoder: &decoder, state: &state)
 
         for _ in 0..<7 {
@@ -203,7 +203,7 @@ final class CintiqV1DecoderTests: XCTestCase {
         // This invariant is the entire reason for the "buttons only from general
         // packets" rule documented at decoder line 27.
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         // Seed proximity from a general packet (no button held).
         _ = decode(generalPacket(), decoder: &decoder, state: &state)
 
@@ -226,7 +226,7 @@ final class CintiqV1DecoderTests: XCTestCase {
         // pressure data, so the decoder must reuse `lastPressure` from the
         // previous general packet. Returning 0 would cause rapid mouseUp/mouseDown.
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         // Seed pressure at 512 via a general packet.
         _ = decode(generalPacket(), decoder: &decoder, state: &state)
 
@@ -244,7 +244,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testRotationPacketProducesNonZeroRotationOutput() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         _ = decode(generalPacket(), decoder: &decoder, state: &state)
 
         var rot = [UInt8](repeating: 0, count: 10)
@@ -267,7 +267,7 @@ final class CintiqV1DecoderTests: XCTestCase {
         // Report 0x01 fires tipDown=true. Subsequent general packet with raw
         // pressure 0 must surface the synthetic threshold (81) instead.
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
 
         // Tip switch: report[0]=0x01, report[1] bit0 = 1.
         _ = decode([0x01, 0x01], decoder: &decoder, state: &state)
@@ -283,7 +283,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testTipSwitchOverrideClearedOnTipUp() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         _ = decode([0x01, 0x01], decoder: &decoder, state: &state)  // tip down
         _ = decode([0x01, 0x00], decoder: &decoder, state: &state)  // tip up
 
@@ -303,7 +303,7 @@ final class CintiqV1DecoderTests: XCTestCase {
         // toolCode formula:
         //   toolCode = (report[2]<<4) | (report[3]>>4) | ((report[7]&0x0F)<<12) | ((report[8]&0xF0)<<4)
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 10)
         bytes[0] = 0x02
         bytes[1] = 0xC2  // tool-change, low bits 0x02
@@ -325,7 +325,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testProximityOutEmitsFinalPenWithInProximityFalse() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         // Establish prox.
         _ = decode(generalPacket(), decoder: &decoder, state: &state)
         XCTAssertTrue(state.prevInProximity)
@@ -348,7 +348,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testExpressKeyReportDecodesLeftRingAndButtons() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 9)
         bytes[0] = 0x0C
         bytes[1] = 0x80 | 0x12   // left ring active, position 0x12 (18)
@@ -371,7 +371,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testExpressKeyReportDecodesOSDButtons() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 9)
         bytes[0] = 0x0C
         bytes[3] = 0x10  // capA bit4 — left OSD button
@@ -415,7 +415,7 @@ final class CintiqV1DecoderTests: XCTestCase {
     // via wacom_wac.c wacom_intuos_pad(), see CintiqV1Decoder header comment.
     func test21UX2ExpressKeyReportDecodesCenterTogglesNotOSDButtons() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 9)
         bytes[0] = 0x0C
         bytes[5] = 0x01  // left center toggle
@@ -452,7 +452,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testExpressKeyReportShortLengthRejected() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let bytes: [UInt8] = [0x0C, 0x80, 0, 0, 0, 0]  // length 6, threshold is 7
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
@@ -465,7 +465,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testCintiqPadReportNoButtonsPressed() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let bytes: [UInt8] = [0x11, 0x80, 0x00, 0x00, 0x04, 0x1E, 0x00, 0x04, 0xFF, 0x8C]
         let results = decode(bytes, decoder: &decoder, state: &state)
         guard case .aux(let aux)? = results.first else {
@@ -476,7 +476,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testCintiqPadReportEachButtonBitDecodedIndependently() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
 
         var bytes: [UInt8] = [0x11, 0x80, 0x01, 0x00, 0x04, 0x1E, 0x00, 0x04, 0xFF, 0x8C]
         var results = decode(bytes, decoder: &decoder, state: &state)
@@ -502,7 +502,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testCintiqPadReportShortLengthRejected() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let bytes: [UInt8] = [0x11, 0x80]  // length 2, threshold is 3
         XCTAssertTrue(decode(bytes, decoder: &decoder, state: &state).isEmpty)
     }
@@ -519,7 +519,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testInRangePacketsBeforeToolChangeRegisterNoPhantomTool() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let inRange1 = decode([0x10, 0x20, 0x87, 0xF2, 0x3B, 0xE6, 0, 0, 0, 0], decoder: &decoder, state: &state)
         let inRange2 = decode([0x10, 0x20, 0x87, 0xF6, 0x3B, 0xAE, 0, 0, 0, 0x03], decoder: &decoder, state: &state)
         XCTAssertTrue(toolEnters(inRange1 + inRange2).isEmpty)
@@ -547,7 +547,7 @@ final class CintiqV1DecoderTests: XCTestCase {
 
     func testFallbackToolStillEmittedWhenDataPacketArrivesFirst() {
         var decoder = CintiqV1Decoder()
-        var state = DecoderState()
+        var state = CintiqV1Decoder.State()
         let first = decode(generalPacket(), decoder: &decoder, state: &state)
         XCTAssertEqual(toolEnters(first).map(\.serial), [0])
     }

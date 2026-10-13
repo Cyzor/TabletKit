@@ -24,23 +24,19 @@ final class HotPathBudgetTests: XCTestCase {
 
     func testDecodersStayWithinPerReportBudget() throws {
         for fixture in ConformanceHarnessTests.fixtures {
-            guard var decoder = ConformanceDecoderFactory.make(for: fixture.parser) else {
+            guard let made = ConformanceDecoderFactory.make(for: fixture.parser) else {
                 XCTFail("\(fixture.device): unknown parser '\(fixture.parser)'")
                 continue
             }
             let records = try CaptureLogParser.parse(fixture.captureLog, requireHeader: false)
-            var state = DecoderState()
+            var decoder = DeviceDecoder(made, digitizer: fixture.spec, family: fixture.deviceFamily)
             var sink = 0
 
             let before = bytesInUse()
             let start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
             for i in 0..<iterations {
                 let record = records[i % records.count]
-                let results = HIDReport.withReport(record.bytes) { report in
-                    decoder.decode(
-                        report: report, spec: fixture.spec, state: &state,
-                        deviceFamily: fixture.deviceFamily)
-                }
+                let results = HIDReport.withReport(record.bytes) { decoder.decode($0) }
                 sink &+= results.count
             }
             let elapsed = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start

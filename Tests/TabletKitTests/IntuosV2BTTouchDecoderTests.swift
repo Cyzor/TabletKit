@@ -30,7 +30,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 4)
 
     private func decode(
-        _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
+        _ bytes: [UInt8], spec: DigitizerSpec, state: inout IntuosV2Decoder.State
     ) -> [DecodeResult] {
         let decoder = IntuosV2Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
@@ -82,7 +82,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     // MARK: - Gating
 
     func testTouchSkippedWhenSpecHasNoFingerTouch() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 1, [(2, 0x01, 1000, 800, 20)])
         ])
@@ -92,7 +92,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testTooShortBufferRejected() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Anything below 109 + 43*4 = 281 bytes is rejected.
         var bytes = [UInt8](repeating: 0, count: 280)
         bytes[0] = 0x80
@@ -107,7 +107,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     // MARK: - Single-frame contacts
 
     func testSingleFingerDownInFrame0() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 1, [(3, 0x01, 3456, 2048, 28)])
         ])
@@ -122,7 +122,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testLiftStatusDropsContact() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 1, [(3, 0x00, 3456, 2048, 28)])  // status bit clear = lift
         ])
@@ -132,7 +132,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testFiveContactsInOneFrame() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 5, [
                 (2, 0x01,   100,  100, 18),
@@ -149,7 +149,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testCountFieldCappedAtFive() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Declare count=7 but only 5 slots fit in 41 used bytes.
         let bytes = make361WithTouch(frames: [
             (0, 7, [
@@ -168,7 +168,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     // MARK: - Multi-frame batching
 
     func testMultipleValidFramesEmitOneTouchEach() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 1, [(2, 0x01, 1000,  800, 20)]),
             (1, 1, [(2, 0x01, 1010,  810, 21)]),
@@ -181,7 +181,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testInvalidFrameHeaderSkipped() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Build with frame 1 active; manually zero frame 0's valid bit.
         var bytes = make361WithTouch(frames: [
             (1, 1, [(2, 0x01, 1234, 5678, 24)])
@@ -194,7 +194,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testContinuationFrameCountZeroIgnoredInV1() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Frame 0 valid w/ count=0 (continuation header) — V1 ignores.
         // Frame 1 valid w/ count=1 — emitted.
         var bytes = make361WithTouch(frames: [
@@ -209,7 +209,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     // MARK: - Coordinate extremes
 
     func testCornersDecodeAtExpectedValues() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make361WithTouch(frames: [
             (0, 2, [
                 (2, 0x01,     0,    0, 18),     // top-left
@@ -249,7 +249,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     }
 
     func testBTTouchRecordsDeviceStampPerFrame() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let results = decode(
             containerWithStampedFrames([6264, 6364, 6464]),
             spec: pth860BT, state: &state)
@@ -261,22 +261,22 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     /// sub-frames are exactly `btTouchCountsPerFrame` apart, which at
     /// `btTouchMsPerCount` is 10 ms.
     func testBTTouchStampStrideIsOneFramePeriod() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         _ = decode(
             containerWithStampedFrames([6264, 6364, 6464]),
             spec: pth860BT, state: &state)
         let deltas = zip(state.btTouchFrameStamps, state.btTouchFrameStamps.dropFirst())
             .map { Int($1) - Int($0) }
-        XCTAssertEqual(deltas, [DecoderState.btTouchCountsPerFrame,
-                                DecoderState.btTouchCountsPerFrame])
-        let msApart = Double(DecoderState.btTouchCountsPerFrame) * DecoderState.btTouchMsPerCount
+        XCTAssertEqual(deltas, [TouchFrame.deviceTimeCountsPerBluetoothFrame,
+                                TouchFrame.deviceTimeCountsPerBluetoothFrame])
+        let msApart = Double(TouchFrame.deviceTimeCountsPerBluetoothFrame) * TouchFrame.deviceTimeMsPerCount
         XCTAssertEqual(msApart, 10, accuracy: 0.001)
     }
 
     /// A frame the decoder skips must contribute no stamp, or stamps stop
     /// lining up with the frames that actually reach the injector.
     func testSkippedFrameContributesNoStamp() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var report = containerWithStampedFrames([6264, 6364, 6464])
         report[109 + 43] = 0x80          // middle frame: valid bit, count 0
         let results = decode(report, spec: pth860BT, state: &state)
@@ -287,7 +287,7 @@ final class IntuosV2BTTouchDecoderTests: XCTestCase {
     /// Stamps reset per container — a later report must not inherit the
     /// previous one's entries.
     func testStampsResetBetweenContainers() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         _ = decode(
             containerWithStampedFrames([6264, 6364, 6464]),
             spec: pth860BT, state: &state)

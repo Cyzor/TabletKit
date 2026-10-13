@@ -22,22 +22,26 @@ final class DeviceDecoderTests: XCTestCase {
     func testMatchesTheRawDecoderForEveryRegistryRow() {
         var rng = SplitMix64(state: 7)
         for spec in WacomDeviceRegistry.knownDevices {
-            var wrapped = spec.makeDecoder()
-            var raw = spec.format.decoder()
-            var state = DecoderState()
-            for _ in 0..<200 {
-                let ids: [UInt8] = [0x02, 0x03, 0x06, 0x0C, 0x10, 0x11, 0x1A, 0x1E, 0x1F, 0x20, 0x21, 0x80, 0x81]
-                var bytes = (0..<64).map { _ in UInt8(truncatingIfNeeded: rng.next()) }
-                bytes[0] = ids[Int(rng.next() % UInt64(ids.count))]
-                bytes = Array(bytes.prefix(Int(rng.next() % 64) + 1))
-                let a = HIDReport.withReport(bytes) { wrapped.decode($0) }
-                let b = HIDReport.withReport(bytes) {
-                    raw.decode(report: $0, spec: spec.digitizerSpec, state: &state, deviceFamily: spec.family)
-                }
-                XCTAssertEqual(String(describing: a), String(describing: b), "\(spec.name)")
-            }
-            XCTAssertEqual(wrapped.penInRange, state.prevInProximity, spec.name)
+            compare(spec.format.decoder(), against: spec, rng: &rng)
         }
+    }
+
+    private func compare<Raw: TabletReportDecoder>(_ raw: Raw, against spec: TabletSpec, rng: inout SplitMix64) {
+        var raw = raw
+        var wrapped = spec.makeDecoder()
+        var state = Raw.State()
+        for _ in 0..<200 {
+            let ids: [UInt8] = [0x02, 0x03, 0x06, 0x0C, 0x10, 0x11, 0x1A, 0x1E, 0x1F, 0x20, 0x21, 0x80, 0x81]
+            var bytes = (0..<64).map { _ in UInt8(truncatingIfNeeded: rng.next()) }
+            bytes[0] = ids[Int(rng.next() % UInt64(ids.count))]
+            bytes = Array(bytes.prefix(Int(rng.next() % 64) + 1))
+            let a = HIDReport.withReport(bytes) { wrapped.decode($0) }
+            let b = HIDReport.withReport(bytes) {
+                raw.decode(report: $0, spec: spec.digitizerSpec, state: &state, deviceFamily: spec.family)
+            }
+            XCTAssertEqual(String(describing: a), String(describing: b), "\(spec.name)")
+        }
+        XCTAssertEqual(wrapped.penInRange, state.prevInProximity, spec.name)
     }
 
     func testResetForgetsThePen() throws {

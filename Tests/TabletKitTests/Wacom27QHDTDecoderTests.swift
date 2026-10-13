@@ -16,7 +16,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
         isPenDisplay: true, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState
+        _ bytes: [UInt8], state: inout Wacom27QHDTDecoder.State
     ) -> [DecodeResult] {
         let decoder = Wacom27QHDTDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -55,7 +55,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     // MARK: - Basic decode
 
     func testSingleContactDecodesImmediately() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         let report = makeReport(
             frameCount: 1,
             contacts: [Contact(active: true, id: 5, x: 100, y: 200)])
@@ -73,7 +73,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     }
 
     func testAllTenContactsFitInOnePacket() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         let report = makeReport(
             frameCount: 10,
             contacts: (0..<10).map { Contact(active: true, id: UInt8($0), x: UInt16($0) * 10, y: 0) })
@@ -89,7 +89,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     }
 
     func testInactiveRecordIsOmittedFromTheFrame() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         let report = makeReport(
             frameCount: 2,
             contacts: [
@@ -105,7 +105,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     }
 
     func testZeroFrameCountEmitsAnEmptyTouchFrame() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         let results = decode(makeReport(frameCount: 0, contacts: []), state: &state)
         guard case .touch(let contacts)? = results.first else {
             return XCTFail("expected an empty .touch result, not no result")
@@ -116,7 +116,7 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     // MARK: - Robustness
 
     func testGarbageFrameCountByteIsClampedToTenRecords() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         var report = makeReport(
             frameCount: 0,
             contacts: (0..<3).map { Contact(active: true, id: UInt8($0), x: 0, y: 0) })
@@ -131,14 +131,14 @@ final class Wacom27QHDTDecoderTests: XCTestCase {
     }
 
     func testWrongReportIDIsIgnored() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         var report = makeReport(frameCount: 1, contacts: [Contact(active: true, id: 0, x: 1, y: 1)])
         report[0] = 0x01
         XCTAssertTrue(decode(report, state: &state).isEmpty)
     }
 
     func testShortReportIsIgnored() {
-        var state = DecoderState()
+        var state = Wacom27QHDTDecoder.State()
         let short = [UInt8](repeating: 0, count: 63)
         XCTAssertTrue(decode(short, state: &state).isEmpty)
     }

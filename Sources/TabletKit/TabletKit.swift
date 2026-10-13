@@ -18,10 +18,9 @@
 //
 // 1. Look up the device in the registry (WacomDeviceRegistry or
 //    VendorDeviceRegistry) to get its TabletSpec.
-// 2. Build a DigitizerSpec from the spec's coordinate and pressure ranges.
-// 3. Allocate a DecoderState for this device instance.
-// 4. On each HID report callback, hand the bytes to the matching
-//    TabletReportDecoder and act on the returned DecodeResult array.
+// 2. Call makeDecoder() once for each device.
+// 3. On each HID report, pass the bytes to the decoder's events(_:) and act
+//    on the TabletEvents it returns.
 //
 // See the README for a full worked example against a real device, and the
 // DocC catalog (TabletKit.docc/TabletKit.md) for the curated symbol index.
@@ -29,6 +28,6 @@
 // This is not yet a facade. TabletKit doesn't have a session layer —
 // enumeration, interface routing, and decoder selection are still the
 // caller's job. When that layer exists, its entry point belongs in this
-// file, replacing this comment's four-step manual loop with a real one-call
+// file, replacing this comment's three-step manual loop with a real one-call
 // API. Until then, this file exists to be found first, not to hide the
 // current wiring cost.

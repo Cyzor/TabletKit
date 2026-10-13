@@ -32,7 +32,7 @@ final class IntuosHTGenerationTests: XCTestCase {
         buttonCount: 4, hasFingerTouch: true, maxTouchContacts: 16)
 
     private func decodeBamboo(
-        _ bytes: [UInt8], spec: DigitizerSpec, state: inout DecoderState
+        _ bytes: [UInt8], spec: DigitizerSpec, state: inout BambooDecoder.State
     ) -> [DecodeResult] {
         var decoder = BambooDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -86,7 +86,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     /// corner must decode to exactly maxX/maxY, not the ~130,600 the big-endian
     /// IntuosV1 path produced for every position regardless of tablet size.
     func testPenAtFarCornerDecodesToRegisteredMaximum() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         let results = decodeBamboo(
             penReport(status: 0xF0, x: 21600, y: 13035, pressure: 0),
             spec: ctl680, state: &state)
@@ -98,7 +98,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     }
 
     func testPenCoordinatesAreLittleEndian() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         // 0x1744 = 5956. A big-endian read of the same bytes gives 0x4417<<1 = 34862.
         let results = decodeBamboo(
             penReport(status: 0xF0, x: 0x1744, y: 0x0D48, pressure: 0),
@@ -108,7 +108,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     }
 
     func testTipContactReportsPressureAndBarrelButtons() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         _ = decodeBamboo(
             penReport(status: 0xF0, x: 100, y: 100, pressure: 0), spec: ctl680, state: &state)
         // 0xF3 = in proximity (0x20) + tip (0x01) + barrel 1 (0x02).
@@ -122,7 +122,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     }
 
     func testEraserStatusBitDecodes() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         let results = decodeBamboo(
             penReport(status: 0xF8, x: 100, y: 100, pressure: 0), spec: ctl680, state: &state)
         XCTAssertTrue(point(results)?.eraser == true)
@@ -133,7 +133,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     /// Pen and container share report ID 0x02 and are told apart only by length.
     /// Before the length guard, a 64-byte container decoded as pen coordinates.
     func testContainerIsNotDecodedAsPenCoordinates() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         let container = makeContainer([[0x80, 0x0F, 0, 0, 0, 0, 0, 0]])
         let results = decodeBamboo(container, spec: ctl680, state: &state)
         XCTAssertNil(point(results), "64-byte container must not produce a pen point")
@@ -143,7 +143,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     /// Pen-only models still have four express keys. Gating container entry on
     /// hasFingerTouch (as the IntuosV1 path used to) would leave these dead.
     func testPadButtonsDecodeOnPenOnlyModel() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         XCTAssertFalse(ctl680.hasFingerTouch)
         let results = decodeBamboo(
             makeContainer([[0x80, 0x0F, 0, 0, 0, 0, 0, 0]]), spec: ctl680, state: &state)
@@ -151,7 +151,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     }
 
     func testPadButtonsDecodeIndividually() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         let results = decodeBamboo(
             makeContainer([[0x80, 0x02, 0, 0, 0, 0, 0, 0]]), spec: ctl680, state: &state)
         XCTAssertEqual(aux(results)?.buttons, [false, true, false, false])
@@ -159,7 +159,7 @@ final class IntuosHTGenerationTests: XCTestCase {
 
     /// Touch must stay gated on hasFingerTouch even though container entry is not.
     func testTouchMessagesIgnoredWithoutFingerTouch() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         let touchMsg: [UInt8] = [0x05, 0x80, 0x51, 0x53, 0x57, 3, 3, 0]
         let results = decodeBamboo(
             makeContainer([touchMsg]), spec: ctl680, state: &state)
@@ -169,7 +169,7 @@ final class IntuosHTGenerationTests: XCTestCase {
     /// Same container bytes, touch-capable spec: contacts decode. This is the
     /// cross-generation claim — one container implementation, two pen formats.
     func testSameContainerDecodesTouchOnTouchCapableSpec() {
-        var state = DecoderState()
+        var state = IntuosV1Decoder.State()
         let touchMsg: [UInt8] = [0x05, 0x80, 0x51, 0x53, 0x57, 3, 3, 0]
         let decoder = IntuosV1Decoder()
         let container = makeContainer([touchMsg])

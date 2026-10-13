@@ -22,7 +22,7 @@ final class XencelabsDecoderTests: XCTestCase {
         buttonCount: 3, hasTilt: true)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState
+        _ bytes: [UInt8], state: inout XencelabsDecoder.State
     ) -> [DecodeResult] {
         var decoder = XencelabsDecoder()
         return HIDReport.withReport(bytes) { report in
@@ -69,7 +69,7 @@ final class XencelabsDecoderTests: XCTestCase {
 
     /// Driverless hover frame, captured verbatim.
     func testCapturedHoverFrame() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(
             frame("02 20 d5 05 a1 e3 00 00 11 21 00 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state)
@@ -86,7 +86,7 @@ final class XencelabsDecoderTests: XCTestCase {
 
     /// Pen-down frame (tag 0x21) from the confirmed pressure-onset sequence.
     func testCapturedPenDownFrame() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(
             frame("02 21 41 04 fe e3 17 00 00 23 00 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state)
@@ -98,7 +98,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Driver-initialized barrel-button frame (tag 0xa4), captured verbatim —
     /// bit7 must not change pen decoding.
     func testCapturedBarrelButtonFrame() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(
             frame("02 a4 e1 1c 99 d1 00 00 13 13 01 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state)
@@ -112,7 +112,7 @@ final class XencelabsDecoderTests: XCTestCase {
     // MARK: - Pen path
 
     func testToolEnterFiresOnRisingEdgeOnly() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let first = decode(makePen(tag: 0x20, x: 100, y: 100), state: &state)
         XCTAssertTrue(first.contains { if case .toolEnter(let t) = $0 { return !t.isEraser && !t.isMouse } else { return false } })
         let second = decode(makePen(tag: 0x20, x: 101, y: 101), state: &state)
@@ -120,14 +120,14 @@ final class XencelabsDecoderTests: XCTestCase {
     }
 
     func testFullPressureDecodes8191() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x21, x: 1, y: 1, pressure: 8191), state: &state)
         XCTAssertEqual(penPoint(results)?.pressure, 8191)
         XCTAssertEqual(penPoint(results)?.normalizedPressure ?? 0, 1.0, accuracy: 0.001)
     }
 
     func testEraserBitSetsEraserAndToolIdentity() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         // 0x61 = the Thin Pen's eraser touching, a verbatim captured tag.
         let results = decode(makePen(tag: 0x61, x: 5, y: 5, pressure: 1000), state: &state)
         XCTAssertEqual(penPoint(results)?.eraser, true)
@@ -142,18 +142,18 @@ final class XencelabsDecoderTests: XCTestCase {
     /// capture with both pens: Thin Pen 20/21/24/28/60/61, 3 Button Pen
     /// A0/A1/A2/A4/A8/E0/E1.
     func testBit7IdentifiesThePen() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         XCTAssertEqual(toolCodes(decode(makePen(tag: 0x20), state: &state)), [0xE812])
-        state = DecoderState()
+        state = XencelabsDecoder.State()
         XCTAssertEqual(toolCodes(decode(makePen(tag: 0x60), state: &state)), [0xE81A])
-        state = DecoderState()
+        state = XencelabsDecoder.State()
         XCTAssertEqual(toolCodes(decode(makePen(tag: 0xA0), state: &state)), [0xE802])
-        state = DecoderState()
+        state = XencelabsDecoder.State()
         XCTAssertEqual(toolCodes(decode(makePen(tag: 0xE0), state: &state)), [0xE80A])
     }
 
     func testPenIdentityIsAnnouncedOnce() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20), state: &state)
         XCTAssertTrue(toolCodes(decode(makePen(tag: 0x21, pressure: 500), state: &state)).isEmpty)
         XCTAssertTrue(toolCodes(decode(makePen(tag: 0x28), state: &state)).isEmpty)
@@ -162,7 +162,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Out of range (C0) has bit 7 set for both pens, so it mustn't count
     /// as the 3 Button Pen.
     func testOutOfRangeDoesNotChangeThePen() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20), state: &state)
         XCTAssertTrue(toolCodes(decode(makePen(tag: 0xC0), state: &state)).isEmpty)
         XCTAssertEqual(toolCodes(decode(makePen(tag: 0x20), state: &state)), [0xE812])
@@ -175,7 +175,7 @@ final class XencelabsDecoderTests: XCTestCase {
     }
 
     func testPenToEraserFlipReemitsToolEnter() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20, x: 1, y: 1), state: &state)
         let flipped = decode(makePen(tag: 0x60, x: 1, y: 1), state: &state)
         XCTAssertTrue(flipped.contains { if case .toolEnter(let t) = $0 { return t.isEraser } else { return false } })
@@ -185,7 +185,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// slim pen uses bits 2–3 (penButton1/2); the 3-button pen adds bit 1,
     /// mapped to penButton3.
     func testBarrelButtonsMapToTagBits() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20), state: &state)
         let b1 = penPoint(decode(makePen(tag: 0x24), state: &state))
         XCTAssertEqual(b1?.penButton1, true)
@@ -203,7 +203,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// convention TabletPoint defines (verified at the application, see
     /// TabletPoint.tiltY), so any negation here would be wrong.
     func testTiltSignsArePassedThroughUnmodified() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x20, tiltX: 30, tiltY: 30), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertGreaterThan(p.tiltX, 0, "positive wire X stays positive")
@@ -219,7 +219,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// bytes there and never exceeds them — so full deflection must read as
     /// exactly full scale.
     func testTiltReachesFullScaleAtTheMechanicalStops() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x20, tiltX: 60, tiltY: -60), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertEqual(p.tiltX, 1.0, accuracy: 0.001)
@@ -229,7 +229,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Mid-range tilt must scale proportionally rather than saturate early,
     /// which is what an under-sized divisor caused.
     func testMidRangeTiltDoesNotClamp() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x20, tiltX: 30, tiltY: -45), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertEqual(p.tiltX, 0.5, accuracy: 0.001)
@@ -243,7 +243,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// made X wrap mod 65536 in the middle of the screen ("Pac-Man" cursor);
     /// with the high byte the coordinates are continuous.
     func testXHighByteDecodesContinuouslyAcrossLowWordWrap() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let before = penPoint(decode(
             frame("02 20 ec ff de 6a 00 00 1c 11 00 00 47 38 43 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
             state: &state))
@@ -258,7 +258,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// The right-edge maximum observed live is a round firmware clamp at
     /// exactly 105000 (byte 10 = 1, low word = 105000 - 65536 = 39464).
     func testFullRangeXDecodesToFirmwareCeiling() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x20, x: 105000, y: 59000), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertEqual(p.x, 105000)
@@ -268,7 +268,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Values past the spec maxima (never observed live — firmware clamps
     /// first) must not escape the spec'd range.
     func testCoordinatesClampToSpecMaxima() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let results = decode(makePen(tag: 0x20, x: 120000, y: 70000), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no pen result") }
         XCTAssertEqual(p.x, 105000)
@@ -276,7 +276,7 @@ final class XencelabsDecoderTests: XCTestCase {
     }
 
     func testProximityExitEmitsExitPointAtLastPosition() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20, x: 300, y: 400), state: &state)
         let results = decode(makePen(tag: 0xC0), state: &state)
         guard let p = penPoint(results) else { return XCTFail("no exit point") }
@@ -294,7 +294,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// and latch a phantom express-key/mode-button press — with no puck even
     /// connected. Must decode to nothing.
     func testConfigEchoFramesAreNotMisreadAsAux() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let echo1 = frame("02 b5 00 10 06 01 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
         XCTAssertTrue(decode(echo1, state: &state).isEmpty)
         let echo2 = frame("02 b5 00 05 09 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
@@ -310,7 +310,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// with no matching release, sticking a mapped modifier down. Must
     /// decode to nothing.
     func testDongleStatusFrameIsNotMisreadAsAux() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let status1 = frame("02 f8 02 01 20 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
         XCTAssertTrue(decode(status1, state: &state).isEmpty)
     }
@@ -322,7 +322,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// where byte[3] == 0x5a == 90% matched the reported charge level).
     /// Must decode to `.battery(percent: 99, charging: false)`.
     func testBatteryReplyDecodesPercent() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         let reply = frame("02 f2 01 63 00 00 00 00 00 00 00 00 aa 67 82 b9 35 f4 00 00 00 00 00 00 00 00 00 00 00 00 00 00")
         let results = decode(reply, state: &state)
         XCTAssertEqual(results.count, 1)
@@ -338,7 +338,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Verbatim captured one-hot button frames: byte 2 bits 0–7 are puck
     /// buttons 1–8, byte 3 bits 0–1 are buttons 9–10.
     func testPuckButtonsDecodeOneHot() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         var press = makePen(tag: 0xF0)
         press[2] = 0x10 // button 5
         guard let a = auxButtons(decode(press, state: &state)) else { return XCTFail("no aux result") }
@@ -367,7 +367,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Dial rotation: byte 7 = 1 (CCW) or 2 (CW), one event per click. Positive
     /// delta means physically clockwise (confirmed on hardware 2026-08-06).
     func testPuckDialEmitsWheelSteps() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         var ccw = makePen(tag: 0xF0)
         ccw[7] = 0x01
         var results = decode(ccw, state: &state)
@@ -380,7 +380,7 @@ final class XencelabsDecoderTests: XCTestCase {
 
     /// Aux frames must not disturb pen proximity state.
     func testAuxFrameDoesNotAffectPenState() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         _ = decode(makePen(tag: 0x20, x: 10, y: 10), state: &state)
         _ = decode(makePen(tag: 0xF0), state: &state)
         XCTAssertTrue(state.prevInProximity)
@@ -394,7 +394,7 @@ final class XencelabsDecoderTests: XCTestCase {
     /// Report ID 7 (the declared-but-unused digitizer collection) and other
     /// report IDs must be ignored — only report 2 carries live data.
     func testNonVendorReportIDsAreIgnored() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         var report7 = [UInt8](repeating: 0, count: 10)
         report7[0] = 0x07
         report7[1] = 0x25 // inRange + tip in the report-7 bit layout
@@ -404,7 +404,7 @@ final class XencelabsDecoderTests: XCTestCase {
     // MARK: - Robustness
 
     func testShortReportsRejected() {
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         XCTAssertTrue(decode([0x02], state: &state).isEmpty)
         XCTAssertTrue(decode([0x02, 0x21, 0, 0, 0], state: &state).isEmpty)
     }

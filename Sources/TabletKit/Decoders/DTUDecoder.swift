@@ -25,14 +25,14 @@ import Foundation
 /// Experimental: not yet validated on hardware.
 package struct DTUDecoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 8 else { return [] }
@@ -55,7 +55,7 @@ package struct DTUDecoder: TabletReportDecoder {
     private func decodePenReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         let flags = report[1]
         let prox = (flags & 0x20) != 0
@@ -96,5 +96,19 @@ package struct DTUDecoder: TabletReportDecoder {
                     inProximity: true,
                     hoverDistance: 0))
         ]
+    }
+}
+
+extension DTUDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+
+        package init() {}
     }
 }

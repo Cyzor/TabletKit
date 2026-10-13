@@ -12,7 +12,7 @@
 //     let log = try String(contentsOf: url, encoding: .utf8)
 //     let records = try CaptureLogParser.parse(log)
 //     var decoder = IntuosV2Decoder()
-//     var state   = DecoderState()
+//     var state   = IntuosV2Decoder.State()
 //     for r in records {
 //         let results = HIDReport.withReport(r.bytes) { report in
 //             decoder.decode(report: report,

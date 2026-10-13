@@ -38,7 +38,7 @@ import Foundation
 /// overrides `spec.maxPressure` to 8191 for BLE reports only.
 package struct IntuosV1Decoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Hover field is `report[9] >> 2`, six bits — the kernel's
@@ -49,7 +49,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
@@ -86,7 +86,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         // models (CTH-690). Gated on length alone — touch and pad are gated
         // independently inside, so pen-only models still get their express keys.
         if id == 0x02 && report.count == BPT3ContainerDecoder.reportLength {
-            return BPT3ContainerDecoder.decode(report: report, spec: spec, state: &state)
+            return BPT3ContainerDecoder.decode(report: report, spec: spec, slots: &state.bpt3TouchSlots)
         }
         // USB pen reports are exactly 10 bytes. Anything else on this ID —
         // notably the 64-byte BPT3 container handled above, or a longer
@@ -108,7 +108,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
     private func decodeUSBPen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
@@ -170,7 +170,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
             let toolHasRotation = ToolCatalog.hasRotation(toolCode: state.currentToolCode)
             state.exitFrameCount += 1
             if toolHasRotation
-                && state.exitFrameCount >= DecoderState.exitThreshold
+                && state.exitFrameCount >= proximityExitFrames
                 && state.prevInProximity
             {
                 state.exitFrameCount = 0
@@ -240,7 +240,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                 // Check tool compatibility and emit warning if unsupported
                 emitToolCompatibility(
                     toolCode: fallbackCode, deviceFamily: deviceFamily,
-                    state: &state, results: &results)
+                    toolIsSupported: &state.toolIsSupported, results: &results)
             }
         }
         state.prevInProximity = true
@@ -347,7 +347,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
 
     private func decodeToolChange(
         report: HIDReport,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let serial =
@@ -377,7 +377,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         // Check tool compatibility and emit warning if unsupported
         emitToolCompatibility(
             toolCode: toolCode, deviceFamily: deviceFamily,
-            state: &state, results: &results)
+            toolIsSupported: &state.toolIsSupported, results: &results)
 
         return results
     }
@@ -387,7 +387,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
     private func decodeBLEPen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         // BLE uses 13-bit pressure regardless of the device's USB maxPressure.
@@ -462,7 +462,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
     private func decodeIntuos4WLAggregated(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let frameCount = report[0] == 0x03 ? 2 : 3
@@ -538,4 +538,41 @@ func intuosRotationDegrees(_ report: HIDReport) -> Double {
     if degrees < 0 { degrees += 360.0 }
     if degrees >= 360 { degrees -= 360.0 }
     return degrees
+}
+
+extension IntuosV1Decoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Serial at the last tool change.
+        package var lastSerial: UInt32 = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+        /// Whether the tool in range is a mouse.
+        package var toolIsMouse: Bool = false
+        /// Active BPT3 touch contacts by slot. Containers carry only changes.
+        package var bpt3TouchSlots: [Int: TouchContact] = [:]
+        /// Consecutive weak frames. The pen leaves at `proximityExitFrames`.
+        package var exitFrameCount: Int = 0
+        /// Whether this family fully supports the tool in range.
+        package var toolIsSupported: Bool = true
+        /// Airbrush wheel, held because it arrives in its own report.
+        package var lastAirbrushWheel: Int? = nil
+        /// Last valid Art Pen rotation, in degrees.
+        package var lastRotation: Double = 0
+        /// Whether real tilt has arrived since the pen entered.
+        package var hasValidTiltFrame: Bool = false
+        /// Last valid tilt, held through low-confidence frames.
+        package var lastTiltX: Double = 0
+        package var lastTiltY: Double = 0
+
+        package init() {}
+    }
 }

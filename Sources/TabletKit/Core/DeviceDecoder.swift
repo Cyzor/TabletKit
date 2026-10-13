@@ -15,8 +15,7 @@ import Foundation
 /// Keep one per device, or one per interface that sends its own reports, and
 /// call it from a single thread.
 public struct DeviceDecoder: Sendable {
-    private var decoder: any TabletReportDecoder
-    private var state = DecoderState()
+    private var decoder: any StatefulDecoder
     var padShape = PadShape(rings: 0, strips: 0)
     private var toolInRange: ToolIdentity?
 
@@ -37,13 +36,13 @@ public struct DeviceDecoder: Sendable {
     /// Wraps a decoder that isn't chosen by format, such as a fixed-layout
     /// touch sensor's.
     package init(_ decoder: any TabletReportDecoder, digitizer: DigitizerSpec, family: DeviceFamily) {
-        self.decoder = decoder
+        self.decoder = withState(decoder)
         self.digitizer = digitizer
         self.family = family
     }
 
     package mutating func decode(_ report: HIDReport) -> [DecodeResult] {
-        decoder.decode(report: report, spec: digitizer, state: &state, deviceFamily: family)
+        decoder.decode(report, spec: digitizer, family: family)
     }
 
     /// How long without a report means the pen has left, or `nil` if the
@@ -51,7 +50,7 @@ public struct DeviceDecoder: Sendable {
     public var silenceTimeout: TimeInterval? { decoder.silenceTimeout }
 
     package mutating func decodeSilence() -> [DecodeResult] {
-        decoder.decodeSilence(spec: digitizer, state: &state, deviceFamily: family)
+        decoder.decodeSilence(spec: digitizer, family: family)
     }
 
     /// Decodes one report into events. Adds a tool leave when the pen goes
@@ -69,7 +68,7 @@ public struct DeviceDecoder: Sendable {
     private mutating func events(from results: [DecodeResult]) -> [TabletEvent] {
         var events: [TabletEvent] = []
         events.reserveCapacity(results.count + 1)
-        let stamps = state.btTouchFrameStamps
+        let stamps = decoder.touchFrameStamps
         var touchIndex = 0
         for result in results {
             switch result {
@@ -110,17 +109,50 @@ public struct DeviceDecoder: Sendable {
     /// Forgets the current pen and touches, as when a wireless link drops or
     /// comes back.
     public mutating func reset() {
-        state = DecoderState()
+        decoder.reset()
         toolInRange = nil
     }
 
     /// Whether the last report had the pen in range.
-    public var penInRange: Bool { state.prevInProximity }
+    public var penInRange: Bool { decoder.penInRange }
 
     /// The device's own clock for each touch frame in the last report, when
     /// it sends one (Bluetooth batches only), in the order the frames were
     /// decoded.
-    package var touchFrameStamps: [UInt16] { state.btTouchFrameStamps }
+    package var touchFrameStamps: [UInt16] { decoder.touchFrameStamps }
+}
+
+/// A decoder kept together with its own state.
+private protocol StatefulDecoder: Sendable {
+    var silenceTimeout: TimeInterval? { get }
+    var penInRange: Bool { get }
+    var touchFrameStamps: [UInt16] { get }
+    mutating func decode(_ report: HIDReport, spec: DigitizerSpec, family: DeviceFamily) -> [DecodeResult]
+    mutating func decodeSilence(spec: DigitizerSpec, family: DeviceFamily) -> [DecodeResult]
+    mutating func reset()
+}
+
+private struct WithState<Decoder: TabletReportDecoder>: StatefulDecoder {
+    var decoder: Decoder
+    var state = Decoder.State()
+
+    var silenceTimeout: TimeInterval? { decoder.silenceTimeout }
+    var penInRange: Bool { state.prevInProximity }
+    var touchFrameStamps: [UInt16] { state.btTouchFrameStamps }
+
+    mutating func decode(_ report: HIDReport, spec: DigitizerSpec, family: DeviceFamily) -> [DecodeResult] {
+        decoder.decode(report: report, spec: spec, state: &state, deviceFamily: family)
+    }
+
+    mutating func decodeSilence(spec: DigitizerSpec, family: DeviceFamily) -> [DecodeResult] {
+        decoder.decodeSilence(spec: spec, state: &state, deviceFamily: family)
+    }
+
+    mutating func reset() { state = Decoder.State() }
+}
+
+private func withState<Decoder: TabletReportDecoder>(_ decoder: Decoder) -> any StatefulDecoder {
+    WithState(decoder: decoder)
 }
 
 extension TabletSpec {

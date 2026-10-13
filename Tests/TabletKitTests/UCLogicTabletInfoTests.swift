@@ -193,7 +193,7 @@ final class UCLogicTabletInfoTests: XCTestCase {
     /// Decoders that don't opt in keep today's behavior.
     func testDecodersHaveNoSilenceTimeoutByDefault() {
         var decoder = XencelabsDecoder()
-        var state = DecoderState()
+        var state = XencelabsDecoder.State()
         XCTAssertNil(decoder.silenceTimeout)
         let spec = DigitizerSpec(maxX: 100, maxY: 100, maxPressure: 100)
         XCTAssertTrue(

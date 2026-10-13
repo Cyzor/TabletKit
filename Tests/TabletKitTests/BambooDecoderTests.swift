@@ -33,7 +33,7 @@ final class BambooDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout BambooDecoder.State,
         spec: DigitizerSpec? = nil, family: DeviceFamily = .bamboo
     ) -> [DecodeResult] {
         var decoder = BambooDecoder()
@@ -61,21 +61,21 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Report gating
 
     func testWrongReportIDReturnsEmpty() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // report[0]=0x11, but decoder requires 0x10
         let b = [UInt8](repeating: 0, count: 10)
         XCTAssertTrue(decode([0x11] + Array(b.dropFirst()), state: &st).isEmpty)
     }
 
     func testTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         XCTAssertTrue(decode([0x10, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], state: &st).isEmpty)
     }
 
     // MARK: - Coordinate decode (BE16)
 
     func testBE16XYDecoded() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // X: high byte in report[2], low in report[3] → 0x1234 = 4660
         // Y: high byte in report[4], low in report[5] → 0x5678 = 22136
         let b = makePen(status: 0x80, xHigh: 0x12, xLow: 0x34, yHigh: 0x56, yLow: 0x78)
@@ -90,7 +90,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - 11-bit pressure (>>1 for 1023 devices)
 
     func test11BitPressureRightShiftedForMaxPressure1023() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // rawPressure = (d6 << 3) | (d7 >> 5)
         // d6=0xFF → 0xFF << 3 = 2040; d7=0xE0 → 0xE0 >> 5 = 7
         // rawPressure = 2047; >> 1 = 1023 (max for 1023-device)
@@ -102,7 +102,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testZeroPressure() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makePen(status: 0x80, pressHigh: 0x00, pressLow: 0x00)
         let r = decode(b, state: &st)
         let pen = r.first { if case .pen = $0 { return true }; return false }
@@ -113,7 +113,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Tool enter
 
     func testToolEnterEmittedOnFirstProximityEntryPen() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // toolType bits 4:3 = 0 (status >> 3) & 0x03 == 0 → pen
         let b = makePen(status: 0x80)  // bit7=prox, bits 4:3=0 → pen
         let r = decode(b, state: &st)
@@ -124,7 +124,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testToolEnterEmittedForEraser() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // toolType = 1 → status bits 4:3 = 0b001 → (1 << 3) = 0x08
         let b = makePen(status: 0x80 | 0x08)
         let r = decode(b, state: &st)
@@ -135,7 +135,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testNoToolEnterOnSubsequentFrame() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makePen(status: 0x80)
         _ = decode(b, state: &st)  // first frame — emits toolEnter
         let r = decode(b, state: &st)  // second frame — no toolEnter
@@ -146,7 +146,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Tilt
 
     func testTiltDecodedWhenHasTiltTrue() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // tiltX byte = 0x0F → (0x0F & 0x0F) = 15; (15-8)/8.0 = 0.875
         // tiltY byte = 0x08 → (0x08 & 0x0F) = 8;  (8-8)/8.0  = 0.0
         let b = makePen(status: 0x80, tiltX: 0x0F, tiltY: 0x08)
@@ -158,7 +158,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testTiltIsZeroWhenHasTiltFalse() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // Non-zero tilt bytes, but CTL-470 has hasTilt=false → both should be 0.0
         let b = makePen(status: 0x80, tiltX: 0x0F, tiltY: 0x0F)
         let r = decode(b, state: &st, spec: ctl470)
@@ -171,7 +171,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Pen buttons
 
     func testPenButton1FromBit1() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // status bit 1 = 0x02 | prox bit 7
         let b = makePen(status: 0x80 | 0x02)
         let r = decode(b, state: &st)
@@ -182,7 +182,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testPenButton2FromBit2() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // status bit 2 = 0x04 | prox bit 7
         let b = makePen(status: 0x80 | 0x04)
         let r = decode(b, state: &st)
@@ -195,7 +195,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Proximity exit
 
     func testProximityExitEmitsPenOutAndPad() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // Enter proximity.
         _ = decode(makePen(status: 0x80, xHigh: 0x10, xLow: 0x00, yHigh: 0x08, yLow: 0x00), state: &st, spec: cth470)
         XCTAssertTrue(st.prevInProximity)
@@ -217,7 +217,7 @@ final class BambooDecoderTests: XCTestCase {
     // MARK: - Pad button layouts
 
     func testPad4ButtonLayout() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // padByte = report[7]: 0x08=btn0, 0x20=btn1, 0x10=btn2, 0x40=btn3
         // All four set: 0x08|0x20|0x10|0x40 = 0x78
         let b: [UInt8] = [0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0x00, 0x00]
@@ -231,7 +231,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testPad2ButtonLayout() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // CTL-470: padByte=0x03 → btn0=(0x01), btn1=(0x02)
         let b: [UInt8] = [0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00]
         let r = decode(b, state: &st, spec: ctl470)
@@ -262,7 +262,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTLE16CoordinatesAndPressure() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x2345, pressure: 1000)
         let r = decode(b, state: &st, spec: ctl460)
         let pen = r.first { if case .pen = $0 { return true }; return false }
@@ -274,7 +274,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTToolEnterAndBarrelButtons() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPT(status: 0x20 | 0x02 | 0x04)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
@@ -288,7 +288,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTEraserToolBit() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPT(status: 0x20 | 0x08)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
@@ -298,7 +298,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTProximityExit() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         _ = decode(makeBPT(status: 0x20, x: 500, y: 600), state: &st, spec: ctl460)
         XCTAssertTrue(st.prevInProximity)
         let r = decode(makeBPT(status: 0x00), state: &st, spec: ctl460)
@@ -312,12 +312,12 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTOutOfProximityIdleFramesProduceNothing() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         XCTAssertTrue(decode(makeBPT(status: 0x00), state: &st, spec: ctl460).isEmpty)
     }
 
     func testBPTHoverDistance() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPT(status: 0x20, distance: 42)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
@@ -326,12 +326,12 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         XCTAssertTrue(decode(Array(makeBPT(status: 0x20).dropLast()), state: &st, spec: ctl460).isEmpty)
     }
 
     func testNoPadWhenButtonCountZero() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // CTT-460 has buttonCount=0 → no pad even when not in proximity
         let b: [UInt8] = [0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00]
         let r = decode(b, state: &st, spec: ctt460)
@@ -371,7 +371,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTouchSingleContactStride9() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPTTouch(padByte: 0x00, contacts: [(x: 300, y: 200), nil])
         let r = decode(b, state: &st, spec: cth460Touch)
         guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
@@ -383,7 +383,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTouchTwoContactsStride8() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPTTouch(padByte: 0x80, contacts: [(x: 10, y: 20), (x: 400, y: 300)])
         let r = decode(b, state: &st, spec: cth460Touch)
         guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
@@ -398,7 +398,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTouchAllFingersLiftedEmitsEmptyArray() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPTTouch(padByte: 0x00, contacts: [nil, nil])
         let r = decode(b, state: &st, spec: cth460Touch)
         guard case .touch(let contacts)? = (r.first { if case .touch = $0 { return true }; return false })
@@ -407,7 +407,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTouchExpressKeysFromByte1() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         // bits 3,2,1,0 → BTN_0..BTN_3; set BTN_0 and BTN_3.
         let b = makeBPTTouch(padByte: 0x09, contacts: [nil, nil])
         let r = decode(b, state: &st, spec: cth460Touch)
@@ -417,7 +417,7 @@ final class BambooDecoderTests: XCTestCase {
     }
 
     func testBPTTouchNoAuxWhenButtonCountZero() {
-        var st = DecoderState()
+        var st = BambooDecoder.State()
         let b = makeBPTTouch(padByte: 0x0F, contacts: [nil, nil])
         let r = decode(b, state: &st, spec: ctl460)
         let auxResult = r.first { if case .aux = $0 { return true }; return false }
@@ -432,7 +432,7 @@ extension BambooDecoderTests {
         for pid in [0x00DD, 0x037A, 0x037B] {
             let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
             XCTAssertEqual(row.format, .bamboo, "0x\(String(pid, radix: 16))")
-            var st = DecoderState()
+            var st = BambooDecoder.State()
             let r = decode(makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x0567, pressure: 900),
                            state: &st, spec: row.digitizerSpec)
             guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
@@ -464,7 +464,7 @@ extension BambooDecoderTests {
     }
 
     func testBambooPadPenDecodesLittleEndianFields() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         // Tip + barrel + in range; X 0x1234, Y 0x0567, pressure 0x0100.
         let r = makePad(parts: 0x01, pen: [0x23, 0x34, 0x12, 0x67, 0x05, 0x00, 0x01])
         let results = decode(r, state: &state, spec: bambooPad)
@@ -479,7 +479,7 @@ extension BambooDecoderTests {
     }
 
     func testBambooPadEraserAndWirelessLength() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         // Invert + eraser + in range, 32-byte wireless container.
         let r = makePad(length: 32, parts: 0x01, pen: [0x2C, 0x10, 0x00, 0x20, 0x00, 0x50, 0x00])
         guard case .pen(let pt)? = decode(r, state: &state, spec: bambooPad).last else {
@@ -490,7 +490,7 @@ extension BambooDecoderTests {
     }
 
     func testBambooPadPenExitAfterRange() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         _ = decode(makePad(parts: 0x01, pen: [0x20, 0x10, 0x00, 0x20, 0x00]), state: &state, spec: bambooPad)
         let results = decode(makePad(parts: 0x00), state: &state, spec: bambooPad)
         guard case .pen(let pt)? = results.first else { return XCTFail("no exit point: \(results)") }
@@ -498,7 +498,7 @@ extension BambooDecoderTests {
     }
 
     func testBambooPadTouchAndClickButtons() {
-        var state = DecoderState()
+        var state = BambooDecoder.State()
         // Fingers 0 and 2 live, left click held. Finger 0: X 0x123, Y 0x456.
         // Finger 2: X 0xFFF, Y 0x000.
         let touch: [UInt8] = [0x45, 0x23, 0x61, 0x45, 0, 0, 0, 0xFF, 0x0F, 0x00]

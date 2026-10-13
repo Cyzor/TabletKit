@@ -83,7 +83,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
     public mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         switch report.reportID {
@@ -99,14 +99,14 @@ package struct UCLogicDecoder: TabletReportDecoder {
     /// Reports the pen leaving, if it hadn't already.
     public mutating func decodeSilence(
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         penLeft(spec: spec, state: &state)
     }
 
     private mutating func decodeHuion(
-        _ report: HIDReport, spec: DigitizerSpec, state: inout DecoderState
+        _ report: HIDReport, spec: DigitizerSpec, state: inout State
     ) -> [DecodeResult] {
         let status = report[1]
         if status == Self.huionButtonsStatus {
@@ -129,7 +129,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
     }
 
     private mutating func decodeUGEE(
-        _ report: HIDReport, spec: DigitizerSpec, state: inout DecoderState
+        _ report: HIDReport, spec: DigitizerSpec, state: inout State
     ) -> [DecodeResult] {
         let status = report[1]
         if status == Self.ugeeButtonsStatus {
@@ -161,7 +161,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
 
     private func penInRange(
         status: UInt8, x: Int, y: Int, pressure: Int, tiltX: Int, tiltY: Int,
-        eraser: Bool = false, spec: DigitizerSpec, state: inout DecoderState
+        eraser: Bool = false, spec: DigitizerSpec, state: inout State
     ) -> [DecodeResult] {
         var results: [DecodeResult] = []
         // Announce the tool on entering range, and when the pen flips over.
@@ -190,7 +190,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
         return results
     }
 
-    private func penLeft(spec: DigitizerSpec, state: inout DecoderState) -> [DecodeResult] {
+    private func penLeft(spec: DigitizerSpec, state: inout State) -> [DecodeResult] {
         guard state.prevInProximity else { return [] }
         state.prevInProximity = false
         let wasEraser = state.isEraser
@@ -215,5 +215,21 @@ package struct UCLogicDecoder: TabletReportDecoder {
 
     private static func tiltFraction(_ degrees: Int) -> Double {
         max(-1.0, min(1.0, Double(degrees) / tiltMaxDegrees))
+    }
+}
+
+extension UCLogicDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+
+        package init() {}
     }
 }

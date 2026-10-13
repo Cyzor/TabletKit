@@ -95,14 +95,14 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         Swift.min(x, spec.maxX - x, y, spec.maxY - y)
     }
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
@@ -165,7 +165,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     /// published-property churn downstream.
     private func decodeBatteryReport(
         report: HIDReport,
-        state: inout DecoderState
+        state: inout State
     ) -> [DecodeResult] {
         let batByte = report[1]
         guard batByte != state.lastBatteryByte else { return [] }
@@ -195,7 +195,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     private func decodePenReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
@@ -286,7 +286,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     private func decodeExtendedPenReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
@@ -487,7 +487,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
                                 isMouse: false)))
                     emitToolCompatibility(
                         toolCode: toolCode, deviceFamily: deviceFamily,
-                        state: &state, results: &results)
+                        toolIsSupported: &state.toolIsSupported, results: &results)
                 }
             }
         }
@@ -764,7 +764,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     /// Writes `currentToolCode` only, never `lastToolCode` or `lastSerial`:
     /// those detect announcement changes, and setting them made a later real
     /// Art Pen announcement compare equal and get dropped.
-    static func inferArtPenFromRotation(_ results: inout [DecodeResult], state: inout DecoderState) {
+    static func inferArtPenFromRotation(_ results: inout [DecodeResult], state: inout State) {
         let point = results.lazy.compactMap { result -> TabletPoint? in
             if case .pen(let point) = result { return point } else { return nil }
         }.first
@@ -782,7 +782,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     private func decodeBLEReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let discriminator = report[1]
@@ -821,7 +821,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
                     ]
                     emitToolCompatibility(
                         toolCode: toolCode, deviceFamily: deviceFamily,
-                        state: &state, results: &announceResults)
+                        toolIsSupported: &state.toolIsSupported, results: &announceResults)
                     return announceResults
                 }
             }
@@ -1191,7 +1191,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     private func decodeStandardDigitizerReport(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[2]
@@ -1258,5 +1258,42 @@ package struct IntuosV3Decoder: TabletReportDecoder {
             source.bitIndex >= 0, source.bitIndex < 8
         else { return false }
         return (report[source.byteIndex] & (1 << source.bitIndex)) != 0
+    }
+}
+
+extension IntuosV3Decoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Serial at the last tool change.
+        package var lastSerial: UInt32 = 0
+        /// Tool code at the last tool change.
+        package var lastToolCode: UInt16 = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether this family fully supports the tool in range.
+        package var toolIsSupported: Bool = true
+        /// Last valid Art Pen rotation, in degrees.
+        package var lastRotation: Double = 0
+        /// Whether a real rotation has arrived since the pen entered.
+        package var hasValidRotationFrame: Bool = false
+        /// Whether real tilt has arrived since the pen entered.
+        package var hasValidTiltFrame: Bool = false
+        /// Last valid tilt, held through low-confidence frames.
+        package var lastTiltX: Double = 0
+        package var lastTiltY: Double = 0
+        /// Last battery byte, so unchanged readings aren't sent again. 0xFF until one arrives.
+        package var lastBatteryByte: UInt8 = 0xFF
+        /// Whether a Bluetooth sample has reached the surface's edge, so a jump that follows is the barrel, not the tip.
+        package var bleOutsideSurface: Bool = false
+        /// Consecutive samples the barrel gate has dropped.
+        package var bleBarrelDropCount: Int = 0
+
+        package init() {}
     }
 }

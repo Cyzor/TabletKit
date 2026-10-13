@@ -44,7 +44,7 @@ import Foundation
 /// injects a minimum contact pressure so apps register a click.
 package struct CintiqV1Decoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     // ── Barrel button debounce state ──────────────────────────────────────────
@@ -76,7 +76,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     public mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
@@ -111,7 +111,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     private mutating func decodePen(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let status = report[1]
@@ -237,7 +237,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
                             isEraser: state.isEraser, isMouse: false)))
                 emitToolCompatibility(
                     toolCode: fallbackCode, deviceFamily: deviceFamily,
-                    state: &state, results: &results)
+                    toolIsSupported: &state.toolIsSupported, results: &results)
             }
         }
 
@@ -263,7 +263,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
 
     private func decodeToolChange(
         report: HIDReport,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let serial =
@@ -291,7 +291,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         ]
         emitToolCompatibility(
             toolCode: toolCode, deviceFamily: deviceFamily,
-            state: &state, results: &results)
+            toolIsSupported: &state.toolIsSupported, results: &results)
         return results
     }
 
@@ -417,7 +417,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
 
     // MARK: - State reset on proximity-out
 
-    private mutating func resetProximityState(state: inout DecoderState) {
+    private mutating func resetProximityState(state: inout State) {
         state.prevInProximity = false
         state.lastRotation = 0.0
         state.lastTiltX = 0.0
@@ -430,5 +430,34 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         tipPressureOverride = 0
         lastPressure = 0
         fallbackToolPending = false
+    }
+}
+
+extension CintiqV1Decoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Serial at the last tool change.
+        package var lastSerial: UInt32 = 0
+        /// The tool in range.
+        package var currentToolCode: UInt16 = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+        /// Whether the tool in range is a mouse.
+        package var toolIsMouse: Bool = false
+        /// Whether this family fully supports the tool in range.
+        package var toolIsSupported: Bool = true
+        /// Last valid Art Pen rotation, in degrees.
+        package var lastRotation: Double = 0
+        /// Last valid tilt, held through low-confidence frames.
+        package var lastTiltX: Double = 0
+        package var lastTiltY: Double = 0
+
+        package init() {}
     }
 }

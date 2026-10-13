@@ -24,7 +24,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
         buttonCount: 4, hasTilt: false, hasDualRings: false,
         isPenDisplay: false, ringSlotCount: 0)
 
-    private func decode(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
+    private func decode(_ bytes: [UInt8], state: inout IntuosV2Decoder.State) -> [DecodeResult] {
         let decoder = IntuosV2Decoder()
         return HIDReport.withReport(bytes) { report -> [DecodeResult] in
             decoder.decode(
@@ -46,7 +46,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// Tip down mid-stroke. Three valid frames; the last one is what the host
     /// sees as the current position, and pressure is well into the range.
     func testTipDownStrokeDecodesLastFrame() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let r = decode(
             hex(
                 "81 E1 22 22 43 18 A3 0B 11 E1 26 22 5F 18 20 0C 11 E1 2A 22 7F 18 B3 0C 11 "
@@ -64,7 +64,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// Barrel button 1 held while drawing — status 0xE3 sets bit 1 on top of
     /// valid/prox/range.
     func testBarrelButtonOne() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let r = decode(
             hex(
                 "81 E1 54 26 91 16 DF 07 14 E1 56 26 9C 16 05 08 13 E3 5B 26 AE 16 26 08 13 "
@@ -82,7 +82,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// the last known position — reporting the raw bytes is what produced
     /// cursor jumps to (0,0) in an earlier third-party implementation.
     func testOutOfRangeHoldsLastPosition() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         // Establish a position with an in-range frame first.
         _ = decode(
             hex(
@@ -106,7 +106,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// in the capture matched this mapping.
     func testExpressKeyBitmap() {
         for (bit, index) in [(UInt8(0x01), 0), (0x02, 1), (0x04, 2), (0x08, 3)] {
-            var state = DecoderState()
+            var state = IntuosV2Decoder.State()
             var bytes = [UInt8](repeating: 0, count: 51)
             bytes[0] = 0x81
             bytes[44] = bit
@@ -124,7 +124,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// whole container when no pen frame is valid makes the keys die whenever
     /// the pen is out of range.
     func testAuxOnlyReportEmitsNoPenSample() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let r = decode(
             hex(
                 "81 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
@@ -140,7 +140,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// Byte 45: bit 7 charging, bits 0-6 percent. The capture ran on battery at
     /// 20-21%, bit 7 clear throughout.
     func testBatteryFromCapture() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let r = decode(
             hex(
                 "81 C0 23 27 FD 16 00 00 3F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
@@ -156,7 +156,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     }
 
     func testChargingBitSetsFlag() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 51)
         bytes[0] = 0x81
         bytes[45] = 0x80 | 55
@@ -174,7 +174,7 @@ final class IntuosHT3BTDecoderTests: XCTestCase {
     /// The kernel accepts this family from 46 bytes; below that, bytes 44/45
     /// don't exist and the container must be rejected rather than read past.
     func testShortReportRejected() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 45)
         bytes[0] = 0x81
         XCTAssertTrue(decode(bytes, state: &state).isEmpty)

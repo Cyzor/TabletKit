@@ -18,7 +18,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         buttonCount: 4, hasFingerTouch: true, maxTouchContacts: 16)
 
     private func decode(
-        _ bytes: [UInt8], spec: DigitizerSpec? = nil, state: inout DecoderState
+        _ bytes: [UInt8], spec: DigitizerSpec? = nil, state: inout IntuosV1Decoder.State
     ) -> [DecodeResult] {
         let decoder = IntuosV1Decoder()
         let spec = spec ?? cth690
@@ -68,7 +68,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     /// First sampled container from the 2026-07-03 CTH-690 discovery capture:
     /// slot 2 lifting plus slot 5 down at (1301, 1335).
     func testCaptureFirstSample() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 64)
         let head: [UInt8] = [
             0x02, 0x02,
@@ -89,7 +89,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     // MARK: - Gating
 
     func testRejectedWithoutFingerTouch() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         let penOnly = DigitizerSpec(
             maxX: 21600, maxY: 13500, maxPressure: 2047, buttonCount: 4)
         let bytes = makeContainer([touchMsg(slot: 2, down: true, x: 100, y: 200)])
@@ -100,7 +100,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     // MARK: - Slot state
 
     func testSlotStatePersistsAcrossContainers() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
         // Second container mentions only slot 3; slot 2 must remain active.
         let results = decode(
@@ -112,7 +112,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     }
 
     func testReleaseRemovesContact() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(
             makeContainer([
                 touchMsg(slot: 2, down: true, x: 1000, y: 500),
@@ -125,7 +125,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     }
 
     func testTwelveBitCoordinateExtremes() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         let results = decode(
             makeContainer([touchMsg(slot: 2, down: true, x: 4095, y: 4095)]), state: &s)
         guard let list = contacts(results) else { return XCTFail("expected .touch") }
@@ -141,7 +141,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     /// Pen whose low-confidence hover thrashed `prevInProximity` and killed
     /// touch for the whole time a hand rested near the tablet.
     func testContactsPassThroughRegardlessOfPenProximity() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         s.prevInProximity = true
         let results = decode(
             makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
@@ -151,7 +151,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     }
 
     func testPenProximityDoesNotFlushActiveContacts() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(makeContainer([touchMsg(slot: 2, down: true, x: 1000, y: 500)]), state: &s)
         s.prevInProximity = true  // pen entered proximity via a 0x10 report
         // A pad-only container while the pen is in proximity must leave the
@@ -165,7 +165,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     /// A sustained pen-in-proximity state (real or a thrashing decoder flag)
     /// must never latch touch off at this layer.
     func testSustainedPenProximityNeverLatchesTouchOff() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         s.prevInProximity = true
 
         var penReport = [UInt8](repeating: 0, count: 10)
@@ -185,7 +185,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     // MARK: - Express keys (pad message 0x80)
 
     func testPadMessageAllFourKeys() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         let results = decode(makeContainer([[0x80, 0x0F, 0, 0, 0, 0, 0, 0]]), state: &s)
         guard case .aux(let aux)? = results.first else {
             return XCTFail("expected .aux, got \(results)")
@@ -195,7 +195,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
 
     func testPadMessageSingleKeyBits() {
         for (bit, index) in [(UInt8(0x01), 0), (0x02, 1), (0x04, 2), (0x08, 3)] {
-            var s = DecoderState()
+            var s = IntuosV1Decoder.State()
             let results = decode(makeContainer([[0x80, bit, 0, 0, 0, 0, 0, 0]]), state: &s)
             guard case .aux(let aux)? = results.first else {
                 return XCTFail("expected .aux for bit \(bit)")
@@ -212,7 +212,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     /// classic Intuos packet — confirms the existing intuosV1 pen path fits
     /// the CTH-690 without changes.
     func testCapturePenSample() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         let bytes: [UInt8] = [0x10, 0xE0, 0x10, 0x82, 0x15, 0x4F, 0x00, 0x00, 0x00, 0xFF]
         let results = decode(bytes, state: &s)
         guard case .pen(let point)? = results.last else {
@@ -237,7 +237,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     }
 
     func testLiftoffMaskEndsContactsNotInTheMask() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(
             makeContainer([touchMsg(slot: 2, down: true, x: 1785, y: 2021)]), state: &s)
         XCTAssertEqual(s.bpt3TouchSlots.count, 1, "contact is latched")
@@ -251,7 +251,7 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
     }
 
     func testLiftoffMaskKeepsContactsStillDown() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(
             makeContainer([
                 touchMsg(slot: 2, down: true, x: 100, y: 200),
@@ -270,14 +270,14 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
 
     /// Nothing latched: stay silent rather than emit empty updates forever.
     func testRepeatedLiftoffFramesWithNothingDownEmitNothing() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         XCTAssertTrue(decode(liftoffFrame(mask: 0), state: &s).isEmpty)
         XCTAssertTrue(decode(liftoffFrame(mask: 0), state: &s).isEmpty)
     }
 
     /// 0x81 is not a slot key; its bytes would decode to nonsense.
     func testLiftoffFrameIsNotDecodedAsAContact() {
-        var s = DecoderState()
+        var s = IntuosV1Decoder.State()
         _ = decode(liftoffFrame(mask: 0xFFFF), state: &s)
         XCTAssertTrue(s.bpt3TouchSlots.isEmpty, "0x81 never creates a contact")
     }

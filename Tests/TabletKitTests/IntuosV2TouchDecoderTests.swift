@@ -18,7 +18,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 4)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV2Decoder.State,
         family: DeviceFamily = .intuosProGen2
     ) -> [DecodeResult] {
         let decoder = IntuosV2Decoder()
@@ -57,14 +57,14 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     // MARK: - Dispatch
 
     func testTooShortRejected() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // 9 bytes — guard length >= 10
         let bytes: [UInt8] = [0x21, 0x01, 0x02, 0x01, 0x64, 0x00, 0x20, 0x00, 0x18]
         XCTAssertTrue(decode(bytes, state: &s).isEmpty)
     }
 
     func testZeroContactCountReturnsEmptyTouch() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make0x21(count: 0, slots: [])
         let results = decode(bytes, state: &s)
         XCTAssertEqual(results.count, 1)
@@ -78,7 +78,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     // MARK: - Single contact
 
     func testSingleFingerDown() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Slot 2 active at X=3456, Y=2048, major=28
         let bytes = make0x21(count: 1, slots: [(2, 0x01, 3456, 2048, 28)])
         let results = decode(bytes, state: &s)
@@ -95,7 +95,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     }
 
     func testLiftFrameStatusZeroProducesEmptyContact() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // status=0x00 on the only slot → lift frame → contacts empty
         let bytes = make0x21(count: 1, slots: [(2, 0x00, 3456, 2048, 28)])
         let results = decode(bytes, state: &s)
@@ -110,7 +110,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     // MARK: - Multi-contact
 
     func testTwoFingersDown() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make0x21(count: 2, slots: [
             (2, 0x01, 1000, 800, 20),
             (3, 0x01, 9000, 6000, 22)
@@ -129,7 +129,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     }
 
     func testMixedActiveAndLiftSlotsOnlyReturnsActive() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Slot 2 active, slot 3 lifting
         let bytes = make0x21(count: 2, slots: [
             (2, 0x01, 4000, 3000, 24),
@@ -144,7 +144,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     }
 
     func testFiveFingers() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make0x21(count: 5, slots: [
             (2, 0x01,   100,  100, 18),
             (3, 0x01, 12300, 8500, 20),
@@ -162,7 +162,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     // MARK: - Coordinate extremes
 
     func testTopLeftCorner() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         let bytes = make0x21(count: 1, slots: [(2, 0x01, 0, 0, 18)])
         let results = decode(bytes, state: &s)
         guard case .touch(let contacts) = results.first else { XCTFail(); return }
@@ -171,7 +171,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     }
 
     func testBottomRightCorner() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // PTH-860 hardware-reported max: X=12439, Y=8639
         let bytes = make0x21(count: 1, slots: [(2, 0x01, 12439, 8639, 18)])
         let results = decode(bytes, state: &s)
@@ -183,7 +183,7 @@ final class IntuosV2TouchDecoderTests: XCTestCase {
     // MARK: - count clamped to 5
 
     func testCountFieldCappedAtFive() {
-        var s = DecoderState()
+        var s = IntuosV2Decoder.State()
         // Declare count=7 but only 5 slots fit in 44 bytes; decoder caps at min(count,5)
         let bytes = make0x21(count: 7, slots: [
             (2, 0x01,  100,  100, 18),

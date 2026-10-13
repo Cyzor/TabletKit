@@ -31,7 +31,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     private let ctc4110wl = DigitizerSpec(maxX: 15200, maxY: 9500, maxPressure: 4095)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV3Decoder.State,
         family: DeviceFamily = .intuosProGen3, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
         let decoder = IntuosV3Decoder()
@@ -42,7 +42,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         }
     }
 
-    private func decodeBLE(_ bytes: [UInt8], state: inout DecoderState) -> [DecodeResult] {
+    private func decodeBLE(_ bytes: [UInt8], state: inout IntuosV3Decoder.State) -> [DecodeResult] {
         let decoder = IntuosV3Decoder()
         return HIDReport.withReport(bytes) { report in
             decoder.decode(
@@ -115,13 +115,13 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - 0x1F gating
 
     func testShort0x1FRejected() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x1F, 0x01, 0x40], state: &st)
         XCTAssertTrue(r.isEmpty)
     }
 
     func testWrong0x1FSubtypeRejected() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // data[1] must be 0x01; other values are unknown.
         var b = make0x1F(status: 0x40)
         b[1] = 0x02
@@ -132,7 +132,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - 0x1F pen report: coordinates, pressure, tilt, buttons
 
     func test0x1FCoordinatesAndPressureDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // X=0x1234=4660, Y=0x5678=22136, pressure=0x1FFF=8191
         let b = make0x1F(
             status: 0x40, x: 0x1234, y: 0x5678, pressure: 0x1FFF)
@@ -146,7 +146,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1FTiltNormalizedAgainst127() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // tiltX = 127 → 1.0; tiltY = -127 → -1.0 (close enough)
         let b = make0x1F(status: 0x40, tiltX: 127, tiltY: -127)
         let r = decode(b, state: &st)
@@ -156,7 +156,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1FPenButtons() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // bit1=penButton1, bit2=penButton2; both set alongside prox (bit6)
         let b = make0x1F(status: 0x40 | 0x02 | 0x04)
         let r = decode(b, state: &st)
@@ -166,7 +166,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1FEraserBit() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // eraser = status bit 5 (0x20), prox bit 6 (0x40)
         let b = make0x1F(status: 0x40 | 0x20)
         let r = decode(b, state: &st)
@@ -175,7 +175,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1FHoverDistanceDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b = make0x1F(status: 0x40, hover: 42)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
@@ -185,7 +185,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - 0x1F proximity-exit state machine
 
     func test0x1FProximityExitEmitsCachedStateAndClearsFlag() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Enter proximity at a known position.
         let enter = make0x1F(status: 0x40, x: 1000, y: 2000, tiltX: 64, tiltY: -32)
         _ = decode(enter, state: &st)
@@ -209,13 +209,13 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - 0x1E extended pen report: 24-bit XY, 16-bit tilt, penButton3
 
     func testShort0x1ERejected() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x1E] + [UInt8](repeating: 0, count: 18), state: &st)
         XCTAssertTrue(r.isEmpty)
     }
 
     func test0x1E24BitXYDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // X = 0x123456, Y = 0xABCDEF. Status 0xC0: proximity + tip switch.
         let b = make0x1E(status: 0xC0, x: 0x123456, y: 0x0ABCDE)
         let r = decode(b, state: &st)
@@ -226,7 +226,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EHoveringAloneCountsAsInProximity() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Status 0x80: proximity set, tip switch clear — hovering must not
         // be treated as an exit.
         let b = make0x1E(status: 0x80, x: 1000, y: 2000)
@@ -242,7 +242,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         // A real Movink 13 capture (2026-09-08) shows raw tilt only ever
         // spans -64...63 — the field is already in degrees, not a 16-bit
         // fraction. 64 → 1.0, -64 → -1.0.
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b = make0x1E(status: 0xC0, tiltX: 64, tiltY: -64)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
@@ -251,7 +251,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EPenButton3FromBit3() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // bit3 = 0x08 alongside proximity bit7 + tip switch bit6
         let b = make0x1E(status: 0xC0 | 0x08)
         let r = decode(b, state: &st)
@@ -262,7 +262,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EHoverDistanceFromByte19() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b = make0x1E(status: 0xC0, hover: 17)
         let r = decode(b, state: &st)
         guard case .pen(let pt) = r[0] else { return XCTFail() }
@@ -270,7 +270,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EProximityExitCachedCoords() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         _ = decode(make0x1E(status: 0xC0, x: 55000, y: 30000), state: &st)
         let r = decode(make0x1E(status: 0x00), state: &st)
         XCTAssertEqual(r.count, 1)
@@ -288,7 +288,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // that recording, not a synthesized guess.
 
     func testRealCaptureHoverFrameDecodesAsInProximityZeroPressure() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
@@ -309,7 +309,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// drawable area — and states it plainly: hover distance railed at 255,
     /// at the rim, with nothing touching. It must produce no position.
     func testRealCaptureUSBGrooveSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0x80, 0x86, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
@@ -328,7 +328,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// hover railed and nothing touching. That distance is outside the rim,
     /// which is why the rule uses the wider border band.
     func testRealCaptureUSBBarrelLeapSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let atEdge: [UInt8] = [
             0x1E, 0x01, 0x80, 0xAF, 0xF2, 0x00, 0x20, 0x8E, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
@@ -353,7 +353,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// 459 units; widening the band past that silences legitimate high hover
     /// near an edge. If this fails, the band was widened too far.
     func testUSBOutOfSurfaceBandLeavesHeadroomForEdgeHover() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         var b: [UInt8] = [
             0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
@@ -378,7 +378,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// just as one in the groove does. Only pairing it with the rim separates
     /// them, and this frame must survive.
     func testRealCaptureUSBHighHoverMidTabletSurvives() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0x80, 0x51, 0x8B, 0x00, 0x6B, 0x11, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00,
@@ -394,7 +394,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureTouchdownFrameZeroPressureTransient() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Momentary zero-pressure frame right at touchdown (0xC0) — real
         // sensor behavior, not a decode bug.
         let b: [UInt8] = [
@@ -403,7 +403,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             0xC0, 0x24, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x90, 0xCA, 0xBA, 0x3A,
         ]
         let r = decode(b, state: &st)
-        // Fresh DecoderState means this frame's real, nonzero serial/tool
+        // Fresh IntuosV3Decoder.State means this frame's real, nonzero serial/tool
         // code (0x24c087aa / 0x0200) is a "new" tool by definition, so a
         // .toolEnter precedes the .pen result — see IntuosV3Decoder's
         // 2026-09-16 tool-identity fix.
@@ -414,7 +414,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureMaxPressureFrameMatchesDeviceCeiling() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Pressure reaches exactly 8191, this device's maxPressure.
         let b: [UInt8] = [
             0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
@@ -445,7 +445,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // than captured.
 
     func testRealCaptureToolEnterFiresOnFirstProximityWithKnownArtPen() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         var b: [UInt8] = [
             0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
             0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
@@ -473,7 +473,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testToolEnterDoesNotRefireForTheSameToolAcrossFrames() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         var b: [UInt8] = [
             0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF, 0x1F,
             0x20, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
@@ -497,7 +497,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureExitFrameClearsProximity() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         _ = decode(
             [
                 0x1E, 0x01, 0xC1, 0xB4, 0x83, 0x00, 0x75, 0x36, 0x00, 0xFF,
@@ -527,7 +527,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // buttons and real tilt range against a device other than the PTK-870.
 
     func testRealCaptureMovinkBarrelButton1() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC2, 0xFD, 0x75, 0x00, 0x27, 0x42, 0x00, 0x00, 0x00,
             0x22, 0x00, 0xFA, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x57, 0x36, 0xD9,
@@ -541,7 +541,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureMovinkBarrelButton2() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC4, 0x8A, 0x71, 0x00, 0x03, 0x41, 0x00, 0x00, 0x00,
             0x20, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x61, 0x36, 0xD9,
@@ -555,7 +555,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureMovinkBarrelButton3() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC8, 0x1C, 0x6C, 0x00, 0x41, 0x43, 0x00, 0x00, 0x00,
             0x1E, 0x00, 0xF8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x36, 0xD9,
@@ -569,7 +569,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureMovinkTiltMatchesDegreeScale() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC0, 0x09, 0x01, 0x00, 0xE7, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x71, 0x36, 0xD9,
@@ -584,13 +584,13 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - 0x11 aux report
 
     func testAuxShortRejectd() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x11], state: &st)
         XCTAssertTrue(r.isEmpty)
     }
 
     func testAuxAllEightExpressKeysDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // All 8 express-key bits set, byte [3] (dial buttons) untouched.
         let r = decode([0x11, 0xFF, 0x00, 0x00, 0x00, 0x00], state: &st)
         XCTAssertFalse(r.isEmpty)
@@ -601,7 +601,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxOnlyOneExpressKeyLit() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Real capture (pen.buttons.hid): each key press lights exactly one
         // bit of byte [1] alone. Confirm byte [3] never leaks into buttons[].
         let r = decode([0x11, 0x04, 0x00, 0x00, 0x00, 0x00], state: &st)
@@ -611,7 +611,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxLeftDialCenterPressSurfacedAsTouchRingButtonDown() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Real capture (pen.center-buttons.hid): left cluster-center key is
         // byte [3] bit 0, independent of the express-key byte.
         let r = decode([0x11, 0x00, 0x00, 0x01, 0x00, 0x00], state: &st)
@@ -621,7 +621,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxRightDialCenterPressDoesNotLeakIntoButtons() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Right cluster-center key is byte [3] bit 1 — decoded but not yet
         // surfaced (no touchRing2ButtonDown field exists). Confirm it stays
         // inert rather than accidentally lighting an express key.
@@ -632,7 +632,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxLeftWheelPositiveDelta() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Left wheel byte[4] = 3 → delta +3
         let r = decode([0x11, 0x00, 0x00, 0x00, 0x03, 0x00], state: &st)
         XCTAssertEqual(r.count, 2)
@@ -642,7 +642,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxRightWheelPositiveDelta() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Right wheel byte[5] = 5 → delta +5
         let r = decode([0x11, 0x00, 0x00, 0x00, 0x00, 0x05], state: &st)
         XCTAssertEqual(r.count, 2)
@@ -652,7 +652,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxWheelNegativeDeltaSign7BitExtension() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // 7-bit sign extension: (Int8(bitPattern: byte) << 1) >> 1
         // 0xFE → Int8 == -2, << 1 == -4 (Int8), >> 1 == -2 (arithmetic shift).
         // So a raw byte of 0xFE yields delta == -2.
@@ -664,7 +664,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxWheelZeroDeltaSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Both wheels at 0 → no .wheel results; only .aux
         let r = decode([0x11, 0x00, 0x00, 0x00, 0x00, 0x00], state: &st)
         XCTAssertEqual(r.count, 1)
@@ -672,7 +672,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testAuxBothWheelsInSameReport() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x11, 0x00, 0x00, 0x00, 0x02, 0x03], state: &st)
         // .aux + two .wheel results
         XCTAssertEqual(r.count, 3)
@@ -687,7 +687,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // MARK: - Unknown report IDs
 
     func testUnknownReportIDReturnsEmpty() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x10, 0x00, 0x40] + [UInt8](repeating: 0, count: 20), state: &st)
         XCTAssertTrue(r.isEmpty)
     }
@@ -700,7 +700,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     // full field-confirmation methodology).
 
     func testShort0x1ARejected() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x1A, 0x42], state: &st)
         XCTAssertTrue(r.isEmpty)
     }
@@ -710,7 +710,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// is asserted here in raw device units — the report carries the same
     /// units the USB registry entry declares, so nothing is rescaled.
     func testRealCaptureBLEPositionDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 66, 128, 193, 84, 124, 144, 31, 6, 255,
             31, 253, 223, 65, 173, 20, 112, 9, 0, 0,
@@ -741,7 +741,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// right edge — which is why the symptom presented as "tilt confounds
     /// the cursor" rather than as a plain coordinate bug.
     func testRealCaptureBLEXSpans20BitsAcrossTheWrapBoundary() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let before: [UInt8] = [
             26, 2, 32, 192, 251, 255, 0, 181, 8, 0,
             0, 24, 35, 0, 160, 47, 202, 98, 0, 0,
@@ -764,7 +764,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// The earlier "X freezes at 4264 near the right corners" report was
     /// this same frame with bit 16 dropped: 69800 − 65536 = 4264.
     func testRealCaptureBLEXReachesExactlyMaxAtRightEdge() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
             0, 0, 0, 0, 16, 255, 246, 78, 32, 0,
@@ -809,7 +809,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             ),
         ]
         for (name, bytes, wantTiltX, wantTiltY) in poses {
-            var st = DecoderState()
+            var st = IntuosV3Decoder.State()
             let p = pens(decodeBLE(bytes, state: &st))
             XCTAssertEqual(p.count, 1, "pose \(name)")
             XCTAssertEqual(p[0].tiltX, wantTiltX / 64.0, accuracy: 1e-9, "pose \(name) tiltX")
@@ -827,7 +827,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// Invert (0x20, eraser end in range) must count as the eraser while it
     /// hovers, not only once Eraser (0x10) reports contact.
     func testBLEHoveringEraserReportsEraser() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let hovering: [UInt8] = [
             26, 2, 0, 0xA0, 12, 124, 48, 188, 4, 0,
             0, 0, 0, 0, 144, 255, 215, 50, 0, 0,
@@ -837,7 +837,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testRealCaptureBLEProximityExitOnZeroStatus() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let inRange: [UInt8] = [
             26, 2, 0, 128, 12, 124, 48, 188, 4, 0,
             0, 0, 0, 0, 144, 255, 215, 50, 0, 0,
@@ -869,7 +869,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// nibble is a frame counter (0xb, 0xc, 0xd... here) that must NOT bleed
     /// into the rotation value.
     func testRealCaptureBLERotationDecodedForArtPen() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 66, 128, 192, 85, 143, 176, 102, 3, 0,
             0, 0, 254, 65, 190, 81, 144, 240, 0, 0,
@@ -894,7 +894,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// frame is one-shot and often never arrives, and a pen with no rotation
     /// sensor only ever reports this filler.
     func testRealCaptureBLERotationFillerReportsNoRotation() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 32, 192, 245, 68, 64, 190, 0, 0,
             0, 41, 252, 0, 64, 81, 98, 169, 0, 0,
@@ -908,7 +908,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// fixed angle. Verbatim frames from `870-bt-0x03FA-20260923-213956`: a
     /// twist frame carrying a count, then the filler frame that follows it.
     func testRealCaptureBLERotationFillerReplaysLastReading() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let twist: [UInt8] = [
             0x1A, 0x42, 0x80, 0xC0, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
             0x00, 0x1B, 0x13, 0x0F, 0x7F, 0x6B, 0xC0, 0x24, 0x00, 0x00,
@@ -932,7 +932,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// A proximity exit drops the held reading, so the next pen's filler
     /// frames don't inherit the previous pen's angle.
     func testBLEProximityExitClearsHeldRotation() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let twist: [UInt8] = [
             0x1A, 0x42, 0x80, 0xC0, 0x8C, 0x6F, 0x50, 0x3E, 0x05, 0x00,
             0x00, 0x1B, 0x13, 0x0F, 0x7F, 0x6B, 0xC0, 0x24, 0x00, 0x00,
@@ -958,7 +958,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// capture ever set; bit 0 tracks the tip switch, and agrees with
     /// pressure > 0 across every capture on hand.
     func testRealCaptureBLEBarrelButtonDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 66, 128, 196, 191, 4, 96, 198, 7, 0,
             0, 0, 234, 254, 253, 106, 140, 68, 15, 0,
@@ -978,7 +978,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// live, monotonic X motion exclusively under this discriminator — it
     /// must decode as a real pen point, not be dropped.
     func testRealCaptureBLEHoverFrameDecodesAsPosition() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 32, 192, 43, 78, 112, 187, 2, 0,
             0, 9, 247, 0, 16, 54, 119, 65, 0, 0,
@@ -994,7 +994,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// is not in range, so no position is emitted regardless of what the
     /// coordinate bytes happen to hold.
     func testRealCaptureBLENoPenPlaceholderSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
@@ -1008,7 +1008,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// excluded outright. (It also sets bit 3 of byte [6], which no real
     /// sample ever does, putting its X far past `spec.maxX`.)
     func testRealCaptureBLEDiscriminatorOneSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 1, 32, 192, 92, 67, 24, 38, 0, 2,
             16, 0, 0, 2, 176, 0, 0, 0, 0, 0,
@@ -1019,7 +1019,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// An announcement carries identity, never a position — suppressed here
     /// by its class nibble rather than by matching its bytes.
     func testRealCaptureBLEAnnouncementEmitsNoPosition() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 65, 128, 192, 129, 144, 128, 36, 4, 8,
             17, 0, 4, 8, 224, 0, 0, 0, 0, 0,
@@ -1048,7 +1048,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             ),
         ]
         for (name, frame, serial, code) in expected {
-            var st = DecoderState()
+            var st = IntuosV3Decoder.State()
             let identities = decodeBLE(frame, state: &st).compactMap { result -> ToolIdentity? in
                 if case .toolEnter(let identity) = result { return identity } else { return nil }
             }
@@ -1069,7 +1069,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// in 56 captures there are six distinct class-1 `[3..9]` signatures, one
     /// per pen, and a whitelist of two could never cover them.
     func testRealCaptureBLEArtPenClassOneFrameEmitsNoPosition() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let zap: [UInt8] = [
             0x1A, 0x41, 0x80, 0xC0, 0x34, 0x12, 0x80, 0x03, 0x04, 0x08,
             0x11, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1094,7 +1094,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         // rolling counter, so all of these must behave identically.
         for discriminator: UInt8 in [0x01, 0x21, 0x41, 0xC1] {
             for (label, payload) in signatures {
-                var st = DecoderState()
+                var st = IntuosV3Decoder.State()
                 var b: [UInt8] = [0x1A, discriminator, 0x80]
                 b.append(contentsOf: payload)
                 b.append(contentsOf: [UInt8](repeating: 0, count: 20 - b.count))
@@ -1111,7 +1111,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// branch *and* rejected by the position branch, so the pen went
     /// unrecognized — the generic-pen symptom, over Bluetooth.
     func testRealCaptureBLEClassOneAnnouncementStillYieldsToolIdentity() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Pro Pen announcement (serial made up, toolCode 0x0200), otherwise verbatim
         // payload, carried on discriminator 0x41.
         let announce: [UInt8] = [
@@ -1140,7 +1140,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// gate can catch them) are dropped too. The cursor stays where the tip
     /// was last genuinely seen.
     func testRealCaptureBLEBarrelTakeoverSuppressedPastTheEdge() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let pastEdge: [UInt8] = [
             26, 2, 0, 128, 168, 16, 1, 0, 0, 0,
             0, 0, 0, 0, 16, 255, 246, 78, 0, 0,
@@ -1178,7 +1178,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// separate them. The status byte can: the border carries a close tip fix,
     /// the groove does not.
     func testRealCaptureBLEGrooveSuppressedButBorderKept() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let border: [UInt8] = [
             26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
             0, 248, 0, 0, 144, 112, 234, 80, 32, 0,
@@ -1187,7 +1187,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(kept.count, 1, "the real border must keep tracking")
         XCTAssertEqual(kept[0].y, 0, "premise: the in-bounds border sits ON the limit")
 
-        var st2 = DecoderState()
+        var st2 = IntuosV3Decoder.State()
         let groove: [UInt8] = [
             26, 2, 0, 128, 67, 77, 208, 53, 0, 0,
             0, 0, 0, 0, 240, 255, 100, 64, 0, 0,
@@ -1211,7 +1211,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// this. X hops 4124 units with Y essentially unchanged — the barrel
     /// offset — and must be rejected.
     func testRealCaptureBLEBarrelHopOverBezelSuppressedWithoutRailing() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let hovering: [UInt8] = [
             26, 2, 0, 128, 67, 77, 144, 150, 0, 0,
             0, 0, 0, 0, 240, 255, 100, 64, 0, 0,
@@ -1234,7 +1234,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// The border band must not swallow the interior: a pen working in the
     /// middle of the tablet is never gated, however it moves.
     func testRealCaptureBLEInteriorMotionNeverGated() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let a: [UInt8] = [
             26, 66, 128, 193, 84, 124, 144, 31, 6, 255,
             31, 253, 223, 65, 173, 20, 112, 9, 0, 0,
@@ -1256,7 +1256,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// the single largest source of surviving cursor leaps — the gate must
     /// survive it.
     func testRealCaptureBLEBarrelGateSurvivesSpuriousProximityExit() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let tipAtEdge: [UInt8] = [
             26, 2, 32, 192, 23, 4, 0, 0, 0, 0,
             0, 48, 0, 0, 0, 127, 195, 156, 0, 0,
@@ -1288,7 +1288,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// test again and the cursor would be dead until the next proximity
     /// cycle. After the cap the gate yields.
     func testRealCaptureBLEBarrelGateCannotLatchForever() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let tipAtEdge: [UInt8] = [
             26, 2, 32, 192, 23, 4, 0, 0, 0, 0,
             0, 48, 0, 0, 0, 127, 195, 156, 0, 0,
@@ -1311,7 +1311,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// per frame across every real re-entry in the four see-saw captures), so
     /// small steps inward from a railed position must be honored.
     func testRealCaptureBLEGateReleasesOnContinuousReentry() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let railed: [UInt8] = [
             26, 2, 32, 192, 168, 16, 145, 172, 3, 0,
             0, 0, 0, 0, 96, 255, 160, 171, 0, 0,
@@ -1343,7 +1343,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// view for one frame. Confirmed byte-identical (except [14]'s rolling
     /// counter) across 64 occurrences at all four edges.
     func testRealCaptureBLEEdgeBounceTemplateSuppressed() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 33, 128, 192, 136, 149, 128, 53, 2, 8,
             17, 0, 2, 8, 112, 0, 0, 0, 0, 0,
@@ -1364,7 +1364,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// lands between two railed frames, and the cursor must not move. Guards
     /// the bounceback at the sequence level, not just the single frame.
     func testRealCaptureBLEEdgeBounceDoesNotMoveCursor() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let railed: [UInt8] = [
             26, 2, 32, 192, 168, 16, 1, 0, 0, 0,
             0, 0, 0, 0, 16, 255, 246, 78, 0, 0,
@@ -1389,7 +1389,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// with the first left ExpressKey (bit 0) pressed — buttons/dial must
     /// still decode even though no pen is in proximity.
     func testRealCaptureBLELeftExpressKeyOneDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
@@ -1408,7 +1408,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// Real idle-state frame with the left dial active + clockwise
     /// (byte19 == 4: bit2 set, bit3 clear).
     func testRealCaptureBLELeftDialClockwiseEmitsWheel() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 16, 0, 0, 0, 0, 4,
@@ -1425,7 +1425,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// Real idle-state frame with the left dial active + counter-clockwise
     /// (byte19 == 12: bits 2 and 3 both set).
     func testRealCaptureBLELeftDialCounterClockwiseEmitsWheel() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let b: [UInt8] = [
             26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 48, 0, 0, 0, 0, 12,
@@ -1458,7 +1458,7 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     /// Real capture byte from a PTK-870 Bluetooth capture: 0x64, discharging.
     func testRealCaptureBatteryFullNotCharging() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x1B(0x64), state: &st)
         XCTAssertEqual(batteries(r).count, 1)
         XCTAssertEqual(batteries(r).first?.0, 100)
@@ -1469,7 +1469,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// bit7 is what makes this a valid percentage at all — unmasked it would
     /// be 204 — and those captures were taken plugged in.
     func testRealCaptureBatteryChargingMasksHighBit() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x1B(0xCC), state: &st)
         XCTAssertEqual(batteries(r).first?.0, 76)
         XCTAssertEqual(batteries(r).first?.1, true)
@@ -1478,7 +1478,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// Real capture byte from two PTK-870 Bluetooth captures: 0xE4 — topped off
     /// on the cable, so 100% and charging simultaneously.
     func testRealCaptureBatteryFullWhileCharging() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x1B(0xE4), state: &st)
         XCTAssertEqual(batteries(r).first?.0, 100)
         XCTAssertEqual(batteries(r).first?.1, true)
@@ -1487,7 +1487,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// The report repeats at 1 Hz whether or not the level moved, so an
     /// unchanged byte must stay silent.
     func testBatteryEmitsOnlyOnChange() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         XCTAssertEqual(batteries(decode(make0x1B(0x61), state: &st)).count, 1)
         XCTAssertEqual(batteries(decode(make0x1B(0x61), state: &st)).count, 0)
         XCTAssertEqual(batteries(decode(make0x1B(0x60), state: &st)).count, 1)
@@ -1497,7 +1497,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// truncated below the captured 20 bytes still decodes rather than
     /// being rejected on length.
     func testBatteryShortReportStillDecodes() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode([0x1B, 0x64], state: &st)
         XCTAssertEqual(batteries(r).first?.0, 100)
     }
@@ -1505,7 +1505,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// Plugging in changes only bit7; the dedupe keys off the whole byte, so
     /// the charging transition must still surface at an unchanged level.
     func testBatteryChargingTransitionAtSameLevelStillEmits() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         _ = decode(make0x1B(0x64), state: &st)
         let r = decode(make0x1B(0xE4), state: &st)
         XCTAssertEqual(batteries(r).count, 1)
@@ -1537,13 +1537,13 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// captures: byte 2 only ever took {0, 64, 65, 66, 96} across two
     /// sessions — 66 (0x42) is in-range | button1.
     func testRealCaptureButton1DecodedFromByte2Bit1() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x42), state: &st, spec: ctc4110wl)
         XCTAssertEqual(pens(r).first?.penButton1, true)
     }
 
     func testRealCaptureEraserDecodedFromByte2Bit5() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x60), state: &st, spec: ctc4110wl)
         XCTAssertEqual(pens(r).first?.eraser, true)
     }
@@ -1552,7 +1552,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// (see the decoder's doc comment) — bit2 must stay unassigned by
     /// default, not silently read as button2.
     func testButton2NotDecodedByDefault() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x46), state: &st, spec: ctc4110wl)
         XCTAssertEqual(pens(r).first?.penButton2, false)
     }
@@ -1563,7 +1563,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testDebugButton2SourceOverridesDecodedBit() {
         var spec = ctc4110wl
         spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 2)
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x46), state: &st, spec: spec)
         XCTAssertEqual(pens(r).first?.penButton2, true)
     }
@@ -1574,7 +1574,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testDebugButton2SourceReadsFalseWhenBitClear() {
         var spec = ctc4110wl
         spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 2)
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
         XCTAssertEqual(pens(r).first?.penButton2, false)
     }
@@ -1585,7 +1585,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testDebugButton2SourceOutOfRangeByteIsFalseNotATrap() {
         var spec = ctc4110wl
         spec.debugButton2Source = .init(byteIndex: 99, bitIndex: 0)
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
         XCTAssertEqual(pens(r).first?.penButton2, false)
     }
@@ -1593,13 +1593,13 @@ final class IntuosV3DecoderTests: XCTestCase {
     func testDebugButton2SourceOutOfRangeBitIsFalseNotATrap() {
         var spec = ctc4110wl
         spec.debugButton2Source = .init(byteIndex: 2, bitIndex: 9)
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x42), state: &st, spec: spec)
         XCTAssertEqual(pens(r).first?.penButton2, false)
     }
 
     func testRealCapturePositionAndPressureDecoded() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         let r = decode(make0x06(status: 0x41, x: 3277, y: 2391, pressure: 4), state: &st, spec: ctc4110wl)
         let p = pens(r).first
         XCTAssertEqual(p?.x, 3277)
@@ -1609,7 +1609,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func testOutOfRangeSynthesizesProximityExit() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         _ = decode(make0x06(status: 0x42), state: &st, spec: ctc4110wl)
         let r = decode(make0x06(status: 0x00), state: &st, spec: ctc4110wl)
         XCTAssertEqual(pens(r).first?.inProximity, false)
@@ -1626,8 +1626,8 @@ final class IntuosV3DecoderTests: XCTestCase {
 
     /// Puts the decoder in Art Pen identity, then returns a full frame
     /// carrying `rotation`, so the tests below start from a known angle.
-    private func artPenState(rotation: Int16) -> (DecoderState, Double) {
-        var st = DecoderState()
+    private func artPenState(rotation: Int16) -> (IntuosV3Decoder.State, Double) {
+        var st = IntuosV3Decoder.State()
         st.currentToolCode = 0x0804
         let full = make0x1E(status: 0xC0, x: 30000, y: 20000, tiltX: 20, rotation: rotation)
         let p = pens(decode(full, state: &st))
@@ -1648,7 +1648,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EStubRotationIsNotHeldBeforeAnyRealReading() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         st.currentToolCode = 0x0804
         // Mid-surface: a stub near an edge is swallowed by the off-surface
         // gate, which is a separate behavior from the rotation hold.
@@ -1671,7 +1671,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     func test0x1EStubRotationNotHeldForNonArtPen() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         st.currentToolCode = 0x0802  // Pro Pen — no barrel sensor
         _ = decode(make0x1E(status: 0xC0, x: 30000, y: 20000, rotation: -252), state: &st)
         let stub = make0x1E(status: 0x80, x: 30010, y: 20010, hover: 255)
@@ -1706,7 +1706,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     /// this: one observed 0x0804, the next observed no tool codes at all while
     /// still carrying 0x0804 in its raw frames.
     func test0x1EReEntryWithSameToolReAnnouncesIt() {
-        var st = DecoderState()
+        var st = IntuosV3Decoder.State()
         // Identity lives at bytes 20-25, past make0x1E's 20-byte frame, so
         // widen to the real 34-byte report length before writing it.
         func frame(_ status: UInt8) -> [UInt8] {

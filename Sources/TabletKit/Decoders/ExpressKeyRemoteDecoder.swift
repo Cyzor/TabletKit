@@ -78,14 +78,14 @@ package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
     static let maxRemotes = 5
     static let pairingSlotStride = 6
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public mutating func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 1 else { return [] }
@@ -124,9 +124,8 @@ package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         var results: [DecodeResult] = [.aux(aux)]
 
         // Only emit battery when it actually changed — this report streams
-        // continuously while the remote is in range, and every other
-        // decoder's battery path (see DecoderState.lastBatteryByte) dedupes
-        // the same way to avoid flooding the host with redundant updates.
+        // continuously while the remote is in range; the other battery
+        // decoders dedupe the same way.
         if state.lastBatteryByte != batteryByte {
             state.lastBatteryByte = batteryByte
             results.append(.battery(percent: batteryPercent, charging: charging))
@@ -161,5 +160,15 @@ package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
         }
 
         return slots.isEmpty ? [] : [.remotePairing(slots)]
+    }
+}
+
+extension ExpressKeyRemoteDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last battery byte, so unchanged readings aren't sent again. 0xFF until one arrives.
+        package var lastBatteryByte: UInt8 = 0xFF
+
+        package init() {}
     }
 }

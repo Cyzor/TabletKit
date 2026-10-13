@@ -46,20 +46,18 @@ import Foundation
 /// self-corrects: if classified eraser at entry but bit 5 later clears
 /// mid-session, the tool is forced back to pen — a behavior neither
 /// research source mentioned, found only by reading `wacom_pl_irq()`
-/// directly. Implemented here with the same `state.isEraser`/
-/// `state.prevInProximity` fields `Intuos3Decoder`/`GraphireDecoder`
-/// already use for their own tool-enter/proximity-session patterns — no
-/// new `DecoderState` field needed.
+/// directly. Implemented with the same eraser and proximity tracking
+/// `Intuos3Decoder` and `GraphireDecoder` use.
 package struct WacomPLDecoder: TabletReportDecoder {
 
-    /// Creates a decoder. Keep one per device, with its own ``DecoderState``.
+    /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
     public init() {}
 
     /// Decodes one report. See ``TabletReportDecoder/decode(report:spec:state:deviceFamily:)``.
     public func decode(
         report: HIDReport,
         spec: DigitizerSpec,
-        state: inout DecoderState,
+        state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         guard report.count >= 8, report[0] == 0x02 else { return [] }
@@ -143,5 +141,21 @@ package struct WacomPLDecoder: TabletReportDecoder {
                     penButton2: button2,
                     eraser: state.isEraser, inProximity: true, hoverDistance: 0)))
         return results
+    }
+}
+
+extension WacomPLDecoder {
+    /// What this decoder remembers between reports.
+    package struct State: DecoderState {
+        /// Last X, held for frames that carry no position.
+        package var lastX: Int = 0
+        /// Last Y, held for frames that carry no position.
+        package var lastY: Int = 0
+        /// Whether the last report had the pen in range.
+        package var prevInProximity: Bool = false
+        /// Whether the eraser end is in range, held through weak frames.
+        package var isEraser: Bool = false
+
+        package init() {}
     }
 }

@@ -25,7 +25,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         isPenDisplay: false, ringSlotCount: 4)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV2Decoder.State,
         family: DeviceFamily = .intuosProGen2
     ) -> [DecodeResult] {
         let decoder = IntuosV2Decoder()
@@ -60,7 +60,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testWirelessStatusDispatchTakesPrecedenceOver361() {
         // report[0]=0x80, report[1]=0x02 → wireless active, not BT pen.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 361)
         bytes[0] = 0x80
         bytes[1] = 0x02
@@ -72,14 +72,14 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testShort80ReportRejected() {
         // Length < 15 → BT pen path bails before reading frames.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes: [UInt8] = [0x80, 0xE0]
         XCTAssertTrue(decode(bytes, state: &state).isEmpty)
     }
 
     func test99ByteShortReportRejected() {
         // 99-byte path requires length >= 99 exactly.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 98)
         bytes[0] = 0x80
         XCTAssertTrue(decode(bytes, state: &state).isEmpty)
@@ -88,7 +88,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     // MARK: - 361-byte path: tool identity
 
     func testToolEnterEmittedOnFirstSightOfToolCode() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         // 0x0842 = Pro Pen 2 (non-eraser, non-mouse).
         var bytes = make361(toolCode: 0x0842)
         // Coordinate bytes so the .pen result has decodable point data.
@@ -111,7 +111,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     /// The 361-byte container carries the pen serial at [99..102], the same
     /// value USB reports. Without it a pen got one identity per transport.
     func testToolEnterCarriesPenSerial() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = make361(toolCode: 0x0804)
         bytes[99] = 0x34; bytes[100] = 0x12; bytes[101] = 0x80; bytes[102] = 0x03
         let tool = decode(bytes, state: &state).compactMap { r -> ToolIdentity? in
@@ -130,7 +130,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testArtPenToolCodeWithBit3SetIsNotMisclassifiedAsEraser() {
         // 0x1108 has bit3 set but is an Art Pen variant, not an eraser.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes = make361(toolCode: 0x1108)
         let results = decode(bytes, state: &state)
 
@@ -147,7 +147,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         // Flag pattern 0x80: valid + neither prox nor inRange — the kernel "exit" condition.
         // With state already in-proximity, this should produce a single .pen with
         // inProximity=false and pressure=0.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.lastX = 1234
         state.lastY = 5678
@@ -166,9 +166,9 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testBoundaryNoiseDoesNotExitBelowThreshold() {
         // 0xC0 frame (prox=1, inRange=0) is boundary noise — must NOT exit unless
-        // exitFrameCount reaches DecoderState.exitThreshold (3). Following frames
+        // exitFrameCount reaches proximityExitFrames (3). Following frames
         // are valid in-range (0xE0) so they don't push the counter further.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.exitFrameCount = 0
         state.lastToolCode = 0x0842  // suppress toolEnter so we count pen-only results
@@ -190,7 +190,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func testBoundaryNoiseExitsAtThreshold() {
         // Three consecutive 0xC0 frames in one report should trigger exit at the third.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.exitFrameCount = 0
         state.lastToolCode = 0x0842
@@ -207,7 +207,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     // MARK: - 361-byte path: eraser and barrel buttons
 
     func testEraserBitSetInFrameFlagsEmittedOnPen() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842  // already in tool; skip toolEnter
 
         // 0xE8: valid + prox + inRange + eraser (bit3).
@@ -221,7 +221,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     }
 
     func testBarrelButtonsDecodedFromFrameFlags() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842
         // 0xE6: valid + prox + inRange + barrel1 (bit1) + barrel2 (bit2).
         let bytes = make361(toolCode: 0x0842, frame0Flags: 0xE6)
@@ -236,7 +236,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     // MARK: - 361-byte path: battery and pad sub-report
 
     func testBatteryEmittedOnChange() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842
         state.lastBatteryByte = 0xFF  // sentinel: nothing seen yet
 
@@ -253,7 +253,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     }
 
     func testPadCenterButtonAndRingEmittedOnChange() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842
         state.lastBTPadKeys = 0
         state.lastBTPadBtn = 0
@@ -280,13 +280,13 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func test99ByteFrameWithInvalidFlagsSkipped() {
         // frame0 flags = 0x00 (bit7 clear) → skipped entirely; no results.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes = make99(frame0Flags: 0x00)
         XCTAssertTrue(decode(bytes, state: &state).isEmpty)
     }
 
     func test99BytePathDecodesValidFrameCoordinates() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = make99(frame0Flags: 0xE0)  // valid + prox + inRange
         // Frame 0 starts at offset 1: f[1..2]=x LE, f[3..4]=y LE, f[5..6]=pressure (bit5 mask).
         bytes[2] = 0xE8; bytes[3] = 0x03   // x = 1000
@@ -305,7 +305,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
     func test99BytePathProximityExitOnAllZeroFlags() {
         // Flag 0x80 alone: valid + neither prox nor inRange — kernel exit signal.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.lastX = 100
         state.lastY = 200
@@ -346,7 +346,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         ].joined(separator: " ")
         let bytes = hex.split(separator: " ").map { UInt8($0, radix: 16)! }
         XCTAssertEqual(bytes.count, 361)
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let points = decode(bytes, state: &state).compactMap { r -> TabletPoint? in
             if case .pen(let p) = r { return p } else { return nil }
         }

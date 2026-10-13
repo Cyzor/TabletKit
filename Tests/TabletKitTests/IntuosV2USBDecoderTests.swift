@@ -34,7 +34,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         isPenDisplay: true, ringSlotCount: 4)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout IntuosV2Decoder.State,
         family: DeviceFamily = .intuosProGen2, spec: DigitizerSpec? = nil
     ) -> [DecodeResult] {
         let decoder = IntuosV2Decoder()
@@ -60,7 +60,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     // MARK: - Dispatch
 
     func testShort0x10ReportRejected() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 11)
         bytes[0] = 0x10
         XCTAssertTrue(decode(bytes, state: &state).isEmpty)
@@ -68,7 +68,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testShort0x01EmitsMouseButton() {
         // Report ID 0x01 with length ≤ 8 is the cordless-mouse button report.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes: [UInt8] = [0x01, 0x05, 0, 0]  // L + M buttons down
         let results = decode(bytes, state: &state)
         guard case .mouseButton(let mask)? = results.first else {
@@ -85,7 +85,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testHoveringEraserReportsEraser() {
         // 0x10 Invert (eraser end in range) without 0x08 Eraser (pressed).
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let points = penPoints(decode(make0x10(status: 0x70), state: &state))
         XCTAssertEqual(points.last?.eraser, true)
     }
@@ -93,7 +93,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     func testWeakFrameKeepsEraser() {
         // A strong hovering-eraser frame, then a weak one (prox without
         // confidence) at the edge of range: the eraser must not drop out.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         _ = decode(make0x10(status: 0x70), state: &state)
         let weak = penPoints(decode(make0x10(status: 0x40), state: &state))
         XCTAssertEqual(weak.last?.eraser, true)
@@ -102,7 +102,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     // MARK: - 0x10 pen path: tool identity
 
     func testToolEnterOnFirstSightOfToolCode() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         // Need length >= 27 for tool extraction; default make0x10 gives 192.
         // Set a serial so the toolChanged branch picks up the serial path.
         var bytes = make0x10(status: 0x60, toolCode: 0x0842)
@@ -120,7 +120,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testArtPen0x1108NotMisclassifiedAsEraser() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes = make0x10(status: 0x60, toolCode: 0x1108)
         let results = decode(bytes, state: &state)
         let toolEnter = results.compactMap { r -> ToolIdentity? in
@@ -133,7 +133,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     // MARK: - 0x10 pen path: coordinate + pressure decode
 
     func testPenCoordinatesPressureAndButtonsDecoded() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842  // skip toolEnter
         state.currentToolCode = 0x0842
         state.prevInProximity = true
@@ -160,7 +160,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testEraserBitFromStatusEmittedOnPen() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842
         state.currentToolCode = 0x0842
 
@@ -178,7 +178,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         // status = 0x00 (neither prox nor highConf set) → kernel "genuine exit" signal.
         // Cached lastTiltX/Y/Rotation should ride along on the exit event so the
         // app's last frame doesn't snap to (0,0)/0°.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.lastX = 12345
         state.lastY = 6789
@@ -210,7 +210,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         // status = 0x40 (prox=1, highConf=0) is Art Pen rotation-sensor oscillation.
         // Below exit threshold, the decoder should emit cached tilt/rotation so the
         // azimuth doesn't snap to 0° on every low-confidence frame.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.exitFrameCount = 0
         state.hasValidTiltFrame = true
@@ -240,7 +240,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testBoundaryNoiseExitsAtThreshold() {
         // Three 0x40 frames in a row should trigger the proximity exit on the third.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         state.prevInProximity = true
         state.exitFrameCount = 0
         state.hasValidTiltFrame = true
@@ -260,7 +260,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     func testCordlessMousePathEmitsWheelDeltaFromByte16() {
         // Mouse tool codes have low nibble = 0x6 (per kernel + decoder comment).
         // 0x0007 is not a mouse; 0x0806 (5-button mouse) is. Use that.
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = make0x10(status: 0x60, toolCode: 0x0806)
         bytes[17] = 0x99  // serial
         bytes[16] = 0x05  // initial scroll position
@@ -278,7 +278,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testMouseWheelDeltaWrapsCorrectlyAcrossByteBoundary() {
         // 254 → 1 should read as +3 (signed delta via Int8(bitPattern:)).
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = make0x10(status: 0x60, toolCode: 0x0806)
         bytes[17] = 0x99
         bytes[16] = 254
@@ -295,7 +295,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     func testAuxRingPositionDecodedAndCenterButtonReported() {
         // Layout: [0]=0x11 [1]=mechanical keys [3]=center button [4]=ring position (0x7F = none).
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes: [UInt8] = [
             0x11,
             0x01,  // mechanical key 0 pressed
@@ -316,7 +316,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testAuxRingInactiveWhenPosition0x7F() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let bytes: [UInt8] = [0x11, 0x00, 0x00, 0x00, 0x7F, 0, 0, 0, 0]
         let results = decode(bytes, state: &state)
         let aux = results.compactMap { r -> AuxButtons? in
@@ -334,7 +334,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     // pressure is plain 16-bit; hover distance and tiltX share byte 11.
 
     func testOffsetPenReportCoordinatesPressureAndProximity() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 34)
         bytes[0] = 0x1E
         bytes[2] = 0x82                                    // prox (0x80) + button1 (0x02)
@@ -354,7 +354,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testOffsetPenReportHoveringAloneCountsAsInProximity() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var bytes = [UInt8](repeating: 0, count: 34)
         bytes[0] = 0x1E
         bytes[2] = 0x80  // proximity only, no tip switch — hovering, not touching
@@ -368,7 +368,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testOffsetPenReportExitClearsProximity() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         var enter = [UInt8](repeating: 0, count: 34)
         enter[0] = 0x1E
         enter[2] = 0xC0
@@ -397,7 +397,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     // the corrected proximity bit against real hardware.
 
     func testRealCaptureDTH227LightTouchFrame() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC0, 0x0D, 0x77, 0x01, 0x55, 0xD4, 0x00, 0x00, 0x00,
             0x0C, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x4D, 0x6F,
@@ -425,7 +425,7 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     }
 
     func testRealCaptureDTH227FullPressureFrame() {
-        var state = DecoderState()
+        var state = IntuosV2Decoder.State()
         let b: [UInt8] = [
             0x1E, 0x01, 0xC1, 0xDB, 0xFD, 0x00, 0xF4, 0x8D, 0x00, 0xDB, 0x01,
             0x0C, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,

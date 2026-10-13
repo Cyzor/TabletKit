@@ -30,7 +30,7 @@ final class DTUDecoderTests: XCTestCase {
         isPenDisplay: true, ringSlotCount: 0)
 
     private func decode(
-        _ bytes: [UInt8], state: inout DecoderState,
+        _ bytes: [UInt8], state: inout DTUDecoder.State,
         family: DeviceFamily = .dtu
     ) -> [DecodeResult] {
         let decoder = DTUDecoder()
@@ -44,12 +44,12 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Length guard
 
     func testTooShortReturnsEmpty() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         XCTAssertTrue(decode([0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00], state: &st).isEmpty)
     }
 
     func testExactlyEightBytesAccepted() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags=0x20 (prox bit only), zero coords and pressure
         let b: [UInt8] = [0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -60,7 +60,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Coordinate decode (LE16)
 
     func testLE16XYDecoded() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // X = 0x1234 = 4660 (low byte first), Y = 0x5678 = 22136
         // flags=0x20 (prox), no pressure
         let b: [UInt8] = [0x02, 0x20, 0x34, 0x12, 0x78, 0x56, 0x00, 0x00]
@@ -74,7 +74,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - 9-bit pressure
 
     func test9BitPressureFullScale() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // report[6]=0xFF (low 8 bits), report[7]=0x01 (bit 0 = MSB) → 0x1FF = 511
         let b: [UInt8] = [0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x01]
         let r = decode(b, state: &st)
@@ -83,7 +83,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func test9BitPressureLowByteOnly() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // report[6]=0xAA, report[7]=0x00 → pressure=0xAA=170
         let b: [UInt8] = [0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0xAA, 0x00]
         let r = decode(b, state: &st)
@@ -92,7 +92,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func test9BitPressureHighBitIgnoredAboveBit0() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // report[7]=0xFE — only bit 0 contributes; 0xFE has bit 0 clear → no MSB
         // so pressure = report[6] only = 0x10 = 16
         let b: [UInt8] = [0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x10, 0xFE]
@@ -104,7 +104,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Eraser (flags bits 3:2 = 0x0C)
 
     func testEraserBit2Set() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags = 0x20 | 0x04 = 0x24 → bit 2 of 0x0C mask set → isEraser
         let b: [UInt8] = [0x02, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -113,7 +113,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func testEraserBit3Set() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags = 0x20 | 0x08 = 0x28 → bit 3 of 0x0C mask set → isEraser
         let b: [UInt8] = [0x02, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -122,7 +122,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func testPenNotEraser() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags = 0x20 only → bits 3:2 clear → pen (not eraser)
         let b: [UInt8] = [0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -133,7 +133,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Pen buttons
 
     func testPenButton1FromBit1() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags = 0x20 | 0x02 = 0x22
         let b: [UInt8] = [0x02, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -143,7 +143,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func testPenButton2FromBit4() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // flags = 0x20 | 0x10 = 0x30
         let b: [UInt8] = [0x02, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         let r = decode(b, state: &st)
@@ -155,7 +155,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Proximity exit state machine
 
     func testProximityExitEmitsCachedCoordsAndPressureZero() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // Enter at known position.
         let enter: [UInt8] = [0x02, 0x20, 0x00, 0x10, 0x00, 0x08, 0xFF, 0x01]
         _ = decode(enter, state: &st)
@@ -174,7 +174,7 @@ final class DTUDecoderTests: XCTestCase {
     }
 
     func testSecondExitFrameSuppressed() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         _ = decode([0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], state: &st)
         let exit: [UInt8] = [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         _ = decode(exit, state: &st)
@@ -185,7 +185,7 @@ final class DTUDecoderTests: XCTestCase {
     // MARK: - Report ID not checked
 
     func testArbitraryReportIDDecodedWhenLengthSufficient() {
-        var st = DecoderState()
+        var st = DTUDecoder.State()
         // report[0]=0x99 — DTUDecoder does not gate on report ID.
         // flags=0x20 (prox), coords=0x1234/0x5678, pressure=0
         let b: [UInt8] = [0x99, 0x20, 0x34, 0x12, 0x78, 0x56, 0x00, 0x00]
