@@ -125,7 +125,15 @@ extension IntuosV2Decoder {
         // but exclude known Art Pen codes that happen to have bit3 set.
         let toolIsEraser = !isArtPen && (toolCode & 0x0008) != 0
 
-        if toolCode != 0 && (toolCode != state.lastToolCode || serial != state.lastSerial) {
+        // Every report repeats the tool code, even after the pen leaves, so a
+        // pen that's out is announced only with a frame that has it in range.
+        let hasInRangeFrame = (0..<7).contains { i in
+            let offset = 1 + i * 14
+            return offset + 14 <= report.count && report[offset] & 0xA0 == 0xA0
+        }
+        if toolCode != 0 && (toolCode != state.lastToolCode || serial != state.lastSerial)
+            && (state.prevInProximity || hasInRangeFrame)
+        {
             state.lastToolCode = toolCode
             state.lastSerial = serial
             state.currentToolCode = toolCode
@@ -214,6 +222,11 @@ extension IntuosV2Decoder {
                 }
                 break
             }
+
+            // Edge noise while the pen is out isn't a return. Only an in-range
+            // frame brings it back, as in the Linux driver; otherwise a lone
+            // 0xC0 after an exit reads as a hovering pen that never leaves.
+            if !inRange && !state.prevInProximity { continue }
 
             // Boundary noise (0xC0, prox=1/inRange=0): threshold before
             // exiting, but keep decoding and sending point data below — only
