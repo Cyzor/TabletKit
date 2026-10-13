@@ -9,9 +9,9 @@
 //     (1 byte header + 7 × 14-byte pen frames; no metadata, pad, or battery)
 //
 // These tests exist to lock in dispatch, the proximity-exit state machine
-// (the area flagged in Architecture-Improvement-Plan.md as the most under-tested
-// code), and the eraser / barrel-button / battery / pad sub-paths in the 361-byte
-// container. They are not exhaustive — add cases as bugs are discovered.
+// (once the least-tested code here), and the eraser / barrel-button / battery /
+// pad sub-paths in the 361-byte container. They are not exhaustive — add cases
+// as bugs are discovered.
 import XCTest
 @testable import TabletKit
 

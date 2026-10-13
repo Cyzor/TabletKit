@@ -5,7 +5,7 @@ TabletKit's device registry only exists as Swift (`WacomDeviceRegistry.swift`),
 which means a non-Swift consumer — a script, a website, another platform's
 driver — can't read it without either a Swift toolchain or its own from-scratch
 parser. OpenTabletDriver's per-vendor JSON configs are the model worth
-borrowing here (see `TabletKit-Public-API-Design.md`, §5 item 5): a
+borrowing here: a
 versioned, machine-readable snapshot alongside the Swift source, not a
 replacement for it. `registry_lib.py` already parses the Swift for the audit
 scripts, so this is a serialization step, not a redesign.

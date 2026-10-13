@@ -28,8 +28,7 @@
 //
 // This is not yet a facade. TabletKit doesn't have a session layer —
 // enumeration, interface routing, and decoder selection are still the
-// caller's job (see TabletKit-Public-API-Design.md's Tier 2 in the
-// project's design notes). When that layer exists, its entry point belongs
-// in this file, replacing this comment's four-step manual loop with a real
-// one-call API. Until then, this file exists to be found first, not to
-// hide the current wiring cost.
+// caller's job. When that layer exists, its entry point belongs in this
+// file, replacing this comment's four-step manual loop with a real one-call
+// API. Until then, this file exists to be found first, not to hide the
+// current wiring cost.

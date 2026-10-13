@@ -2,9 +2,8 @@
 //
 // Pure-math tests for the synthetic-modifier bit logic extracted from
 // InputInjector. These cover the algebra; the surrounding state machine
-// (watchdogs, ref counts, thread ownership) is not testable from the
-// SwiftPM package and is documented in
-// Notes/InputInjector-Modifier-State-Invariants.md.
+// (watchdogs, ref counts, thread ownership) lives in the app and is not
+// testable from the SwiftPM package.
 import XCTest
 import CoreGraphics
 @testable import TabletKit

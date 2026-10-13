@@ -67,7 +67,7 @@ final class XencelabsDecoderTests: XCTestCase {
 
     // MARK: - Verbatim captured frames
 
-    /// Driverless hover frame from xencelabs-pressure.txt.
+    /// Driverless hover frame, captured verbatim.
     func testCapturedHoverFrame() {
         var state = DecoderState()
         let results = decode(
@@ -95,8 +95,8 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertTrue(p.inProximity)
     }
 
-    /// Driver-initialized barrel-button frame (tag 0xa4) from
-    /// xencelabs-native-input.txt — bit7 must not change pen decoding.
+    /// Driver-initialized barrel-button frame (tag 0xa4), captured verbatim —
+    /// bit7 must not change pen decoding.
     func testCapturedBarrelButtonFrame() {
         var state = DecoderState()
         let results = decode(
@@ -238,11 +238,10 @@ final class XencelabsDecoderTests: XCTestCase {
         XCTAssertLessThan(abs(p.tiltY), 1.0)
     }
 
-    /// Verbatim adjacent frames from a live mid-screen right sweep
-    /// (xencelabs-middle-to-right-edge.txt): the low X word wraps 65516→23
-    /// while byte 10 flips 0→1. Reading only 16 bits made X wrap mod 65536
-    /// in the middle of the screen ("Pac-Man" cursor); with the high byte
-    /// the coordinates are continuous.
+    /// Verbatim adjacent frames from a live mid-screen right sweep: the low
+    /// X word wraps 65516→23 while byte 10 flips 0→1. Reading only 16 bits
+    /// made X wrap mod 65536 in the middle of the screen ("Pac-Man" cursor);
+    /// with the high byte the coordinates are continuous.
     func testXHighByteDecodesContinuouslyAcrossLowWordWrap() {
         var state = DecoderState()
         let before = penPoint(decode(
