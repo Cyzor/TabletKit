@@ -43,6 +43,19 @@ jobs:
             -Xswiftc -strict-concurrency=complete \
             -Xswiftc -warnings-as-errors
 
+  # On next, the public API only shrinks: every public symbol must appear in
+  # public-api.txt, so an addition is a deliberate edit to that file.
+  public-api:
+    if: github.ref_name == 'next' || github.base_ref == 'next'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.3"
+      - name: Compare public symbols with public-api.txt
+        run: python3 tools/check-public-api.py
+
   api-breakage:
     runs-on: macos-15
     steps:
