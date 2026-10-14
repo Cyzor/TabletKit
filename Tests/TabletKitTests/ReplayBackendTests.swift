@@ -109,14 +109,8 @@ final class ReplayBackendTests: XCTestCase {
 
     /// Our own and submitted captures, kept outside the repo.
     func testRealCapturesLoad() throws {
-        let scratch = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Notes/Scratch/Device-Diagnostics")
-        guard FileManager.default.fileExists(atPath: scratch.path) else {
-            throw XCTSkip("No captures outside the repo")
-        }
-        let zips = (FileManager.default.enumerator(at: scratch, includingPropertiesForKeys: nil)?
-            .compactMap { $0 as? URL } ?? []).filter { $0.pathExtension == "zip" }
+        let zips = PrivateRecordings.captures
+        guard !zips.isEmpty else { throw XCTSkip("No captures outside the repo") }
         var loaded = 0
         for zip in zips {
             let members = unzip(zip, ["-Z1"]).map { String(decoding: $0, as: UTF8.self) } ?? ""

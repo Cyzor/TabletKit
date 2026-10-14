@@ -10,15 +10,8 @@ import XCTest
 
 final class TabletInputReplayTests: XCTestCase {
 
-    private var traceDirectory: URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Notes/Scratch/Device-Diagnostics/Traces")
-    }
-
     func testTracesReplayEventForEvent() throws {
-        let traces = (try? FileManager.default.contentsOfDirectory(at: traceDirectory, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension == "jsonl" }.sorted { $0.path < $1.path } ?? []
+        let traces = PrivateRecordings.traces
         guard !traces.isEmpty else { throw XCTSkip("No report traces outside the repo") }
         for trace in traces {
             let recording = try ReplayRecording(trace: String(contentsOf: trace, encoding: .utf8))
