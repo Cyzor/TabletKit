@@ -57,6 +57,18 @@ final class InterfaceDecisionTests: XCTestCase {
         XCTAssertNotEqual(name(decide(facts(pid: sensor), hold: false)), "hold")
     }
 
+    /// A known tablet marked unregistered routes as an unknown one would.
+    func testUnregisteredProductTakesTheFallbackPath() {
+        var known = facts(pid: 0x0357)
+        known.isUnregistered = true
+        XCTAssertEqual(name(decide(known, hasXY: true, kind: .pen)), "wacom fallback")
+        XCTAssertEqual(name(decide(known, hasXY: true, kind: .touchOnly)), "skip")
+        XCTAssertEqual(name(decide(known)), "skip")
+        var other = facts(vendor: 0x256C, pid: 0x0064)
+        other.isUnregistered = true
+        XCTAssertEqual(name(decide(other, hasXY: true, kind: .pen)), "generic")
+    }
+
     func testRegisteredDevices() {
         // PTH-860: the 0x01 interface without a pen collection waits for 0xFF00.
         XCTAssertEqual(name(decide(facts(pid: 0x0358, page: 0x01, pairs: [(0x01, 0x02)]))), "defer")

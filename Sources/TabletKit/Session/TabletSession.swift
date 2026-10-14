@@ -28,6 +28,10 @@ public final class TabletSession {
     public private(set) var tablets: [ConnectedTablet] = []
     /// Interfaces routed to no driver here, which the delegate may drive itself.
     public private(set) var unclaimed: [any HIDInterface] = []
+    /// Products routed as if the registry didn't know them, so their pen
+    /// interfaces reach the delegate as unclaimed. For testing fallback
+    /// drivers on a known tablet; set it before ``start()``.
+    public var unregisteredProductIDs: Set<Int> = []
     /// How long a touch sensor waits for its tablet before routing alone.
     package var heldSensorTimeout: TimeInterval = 10
 
@@ -120,7 +124,8 @@ public final class TabletSession {
         let facts = InterfaceRouting.Facts(
             vendorID: interface.vendorID, productID: identity.productID, usagePage: interface.usagePage,
             usagePairs: interface.usagePairs.map { (page: $0.page, usage: $0.usage) },
-            isBluetooth: identity.isBluetooth, overrideSpec: overrideSpec)
+            isBluetooth: identity.isBluetooth, overrideSpec: overrideSpec,
+            isUnregistered: unregisteredProductIDs.contains(identity.productID))
         let attached = tablets.filter { !$0.transports.isEmpty }.map(\.productID)
         let decision = InterfaceRouting.decide(
             facts, attachedProductIDs: attached, holdTouchCompanion: holdingSensor

@@ -512,6 +512,7 @@ property TabletQuirks.usbModeReadBack
 property TabletSession.delegate
 property TabletSession.tablets
 property TabletSession.unclaimed
+property TabletSession.unregisteredProductIDs
 property TabletSpec.activeHeightMM
 property TabletSpec.activeWidthMM
 property TabletSpec.bezelButtonCount

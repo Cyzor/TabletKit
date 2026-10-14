@@ -59,10 +59,12 @@ package enum InterfaceRouting {
         package var isBluetooth: Bool
         /// A spec from outside the Wacom registry (Xencelabs); replaces the lookup.
         package var overrideSpec: TabletSpec?
+        /// Route as if no registry knew the product.
+        package var isUnregistered: Bool
 
         package init(
             vendorID: Int, productID: Int, usagePage: Int, usagePairs: [UsagePair],
-            isBluetooth: Bool, overrideSpec: TabletSpec? = nil
+            isBluetooth: Bool, overrideSpec: TabletSpec? = nil, isUnregistered: Bool = false
         ) {
             self.vendorID = vendorID
             self.productID = productID
@@ -70,6 +72,7 @@ package enum InterfaceRouting {
             self.usagePairs = usagePairs
             self.isBluetooth = isBluetooth
             self.overrideSpec = overrideSpec
+            self.isUnregistered = isUnregistered
         }
     }
 
@@ -124,6 +127,12 @@ package enum InterfaceRouting {
         // Pinned to 0x056A: nothing on the consumer 0x0531 VID pairs with it.
         if facts.vendorID == 0x056A && productID == 0x0084 {
             return .wirelessDongle
+        }
+
+        if facts.isUnregistered {
+            let descriptor = probe()
+            guard descriptor.hasXY, descriptor.kind != .touchOnly else { return .skip }
+            return isWacom ? .wacomFallback : .genericDigitizer
         }
 
         // Ahead of the registry lookup: sensors have name-only rows that
