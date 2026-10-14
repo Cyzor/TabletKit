@@ -19,6 +19,10 @@ final class HotPathBudgetTests: XCTestCase {
     /// A 1 kHz pen leaves 1,000 µs per report for the whole pipeline.
     private let decodeCeilingNanos: Double = 5_000
 
+    /// The input path does about twice the decoder's work: 1 µs here, and
+    /// 3 to 5.5 µs on CI's shared runners.
+    private let inputCeilingNanos: Double = 10_000
+
     /// Allowed growth in bytes still allocated after the full run.
     private let retainedGrowthCeiling = 256 * 1024
 
@@ -84,7 +88,7 @@ final class HotPathBudgetTests: XCTestCase {
 
             print("hot-path input \(spec.name) \(String(format: "%.0f", inputNanos)) ns/report, decoder alone \(String(format: "%.0f", decodeNanos)) ns, retained \(growth) B")
             XCTAssertGreaterThan(sink, 0)
-            XCTAssertLessThan(inputNanos, decodeCeilingNanos, "\(fixture.device): input path cost regressed")
+            XCTAssertLessThan(inputNanos, inputCeilingNanos, "\(fixture.device): input path cost regressed")
             XCTAssertLessThan(growth, retainedGrowthCeiling, "\(fixture.device): input path retains memory")
         }
     }

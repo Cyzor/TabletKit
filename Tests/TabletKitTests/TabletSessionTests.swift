@@ -84,6 +84,8 @@ final class TabletSessionTests: XCTestCase {
         XCTAssertTrue(transport.primary === backend.interfaces[1])
         XCTAssertEqual(transport.interfaces.count, 2)
         XCTAssertTrue(session.transport(for: backend.interfaces[0]) === transport)
+        // The connect sequence writes on the output queue.
+        transport.connection.output.drain()
         XCTAssertEqual(backend.interfaces[1].writes.first, "inputMode")
     }
 
