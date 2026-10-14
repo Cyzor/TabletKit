@@ -171,17 +171,24 @@ public struct GenericPenDecoder: Sendable {
     }
 
     /// Decodes one raw input report, borrowed for the duration of the call.
+    ///
+    /// A layout with report ID 0 comes from a descriptor that declares no
+    /// report IDs, so its reports start with data.
     public func decode(report: HIDReport) -> TabletPoint? {
-        guard report.count > layout.payloadBytes,
-              report.reportID == layout.reportID
+        let idBytes = layout.reportID == 0 ? 0 : 1
+        guard report.count >= layout.payloadBytes + idBytes,
+              idBytes == 0 || report.reportID == layout.reportID
         else { return nil }
 
-        let payload = Array(UnsafeBufferPointer(start: report.pointer + 1, count: report.count - 1))
+        let payload = Array(UnsafeBufferPointer(start: report.pointer + idBytes, count: report.count - idBytes))
 
         let x = extractField(layout.x, from: payload)
         let y = extractField(layout.y, from: payload)
 
-        let pressure = layout.tipPressure.map { extractField($0, from: payload) } ?? 0
+        // A pen with no pressure field presses at full scale while its tip
+        // is down, so taps still click.
+        let tipDown = layout.tipSwitch.map { extractField($0, from: payload) != 0 } ?? false
+        let pressure = layout.tipPressure.map { extractField($0, from: payload) } ?? (tipDown ? 1 : 0)
 
         // Tilt is a signed field whose logical range is the degree bound;
         // TabletPoint wants -1.0...1.0, so normalize by the field's own

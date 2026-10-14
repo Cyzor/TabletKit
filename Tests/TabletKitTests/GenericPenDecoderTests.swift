@@ -202,6 +202,34 @@ final class GenericPenDecoderTests: XCTestCase {
         XCTAssertEqual(point.maxPressure, 1)  // never zero — avoids a divide by zero downstream
     }
 
+    /// A pen with no pressure field presses at full scale while its tip is
+    /// down, so a tap clicks.
+    func testTipOnlyPenPressesAtFullScale() throws {
+        let layout = try layout(fromHex: Self.tipOnlyPen, reportID: 0x10)
+        let decoder = GenericPenDecoder(layout: layout)
+        var report = [UInt8](repeating: 0, count: layout.payloadBytes + 1)
+        report[0] = 0x10
+        report[1] = 0b11  // tip and in range
+        let point = try XCTUnwrap(decoder.decode(report: report))
+        XCTAssertEqual(point.normalizedPressure, 1)
+    }
+
+    /// A descriptor with no report IDs sends reports that start with data.
+    func testReportWithoutIDDecodesFromFirstByte() throws {
+        let hex = Self.tipOnlyPen.replacingOccurrences(of: "a1018510", with: "a101")
+        let layout = try layout(fromHex: hex, reportID: 0)
+        let decoder = GenericPenDecoder(layout: layout)
+        var report = [UInt8](repeating: 0, count: layout.payloadBytes)
+        report[0] = 0b10  // in range
+        setLE(&report, at: 1, bytes: 2, value: 1234)
+        setLE(&report, at: 3, bytes: 2, value: 5678)
+        let point = try XCTUnwrap(decoder.decode(report: report))
+        XCTAssertEqual(point.x, 1234)
+        XCTAssertEqual(point.y, 5678)
+        XCTAssertTrue(point.inProximity)
+        XCTAssertNil(decoder.decode(report: Array(report.prefix(3))))
+    }
+
     /// A report for a different ID, or one too short, is rejected.
     func testForeignOrShortReportIsRejected() throws {
         let layout = try layout(fromHex: TouchDescriptorFixtures.vendorPagePen, reportID: 0x10)
@@ -216,6 +244,10 @@ final class GenericPenDecoderTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// A stylus with only Tip Switch, In Range, X, and Y, on report 0x10.
+    private static let tipOnlyPen = "050d0902a10185100942093215002501750195028102950681030501"
+        + "09300931150026ff7f751095028102c0"
 
     private func layout(fromHex hex: String, reportID: UInt8) throws -> GenericPenLayout {
         let parsed = try HIDReportDescriptorParser.parse(hex: hex)

@@ -3,12 +3,11 @@
 
 /// Accumulates standard HID digitizer element values into a `TabletPoint`.
 ///
-/// Pure and vendor-neutral — no IOKit. The app's `GenericHIDDigitizer` reads
-/// element values via IOKit value callbacks and forwards each `(usagePage,
-/// usage, value)` tuple to `update(usagePage:usage:value:)`; `point()` then
-/// produces the current frame. Keeping this logic here (rather than inside the
-/// IOKit callback) makes the proximity rules, click-pressure synthesis, and
-/// usage mapping unit-testable without hardware.
+/// Pure and vendor-neutral — no IOKit. Feed each `(usagePage, usage, value)`
+/// from IOKit's value callbacks to `update(usagePage:usage:value:)`, and
+/// `point()` produces the current frame. Element values arrive one at a time,
+/// so a frame can be one element stale; ``GenericPenDecoder`` reads whole
+/// reports instead.
 ///
 /// Usages follow the HID Usage Tables: Generic Desktop X/Y on page `0x01`,
 /// everything else on the Digitizer page `0x0D`.
