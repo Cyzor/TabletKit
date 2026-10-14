@@ -39,9 +39,14 @@ public enum DigitizerInterfaceKind: Equatable, Sendable {
 public func classifyDigitizerInterface(
     descriptor: DescriptorLayout
 ) -> DigitizerInterfaceKind {
+    var sawFinger = false
     for report in descriptor.reports where report.direction == .input {
+        // Wacom declares fingers on a vendor page, with its own X usage.
+        let reportIsFinger = report.fields.contains(where: GenericPenLayout.isTouch)
         for field in report.fields
-        where field.extendedUsage == PrecisionTouchLayout.Usage.x && !field.isConstant {
+        where !field.isConstant && (field.extendedUsage == PrecisionTouchLayout.Usage.x
+            || (field.usage == DigitizerUsage.vendorX
+                && DigitizerUsage.isDecodable(usagePage: field.usagePage, usage: field.usage))) {
             // Relative X never indicates a pen. Windows Precision Touchpad
             // devices are required to declare a legacy Mouse collection
             // (Generic Desktop Mouse → relative X/Y) for boot compatibility
@@ -51,6 +56,7 @@ public func classifyDigitizerInterface(
             // digitizer's X/Y are absolute by definition.
             if field.isRelative { continue }
 
+            if reportIsFinger { sawFinger = true; continue }
             let isTouch =
                 field.collectionPath.contains(PrecisionTouchLayout.Usage.touchScreenCollection)
                 || field.collectionPath.contains(PrecisionTouchLayout.Usage.touchPadCollection)
@@ -67,10 +73,11 @@ public func classifyDigitizerInterface(
     // what the device is, and some pen tablets declare a stylus under Touch
     // Screen. Withholding the pen driver from one of those would silently take
     // a working device away from its only driver, so the verdict additionally
-    // requires a report that actually tracks multiple contacts.
+    // requires a report that actually tracks multiple contacts, or one that
+    // declares a finger.
     let multiContact = PrecisionTouchLayout.derive(from: descriptor)
         .contains { $0.isMultiContact }
-    return multiContact ? .touchOnly : .undetermined
+    return multiContact || sawFinger ? .touchOnly : .undetermined
 }
 
 /// Classifies a live device by reading and parsing its report descriptor.

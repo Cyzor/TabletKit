@@ -69,6 +69,10 @@ public struct GenericPenLayout: Equatable, Sendable {
     /// Derives a layout from a single report, or `nil` when it is not a pen
     /// digitizer report.
     public static func derive(from report: DescriptorReport) -> GenericPenLayout? {
+        // A finger has a tip switch and X/Y too. Wacom declares its fingers
+        // on a vendor page, outside any Touch Screen collection.
+        guard !report.fields.contains(where: isTouch) else { return nil }
+
         var x: DescriptorField?
         var y: DescriptorField?
         var tipSwitch: DescriptorField?
@@ -142,6 +146,15 @@ public struct GenericPenLayout: Equatable, Sendable {
             hoverDistance: hoverDistance,
             logicalMaxX: x.logicalMax, logicalMaxY: y.logicalMax,
             logicalMaxPressure: tipPressure?.logicalMax ?? 0)
+    }
+}
+
+extension GenericPenLayout {
+    /// Whether a field sits in a Finger collection, on the Digitizer page or
+    /// a vendor page. Contact usages don't count: Wacom declares Contact
+    /// Count inside its Stylus collections.
+    static func isTouch(_ field: DescriptorField) -> Bool {
+        field.collectionPath.contains { ($0 >> 16 == 0x0D || $0 >> 16 >= 0xFF00) && $0 & 0xFFFF == 0x22 }
     }
 }
 

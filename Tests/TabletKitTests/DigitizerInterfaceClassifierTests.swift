@@ -65,6 +65,16 @@ final class DigitizerInterfaceClassifierTests: XCTestCase {
         XCTAssertTrue(PrecisionTouchLayout.derive(from: touch).contains { $0.isMultiContact })
     }
 
+    /// A vendor-page Finger collection is touch, as on Intuos Pro tablets.
+    /// Without it, the same vendor X/Y is a pen.
+    func testVendorPageFingerIsTouchOnly() throws {
+        XCTAssertEqual(try classify(TouchDescriptorFixtures.vendorPageFinger), .touchOnly)
+        let unwrapped = TouchDescriptorFixtures.vendorPageFinger
+            .replacingOccurrences(of: "0922a102", with: "")
+            .replacingOccurrences(of: "c0c0", with: "c0")
+        XCTAssertEqual(try classify(unwrapped), .pen)
+    }
+
     /// An opaque vendor descriptor with no X/Y at all yields no information —
     /// never a `.touchOnly` verdict, which the router would act on.
     func testOpaqueInterfaceIsUndetermined() throws {

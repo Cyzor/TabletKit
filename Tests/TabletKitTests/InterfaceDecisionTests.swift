@@ -62,7 +62,7 @@ final class InterfaceDecisionTests: XCTestCase {
         var known = facts(pid: 0x0357)
         known.isUnregistered = true
         XCTAssertEqual(name(decide(known, hasXY: true, kind: .pen)), "wacom fallback")
-        XCTAssertEqual(name(decide(known, hasXY: true, kind: .touchOnly)), "skip")
+        XCTAssertEqual(name(decide(known, hasXY: true, kind: .touchOnly)), "observe")
         XCTAssertEqual(name(decide(known)), "skip")
         var other = facts(vendor: 0x256C, pid: 0x0064)
         other.isUnregistered = true

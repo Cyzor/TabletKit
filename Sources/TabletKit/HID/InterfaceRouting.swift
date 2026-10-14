@@ -131,7 +131,8 @@ package enum InterfaceRouting {
 
         if facts.isUnregistered {
             let descriptor = probe()
-            guard descriptor.hasXY, descriptor.kind != .touchOnly else { return .skip }
+            guard descriptor.hasXY else { return .skip }
+            if descriptor.kind == .touchOnly { return .observeTouchOnly }
             return isWacom ? .wacomFallback : .genericDigitizer
         }
 

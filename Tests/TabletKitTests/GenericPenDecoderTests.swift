@@ -77,6 +77,29 @@ final class GenericPenDecoderTests: XCTestCase {
         XCTAssertEqual(layouts.map(\.reportID), [0x10])
     }
 
+    /// A vendor-page Finger collection is touch, not a pen, though it has
+    /// a tip switch and X/Y. Without the Finger collection the same report
+    /// is a pen.
+    func testVendorPageFingerIsNotDerivedAsPen() throws {
+        let finger = try HIDReportDescriptorParser.parse(hex: TouchDescriptorFixtures.vendorPageFinger)
+        XCTAssertTrue(GenericPenLayout.derive(from: finger).isEmpty)
+
+        let unwrapped = TouchDescriptorFixtures.vendorPageFinger
+            .replacingOccurrences(of: "0922a102", with: "")
+            .replacingOccurrences(of: "c0c0", with: "c0")
+        let pen = try HIDReportDescriptorParser.parse(hex: unwrapped)
+        XCTAssertEqual(GenericPenLayout.derive(from: pen).map(\.reportID), [0x21])
+    }
+
+    /// Wacom declares Contact Count inside its Stylus collections, as on
+    /// the PTK-870. That report is still a pen.
+    func testContactCountInStylusIsStillPen() throws {
+        let hex = TouchDescriptorFixtures.pen.replacingOccurrences(
+            of: "8102c0c0", with: "81020954150025017508950181 02c0c0".replacingOccurrences(of: " ", with: ""))
+        XCTAssertEqual(GenericPenLayout.derive(from: try HIDReportDescriptorParser.parse(hex: hex)).map(\.reportID), [0x10])
+        XCTAssertEqual(classifyDigitizerInterface(descriptor: try HIDReportDescriptorParser.parse(hex: hex)), .pen)
+    }
+
     /// A pen declared under a Touch Screen collection (the false positive
     /// `classifyDigitizerInterface` guards against) must not yield a pen
     /// layout either — it is meant to reach `PrecisionTouchDecoder`, not this

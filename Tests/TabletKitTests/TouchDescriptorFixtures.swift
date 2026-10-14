@@ -165,4 +165,13 @@ enum TouchDescriptorFixtures {
         "089501150026ff008102050109307510950115002600368102093126601e810205",
         "0d094875081500264700810209492628008102c0c0",
     ].joined()
+
+    /// Touch the way Intuos Pro tablets declare it: a vendor-page (0xFF00)
+    /// application whose Finger collection holds a tip switch and Wacom's
+    /// vendor X/Y, with no Touch Screen collection anywhere. One finger, on
+    /// report `0x21`.
+    static let vendorPageFinger: String = [
+        "0600ff0905a101852109 22a102094215002501750195018102950781030a3001",
+        "150026ff7f751095018102 0a3101810 2c0c0",
+    ].joined().replacingOccurrences(of: " ", with: "")
 }
