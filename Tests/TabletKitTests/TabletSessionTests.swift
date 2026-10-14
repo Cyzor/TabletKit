@@ -8,9 +8,8 @@ import XCTest
 @testable import TabletKit
 
 /// Records what a session reports. Replay runs everything on main.
-final class RecordingDelegate: TabletSessionDelegate, @unchecked Sendable {
+final class RecordingDelegate: TabletSessionDelegate, TabletInputSink, @unchecked Sendable {
     var log: [String] = []
-    var events: [Int: [TabletEvent]] = [:]
     var lastBatch: [TabletEvent] = []
     var reports = 0
     var unclaimed: [UnclaimedKind] = []
@@ -34,11 +33,11 @@ final class RecordingDelegate: TabletSessionDelegate, @unchecked Sendable {
     func session(_ session: TabletSession, transport: TabletTransport, didReadSerial serial: UInt32) {
         serials.append(serial)
     }
-    func transport(_ id: TabletTransport.ID, didDecode events: [TabletEvent], at receivedNs: UInt64) {
-        self.events[id, default: []] += events
+    func session(_ session: TabletSession, inputSinkFor transport: TabletTransport) -> any TabletInputSink { self }
+    func didDecode(_ events: [TabletEvent], from report: HIDReport, on interface: any HIDInterface, at receivedNs: UInt64) {
         lastBatch += events
     }
-    func transport(_ id: TabletTransport.ID, didReceive report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface) {
+    func didReceive(_ report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface) {
         reports += 1
     }
 }

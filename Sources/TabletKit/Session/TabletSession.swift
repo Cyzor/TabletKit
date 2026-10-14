@@ -15,17 +15,17 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "session
 /// transport share a ``TabletTransport``, and a tablet's transports share a
 /// ``ConnectedTablet``. Interfaces that arrive before the one that takes
 /// them are held until it does, and a touch sensor whose tablet never
-/// appears is routed on its own after ``heldSensorTimeout``.
+/// appears is routed on its own after 10 seconds.
 ///
 /// Three executors, as the delegate's methods say: the main actor for
 /// lifecycle, the input thread for reports and events, and one output queue
 /// per transport for the connect sequence and control writes.
 @MainActor
-package final class TabletSession {
-    package private(set) weak var delegate: (any TabletSessionDelegate)?
-    package private(set) var tablets: [ConnectedTablet] = []
+public final class TabletSession {
+    public private(set) weak var delegate: (any TabletSessionDelegate)?
+    public private(set) var tablets: [ConnectedTablet] = []
     /// Interfaces routed to no driver here, which the delegate may drive itself.
-    package private(set) var unclaimed: [any HIDInterface] = []
+    public private(set) var unclaimed: [any HIDInterface] = []
     /// How long a touch sensor waits for its tablet before routing alone.
     package var heldSensorTimeout: TimeInterval = 10
 
@@ -43,6 +43,13 @@ package final class TabletSession {
 
     private static let receiverProductID = 0x0084
 
+    /// A session over the system's HID stack. It matches every interface
+    /// from `vendorIDs`, and any vendor's pen digitizer when
+    /// `anyPenDigitizer` is set.
+    public convenience init(vendorIDs: [Int], anyPenDigitizer: Bool, delegate: any TabletSessionDelegate) {
+        self.init(backend: IOKitBackend(vendorIDs: vendorIDs, anyPenDigitizer: anyPenDigitizer), delegate: delegate)
+    }
+
     package init(backend: any HIDBackend, delegate: any TabletSessionDelegate) {
         self.backend = backend
         self.delegate = delegate
@@ -51,16 +58,16 @@ package final class TabletSession {
     /// Starts listening. Returns the result of opening HID access, which
     /// fails without Input Monitoring permission.
     @discardableResult
-    package func start() -> IOReturn {
+    public func start() -> IOReturn {
         backend.start(
             attached: { [weak self] in self?.attach($0) },
             detached: { [weak self] in self?.detach($0) })
     }
 
     /// Tries HID access again, as after Input Monitoring is granted.
-    package func retryOpen() -> IOReturn { backend.retryOpen() }
+    public func retryOpen() -> IOReturn { backend.retryOpen() }
 
-    package func stop() {
+    public func stop() {
         backend.stop()
         for tablet in tablets {
             for transport in tablet.transports { transport.close() }
@@ -76,14 +83,14 @@ package final class TabletSession {
     }
 
     /// Sends every tablet's init again, as after the Mac wakes.
-    package func reawakenAll() {
+    public func reawakenAll() {
         for tablet in tablets {
             for transport in tablet.transports { transport.reawaken() }
         }
     }
 
     /// The transport an interface belongs to.
-    package func transport(for interface: any HIDInterface) -> TabletTransport? {
+    public func transport(for interface: any HIDInterface) -> TabletTransport? {
         transportOf[ObjectIdentifier(interface)]
     }
 
@@ -190,7 +197,7 @@ package final class TabletSession {
         transportOf[ObjectIdentifier(interface)] = transport
         if isWireless { receiverHomes[identity.key] = tablet }
         delegate?.session(self, didAttach: transport, to: tablet)
-        if !transport.open() { delegate?.session(self, transportDidChangeState: transport) }
+        if !transport.open(sink: delegate?.session(self, inputSinkFor: transport)) { delegate?.session(self, transportDidChangeState: transport) }
 
         // Interfaces that arrived first, waiting for this one.
         for held in heldSiblings.release(interface.productID).map(\.interface) {
@@ -297,10 +304,10 @@ package final class TabletSession {
 /// One physical tablet: every transport it's connected over, under one
 /// identity.
 @MainActor
-package final class ConnectedTablet: Identifiable {
-    package nonisolated let id: Int
-    package internal(set) var key: DeviceInstanceKey
-    package internal(set) var transports: [TabletTransport] = []
+public final class ConnectedTablet: Identifiable {
+    public nonisolated let id: Int
+    public internal(set) var key: DeviceInstanceKey
+    public internal(set) var transports: [TabletTransport] = []
 
     init(id: Int, key: DeviceInstanceKey) {
         self.id = id
@@ -308,11 +315,11 @@ package final class ConnectedTablet: Identifiable {
     }
 
     /// Transport variants folded onto one product ID.
-    package var productID: Int { key.productID }
+    public var productID: Int { key.productID }
 
     /// The transport that drives the tablet when it has more than one, as
     /// the Quick Keys puck does on its cable and receiver at once.
-    package var activeTransport: TabletTransport? {
+    public var activeTransport: TabletTransport? {
         transports.max {
             VendorDeviceRegistry.transportPriority(forRawProductID: $0.rawProductID)
                 < VendorDeviceRegistry.transportPriority(forRawProductID: $1.rawProductID)
@@ -321,7 +328,7 @@ package final class ConnectedTablet: Identifiable {
 }
 
 /// Why the session left an interface to someone else.
-package enum UnclaimedKind: Sendable, Equatable {
+public enum UnclaimedKind: Sendable, Equatable {
     /// A known vendor's device with no decoder.
     case recognizedOnly
     /// A multitouch interface the registry doesn't know: watch, inject nothing.
@@ -334,14 +341,16 @@ package enum UnclaimedKind: Sendable, Equatable {
 
 /// What a session tells its owner.
 ///
-/// Lifecycle methods run on the main actor. ``transport(_:didDecode:at:)``
-/// and ``transport(_:didReceive:at:from:)`` run on the input thread and must
-/// return quickly; ``transport(_:didRun:)`` runs on the transport's output
-/// queue.
-package protocol TabletSessionDelegate: AnyObject, Sendable {
+/// Everything runs on the main actor except ``transport(_:didRun:)``, which
+/// runs on the transport's output queue. Reports go to the transport's
+/// ``TabletInputSink`` instead.
+public protocol TabletSessionDelegate: AnyObject, Sendable {
     /// A transport connected, joining `tablet`. It opens right after this,
     /// so its reports can already arrive.
     @MainActor func session(_ session: TabletSession, didAttach transport: TabletTransport, to tablet: ConnectedTablet)
+    /// Where a connecting transport's reports go, for as long as it's
+    /// connected. Asked once, just before it opens.
+    @MainActor func session(_ session: TabletSession, inputSinkFor transport: TabletTransport) -> any TabletInputSink
     /// A transport went. `tablet` is gone too if it has no transports left.
     @MainActor func session(_ session: TabletSession, didDetach transport: TabletTransport, from tablet: ConnectedTablet)
     /// A receiver moved to the tablet it relays. `old` is gone if it has no
@@ -361,26 +370,34 @@ package protocol TabletSessionDelegate: AnyObject, Sendable {
     @MainActor func session(_ session: TabletSession, didFindUnclaimed interface: any HIDInterface, as kind: UnclaimedKind)
     @MainActor func session(_ session: TabletSession, didLoseUnclaimed interface: any HIDInterface)
 
-    /// One report's events, with the time it arrived. On the input thread.
-    func transport(_ id: TabletTransport.ID, didDecode events: [TabletEvent], at receivedNs: UInt64)
-    /// Every report before decoding, as for capture. On the input thread.
-    func transport(_ id: TabletTransport.ID, didReceive report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface)
     /// Each write and read of the connect sequence. On the output queue.
-    func transport(_ id: TabletTransport.ID, didRun step: TabletConnection.ConnectStep)
+    func transport(_ id: TabletTransport.ID, didRun step: ConnectStep)
+}
+
+/// Where one transport's reports arrive, on the input thread. Both methods
+/// must return quickly: the next report waits.
+public protocol TabletInputSink: AnyObject, Sendable {
+    /// Every report, before decoding, as for capture.
+    func didReceive(_ report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface)
+    /// One report's events, none or more, with the report and when it arrived.
+    func didDecode(_ events: [TabletEvent], from report: HIDReport, on interface: any HIDInterface, at receivedNs: UInt64)
+}
+
+extension TabletInputSink {
+    public func didReceive(_ report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface) {}
 }
 
 extension TabletSessionDelegate {
-    @MainActor package func session(
+    @MainActor public func session(
         _ session: TabletSession, didRegroup transport: TabletTransport, from old: ConnectedTablet, to new: ConnectedTablet) {}
-    @MainActor package func session(_ session: TabletSession, didRekey tablet: ConnectedTablet, from old: DeviceInstanceKey) {}
-    @MainActor package func session(_ session: TabletSession, didAdd interface: any HIDInterface, to transport: TabletTransport) {}
-    @MainActor package func session(_ session: TabletSession, transportDidChangeState transport: TabletTransport) {}
-    @MainActor package func session(_ session: TabletSession, transport: TabletTransport, didReadSerial serial: UInt32) {}
-    @MainActor package func session(_ session: TabletSession, transport: TabletTransport, didPairWith productID: Int) {}
-    @MainActor package func session(_ session: TabletSession, didFindUnclaimed interface: any HIDInterface, as kind: UnclaimedKind) {}
-    @MainActor package func session(_ session: TabletSession, didLoseUnclaimed interface: any HIDInterface) {}
-    package func transport(_ id: TabletTransport.ID, didReceive report: HIDReport, at receivedNs: UInt64, from interface: any HIDInterface) {}
-    package func transport(_ id: TabletTransport.ID, didRun step: TabletConnection.ConnectStep) {}
+    @MainActor public func session(_ session: TabletSession, didRekey tablet: ConnectedTablet, from old: DeviceInstanceKey) {}
+    @MainActor public func session(_ session: TabletSession, didAdd interface: any HIDInterface, to transport: TabletTransport) {}
+    @MainActor public func session(_ session: TabletSession, transportDidChangeState transport: TabletTransport) {}
+    @MainActor public func session(_ session: TabletSession, transport: TabletTransport, didReadSerial serial: UInt32) {}
+    @MainActor public func session(_ session: TabletSession, transport: TabletTransport, didPairWith productID: Int) {}
+    @MainActor public func session(_ session: TabletSession, didFindUnclaimed interface: any HIDInterface, as kind: UnclaimedKind) {}
+    @MainActor public func session(_ session: TabletSession, didLoseUnclaimed interface: any HIDInterface) {}
+    public func transport(_ id: TabletTransport.ID, didRun step: ConnectStep) {}
 }
 
 /// Holds an interface for ``HeldInterfaces``, which compares by identity.

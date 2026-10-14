@@ -155,7 +155,7 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
 
     /// The second ring's slot, on two-ring Cintiqs, which take both rings in
     /// one report.
-    package func setRingLED2(index: Int) {
+    public func setRingLED2(index: Int) {
         queue.perform { [self] in
             guard spec.format == .cintiqV1, spec.hasDualRings else { return }
             ledIndex2 = index
@@ -289,7 +289,7 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
 
     /// Turns the key display images 180° for a tablet used upside down, and
     /// resends what they show.
-    package func setKeyOLEDsRotated180(_ rotated: Bool) {
+    public func setKeyOLEDsRotated180(_ rotated: Bool) {
         queue.perform { [self] in
             guard spec.hasKeyOLEDs, rotated != keyOLEDsRotated180 else { return }
             keyOLEDsRotated180 = rotated

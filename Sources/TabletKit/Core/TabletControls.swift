@@ -48,6 +48,13 @@ public protocol RingLEDControl: AnyObject {
     /// Per-slot colors for an RGB LED; `nil` entries use the device's
     /// factory palette. Devices with single-color LEDs ignore this.
     func setRingLEDColors(_ colors: [LEDColor?])
+    /// Light the second ring's LED, on tablets with two rings that light
+    /// independently (Cintiq 24HD).
+    func setRingLED2(index: Int)
+}
+
+extension RingLEDControl {
+    public func setRingLED2(index: Int) {}
 }
 
 /// On-device text: the active ring or dial mode's name, and per-key labels.
@@ -55,6 +62,13 @@ public protocol LabelControl: AnyObject {
     func setRingModeLabel(_ label: String)
     /// `labels[0]` is key 1.
     func setAuxKeyLabels(_ labels: [String])
+    /// Turn the key displays' images 180°, for a tablet used upside down
+    /// (Intuos4).
+    func setKeyOLEDsRotated180(_ rotated: Bool)
+}
+
+extension LabelControl {
+    public func setKeyOLEDsRotated180(_ rotated: Bool) {}
 }
 
 /// A pen display's own panel settings, set over HID.

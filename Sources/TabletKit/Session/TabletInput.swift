@@ -373,6 +373,7 @@ package struct TabletInput {
             touchDecoders[touchLayout.reportID] = PrecisionTouchDecoder(layout: touchLayout)
             if touchLayout.logicalMaxX > 0, touchLayout.logicalMaxY > 0, touchRange?.exact != true {
                 touchRange = (touchLayout.logicalMaxX, touchLayout.logicalMaxY, true)
+                DescribedTouchRanges.record(touchRange!, forProductID: spec.productID)
             }
         }
     }
@@ -391,7 +392,10 @@ package struct TabletInput {
         guard let x = fingerFields.first(where: { $0.extendedUsage == 0x0001_0030 })?.logicalMax,
             let y = fingerFields.first(where: { $0.extendedUsage == 0x0001_0031 })?.logicalMax
         else { return }
-        if touchRange == nil { touchRange = (x, y, false) }
+        if touchRange == nil {
+            touchRange = (x, y, false)
+            DescribedTouchRanges.record(touchRange!, forProductID: spec.productID)
+        }
     }
 
     /// A receiver's spec with its paired tablet's touch capability. Its own

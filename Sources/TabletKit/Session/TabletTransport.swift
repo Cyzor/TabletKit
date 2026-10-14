@@ -11,27 +11,27 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "session
 /// One way a tablet is connected: its USB cable, its Bluetooth link, or a
 /// wireless receiver. Interfaces of the same product and transport join it.
 ///
-/// Ties the three parts of a driver together: ``TabletConnection`` opens and
-/// switches the tablet on, ``TabletInput`` turns its reports into events on
-/// the input thread, and ``TabletOutput`` takes control writes. The input
-/// path makes no hops: a report decodes and reaches the delegate on the
+/// Ties the three parts of a driver together: the connection opens and
+/// switches the tablet on, the input path turns its reports into events on
+/// the input thread, and the output takes control writes. The input
+/// path makes no hops: a report decodes and reaches its sink on the
 /// thread it arrived on.
 @MainActor
-package final class TabletTransport: Identifiable {
-    package nonisolated let id: Int
+public final class TabletTransport: Identifiable {
+    public nonisolated let id: Int
     /// The product ID as the interface reports it, before transport folding.
-    package nonisolated let rawProductID: Int
-    package nonisolated let spec: TabletSpec
-    package nonisolated let isBluetooth: Bool
+    public nonisolated let rawProductID: Int
+    public nonisolated let spec: TabletSpec
+    public nonisolated let isBluetooth: Bool
     /// Whether this is a wireless receiver, which relays a tablet it pairs with.
-    package nonisolated let isWireless: Bool
+    public nonisolated let isWireless: Bool
     /// The transport as the system names it, such as "USB" or "Bluetooth Low Energy".
-    package nonisolated let transportName: String
+    public nonisolated let transportName: String
     /// The identity the first interface gave. A receiver keeps its own even
     /// after it joins the tablet it relays.
-    package nonisolated let key: DeviceInstanceKey
+    public nonisolated let key: DeviceInstanceKey
 
-    package enum State: Sendable, Equatable {
+    public enum State: Sendable, Equatable {
         /// Opened, with the connect sequence still running.
         case connecting
         case normal
@@ -39,19 +39,27 @@ package final class TabletTransport: Identifiable {
         case disconnected
     }
 
-    package private(set) var state: State = .connecting
+    public private(set) var state: State = .connecting
     /// The tablet this transport belongs to.
-    package internal(set) weak var tablet: ConnectedTablet?
+    public internal(set) weak var tablet: ConnectedTablet?
     /// The tablet a wireless receiver named, or 0 until it does.
-    package private(set) var pairedProductID = 0
-    package private(set) var hardwareSerial: UInt32?
+    public private(set) var pairedProductID = 0
+    public private(set) var hardwareSerial: UInt32?
 
-    package var primary: any HIDInterface { connection.primary }
-    /// Every interface whose reports reach the delegate, primary first.
-    package private(set) var deliveringInterfaces: [any HIDInterface] = []
+    public var primary: any HIDInterface { connection.primary }
+    /// Every interface whose reports reach the sink, primary first.
+    public private(set) var deliveringInterfaces: [any HIDInterface] = []
     /// Every interface this transport holds, including the LED interface.
-    package private(set) var interfaces: [any HIDInterface] = []
-    package var controls: TabletControls { output.controls }
+    public private(set) var interfaces: [any HIDInterface] = []
+    public var controls: TabletControls { output.controls }
+    /// The ranges reports are read against: a receiver's paired tablet's,
+    /// once it names one.
+    public var digitizer: DigitizerSpec {
+        if pairedProductID != 0, let paired = WacomDeviceRegistry.spec(for: pairedProductID) {
+            return paired.digitizerSpec
+        }
+        return spec.digitizerSpec
+    }
 
     let connection: TabletConnection
     let output: TabletOutput
@@ -83,7 +91,7 @@ package final class TabletTransport: Identifiable {
 
     /// Opens the primary interface and starts the connect sequence. False if
     /// the open failed, with the transport faulted.
-    func open() -> Bool {
+    func open(sink: (any TabletInputSink)?) -> Bool {
         let id = id
         let delegate = session?.delegate
         connection.onStep = { step in delegate?.transport(id, didRun: step) }
@@ -93,7 +101,7 @@ package final class TabletTransport: Identifiable {
         output.attach(primary: primary, isBluetooth: isBluetooth, isWireless: isWireless)
         let ret = connection.open(
             accepts: { [spec] in Self.accepts($0, spec: spec) },
-            onReport: makeReportHandler())
+            onReport: makeReportHandler(sink: sink))
         guard ret == kIOReturnSuccess else {
             state = .faulted(ret == kIOReturnNotPermitted ? .permissionDenied : .openFailed(ret))
             return false
@@ -130,7 +138,7 @@ package final class TabletTransport: Identifiable {
     }
 
     /// Sends the init sequence again, as after sleep.
-    package func reawaken() {
+    public func reawaken() {
         connection.reawaken()
     }
 
@@ -193,22 +201,18 @@ package final class TabletTransport: Identifiable {
     /// The handler every interface's reports run through, on the input
     /// executor. It captures only what it needs, so a report never touches
     /// main-actor state.
-    private func makeReportHandler() -> @Sendable (any HIDInterface, HIDReport, UInt64) -> Void {
-        let id = id
+    private func makeReportHandler(sink: (any TabletInputSink)?) -> @Sendable (any HIDInterface, HIDReport, UInt64) -> Void {
         let input = input
         let output = output
         let backend = backend
-        let delegate = session?.delegate
         let notesReports = spec.format == .xencelabs
         let accepts: @Sendable (any HIDInterface) -> Bool = { [spec] in Self.accepts($0, spec: spec) }
         return { [weak self] interface, report, ns in
             guard accepts(interface) else { return }
-            delegate?.transport(id, didReceive: report, at: ns, from: interface)
+            sink?.didReceive(report, at: ns, from: interface)
             let result = input.value.handle(report, at: ns)
             if notesReports { output.noteReport(at: ns) }
-            if !result.events.isEmpty {
-                delegate?.transport(id, didDecode: result.events, at: ns)
-            }
+            sink?.didDecode(result.events, from: report, on: interface, at: ns)
             for effect in result.effects {
                 switch effect {
                 case .relinkPuck(let identity):
@@ -261,7 +265,7 @@ package final class TabletTransport: Identifiable {
 }
 
 /// Why a transport stopped working.
-package enum TabletFailure: Sendable, Equatable {
+public enum TabletFailure: Sendable, Equatable {
     /// The system refused access: Input Monitoring isn't granted.
     case permissionDenied
     /// The interface wouldn't open, often because another tablet driver holds it.

@@ -40,11 +40,7 @@ package final class TabletConnection: @unchecked Sendable {
     private let savedTouchModes = SavedModes()
     private var onReport: (@Sendable (any HIDInterface, HIDReport, UInt64) -> Void)?
 
-    package enum ConnectStep: Sendable, Equatable {
-        case wrote(reportID: Int, value: Int, result: IOReturn, usagePage: Int)
-        case read(purpose: String, reportID: Int, result: IOReturn, reply: [UInt8], usagePage: Int)
-        case inputMode(usagePage: Int)
-    }
+    package typealias ConnectStep = TabletKit.ConnectStep
 
     /// Xencelabs writes are paced 3 ms apart: firmware busy repainting drops
     /// a write and still reports success.
@@ -377,4 +373,12 @@ private final class SavedModes: @unchecked Sendable {
             return modes
         }
     }
+}
+
+/// One write or read of a tablet's connect sequence.
+public enum ConnectStep: Sendable, Equatable {
+    case wrote(reportID: Int, value: Int, result: IOReturn, usagePage: Int)
+    case read(purpose: String, reportID: Int, result: IOReturn, reply: [UInt8], usagePage: Int)
+    /// The HID Digitizer Input Mode switch, written through IOKit's element.
+    case inputMode(usagePage: Int)
 }
