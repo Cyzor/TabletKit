@@ -206,13 +206,20 @@ public final class TabletTransport: Identifiable {
         let output = output
         let backend = backend
         let notesReports = spec.format == .xencelabs
-        let accepts: @Sendable (any HIDInterface) -> Bool = { [spec] in Self.accepts($0, spec: spec) }
+        // Siblings open only when accepted, so only the primary needs the check.
+        let primary = primary
+        let rejectsPrimary = !Self.accepts(primary, spec: spec)
         return { [weak self] interface, report, ns in
-            guard accepts(interface) else { return }
+            if rejectsPrimary && interface === primary { return }
             sink?.didReceive(report, at: ns, from: interface)
             let result = input.value.handle(report, at: ns)
-            if notesReports { output.noteReport(at: ns) }
             sink?.didDecode(result.events, from: report, on: interface, at: ns)
+            // The battery poll's silence check needs this to the second, so
+            // it reaches the output queue at most once a second.
+            if notesReports, ns &- input.lastNotedReportNs >= 1_000_000_000 {
+                input.lastNotedReportNs = ns
+                output.noteReport(at: ns)
+            }
             for effect in result.effects {
                 switch effect {
                 case .relinkPuck(let identity):
@@ -275,5 +282,7 @@ public enum TabletFailure: Sendable, Equatable {
 /// A transport's input state, touched only on the input executor.
 final class InputBox: @unchecked Sendable {
     var value: TabletInput
+    /// When the output queue last heard of a report, for Xencelabs.
+    var lastNotedReportNs: UInt64 = 0
     init(_ value: TabletInput) { self.value = value }
 }
