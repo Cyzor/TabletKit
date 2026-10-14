@@ -4,7 +4,7 @@
 
 /// A relayed remote coming online or going offline, as seen through its
 /// receiver.
-public enum RemoteLinkChange: Sendable, Equatable {
+package enum RemoteLinkChange: Sendable, Equatable {
     case online, offline
 }
 
@@ -24,7 +24,7 @@ public enum RemoteLinkChange: Sendable, Equatable {
 /// any prior pairing record. One-shot per dongle connection.
 ///
 /// One per receiver, used on the input thread.
-public struct XencelabsRelayWatcher: Sendable {
+package struct XencelabsRelayWatcher: Sendable {
 
     /// Devices whose report-2 tunnel can relay a wireless Quick Keys puck and
     /// therefore need the relink/re-arm/resync handling: the standalone USB
@@ -33,30 +33,30 @@ public struct XencelabsRelayWatcher: Sendable {
     /// puck traffic into its own vendor tunnel (confirmed 2026-07-08 via two
     /// discovery captures — 0xF8/0xF2 status frames with the puck's identity
     /// trailer, plus live 0xF0 aux data, all arriving on 0x520D).
-    public static let relayProductIDs: Set<Int> = [0x5203, 0x520D]
-    public static let identityLength = 6
+    package static let relayProductIDs: Set<Int> = [0x5203, 0x520D]
+    package static let identityLength = 6
 
-    public struct Outcome: Sendable, Equatable {
+    package struct Outcome: Sendable, Equatable {
         /// `.online` when the puck comes back after a relink: send it again.
-        public var linkChange: RemoteLinkChange?
+        package var linkChange: RemoteLinkChange?
         /// Send the relink handshake addressed to this identity.
-        public var relinkIdentity: [UInt8]?
+        package var relinkIdentity: [UInt8]?
     }
 
-    public init() {}
+    package init() {}
 
-    public private(set) var dongleRelinked = false
+    package private(set) var dongleRelinked = false
     /// True once the display push is scheduled for this relink.
-    public private(set) var postRelinkResynced = false
+    package private(set) var postRelinkResynced = false
     /// Bumped when the puck reconnects or goes offline, so a pending display
     /// push from an earlier connection stands down.
-    public private(set) var relinkGeneration = 0
+    package private(set) var relinkGeneration = 0
     /// The puck's 6-byte identity read off the relink report, kept so the
     /// resync's label-reset write can address the same puck.
-    public private(set) var dongleIdentity: [UInt8]?
+    package private(set) var dongleIdentity: [UInt8]?
 
     /// Reads one report from a Xencelabs device with product ID `productID`.
-    public mutating func observe(_ report: HIDReport, productID: Int) -> Outcome {
+    package mutating func observe(_ report: HIDReport, productID: Int) -> Outcome {
         let length = report.count
         var outcome = Outcome()
         guard Self.relayProductIDs.contains(productID) else { return outcome }
@@ -116,7 +116,7 @@ public struct XencelabsRelayWatcher: Sendable {
 
     /// Records the relink's result. Returns the generation to schedule the
     /// display push for, or nil when no push is due.
-    public mutating func relinkSent(succeeded: Bool) -> Int? {
+    package mutating func relinkSent(succeeded: Bool) -> Int? {
         guard succeeded, !postRelinkResynced else { return nil }
         postRelinkResynced = true
         return relinkGeneration

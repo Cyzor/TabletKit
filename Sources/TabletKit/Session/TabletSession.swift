@@ -10,8 +10,8 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "session
 
 /// Finds tablets, connects them, and hands their events to a delegate.
 ///
-/// Each interface the backend reports is gated by vendor, routed with
-/// ``InterfaceRouting``, and grouped: interfaces of one product and
+/// Each interface the backend reports is gated by vendor, routed by what it
+/// carries, and grouped: interfaces of one product and
 /// transport share a ``TabletTransport``, and a tablet's transports share a
 /// ``ConnectedTablet``. Interfaces that arrive before the one that takes
 /// them are held until it does, and a touch sensor whose tablet never

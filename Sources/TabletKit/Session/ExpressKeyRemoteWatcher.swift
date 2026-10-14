@@ -11,23 +11,23 @@
 /// offline when its serial leaves the pairing table (0x10). Silence means
 /// nothing, since a remote sleeps when idle and wakes on a key press. A
 /// remote that is paired but never heard from is in ``silentRemotes``.
-public struct ExpressKeyRemoteWatcher: Sendable {
-    public struct Change: Sendable, Equatable {
-        public var serial: UInt32
-        public var link: RemoteLinkChange
+package struct ExpressKeyRemoteWatcher: Sendable {
+    package struct Change: Sendable, Equatable {
+        package var serial: UInt32
+        package var link: RemoteLinkChange
     }
 
     /// Serials in the receiver's latest pairing table.
-    public private(set) var paired: Set<UInt32> = []
+    package private(set) var paired: Set<UInt32> = []
     /// Serials that have sent an event since they were paired.
-    public private(set) var heard: Set<UInt32> = []
+    package private(set) var heard: Set<UInt32> = []
 
-    public init() {}
+    package init() {}
 
     /// Paired remotes that haven't sent anything yet.
-    public var silentRemotes: [UInt32] { paired.subtracting(heard).sorted() }
+    package var silentRemotes: [UInt32] { paired.subtracting(heard).sorted() }
 
-    public mutating func observe(_ report: HIDReport) -> [Change] {
+    package mutating func observe(_ report: HIDReport) -> [Change] {
         guard report.count > 0 else { return [] }
         switch report.reportID {
         case ExpressKeyRemoteDecoder.remoteReportID where report.count >= 6:

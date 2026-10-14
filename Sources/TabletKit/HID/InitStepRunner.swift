@@ -6,36 +6,36 @@ import Foundation
 import IOKit
 
 /// What one init step did.
-public struct InitStepOutcome: Sendable {
-    public let index: Int
-    public let step: InitStep
+package struct InitStepOutcome: Sendable {
+    package let index: Int
+    package let step: InitStep
     /// The write's result; `nil` for delays and string reads.
-    public let result: IOReturn?
+    package let result: IOReturn?
     /// Bytes actually sent, after padding.
-    public let sentLength: Int
+    package let sentLength: Int
     /// A string read's reply.
-    public let reply: [UInt8]?
+    package let reply: [UInt8]?
 }
 
 /// One read-back of a mode switch.
-public struct ModeReadBackOutcome: Sendable {
+package struct ModeReadBackOutcome: Sendable {
     /// 0 for the read right after init, then one per resend.
-    public let attempt: Int
+    package let attempt: Int
     /// The resend's result; `nil` on attempt 0.
-    public let writeResult: IOReturn?
-    public let readResult: IOReturn
-    public let reply: [UInt8]
-    public let matched: Bool
+    package let writeResult: IOReturn?
+    package let readResult: IOReturn
+    package let reply: [UInt8]
+    package let matched: Bool
     /// Nothing follows this outcome.
-    public let isLast: Bool
+    package let isLast: Bool
 }
 
 /// Runs a tablet's ``InitStep``s in order against one interface.
 ///
 /// Output reports are padded to the interface's declared size. Steps run on
 /// the caller's thread until a delay; after one, the rest run on `queue`.
-public enum InitStepRunner {
-    public static func run(
+package enum InitStepRunner {
+    package static func run(
         _ steps: [InitStep], on interface: any HIDInterface,
         queue: DispatchQueue = .main, from index: Int = 0,
         onStep: @escaping @Sendable (InitStepOutcome) -> Void
@@ -69,7 +69,7 @@ public enum InitStepRunner {
     /// Reads back a mode switch that init already sent, and resends it on
     /// the rule's schedule until the tablet reports the mode. The first read
     /// runs on the caller's thread, the rest on `queue`.
-    public static func confirmMode(
+    package static func confirmMode(
         _ rule: TabletQuirks.ModeReadBack, on interface: any HIDInterface,
         queue: DispatchQueue = .main,
         onAttempt: @escaping @Sendable (ModeReadBackOutcome) -> Void
