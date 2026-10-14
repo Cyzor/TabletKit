@@ -146,6 +146,8 @@ extension ReplayRecording {
             i.productName = entry["deviceName"] as? String ?? device["name"] as? String
             let descriptor = entry["hidReportDescriptor"] as? [String: Any]
             i.reportDescriptor = bytes(descriptor?["rawHex"] as? String ?? "")
+            // Captures don't record usage pairs, so they come from the descriptor.
+            i.usagePairs = collectionUsages(i.reportDescriptor)
             interfaces.append(i)
             reportIDs.append(Set(((entry["reports"] as? [String: Any]) ?? [:]).keys.compactMap {
                 hexInt($0).map { UInt8(truncatingIfNeeded: $0) }
@@ -199,6 +201,48 @@ private func bytes(_ hex: String) -> [UInt8] {
         index = next
     }
     return out
+}
+
+/// The usages of a report descriptor's application and physical
+/// collections, close to what IOKit lists as an interface's usage pairs.
+func collectionUsages(_ descriptor: [UInt8]) -> [HIDUsagePair] {
+    var pairs: [HIDUsagePair] = []
+    var page = 0
+    var usage: Int?
+    var usageHasPage = false
+    var i = 0
+    while i < descriptor.count {
+        let prefix = descriptor[i]
+        if prefix == 0xFE {  // long item
+            guard i + 1 < descriptor.count else { break }
+            i += 3 + Int(descriptor[i + 1])
+            continue
+        }
+        let size = [0, 1, 2, 4][Int(prefix & 0x03)]
+        guard i + size < descriptor.count else { break }
+        var value = 0
+        for b in 0..<size { value |= Int(descriptor[i + 1 + b]) << (8 * b) }
+        switch prefix & 0xFC {
+        case 0x04: page = value
+        case 0x08:
+            if usage == nil {
+                usage = value
+                usageHasPage = size == 4
+            }
+        case 0xA0:
+            // Logical collections (type 2) group fields; IOKit doesn't list them.
+            if let u = usage, value != 2 {
+                let pair = usageHasPage
+                    ? HIDUsagePair(page: u >> 16, usage: u & 0xFFFF) : HIDUsagePair(page: page, usage: u)
+                if !pairs.contains(pair) { pairs.append(pair) }
+            }
+        default: break
+        }
+        // Local items last until the next main item.
+        if prefix & 0x0C == 0x00 { usage = nil }
+        i += 1 + size
+    }
+    return pairs
 }
 
 /// An integer from a JSON number or a hex string such as "0x056A".

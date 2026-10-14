@@ -39,6 +39,28 @@ final class ReplayBackendTests: XCTestCase {
         guard case .detach(1) = r.events[4] else { return XCTFail() }
     }
 
+    /// Captures lack usage pairs, so they're read off the descriptor. Traces
+    /// have both, the pairs from IOKit, to check against.
+    func testUsagePairsFromDescriptorMatchIOKit() throws {
+        XCTAssertEqual(collectionUsages([0x05, 0x0D, 0x09, 0x02, 0xA1, 0x01, 0xA1, 0x00, 0xC0, 0xC0,
+                                            0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x09, 0x02, 0xA1, 0x02, 0xC0, 0xC0]),
+                       [HIDUsagePair(page: 0x0D, usage: 0x02), HIDUsagePair(page: 0xFF00, usage: 0x01)])
+        let traces = PrivateRecordings.traces
+        guard !traces.isEmpty else { throw XCTSkip("No report traces outside the repo") }
+        for trace in traces {
+            for i in try ReplayRecording(trace: String(contentsOf: trace, encoding: .utf8)).interfaces
+            where !i.reportDescriptor.isEmpty {
+                // IOKit lists a few more, never fewer, and agrees on the pen
+                // collection, which is what routing reads.
+                let derived = collectionUsages(i.reportDescriptor)
+                XCTAssertTrue(Set(derived.map { [$0.page, $0.usage] }).isSubset(of: Set(i.usagePairs.map { [$0.page, $0.usage] })))
+                XCTAssertEqual(InterfaceRouting.isPenCollection(in: derived.map { ($0.page, $0.usage) }),
+                               InterfaceRouting.isPenCollection(in: i.usagePairs.map { ($0.page, $0.usage) }),
+                               "\(trace.lastPathComponent) 0x\(String(i.productID, radix: 16)) page 0x\(String(i.usagePage, radix: 16))")
+            }
+        }
+    }
+
     func testMalformedTraceLineThrows() {
         XCTAssertThrowsError(try ReplayRecording(trace: "not json"))
     }
