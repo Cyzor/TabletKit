@@ -43,6 +43,19 @@ public final class HIDOutputQueue: @unchecked Sendable {
         queue.sync {}
     }
 
+    /// Runs `work` on the queue, in order with the writes around it.
+    package func perform(_ work: @escaping @Sendable () -> Void) {
+        queue.async(execute: work)
+    }
+
+    /// Runs `work` on the queue and waits for it.
+    package func performAndWait(_ work: @Sendable () -> Void) {
+        queue.sync(execute: work)
+    }
+
+    /// The queue itself, for work that continues after a delay.
+    package var dispatchQueue: DispatchQueue { queue }
+
     private func waitForGap() {
         let now = DispatchTime.now().uptimeNanoseconds
         if lastPacedWrite != 0, minimumGapNanos > 0 {

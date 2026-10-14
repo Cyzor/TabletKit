@@ -57,15 +57,18 @@ package final class ReplayBackend: HIDBackend, @unchecked Sendable {
 /// One recorded interface. Answers feature reads from the recording and
 /// logs every write.
 ///
-/// `@unchecked Sendable`: replay runs on one thread.
+/// `@unchecked Sendable`: a lock guards the replies and the write log,
+/// which an output queue touches. Opening and delivery stay on one thread.
 package final class ReplayInterface: HIDInterface, @unchecked Sendable {
     package let recorded: ReplayRecording.Interface
+    private let lock = NSLock()
     private var replies: [UInt8: [ReplayRecording.Reply]]
     private var onReport: (@Sendable (HIDReport, UInt64) -> Void)?
     package private(set) var isOpen = false
     package private(set) var seized = false
+    private var log: [String] = []
     /// Every write, as "feature 02 02" or "output 02 b0 04".
-    package private(set) var writes: [String] = []
+    package var writes: [String] { lock.withLock { log } }
 
     package init(_ recorded: ReplayRecording.Interface) {
         self.recorded = recorded
@@ -86,19 +89,29 @@ package final class ReplayInterface: HIDInterface, @unchecked Sendable {
     package var reportDescriptor: [UInt8] { recorded.reportDescriptor }
 
     package func setReport(_ kind: HIDReportKind, bytes: [UInt8]) -> IOReturn {
-        writes.append("\(kind) " + bytes.map { String(format: "%02x", $0) }.joined(separator: " "))
+        let line = "\(kind) " + bytes.map { String(format: "%02x", $0) }.joined(separator: " ")
+        lock.withLock { log.append(line) }
         return kIOReturnSuccess
     }
 
     /// The next recorded reply for `id`, or unsupported once they run out.
     package func getReport(_ kind: HIDReportKind, id: UInt8, length: Int) -> (IOReturn, [UInt8]) {
-        guard kind == .feature, var queue = replies[id], !queue.isEmpty else { return (kIOReturnUnsupported, []) }
-        let reply = queue.removeFirst()
-        replies[id] = queue
+        guard kind == .feature else { return (kIOReturnUnsupported, []) }
+        let reply: ReplayRecording.Reply? = lock.withLock {
+            guard var queue = replies[id], !queue.isEmpty else { return nil }
+            let next = queue.removeFirst()
+            replies[id] = queue
+            return next
+        }
+        guard let reply else { return (kIOReturnUnsupported, []) }
         return (reply.result, Array(reply.bytes.prefix(length)))
     }
 
     package func readString(index: UInt8) -> [UInt8]? { nil }
+
+    /// Logs the HID Digitizer Input Mode switch, which IOKit builds from the
+    /// descriptor's element rather than a raw report.
+    package func noteInputMode() { lock.withLock { log.append("inputMode") } }
 
     package func open(seize: Bool, onReport: @escaping @Sendable (HIDReport, UInt64) -> Void) -> IOReturn {
         isOpen = true
