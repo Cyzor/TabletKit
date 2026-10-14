@@ -82,13 +82,10 @@ extension HIDInterface {
 /// on one thread.
 public final class IOKitHIDInterface: HIDInterface, @unchecked Sendable {
     public let device: IOHIDDevice
-    private var buffer: UnsafeMutablePointer<UInt8>?
-    private var bufferSize = 0
-    private var onReport: (@Sendable (HIDReport, UInt64) -> Void)?
+    /// The open callback's state, while one is registered.
+    private var sink: ReportSink?
 
     public init(_ device: IOHIDDevice) { self.device = device }
-
-    deinit { buffer?.deallocate() }
 
     public var vendorID: Int { hidIntProperty(device, kIOHIDVendorIDKey) }
     public var productID: Int { hidIntProperty(device, kIOHIDProductIDKey) }
@@ -137,38 +134,60 @@ public final class IOKitHIDInterface: HIDInterface, @unchecked Sendable {
         let options = IOOptionBits(seize ? kIOHIDOptionsTypeSeizeDevice : kIOHIDOptionsTypeNone)
         let ret = IOHIDDeviceOpen(device, options)
         guard ret == kIOReturnSuccess else { return ret }
-        self.onReport = onReport
-        if buffer == nil {
-            bufferSize = max(maxInputReportSize, 192)
-            buffer = .allocate(capacity: bufferSize)
-        }
+        let sink = ReportSink(size: max(maxInputReportSize, 192), onReport: onReport)
+        self.sink = sink
         IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-            device, buffer!, bufferSize, Self.reportCallback, Unmanaged.passUnretained(self).toOpaque())
+            device, sink.buffer, sink.size, Self.reportCallback, Unmanaged.passUnretained(sink).toOpaque())
         IOHIDDeviceScheduleWithRunLoop(device, HIDThread.shared.runLoop, RunLoop.Mode.common.rawValue as CFString)
         return ret
     }
 
+    /// Stops delivery and closes the device, including an open this object
+    /// didn't make, such as the HID manager's: a seize only takes effect on
+    /// a device no one has open.
     public func close() {
-        guard onReport != nil else { return }
-        if let buffer {
-            IOHIDDeviceRegisterInputReportWithTimeStampCallback(device, buffer, bufferSize, nil, nil)
+        if let sink {
+            IOHIDDeviceRegisterInputReportWithTimeStampCallback(device, sink.buffer, sink.size, nil, nil)
+            IOHIDDeviceUnscheduleFromRunLoop(device, HIDThread.shared.runLoop, RunLoop.Mode.common.rawValue as CFString)
+            self.sink = nil
+            // A callback may be running on HIDThread right now. The block
+            // keeps the sink and its buffer alive until after it returns.
+            CFRunLoopPerformBlock(HIDThread.shared.runLoop, CFRunLoopMode.commonModes.rawValue) {
+                withExtendedLifetime(sink) {}
+            }
+            CFRunLoopWakeUp(HIDThread.shared.runLoop)
         }
-        IOHIDDeviceUnscheduleFromRunLoop(device, HIDThread.shared.runLoop, RunLoop.Mode.common.rawValue as CFString)
         IOHIDDeviceClose(device, IOOptionBits(kIOHIDOptionsTypeNone))
-        onReport = nil
     }
 
     private static let reportCallback: IOHIDReportWithTimeStampCallback = {
         context, _, _, _, _, report, length, timestamp in
         guard let context else { return }
-        let interface = Unmanaged<IOKitHIDInterface>.fromOpaque(context).takeUnretainedValue()
+        let sink = Unmanaged<ReportSink>.fromOpaque(context).takeUnretainedValue()
         let ns = timestamp == 0 ? 0 : UInt64(Double(timestamp) * LatencyProbe.timebaseFactor)
-        interface.onReport?(HIDReport(pointer: report, count: length), ns)
+        sink.onReport(HIDReport(pointer: report, count: length), ns)
     }
 
     private func stringProperty(_ key: String) -> String? {
         IOHIDDeviceGetProperty(device, key as CFString) as? String
     }
+}
+
+/// What one open of an ``IOKitHIDInterface`` hands IOKit's callback: the
+/// report buffer and the handler, neither of which changes after open.
+private final class ReportSink: @unchecked Sendable {
+    let buffer: UnsafeMutablePointer<UInt8>
+    let size: Int
+    let onReport: @Sendable (HIDReport, UInt64) -> Void
+
+    init(size: Int, onReport: @escaping @Sendable (HIDReport, UInt64) -> Void) {
+        buffer = .allocate(capacity: size)
+        buffer.initialize(repeating: 0, count: size)
+        self.size = size
+        self.onReport = onReport
+    }
+
+    deinit { buffer.deallocate() }
 }
 
 extension HIDReportKind {

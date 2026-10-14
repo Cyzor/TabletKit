@@ -68,10 +68,12 @@ public final class TabletSession {
     public func retryOpen() -> IOReturn { backend.retryOpen() }
 
     public func stop() {
-        backend.stop()
+        // Transports first: closing puts touch sensor modes back, which
+        // needs the devices still open.
         for tablet in tablets {
             for transport in tablet.transports { transport.close() }
         }
+        backend.stop()
         tablets.removeAll()
         unclaimed.removeAll()
         transportOf.removeAll()
