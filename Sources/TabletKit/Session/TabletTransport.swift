@@ -209,7 +209,9 @@ public final class TabletTransport: Identifiable {
         // Siblings open only when accepted, so only the primary needs the check.
         let primary = primary
         let rejectsPrimary = !Self.accepts(primary, spec: spec)
-        return { [weak self] interface, report, ns in
+        // Formed here on main, so the weak reference never crosses threads.
+        let carryOut: @MainActor @Sendable (TabletInput.Effect) -> Void = { [weak self] in self?.carryOut($0) }
+        return { interface, report, ns in
             if rejectsPrimary && interface === primary { return }
             sink?.didReceive(report, at: ns, from: interface)
             let result = input.value.handle(report, at: ns)
@@ -225,7 +227,7 @@ public final class TabletTransport: Identifiable {
                 case .relinkPuck(let identity):
                     Self.relink(identity, input: input, output: output, backend: backend)
                 case .resendInit, .pairedTablet:
-                    Self.onMain { self?.carryOut(effect) }
+                    Self.onMain { carryOut(effect) }
                 }
             }
         }
