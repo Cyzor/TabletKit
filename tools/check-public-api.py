@@ -12,10 +12,13 @@ synthesizes (operators, hash(into:), Codable) vary between toolchains.
     python3 tools/check-public-api.py            # check
     python3 tools/check-public-api.py --update   # rewrite public-api.txt
 """
+import atexit
 import glob
 import json
 import pathlib
+import shutil
 import subprocess
+import tempfile
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -28,11 +31,18 @@ HEADER = (
 
 
 def current_symbols():
+    # The compiler writes the graphs only when it compiles, so build into a
+    # fresh scratch directory. `swift package dump-symbol-graph` also asks
+    # for the test module, which some toolchains can't load.
+    scratch = tempfile.mkdtemp()
+    atexit.register(shutil.rmtree, scratch, ignore_errors=True)
+    graphs = pathlib.Path(scratch) / "graphs"
+    graphs.mkdir()
     subprocess.run(
-        ["swift", "package", "dump-symbol-graph", "--minimum-access-level", "public"],
+        ["swift", "build", "--target", "TabletKit", "--scratch-path", f"{scratch}/build",
+         "-Xswiftc", "-emit-symbol-graph", "-Xswiftc", "-emit-symbol-graph-dir", "-Xswiftc", str(graphs)],
         cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
-    paths = glob.glob(str(ROOT / ".build" / "**" / "symbolgraph" / "TabletKit*.symbols.json"),
-                      recursive=True)
+    paths = glob.glob(str(graphs / "TabletKit*.symbols.json"))
     if not paths:
         sys.exit("check-public-api: no TabletKit symbol graph found")
     found = set()
