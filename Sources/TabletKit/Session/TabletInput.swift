@@ -116,13 +116,15 @@ package struct TabletInput {
         deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
     }
 
-    /// Records a Quick Keys relink write's result.
-    package mutating func relinkWriteFinished(_ succeeded: Bool) {
-        let name = spec.name
-        if let failures = relayWatcher.relinkSent(succeeded: succeeded) {
-            logger.info("\(name, privacy: .public): relink write failed (\(failures, privacy: .public) in a row)")
-        }
+    /// Records a Quick Keys relink write's result. Returns the relink
+    /// generation to resync the display for, or nil when none is due.
+    package mutating func relinkWriteFinished(_ succeeded: Bool) -> Int? {
+        relayWatcher.relinkSent(succeeded: succeeded)
     }
+
+    /// Advances whenever the puck links or drops, so a resync scheduled for
+    /// an older link doesn't run.
+    package var relinkGeneration: Int { relayWatcher.relinkGeneration }
 
     // MARK: - One report
 

@@ -37,6 +37,13 @@ package final class ReplayBackend: HIDBackend, @unchecked Sendable {
         detached = nil
     }
 
+    /// Replay delivers on the main thread, so input work runs there: now,
+    /// or after `delay` on the main queue.
+    package func performOnInput(after delay: Double, _ body: @escaping @Sendable () -> Void) {
+        if delay <= 0 && Thread.isMainThread { return body() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: body)
+    }
+
     /// Plays events up to, but not including, `end`, or to the end of the
     /// recording. Returns how many events have been played in all.
     @MainActor @discardableResult

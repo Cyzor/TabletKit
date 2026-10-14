@@ -20,10 +20,24 @@ package protocol HIDBackend: AnyObject, Sendable {
     /// user grants Input Monitoring later. Returns the new result.
     @MainActor func retryOpen() -> IOReturn
     @MainActor func stop()
+    /// Runs `body` on the thread reports arrive on, after `delay` seconds.
+    func performOnInput(after delay: Double, _ body: @escaping @Sendable () -> Void)
 }
 
 extension HIDBackend {
     @MainActor package func retryOpen() -> IOReturn { kIOReturnSuccess }
+
+    package func performOnInput(after delay: Double = 0, _ body: @escaping @Sendable () -> Void) {
+        let runLoop = HIDThread.shared.runLoop
+        guard delay > 0 else {
+            CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue, body)
+            CFRunLoopWakeUp(runLoop)
+            return
+        }
+        let timer = CFRunLoopTimerCreateWithHandler(
+            kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + delay, 0, 0, 0) { _ in body() }
+        CFRunLoopAddTimer(runLoop, timer, .commonModes)
+    }
 }
 
 /// The system's HID stack, through `IOHIDManager`.
