@@ -136,7 +136,7 @@ private func bits(_ flags: [Bool]) -> String {
 
 private func fixed(_ d: Double) -> String { String(format: "%.4f", d) }
 
-private func describe(_ event: TabletEvent) -> (kind: String, text: String) {
+func goldenDescription(_ event: TabletEvent) -> (kind: String, text: String) {
     switch event {
     case .pen(let p):
         let buttons = bits([p.penButton1, p.penButton2, p.penButton3, p.penButton4, p.penButton5,
@@ -189,7 +189,7 @@ private struct RowRun {
         inputs += 1
         guard !events.isEmpty else { return }
         for event in events {
-            let (kind, text) = describe(event)
+            let (kind, text) = goldenDescription(event)
             counts[kind, default: 0] += 1
             let line = "\(step) \(text)\n"
             digest.add(line)

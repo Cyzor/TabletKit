@@ -50,6 +50,45 @@ final class HotPathBudgetTests: XCTestCase {
         }
     }
 
+    /// The whole input path a session runs per report: the pre-decode
+    /// checks, decoding, and the gates. Prints its cost next to the decoder's
+    /// alone, on the same reports.
+    func testTabletInputStaysWithinPerReportBudget() throws {
+        // The fixtures' devices, by registry row.
+        let rows: [String: Int] = ["bamboo": 0x00D4, "intuosV2": 0x03D0]
+        for fixture in ConformanceHarnessTests.fixtures {
+            let pid = fixture.device.contains("PTK-870") ? 0x03F9
+                : fixture.device.contains("DTH-135") ? 0x03F0 : rows[fixture.parser]
+            guard let pid, let spec = WacomDeviceRegistry.spec(for: pid) else { continue }
+            let records = try CaptureLogParser.parse(fixture.captureLog, requireHeader: false)
+            var input = TabletInput(spec: spec, isBluetooth: false, isWireless: false)
+            var decoder = spec.makeDecoder()
+            var sink = 0
+
+            let before = bytesInUse()
+            var start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+            for i in 0..<iterations {
+                let record = records[i % records.count]
+                let out = HIDReport.withReport(record.bytes) { input.handle($0, at: UInt64(i) * 1_000_000 + 1) }
+                sink &+= out.events.count
+            }
+            let inputNanos = Double(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start) / Double(iterations)
+            let growth = bytesInUse() - before
+
+            start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+            for i in 0..<iterations {
+                let record = records[i % records.count]
+                sink &+= HIDReport.withReport(record.bytes) { decoder.events($0) }.count
+            }
+            let decodeNanos = Double(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start) / Double(iterations)
+
+            print("hot-path input \(spec.name) \(String(format: "%.0f", inputNanos)) ns/report, decoder alone \(String(format: "%.0f", decodeNanos)) ns, retained \(growth) B")
+            XCTAssertGreaterThan(sink, 0)
+            XCTAssertLessThan(inputNanos, decodeCeilingNanos, "\(fixture.device): input path cost regressed")
+            XCTAssertLessThan(growth, retainedGrowthCeiling, "\(fixture.device): input path retains memory")
+        }
+    }
+
     func testCursorSmootherStaysWithinPerReportBudget() {
         var smoother = CursorSmoother()
         smoother.smoothingStrength = 0.3
