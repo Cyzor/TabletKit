@@ -55,6 +55,11 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/pen-surface"
         ),
+        .executableTarget(
+            name: "tablet-session",
+            dependencies: ["TabletKit"],
+            path: "Samples/tablet-session"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

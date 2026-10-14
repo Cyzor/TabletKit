@@ -19,7 +19,9 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "session
 ///
 /// Three executors, as the delegate's methods say: the main actor for
 /// lifecycle, the input thread for reports and events, and one output queue
-/// per transport for the connect sequence and control writes.
+/// per transport for the connect sequence and control writes. The main
+/// thread must run its run loop, as an app does; a command-line tool calls
+/// `RunLoop.main.run()`, not `dispatchMain()`.
 @MainActor
 public final class TabletSession {
     public private(set) weak var delegate: (any TabletSessionDelegate)?

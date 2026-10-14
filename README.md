@@ -48,6 +48,8 @@ Besides pen, pad, and touch, a decoder reports a pen coming into range and leavi
 
 Most Wacom tablets start in a reduced mode, where pressure, tilt, or a side button may be missing. Each registry entry lists the commands that switch it to full reports in `spec.initSteps`. Send them once after the tablet connects.
 
+Or let a `TabletSession` do it: it finds tablets, switches them on, and hands you decoded events. The `tablet-session` sample does that in about forty lines. Run it with `swift run tablet-session`.
+
 [Building a Minimal Driver](Sources/TabletKit/TabletKit.docc/BuildingAMinimalDriver.md) walks through finding the tablet, switching it on, and moving the cursor, with a working sample you can run.
 
 ## Supported Tablets
