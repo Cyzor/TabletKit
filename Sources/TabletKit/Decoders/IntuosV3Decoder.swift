@@ -119,7 +119,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
                 report: report, spec: spec, state: &state,
                 deviceFamily: deviceFamily)
         case 0x11:
-            return decodeAuxReport(report: report)
+            return decodeAuxReport(report: report, state: &state)
         case 0x1A:
             guard report.count >= 20 else { return [] }
             var results = decodeBLEReport(
@@ -571,7 +571,8 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     /// InputInjector can route them through touchRingSlots (scroll /
     /// key-press / off) without further state in this decoder.
     private func decodeAuxReport(
-        report: HIDReport
+        report: HIDReport,
+        state: inout State
     ) -> [DecodeResult] {
         guard report.count >= 2 else { return [] }
         let primary = report[1]
@@ -580,7 +581,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         var results: [DecodeResult] = [
             .aux(
                 AuxButtons(
-                    buttons: buttons, mechanicalMask: primary,
+                    buttons: buttons, mechanicalMask: Self.newPresses(primary, state: &state),
                     touchRingButtonDown: (dialButtons & 0x01) != 0,
                     touchRing2ButtonDown: (dialButtons & 0x02) != 0))
         ]
@@ -595,6 +596,14 @@ package struct IntuosV3Decoder: TabletReportDecoder {
             if rightDelta != 0 { results.append(.wheel(index: 1, delta: rightDelta)) }
         }
         return results
+    }
+
+    /// Keys pressed since the last pad report. The key byte is live state,
+    /// and Bluetooth repeats it in every in-range frame, so passed through as
+    /// `mechanicalMask` it marks each frame of a held key as a fresh press.
+    private static func newPresses(_ keys: UInt8, state: inout State) -> UInt8 {
+        defer { state.lastExpressKeys = keys }
+        return keys & ~state.lastExpressKeys
     }
 
     // MARK: - 0x1A Bluetooth LE report (pen + pad, single multiplexed interface)
@@ -848,7 +857,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         results.append(
             .aux(
                 AuxButtons(
-                    buttons: buttons, mechanicalMask: report[18],
+                    buttons: buttons, mechanicalMask: Self.newPresses(report[18], state: &state),
                     touchRingButtonDown: (dialFlags & 0x01) != 0,
                     touchRing2ButtonDown: (dialFlags & 0x02) != 0)))
         if (dialFlags & 0x04) != 0 {
@@ -1293,6 +1302,8 @@ extension IntuosV3Decoder {
         package var bleOutsideSurface: Bool = false
         /// Consecutive samples the barrel gate has dropped.
         package var bleBarrelDropCount: Int = 0
+        /// ExpressKey byte from the last pad report, for telling a press from a hold.
+        package var lastExpressKeys: UInt8 = 0
 
         package init() {}
     }

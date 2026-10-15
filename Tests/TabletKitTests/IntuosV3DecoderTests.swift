@@ -610,6 +610,32 @@ final class IntuosV3DecoderTests: XCTestCase {
         for i in [0, 1, 3, 4, 5, 6, 7] { XCTAssertFalse(aux.buttons[i]) }
     }
 
+    private func auxReports(_ results: [DecodeResult]) -> [AuxButtons] {
+        results.compactMap { if case .aux(let a) = $0 { return a } else { return nil } }
+    }
+
+    /// A held key is a press on its first report only; a release and press
+    /// again is a new press.
+    func testAuxHeldKeyMarksPressOnce() {
+        var st = IntuosV3Decoder.State()
+        let pressed: [UInt8] = [0x11, 0x04, 0x00, 0x00, 0x00, 0x00]
+        let released: [UInt8] = [0x11, 0x00, 0x00, 0x00, 0x00, 0x00]
+        XCTAssertEqual(auxReports(decode(pressed, state: &st)).first?.mechanicalMask, 0x04)
+        XCTAssertEqual(auxReports(decode(pressed, state: &st)).first?.mechanicalMask, 0)
+        XCTAssertEqual(auxReports(decode(released, state: &st)).first?.mechanicalMask, 0)
+        XCTAssertEqual(auxReports(decode(pressed, state: &st)).first?.mechanicalMask, 0x04)
+    }
+
+    /// A second key pressed while the first is held is the only new press.
+    func testAuxSecondKeyDuringHoldIsTheOnlyNewPress() {
+        var st = IntuosV3Decoder.State()
+        _ = decode([0x11, 0x01, 0x00, 0x00, 0x00, 0x00], state: &st)
+        let r = auxReports(decode([0x11, 0x03, 0x00, 0x00, 0x00, 0x00], state: &st))
+        XCTAssertEqual(r.first?.mechanicalMask, 0x02)
+        XCTAssertEqual(r.first?.buttons[0], true)
+        XCTAssertEqual(r.first?.buttons[1], true)
+    }
+
     func testAuxLeftDialCenterPressSurfacedAsTouchRingButtonDown() {
         var st = IntuosV3Decoder.State()
         // Real capture (pen.center-buttons.hid): left cluster-center key is
@@ -1403,6 +1429,23 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(aux[0].buttons[1...].allSatisfy { !$0 })
         // No pen point — packetClass is idle (0x02 & 0xfc == 0x00).
         XCTAssertTrue(r.allSatisfy { if case .pen = $0 { return false }; return true })
+    }
+
+    /// Bluetooth repeats the key byte in every frame, so a key held across
+    /// frames must read as one press, not a press per frame.
+    func testRealCaptureBLEHeldExpressKeyMarksPressOnce() {
+        var st = IntuosV3Decoder.State()
+        let held: [UInt8] = [
+            26, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 144, 0, 0, 0, 1, 0,
+        ]
+        let first = auxReports(decode(held, state: &st))
+        XCTAssertEqual(first.first?.mechanicalMask, 0x01)
+        for _ in 0..<3 {
+            let again = auxReports(decode(held, state: &st))
+            XCTAssertEqual(again.first?.buttons[0], true)
+            XCTAssertEqual(again.first?.mechanicalMask, 0)
+        }
     }
 
     /// Real idle-state frame with the left dial active + clockwise
