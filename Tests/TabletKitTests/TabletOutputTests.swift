@@ -127,6 +127,36 @@ final class TabletOutputTests: XCTestCase {
 
     /// A relink addresses the puck, and the resync afterward puts the labels
     /// back even though they were already sent.
+    /// The UI shows controls from `offeredControls` while a tablet is
+    /// unplugged, so a connected one must fill exactly those slots.
+    func testControlsFillExactlyTheOfferedSlots() {
+        for spec in WacomDeviceRegistry.knownDevices {
+            let c = TabletOutput(spec: spec, queue: HIDOutputQueue(label: "test")).controls
+            let filled: TabletControls.Kinds = [
+                c.ringLED != nil ? .ringLED : [], c.labels != nil ? .labels : [],
+                c.displayPanel != nil ? .displayPanel : [], c.quickKeys != nil ? .quickKeys : [],
+            ]
+            XCTAssertEqual(filled, spec.offeredControls, spec.name)
+        }
+    }
+
+    func testTabletWithoutARingGetsNoLEDWrites() throws {
+        let (out, primary, queue) = try output(0x0374)  // CTL-4100
+        XCTAssertNil(out.controls.ringLED)
+        out.setCapableInterface(primary)
+        out.setRingLED(index: 1)
+        queue.drain()
+        XCTAssertEqual(primary.writes, [])
+    }
+
+    /// The receiver's own row has no ring; the tablet it relays may.
+    func testWirelessReceiverOffersTheRingLED() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0084))
+        XCTAssertNil(TabletOutput(spec: spec, queue: HIDOutputQueue(label: "test")).controls.ringLED)
+        XCTAssertNotNil(
+            TabletOutput(spec: spec, queue: HIDOutputQueue(label: "test"), isWirelessReceiver: true).controls.ringLED)
+    }
+
     func testRelinkAndResync() throws {
         let spec = TabletSpec(
             productID: 0x5203, name: "Quick Keys receiver", format: .xencelabs, maxX: 0, maxY: 0,

@@ -175,6 +175,7 @@ init PressureSmoother.init()
 init RemotePairingSlot.init(index:serial:connected:)
 init RingState.init(position:buttonDown:)
 init StripState.init(position:)
+init TabletControls.Kinds.init(rawValue:)
 init TabletControls.init(ringLED:labels:displayPanel:quickKeys:)
 init TabletFeature.init(rawValue:)
 init TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:tiltX:tiltY:rotation:penButton1:penButton2:eraser:inProximity:hoverDistance:mouseMiddleButton:mouseWheelDelta:penButton3:penButton4:penButton5:airbrushWheel:)
@@ -466,6 +467,7 @@ property ReportFormat.tiltMaxDegrees
 property RingState.buttonDown
 property RingState.position
 property StripState.position
+property TabletControls.Kinds.rawValue
 property TabletControls.displayPanel
 property TabletControls.labels
 property TabletControls.quickKeys
@@ -542,6 +544,7 @@ property TabletSpec.maxTouchContacts
 property TabletSpec.maxX
 property TabletSpec.maxY
 property TabletSpec.name
+property TabletSpec.offeredControls
 property TabletSpec.productID
 property TabletSpec.productStringMatch
 property TabletSpec.quirks
@@ -676,6 +679,7 @@ struct RemotePairingSlot
 struct RingState
 struct StripState
 struct TabletControls
+struct TabletControls.Kinds
 struct TabletFeature
 struct TabletPoint
 struct TabletQuirks
@@ -839,6 +843,10 @@ type.property PrecisionTouchLayout.Usage.touchScreenCollection
 type.property PrecisionTouchLayout.Usage.width
 type.property PrecisionTouchLayout.Usage.x
 type.property PrecisionTouchLayout.Usage.y
+type.property TabletControls.Kinds.displayPanel
+type.property TabletControls.Kinds.labels
+type.property TabletControls.Kinds.quickKeys
+type.property TabletControls.Kinds.ringLED
 type.property TabletFeature.bluetooth
 type.property TabletFeature.dial
 type.property TabletFeature.displayControls

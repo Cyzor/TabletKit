@@ -72,23 +72,30 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
     private static let intuos4PressedLuminance: UInt8 = 20
     private static let intuos4OLEDBrightness: UInt8 = 10
 
-    package init(spec: TabletSpec, queue: HIDOutputQueue) {
+    /// The slots `controls` fills.
+    package let offered: TabletControls.Kinds
+
+    /// `isWirelessReceiver`: a receiver's own row has no ring, but the
+    /// tablet it relays may, and `controls` is fixed before it says which.
+    package init(spec: TabletSpec, queue: HIDOutputQueue, isWirelessReceiver: Bool = false) {
         self.spec = spec
         self.queue = queue
+        var offered = spec.offeredControls
+        if isWirelessReceiver && TabletSpec.ringLEDFormats.contains(spec.format) { offered.insert(.ringLED) }
+        self.offered = offered
     }
 
     /// The controls this tablet offers: a slot is filled exactly when
     /// writing to it does something.
     package var controls: TabletControls {
-        let format = spec.format
-        return TabletControls(
-            ringLED: [.intuosV1, .intuosV2, .cintiqV1, .xencelabs].contains(format) ? self : nil,
-            labels: format == .xencelabs || spec.hasKeyOLEDs ? self : nil,
-            displayPanel: hasDisplayPanel ? self : nil,
-            quickKeys: format == .xencelabs ? self : nil)
+        TabletControls(
+            ringLED: offered.contains(.ringLED) ? self : nil,
+            labels: offered.contains(.labels) ? self : nil,
+            displayPanel: offered.contains(.displayPanel) ? self : nil,
+            quickKeys: offered.contains(.quickKeys) ? self : nil)
     }
 
-    private var hasDisplayPanel: Bool { spec.format == .xencelabs && spec.isPenDisplay }
+    private var hasDisplayPanel: Bool { offered.contains(.displayPanel) }
 
     // MARK: - Interfaces
 
@@ -173,7 +180,7 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
 
     /// Shows the active slot on the ring LED. On the output queue.
     private func sendRingLED() {
-        guard let primary else { return }
+        guard offered.contains(.ringLED), let primary else { return }
         let index = ledIndex
         let name = spec.name
         logger.info("\(name, privacy: .public): ring LED → slot \(index) (\(self.isBluetooth ? "BT" : "USB", privacy: .public))")

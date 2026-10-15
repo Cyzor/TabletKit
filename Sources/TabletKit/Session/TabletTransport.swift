@@ -81,7 +81,7 @@ public final class TabletTransport: Identifiable {
         self.backend = backend
         self.session = session
         connection = TabletConnection(primary: primary, spec: spec, seize: seize)
-        output = TabletOutput(spec: spec, queue: connection.output)
+        output = TabletOutput(spec: spec, queue: connection.output, isWirelessReceiver: isWireless)
         var input = TabletInput(spec: spec, isBluetooth: isBluetooth, isWireless: isWireless)
         input.register(primary)
         self.input = InputBox(input)

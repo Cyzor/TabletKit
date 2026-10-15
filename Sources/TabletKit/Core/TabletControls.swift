@@ -41,6 +41,35 @@ public struct TabletControls {
     }
 }
 
+extension TabletControls {
+    /// Which slots a device fills, known without the device.
+    public struct Kinds: OptionSet, Hashable, Sendable {
+        public let rawValue: Int
+        public init(rawValue: Int) { self.rawValue = rawValue }
+
+        public static let ringLED = Kinds(rawValue: 1 << 0)
+        public static let labels = Kinds(rawValue: 1 << 1)
+        public static let displayPanel = Kinds(rawValue: 1 << 2)
+        public static let quickKeys = Kinds(rawValue: 1 << 3)
+    }
+}
+
+extension TabletSpec {
+    /// The controls a tablet of this model offers once connected, from the
+    /// spec alone, so a host can show them, greyed out, while it's unplugged.
+    public var offeredControls: TabletControls.Kinds {
+        var kinds: TabletControls.Kinds = []
+        if Self.ringLEDFormats.contains(format) && (hasTouchRing || hasMechanicalDial) { kinds.insert(.ringLED) }
+        if format == .xencelabs || hasKeyOLEDs { kinds.insert(.labels) }
+        if format == .xencelabs && isPenDisplay { kinds.insert(.displayPanel) }
+        if format == .xencelabs { kinds.insert(.quickKeys) }
+        return kinds
+    }
+
+    /// The formats whose ring or dial LEDs TabletKit can set.
+    static let ringLEDFormats: Set<ReportFormat> = [.intuosV1, .intuosV2, .cintiqV1, .xencelabs]
+}
+
 /// A touch ring's or dial's mode LEDs.
 public protocol RingLEDControl: AnyObject {
     /// Light the LED for the active mode slot (0-based).
