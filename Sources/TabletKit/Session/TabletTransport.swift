@@ -82,6 +82,9 @@ public final class TabletTransport: Identifiable {
         self.session = session
         connection = TabletConnection(primary: primary, spec: spec, seize: seize)
         output = TabletOutput(spec: spec, queue: connection.output, isWirelessReceiver: isWireless)
+        // Before the delegate hears of this transport: its first writes would
+        // otherwise race this onto the output queue and find no interface.
+        output.attach(primary: primary, isBluetooth: isBluetooth, isWireless: isWireless)
         var input = TabletInput(spec: spec, isBluetooth: isBluetooth, isWireless: isWireless)
         input.register(primary)
         self.input = InputBox(input)
@@ -98,7 +101,6 @@ public final class TabletTransport: Identifiable {
         connection.onSerial = { [weak self] serial in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.serialRead(serial) } }
         }
-        output.attach(primary: primary, isBluetooth: isBluetooth, isWireless: isWireless)
         let ret = connection.open(
             accepts: { [spec] in Self.accepts($0, spec: spec) },
             onReport: makeReportHandler(sink: sink))

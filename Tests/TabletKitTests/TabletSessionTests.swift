@@ -14,9 +14,11 @@ final class RecordingDelegate: TabletSessionDelegate, TabletInputSink, @unchecke
     var reports = 0
     var unclaimed: [UnclaimedKind] = []
     var serials: [UInt32] = []
+    var onAttach: ((TabletTransport) -> Void)?
 
     func session(_ session: TabletSession, didAttach transport: TabletTransport, to tablet: ConnectedTablet) {
         log.append("attach 0x\(String(transport.rawProductID, radix: 16)) to 0x\(String(tablet.productID, radix: 16))")
+        onAttach?(transport)
     }
     func session(_ session: TabletSession, didDetach transport: TabletTransport, from tablet: ConnectedTablet) {
         log.append("detach 0x\(String(transport.rawProductID, radix: 16))")
@@ -62,10 +64,12 @@ final class TabletSessionTests: XCTestCase {
     }
 
     private func run(
-        _ interfaces: [ReplayRecording.Interface], _ events: [ReplayRecording.Event]
+        _ interfaces: [ReplayRecording.Interface], _ events: [ReplayRecording.Event],
+        onAttach: ((TabletTransport) -> Void)? = nil
     ) -> (TabletSession, ReplayBackend, RecordingDelegate) {
         let backend = ReplayBackend(ReplayRecording(interfaces: interfaces, events: events))
         let delegate = RecordingDelegate()
+        delegate.onAttach = onAttach
         let session = TabletSession(backend: backend, delegate: delegate)
         session.start()
         backend.play()
@@ -87,6 +91,17 @@ final class TabletSessionTests: XCTestCase {
         // The connect sequence writes on the output queue.
         transport.connection.output.drain()
         XCTAssertEqual(backend.interfaces[1].writes.first, "inputMode")
+    }
+
+    /// A host sets its controls as soon as it hears of a transport, before
+    /// the session opens it. Those writes must still reach the tablet.
+    func testControlWritesFromAttachReachTheTablet() throws {
+        let (session, backend, _) = run(
+            [iface(0x0358, page: 0xFF00, serial: "S1")], [.attach(0)],
+            onAttach: { $0.controls.ringLED?.setRingLED(index: 2) })
+        let transport = try XCTUnwrap(session.tablets.first?.transports.first)
+        transport.connection.output.drain()
+        XCTAssertTrue(backend.interfaces[0].writes.contains("feature 32 46 03"), "\(backend.interfaces[0].writes)")
     }
 
     /// The same tablet over Bluetooth and then USB is one tablet with two
