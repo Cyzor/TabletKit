@@ -169,4 +169,59 @@ final class UCLogicSessionTests: XCTestCase {
         XCTAssertNotEqual(gaomonOnly.tablets.first?.transports.first?.spec.format, .ucLogic)
         XCTAssertEqual(gaomonBackend.interfaces[0].writes, ["string 201"], "never switched on")
     }
+
+    // MARK: - Silence
+
+    /// A Huion tablet that switched on, with one tip-down report queued.
+    private func huionWithReport() -> (TabletSession, ReplayBackend, RecordingDelegate) {
+        let report: [UInt8] = [0x08, 0x81, 0x50, 0xC3, 0x12, 0x7A, 0x00, 0x08, 0x00, 0x00, 0x14, 0x0A]
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: [iface(vendor: 0x256C, product: 0x006D, page: 0xFF00, strings: [200: huion])],
+            events: [.attach(0), .report(interface: 0, bytes: report, ns: 1, decoded: nil)]))
+        let delegate = RecordingDelegate()
+        let session = TabletSession(backend: backend, delegate: delegate)
+        session.experimentalTabletBrands = [.huion]
+        session.start()
+        return (session, backend, delegate)
+    }
+
+    private func leaves(_ events: [TabletEvent]) -> Int {
+        events.filter { if case .pen(let p) = $0 { !p.inProximity } else { false } }.count
+    }
+
+    /// Huion tablets never say the pen left. After 100 ms of quiet, the
+    /// session says so for them, once.
+    func testHuionSilenceMeansThePenLeft() {
+        let (session, backend, delegate) = huionWithReport()
+        backend.play()
+        XCTAssertEqual(session.tablets.first?.transports.first?.spec.format, .ucLogic)
+        XCTAssertEqual(leaves(delegate.lastBatch), 0)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        XCTAssertEqual(leaves(delegate.lastBatch), 0, "not yet")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        XCTAssertEqual(leaves(delegate.lastBatch), 1)
+    }
+
+    /// A transport that's gone delivers no silence.
+    func testNoSilenceAfterTheTransportCloses() {
+        let (session, backend, delegate) = huionWithReport()
+        backend.play()
+        session.stop()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        XCTAssertEqual(leaves(delegate.lastBatch), 0)
+    }
+
+    /// Tablets that say the pen left get no timer.
+    func testUGEEGetsNoSilence() {
+        let report: [UInt8] = [0x02, 0xA1, 0x38, 0x59, 0x88, 0x3B, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00]
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: xpPen(), events: [.attach(1), .report(interface: 1, bytes: report, ns: 1, decoded: nil)]))
+        let delegate = RecordingDelegate()
+        let session = TabletSession(backend: backend, delegate: delegate)
+        session.experimentalTabletBrands = [.xpPen]
+        session.start()
+        backend.play()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        XCTAssertEqual(leaves(delegate.lastBatch), 0)
+    }
 }

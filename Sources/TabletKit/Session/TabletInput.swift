@@ -114,6 +114,13 @@ package struct TabletInput {
     /// Whether the pen was in range after the last report.
     package var penInRange: Bool { decoder.penInRange || descriptorDecoder?.penInRange == true }
 
+    /// How long without a report means the pen left, for tablets that
+    /// never say so; `nil` for the rest.
+    package var silenceTimeout: TimeInterval? { decoder.silenceTimeout }
+
+    /// What a silence as long as ``silenceTimeout`` means.
+    package mutating func handleSilence() -> [TabletEvent] { decoder.eventsForSilence() }
+
     /// Whether reports from an interface on `usagePage` should be decoded.
     package func accepts(usagePage: Int) -> Bool {
         spec.format != .xencelabs || usagePage == Self.xencelabsVendorUsagePage

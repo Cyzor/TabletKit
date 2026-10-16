@@ -152,6 +152,8 @@ public final class TabletTransport: Identifiable {
     func close() {
         output.stop()
         connection.close()
+        let input = input
+        backend.performOnInput(after: 0) { input.isClosed = true }
         state = .disconnected
         deliveringInterfaces.removeAll()
         interfaces.removeAll()
@@ -228,6 +230,9 @@ public final class TabletTransport: Identifiable {
                 input.lastNotedReportNs = ns
                 output.noteReport(at: ns)
             }
+            if let timeout = input.value.silenceTimeout {
+                Self.watchSilence(timeout, on: interface, input: input, backend: backend, sink: sink)
+            }
             for effect in result.effects {
                 switch effect {
                 case .relinkPuck(let identity):
@@ -269,6 +274,40 @@ public final class TabletTransport: Identifiable {
         }
     }
 
+    /// Reports the silence once `timeout` passes with no report. One check
+    /// is pending at a time; a report since it was set pushes it back.
+    private nonisolated static func watchSilence(
+        _ timeout: TimeInterval, on interface: any HIDInterface, input: InputBox, backend: any HIDBackend,
+        sink: (any TabletInputSink)?
+    ) {
+        input.lastReportAt = DispatchTime.now().uptimeNanoseconds
+        guard !input.silenceCheckPending else { return }
+        input.silenceCheckPending = true
+        checkSilence(after: timeout, timeout, on: interface, input: input, backend: backend, sink: sink)
+    }
+
+    private nonisolated static func checkSilence(
+        after delay: TimeInterval, _ timeout: TimeInterval, on interface: any HIDInterface, input: InputBox,
+        backend: any HIDBackend, sink: (any TabletInputSink)?
+    ) {
+        backend.performOnInput(after: delay) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            let quiet = TimeInterval(now &- input.lastReportAt) / 1_000_000_000
+            guard quiet >= timeout else {
+                return checkSilence(
+                    after: timeout - quiet, timeout, on: interface, input: input, backend: backend, sink: sink)
+            }
+            input.silenceCheckPending = false
+            guard !input.isClosed else { return }
+            let events = input.value.handleSilence()
+            guard !events.isEmpty else { return }
+            sink?.didDecode(events, from: HIDReport(pointer: emptyReport, count: 0), on: interface, at: now)
+        }
+    }
+
+    /// The report a silence is delivered with: none.
+    private nonisolated(unsafe) static let emptyReport = UnsafePointer(UnsafeMutablePointer<UInt8>.allocate(capacity: 1))
+
     /// Runs `body` on main: now if already there, as during replay.
     nonisolated static func onMain(_ body: @escaping @MainActor @Sendable () -> Void) {
         if Thread.isMainThread {
@@ -292,5 +331,10 @@ final class InputBox: @unchecked Sendable {
     var value: TabletInput
     /// When the output queue last heard of a report, for Xencelabs.
     var lastNotedReportNs: UInt64 = 0
+    /// When the last report arrived, and whether a silence check is set,
+    /// for tablets that never say the pen left.
+    var lastReportAt: UInt64 = 0
+    var silenceCheckPending = false
+    var isClosed = false
     init(_ value: TabletInput) { self.value = value }
 }
