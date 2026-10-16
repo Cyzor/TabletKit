@@ -5,8 +5,8 @@
 import XCTest
 @testable import TabletKit
 
-/// A tablet the registry doesn't know, decoded from its own descriptor
-/// through `TabletInput`.
+/// Tablets the registry doesn't know, through `TabletInput`: read from
+/// their own descriptor, or a guess for an unknown Wacom.
 final class DescriptorPenDecoderTests: XCTestCase {
 
     // MARK: - The spec
@@ -88,6 +88,76 @@ final class DescriptorPenDecoderTests: XCTestCase {
         XCTAssertEqual(point.x, 1234)
         XCTAssertEqual(point.y, 5678)
         XCTAssertEqual(point.normalizedPressure, 1)
+    }
+
+    // MARK: - An unknown Wacom
+
+    func testUnknownWacomFamilyFromReportSize() {
+        let v2 = TabletSpec.guessed(
+            forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 192, descriptor: bytes(TouchDescriptorFixtures.opaqueVendor))
+        XCTAssertEqual(v2.format, .intuosV2)
+        XCTAssertEqual([v2.maxX, v2.maxY, v2.maxPressure], [44800, 29600, 8191])
+        XCTAssertEqual(v2.initSteps, [.featureReport([0x02, 0x02])])
+        XCTAssertTrue(v2.quirks.readsDescriptorPens)
+        XCTAssertTrue(v2.quirks.inputModeWriteOverUSB, "keeps its family's quirks")
+
+        let v1 = TabletSpec.guessed(forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 10, descriptor: [])
+        XCTAssertEqual(v1.format, .intuosV1)
+        XCTAssertEqual(v1.maxPressure, 1023)
+    }
+
+    func testUnknownWacomRangesAndInitFromDescriptor() {
+        let dataMode = "060dff0901a10185400a02101500250275089501b102c0"
+        let spec = TabletSpec.guessed(
+            forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 26,
+            descriptor: bytes(TouchDescriptorFixtures.vendorPagePen + dataMode))
+        XCTAssertEqual([spec.maxX, spec.maxY, spec.maxPressure], [105286, 59574, 8191])
+        XCTAssertEqual(spec.initSteps, [.featureReport([0x40, 0x02])])
+    }
+
+    /// With an opaque descriptor, the guess decodes as the registry entry
+    /// for the same family does.
+    func testUnknownIntuosV2DecodesLikeTheRegistry() throws {
+        let registry = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0357))  // PTH-660
+        let guessed = TabletSpec.guessed(
+            forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 192, descriptor: bytes(TouchDescriptorFixtures.opaqueVendor))
+        var known = TabletInput(spec: registry, isBluetooth: false, isWireless: false)
+        var unknown = TabletInput(spec: guessed, isBluetooth: false, isWireless: false)
+        unknown.register(Described(TouchDescriptorFixtures.opaqueVendor))
+
+        var report = [UInt8](repeating: 0, count: 192)
+        report[0] = 0x10
+        report[1] = 0x60
+        report[2] = 0x34; report[3] = 0x12          // X 0x1234
+        report[5] = 0x78; report[6] = 0x05          // Y 0x0578
+        report[17] = 0x11; report[18] = 0x22         // serial
+        report[21] = 0x42; report[22] = 0x08         // Pro Pen 2
+        let a = feed(&known, report), b = feed(&unknown, report)
+        XCTAssertEqual(kinds(a), ["enter", "pen"])
+        XCTAssertEqual(kinds(b), kinds(a))
+        guard case .tool(let ta) = a[0], case .tool(let tb) = b[0],
+            case .pen(let pa) = a[1], case .pen(let pb) = b[1]
+        else { return XCTFail() }
+        XCTAssertEqual(tb.identity, ta.identity)
+        XCTAssertEqual([pb.x, pb.y, pb.pressure], [pa.x, pa.y, pa.pressure])
+    }
+
+    /// A pen report the descriptor declares skips the family guess.
+    func testUnknownWacomReadsDescribedPenReportsFirst() throws {
+        let spec = TabletSpec.guessed(
+            forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 26, descriptor: bytes(TouchDescriptorFixtures.vendorPagePen))
+        XCTAssertEqual(spec.format, .intuosV1)
+        var input = TabletInput(spec: spec, isBluetooth: false, isWireless: false)
+        input.register(Described(TouchDescriptorFixtures.vendorPagePen))
+
+        let events = feed(&input, penReport(status: 0x21, x: 50000, y: 30000, pressure: 4000))
+        XCTAssertEqual(kinds(events), ["enter", "pen"])
+        guard case .pen(let point) = events[1] else { return XCTFail() }
+        XCTAssertEqual(point.x, 50000)
+        XCTAssertEqual(point.pressure, 4000)
+        XCTAssertTrue(input.penInRange)
+        XCTAssertEqual(kinds(feed(&input, penReport(status: 0x00))), ["pen", "leave"])
+        XCTAssertFalse(input.penInRange)
     }
 
     // MARK: - Helpers

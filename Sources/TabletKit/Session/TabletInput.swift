@@ -55,9 +55,10 @@ package struct TabletInput {
     }
 
     private var decoder: DeviceDecoder
-    /// The pen reports a ``ReportFormat/descriptor`` tablet's interfaces
-    /// declare, kept to rebuild `decoder` when an interface adds more.
+    /// The pen reports the interfaces' descriptors declare, with
+    /// ``TabletQuirks/readsDescriptorPens``. Ahead of `decoder`.
     private var descriptorPens = DescriptorPenDecoder()
+    private var descriptorDecoder: DeviceDecoder?
     private var toolGrace: ToolAnnouncementGrace
     private var touchDecoders: [UInt8: PrecisionTouchDecoder] = [:]
     private var fixedTouchDecoders: [UInt8: DeviceDecoder] = [:]
@@ -111,7 +112,7 @@ package struct TabletInput {
     package var digitizer: DigitizerSpec { decoder.digitizer }
 
     /// Whether the pen was in range after the last report.
-    package var penInRange: Bool { decoder.penInRange }
+    package var penInRange: Bool { decoder.penInRange || descriptorDecoder?.penInRange == true }
 
     /// Whether reports from an interface on `usagePage` should be decoded.
     package func accepts(usagePage: Int) -> Bool {
@@ -120,8 +121,8 @@ package struct TabletInput {
 
     /// Adds the touch decoders `interface`'s descriptor or product ID calls for.
     package mutating func register(_ interface: any HIDInterface) {
-        if spec.format == .descriptor, descriptorPens.add(descriptor: interface.reportDescriptor) {
-            decoder = DeviceDecoder(descriptorPens, digitizer: decoder.digitizer, family: decoder.family)
+        if spec.quirks.readsDescriptorPens, descriptorPens.add(descriptor: interface.reportDescriptor) {
+            descriptorDecoder = DeviceDecoder(descriptorPens, digitizer: decoder.digitizer, family: decoder.family)
         }
         deriveTouchDecoders(from: interface.reportDescriptor)
         deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
@@ -147,7 +148,7 @@ package struct TabletInput {
         noteXencelabsRelay(report, into: &output)
         noteRemoteLinks(report)
 
-        let wasInProximity = decoder.penInRange
+        let wasInProximity = penInRange
         let graceEnded = toolGrace.advance(penInRange: wasInProximity)
         let decoded = decode(report, now: now, synthesizeToolEnter: isBluetooth && graceEnded, into: &output)
         output.events = gate(decoded, wasInProximity: wasInProximity, into: &output)
@@ -234,6 +235,9 @@ package struct TabletInput {
         }
         if report.count > 0, let touch = touchDecoders[report[0]] {
             return touch.decode(report: report).map { [.touch(TouchFrame(contacts: $0.contacts))] } ?? []
+        }
+        if descriptorPens.handles(report), let events = descriptorDecoder?.events(report) {
+            return events
         }
         var decoded = decoder.events(report)
         // Over Bluetooth the decoder also announces an Art Pen it infers from

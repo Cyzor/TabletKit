@@ -150,6 +150,7 @@ final class DecoderFuzzTests: XCTestCase {
                 }
             }
             _ = layout.modeSwitchFeatureReportID()
+            _ = TabletSpec.guessed(forUnknownWacom: 1, name: "Fuzz", maxInputReportSize: rng.int(200), descriptor: desc)
         }
     }
 

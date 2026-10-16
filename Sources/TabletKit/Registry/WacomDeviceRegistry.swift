@@ -599,6 +599,46 @@ public struct TabletSpec: Sendable {
             seizeUSB: false)
     }
 
+    /// A best guess for a Wacom tablet the registry doesn't know.
+    ///
+    /// Report size picks the family: over 64 bytes reads as IntuosV2, the
+    /// rest as IntuosV1. Pen reports the descriptor declares are read from
+    /// it first, since a modern pen report is small enough to pass for
+    /// IntuosV1. Ranges come from the descriptor where it has them. Init is
+    /// the mode switch the descriptor declares, or report 0x02.
+    package static func guessed(
+        forUnknownWacom productID: Int, name: String, maxInputReportSize: Int, descriptor: [UInt8]
+    ) -> TabletSpec {
+        let format: ReportFormat = maxInputReportSize > 64 ? .intuosV2 : .intuosV1
+        let parsed = descriptor.isEmpty ? nil : try? HIDReportDescriptorParser.parse(descriptor)
+        let fields = parsed?.reports.filter { $0.direction == .input }.flatMap(\.fields) ?? []
+        func largest(page: UInt32, usage: UInt32) -> Int {
+            fields.filter { $0.usagePage == page && $0.usage == usage }.map(\.logicalMax).max() ?? 0
+        }
+        var maxX = largest(page: 0x01, usage: 0x30)
+        var maxY = largest(page: 0x01, usage: 0x31)
+        var maxPressure = largest(page: 0x0D, usage: 0x30)
+        if let pen = parsed.flatMap({ GenericPenLayout.derive(from: $0).first }) {
+            maxX = pen.logicalMaxX
+            maxY = pen.logicalMaxY
+            if pen.logicalMaxPressure > 0 { maxPressure = pen.logicalMaxPressure }
+        }
+        // An Intuos5 or a second-generation Intuos Pro, as the closest
+        // common shape.
+        if maxX <= 0 || maxY <= 0 {
+            (maxX, maxY) = format == .intuosV2 ? (44800, 29600) : (44704, 27940)
+        }
+        if maxPressure <= 0 { maxPressure = format == .intuosV2 ? 8191 : 1023 }
+        let modeSwitch = parsed?.modeSwitchFeatureReportID() ?? 0x02
+        return TabletSpec(
+            productID: productID, name: name, format: format,
+            maxX: maxX, maxY: maxY, maxPressure: maxPressure,
+            buttonCount: 8, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false,
+            initSteps: [.featureReport([modeSwitch, 0x02])]
+        ).withQuirks { $0.readsDescriptorPens = true }
+    }
+
     /// Products without tilt in formats that otherwise carry it: consumer
     /// Intuos (CTL/CTH-x90, CTL-x100), CTE-460, CTL-470, DTU-class business
     /// displays, and entries with no pen (touch sensors, receivers,

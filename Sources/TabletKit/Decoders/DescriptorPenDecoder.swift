@@ -9,7 +9,8 @@ import Foundation
 ///
 /// It starts empty. `TabletInput` adds each interface's pen reports as the
 /// interface arrives, since the registry's decoder factory never sees a
-/// descriptor.
+/// descriptor. With ``TabletQuirks/readsDescriptorPens``, it runs ahead of
+/// the family decoder too.
 package struct DescriptorPenDecoder: TabletReportDecoder {
     private var pens: [UInt8: GenericPenDecoder] = [:]
 
@@ -28,14 +29,19 @@ package struct DescriptorPenDecoder: TabletReportDecoder {
         return added
     }
 
-    /// Whether any pen report is known.
-    package var isEmpty: Bool { pens.isEmpty }
+    /// Whether `report` is a pen report this decoder knows.
+    package func handles(_ report: HIDReport) -> Bool { pen(for: report) != nil }
+
+    /// A descriptor without report IDs has one report, which starts with data.
+    private func pen(for report: HIDReport) -> GenericPenDecoder? {
+        guard report.count > 0 else { return nil }
+        return pens[0] ?? pens[report.reportID]
+    }
 
     package func decode(
         report: HIDReport, spec: DigitizerSpec, state: inout State, deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        // A descriptor without report IDs has one report, which starts with data.
-        guard report.count > 0, let pen = pens[0] ?? pens[report.reportID] else { return [] }
+        guard let pen = pen(for: report) else { return [] }
         let events = pen.events(report: report, state: &state.tool)
         state.prevInProximity = state.tool.current != nil
         return events.compactMap { event in

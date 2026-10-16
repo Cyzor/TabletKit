@@ -35,6 +35,9 @@ public struct TabletQuirks: Sendable, Equatable {
     /// Over Bluetooth, reports to wait for the pen's identity before
     /// assuming a generic pen.
     public var toolAnnounceGraceFrames: Int?
+    /// Pen reports its descriptor declares are read from the descriptor,
+    /// ahead of the family decoder.
+    package var readsDescriptorPens = false
 
     public init() {}
 
@@ -91,6 +94,8 @@ public struct TabletQuirks: Sendable, Equatable {
             q.reinitOnReenumeration = true
         case .cintiqV1:
             q.seizesTouchSensor = true
+        case .descriptor:
+            q.readsDescriptorPens = true
         default:
             break
         }
