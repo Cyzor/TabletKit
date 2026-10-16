@@ -109,3 +109,19 @@ public struct UCLogicTabletInfo: Sendable, Equatable {
         stride(from: 2, to: b.count - 1, by: 2).allSatisfy { b[$0] >= 0x20 && b[$0] < 0x7F && b[$0 + 1] == 0 }
     }
 }
+
+extension UCLogicTabletInfo {
+    /// A spec for this tablet. `initSteps` switch it on again at connect
+    /// and after the Mac wakes.
+    package func spec(productID: Int, name: String, isPenDisplay: Bool, initSteps: [InitStep]) -> TabletSpec {
+        TabletSpec(
+            productID: productID, name: name, format: .ucLogic,
+            maxX: maxX, maxY: maxY, maxPressure: maxPressure,
+            buttonCount: tabletButtonCount, hasTouchRing: false,
+            // Only UGEE v2 reports carry an eraser bit.
+            hasEraser: tabletProtocol == .ugeeV2, hasTilt: true,
+            tiltMaxDegrees: UCLogicDecoder.tiltMaxDegrees,
+            isPenDisplay: isPenDisplay, seizeUSB: false, initSteps: initSteps,
+            activeWidthMM: activeWidthMM, activeHeightMM: activeHeightMM)
+    }
+}

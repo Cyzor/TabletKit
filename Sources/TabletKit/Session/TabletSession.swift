@@ -35,6 +35,11 @@ public final class TabletSession {
     /// Reads an unknown Wacom as any other maker's standard pen, from its
     /// descriptor alone. For testing that path on a Wacom.
     public var readsUnknownWacomAsGeneric = false
+    /// Brands whose tablets the session switches on and reads as
+    /// ``ReportFormat/ucLogic``, sized from their own answer. Experimental, and
+    /// empty by default, which leaves these tablets to the standard pen
+    /// path. Set it before ``start()``.
+    public var experimentalTabletBrands: Set<TabletBrand> = []
     /// How long a touch sensor waits for its tablet, or a watched interface
     /// for a sibling that decodes, before routing alone.
     package var heldSensorTimeout: TimeInterval = 10
@@ -44,6 +49,8 @@ public final class TabletSession {
     private var ledInterfaces: Set<ObjectIdentifier> = []
     private var heldSiblings = HeldInterfaces<Holder>()
     private var heldSensors = HeldInterfaces<Holder>()
+    /// Interfaces of a tablet whose switch-on hasn't been answered yet.
+    private var switchingOn: [DeviceInstanceKey: [any HIDInterface]] = [:]
     /// Each receiver's tablet, by the receiver's own identity, so its later
     /// interfaces find it after it joins the tablet it relays.
     private var receiverHomes: [DeviceInstanceKey: ConnectedTablet] = [:]
@@ -92,6 +99,7 @@ public final class TabletSession {
         heldSensors = HeldInterfaces()
         holders.removeAll()
         receiverHomes.removeAll()
+        switchingOn.removeAll()
     }
 
     /// Sends every tablet's init again, as after the Mac wakes.
@@ -108,7 +116,8 @@ public final class TabletSession {
 
     // MARK: - Attach
 
-    private func attach(_ interface: any HIDInterface, holdingSensor: Bool = true) {
+    private func attach(_ interface: any HIDInterface, holdingSensor: Bool = true, switchingOn: Bool = true) {
+        if switchingOn, attachSwitchingOn(interface) { return }
         guard case .proceed(let overrideSpec) = SessionRouting.vendorGate(interface) else {
             logger.info("recognized 0x\(String(interface.vendorID, radix: 16), privacy: .public)/0x\(String(interface.productID, radix: 16), privacy: .public), no decoder support")
             return giveUp(interface, as: .recognizedOnly)
@@ -189,6 +198,57 @@ public final class TabletSession {
         }
     }
 
+    /// Switches on an interface of an enabled brand, or holds it until a
+    /// sibling answers. False when the interface isn't one.
+    private func attachSwitchingOn(_ interface: any HIDInterface) -> Bool {
+        guard !experimentalTabletBrands.isEmpty, [0x256C, 0x28BD, 0x5543].contains(interface.vendorID) else {
+            return false
+        }
+        let identity = SessionRouting.identity(of: interface)
+        let rawProductID = interface.productID
+        let tablet = group(for: identity, rawProductID: rawProductID)
+        if let existing = tablet?.transports.first(where: { $0.rawProductID == rawProductID }) {
+            transportOf[ObjectIdentifier(interface)] = existing
+            existing.register(interface)
+            return true
+        }
+        // Reading 201 doesn't switch a tablet on; UGEE tablets don't answer it.
+        let firmwareName = interface.vendorID == 0x28BD
+            ? nil : interface.readString(index: 201).flatMap(UCLogicTabletInfo.text(ofStringDescriptor:))
+        let brands = TabletBrand.brands(
+            vendorID: interface.vendorID, productID: rawProductID, firmwareName: firmwareName)
+        guard !brands.isDisjoint(with: experimentalTabletBrands) else { return false }
+
+        let key = identity.key
+        for attempt in UCLogicTabletInfo.switchOns(for: interface) {
+            guard let info = attempt.run(on: interface) else { continue }
+            let profile = VendorDeviceRegistry.profile(
+                forVendorID: interface.vendorID, productID: rawProductID, firmwareName: firmwareName)
+            let name = profile?.productName ?? interface.productName ?? String(format: "Tablet 0x%04X", rawProductID)
+            logger.info("\(name, privacy: .public): switched on (\(String(describing: info.tabletProtocol), privacy: .public)), \(info.maxX, privacy: .public) × \(info.maxY, privacy: .public)")
+            let spec = info.spec(
+                productID: identity.productID, name: name, isPenDisplay: profile?.isPenDisplay ?? false,
+                initSteps: attempt.steps)
+            let transport = install(interface, spec: spec, seize: false, isWireless: false, identity: identity, joining: tablet)
+            for held in self.switchingOn.removeValue(forKey: key) ?? [] {
+                transportOf[ObjectIdentifier(held)] = transport
+                transport.register(held)
+            }
+            return true
+        }
+
+        let isFirst = self.switchingOn[key] == nil
+        self.switchingOn[key, default: []].append(interface)
+        if isFirst {
+            DispatchQueue.main.asyncAfter(deadline: .now() + heldSensorTimeout) { [weak self] in
+                guard let self, let held = self.switchingOn.removeValue(forKey: key) else { return }
+                logger.info("0x\(String(rawProductID, radix: 16, uppercase: true), privacy: .public): no interface answered the switch-on, routing as usual")
+                for interface in held { self.attach(interface, switchingOn: false) }
+            }
+        }
+        return true
+    }
+
     /// The tablet an interface joins, if one is connected: its receiver's
     /// home, the same identity, or the same product where either side has
     /// no serial. A serial-less tablet that gains a serial takes it on.
@@ -233,10 +293,11 @@ public final class TabletSession {
         install(interface, spec: spec, seize: false, isWireless: false, identity: identity, joining: existing, guessedAs: kind)
     }
 
+    @discardableResult
     private func install(
         _ interface: any HIDInterface, spec: TabletSpec, seize: Bool, isWireless: Bool,
         identity: SessionRouting.Identity, joining existing: ConnectedTablet?, guessedAs: UnclaimedKind? = nil
-    ) {
+    ) -> TabletTransport {
         logger.info("\(spec.name, privacy: .public) connected\(seize ? " (seized)" : "", privacy: .public)")
         let tablet = existing ?? newTablet(key: identity.key)
         let transport = TabletTransport(
@@ -260,6 +321,7 @@ public final class TabletSession {
                 transport.attachTouchSensor(held)
             }
         }
+        return transport
     }
 
     private func holder(_ interface: any HIDInterface) -> Holder {
@@ -295,6 +357,9 @@ public final class TabletSession {
         if let holder = holders.removeValue(forKey: ObjectIdentifier(interface)) {
             heldSensors.drop(holder)
             heldSiblings.drop(holder)
+        }
+        for (key, held) in switchingOn where held.contains(where: { $0 === interface }) {
+            switchingOn[key] = held.filter { $0 !== interface }
         }
         if let index = unclaimed.firstIndex(where: { $0 === interface }) {
             unclaimed.remove(at: index)

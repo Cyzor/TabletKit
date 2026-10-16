@@ -74,7 +74,8 @@ package final class ReplayInterface: HIDInterface, @unchecked Sendable {
     package private(set) var isOpen = false
     package private(set) var seized = false
     private var log: [String] = []
-    /// Every write, as "feature 02 02" or "output 02 b0 04".
+    /// Every write and string read, as "feature 02 02", "output 02 b0 04",
+    /// or "string 200".
     package var writes: [String] { lock.withLock { log } }
 
     package init(_ recorded: ReplayRecording.Interface) {
@@ -114,7 +115,11 @@ package final class ReplayInterface: HIDInterface, @unchecked Sendable {
         return (reply.result, Array(reply.bytes.prefix(length)))
     }
 
-    package func readString(index: UInt8) -> [UInt8]? { nil }
+    /// The recorded answer. Logged as "string 200".
+    package func readString(index: UInt8) -> [UInt8]? {
+        lock.withLock { log.append("string \(index)") }
+        return recorded.strings[index]
+    }
 
     /// Logs the HID Digitizer Input Mode switch, which IOKit builds from the
     /// descriptor's element rather than a raw report.

@@ -249,8 +249,13 @@ package final class TabletConnection: @unchecked Sendable {
                     let hex = String(format: "0x%08x", outcome.result ?? kIOReturnSuccess)
                     let padding = outcome.sentLength > bytes.count ? " (padded to \(outcome.sentLength))" : ""
                     logger.info("\(name, privacy: .public): initStep[\(index, privacy: .public)] output report\(padding, privacy: .public) result=\(hex, privacy: .public)")
+                    onStep?(.wrote(reportID: Int(bytes[0]), value: Int(bytes.count > 1 ? bytes[1] : 0),
+                                   result: outcome.result ?? kIOReturnSuccess, usagePage: usagePage))
                 case .stringDescriptor(let descriptorIndex):
                     logger.info("\(name, privacy: .public): initStep[\(index, privacy: .public)] string descriptor \(descriptorIndex, privacy: .public) → \(outcome.reply.map { "\($0.count) bytes" } ?? "no answer", privacy: .public)")
+                    onStep?(.read(purpose: "string descriptor", reportID: descriptorIndex,
+                                  result: outcome.reply == nil ? kIOReturnNotResponding : kIOReturnSuccess,
+                                  reply: outcome.reply ?? [], usagePage: usagePage))
                 case .delay:
                     break
                 }

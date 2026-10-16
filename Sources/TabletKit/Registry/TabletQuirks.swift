@@ -92,6 +92,8 @@ public struct TabletQuirks: Sendable, Equatable {
         case .xencelabs:
             q.answersSerialQuery = false
             q.reinitOnReenumeration = true
+        case .ucLogic:
+            q.answersSerialQuery = false
         case .cintiqV1:
             q.seizesTouchSensor = true
         case .descriptor:

@@ -15,6 +15,8 @@ The steps are the same as in <doc:BuildingAMinimalDriver>, with one difference. 
 
 The `pen-surface` sample does all four, alongside its Wacom support.
 
+A ``TabletSession`` does the first three itself for the brands in ``TabletSession/experimentalTabletBrands``, holding a tablet's interfaces until one answers.
+
 UC-Logic support in TabletKit is new. The UGEE v2 path works on a Xencelabs Pen Display 24, with both of its pens. The Huion v2 path decodes public recordings of real Huion tablets correctly, but no Huion tablet has been tried under macOS yet.
 
 ## Find the Tablet

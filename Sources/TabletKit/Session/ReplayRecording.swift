@@ -22,6 +22,8 @@ package struct ReplayRecording: Sendable {
         package var reportDescriptor: [UInt8] = []
         /// Replies to feature-report reads by report ID, given out in order.
         package var featureReplies: [UInt8: [Reply]] = [:]
+        /// Answers to USB string descriptor reads, header included, by index.
+        package var strings: [UInt8: [UInt8]] = [:]
 
         package init() {}
     }

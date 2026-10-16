@@ -517,6 +517,7 @@ property TabletQuirks.toolAnnounceGraceFrames
 property TabletQuirks.usbIdleReport
 property TabletQuirks.usbModeReadBack
 property TabletSession.delegate
+property TabletSession.experimentalTabletBrands
 property TabletSession.readsUnknownWacomAsGeneric
 property TabletSession.tablets
 property TabletSession.unclaimed

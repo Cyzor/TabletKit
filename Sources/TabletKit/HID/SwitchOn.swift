@@ -101,18 +101,7 @@ extension UCLogicTabletInfo {
     /// neither gets the other's command.
     public init?(switchingOn interface: any HIDInterface) {
         for attempt in Self.switchOns(for: interface) {
-            var reply: [UInt8]?
-            for step in attempt.steps {
-                switch step {
-                case .outputReport(let bytes):
-                    _ = interface.setReport(.output, bytes: padded(bytes, toSize: interface.maxOutputReportSize))
-                case .stringDescriptor(let index):
-                    reply = interface.readString(index: UInt8(truncatingIfNeeded: index))
-                case .featureReport, .delay:
-                    break
-                }
-            }
-            if let reply, let info = UCLogicTabletInfo(answer: reply, to: attempt.tabletProtocol) {
+            if let info = attempt.run(on: interface) {
                 self = info
                 return
             }
@@ -131,6 +120,22 @@ extension UCLogicTabletInfo {
     package struct SwitchOn: Sendable, Equatable {
         package let tabletProtocol: UCLogicProtocol
         package let steps: [InitStep]
+
+        /// Runs the steps, and reads the answer if one came.
+        package func run(on interface: any HIDInterface) -> UCLogicTabletInfo? {
+            var reply: [UInt8]?
+            for step in steps {
+                switch step {
+                case .outputReport(let bytes):
+                    _ = interface.setReport(.output, bytes: padded(bytes, toSize: interface.maxOutputReportSize))
+                case .stringDescriptor(let index):
+                    reply = interface.readString(index: UInt8(truncatingIfNeeded: index))
+                case .featureReport, .delay:
+                    break
+                }
+            }
+            return reply.flatMap { UCLogicTabletInfo(answer: $0, to: tabletProtocol) }
+        }
     }
 
     /// The switch-ons worth trying on an interface, in order.
