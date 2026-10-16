@@ -44,13 +44,12 @@ final class VendorDeviceRegistryTests: XCTestCase {
     }
 
     func testHuionLookupReturnsAtLeastOneProfile() {
-        // PID 0x0064 = Huion H1060P in the OTD snapshot.  May share PID with
-        // other products in future snapshots — assert "at least one" rather
-        // than "exactly one" so a future re-import doesn't break this test.
+        // PID 0x0064 = Huion H1060P in the OTD snapshot. Other products,
+        // Gaomon's among them, share the PID, so assert "at least one".
         let profiles = VendorDeviceRegistry.profiles(forVendorID: 0x256C, productID: 0x0064)
         XCTAssertGreaterThan(profiles.count, 0,
                              "Huion H1060P (0x256C/0x0064) should be present in the imported registry")
-        XCTAssertTrue(profiles.allSatisfy { $0.vendor == "Huion" })
+        XCTAssertTrue(profiles.contains { $0.productName == "Huion H1060P" })
     }
 
     func testXencelabsMediumPresent() {
@@ -79,11 +78,11 @@ final class VendorDeviceRegistryTests: XCTestCase {
     }
 
     func testAllImportedEntriesHaveRecognizedVendor() {
-        let expected: Set<String> = ["Huion", "Xencelabs", "XP-Pen"]
+        let expected: Set<String> = ["Huion", "Gaomon", "XP-Pen", "UGEE", "Parblo", "Xencelabs"]
         let vendors = Set(VendorDeviceRegistry.knownDevices.map(\.vendor))
         XCTAssertEqual(vendors, expected,
                        "Unexpected vendor set: \(vendors). "
-                       + "Re-import via tools/import_vendor_configs.py with --vendors Huion Xencelabs XP-Pen.")
+                       + "Re-import via tools/registry/import_vendor_configs.py with --vendors Huion Xencelabs XP-Pen Gaomon UGEE Parblo.")
     }
 
     // MARK: - Huion same-PID-many-products invariant

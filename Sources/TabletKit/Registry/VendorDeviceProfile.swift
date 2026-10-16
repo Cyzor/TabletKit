@@ -9,7 +9,7 @@
 // log" instead of "Unrecognized device, VID 0x256C, PID 0x006D."
 //
 // Data is bulk-imported from OpenTabletDriver's per-vendor JSON configs (see
-// `tools/import_vendor_configs.py`).  The imported entries carry no decoder
+// the app repo's `tools/registry/import_vendor_configs.py`).  The imported entries carry no decoder
 // dispatch: they exist to *name* a device, nothing more.  A small hand-kept
 // allowlist on top of them marks the few models MockTab can actually drive —
 // see `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)`, which
@@ -25,7 +25,7 @@
 import Foundation
 
 public struct VendorDeviceProfile: Equatable, Sendable {
-    /// Vendor brand string as it appears in OTD ("Huion", "Xencelabs", "XP-Pen").
+    /// Vendor brand string as it appears in OTD, such as "Huion", "XP-Pen", or "Xencelabs".
     public let vendor: String
     /// USB Vendor ID.
     public let vendorID: Int
