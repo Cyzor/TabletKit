@@ -266,11 +266,90 @@ final class GenericPenDecoderTests: XCTestCase {
         XCTAssertNil(decoder.decode(report: short))
     }
 
+    // MARK: - Announcing tools
+
+    /// A pen coming into range is announced once, then only its points follow.
+    func testAnnouncesPenOnEnteringRange() throws {
+        let decoder = GenericPenDecoder(layout: try layout(fromHex: Self.tipOnlyPen, reportID: 0x10))
+        var state = GenericPenDecoder.ToolState()
+        var report = [UInt8](repeating: 0, count: decoder.layout.payloadBytes + 1)
+        report[0] = 0x10
+        report[1] = 0b10  // in range
+
+        let first = HIDReport.withReport(report) { decoder.events(report: $0, state: &state) }
+        XCTAssertEqual(first.count, 2)
+        guard case .tool(let tool) = first[0] else { return XCTFail("expected a tool enter first") }
+        XCTAssertEqual(tool.phase, .enter)
+        XCTAssertEqual(tool.identity, ToolIdentity(serial: 0, toolCode: 0xE902, isEraser: false, isMouse: false))
+
+        let second = HIDReport.withReport(report) { decoder.events(report: $0, state: &state) }
+        XCTAssertEqual(second.count, 1)
+    }
+
+    /// Flipping to the eraser, or leaving and coming back, announces again.
+    func testAnnouncesEraserAndReentry() throws {
+        let decoder = GenericPenDecoder(layout: try layout(fromHex: TouchDescriptorFixtures.vendorPagePen, reportID: 0x10))
+        var state = GenericPenDecoder.ToolState()
+        var report = [UInt8](repeating: 0, count: decoder.layout.payloadBytes + 1)
+        report[0] = 0x10
+        func announced(_ status: UInt8) -> ToolIdentity? {
+            report[1] = status
+            let events = HIDReport.withReport(report) { decoder.events(report: $0, state: &state) }
+            if case .tool(let tool) = events.first { return tool.identity }
+            return nil
+        }
+
+        XCTAssertEqual(announced(0x20)?.toolCode, 0xE902)
+        XCTAssertEqual(announced(0x30)?.toolCode, 0xE90A)  // invert
+        XCTAssertEqual(announced(0x30)?.toolCode, nil)
+        XCTAssertNil(announced(0x00))  // out of range
+        XCTAssertEqual(announced(0x30)?.isEraser, true)
+    }
+
+    /// A pen that reports its serial and Wacom tool code is announced as
+    /// itself, and a swap in range announces the new pen.
+    func testAnnouncesReportedSerialAndToolCode() throws {
+        let decoder = GenericPenDecoder(layout: try layout(fromHex: Self.identifiedPen, reportID: 0x10))
+        XCTAssertNotNil(decoder.layout.transducerSerial)
+        XCTAssertNotNil(decoder.layout.toolType)
+        var state = GenericPenDecoder.ToolState()
+        var report = [UInt8](repeating: 0, count: decoder.layout.payloadBytes + 1)
+        report[0] = 0x10
+        report[1] = 0b10  // in range
+        func announced(serial: Int, tool: Int) -> ToolIdentity? {
+            setLE(&report, at: 6, bytes: 4, value: serial)
+            setLE(&report, at: 10, bytes: 2, value: tool)
+            let events = HIDReport.withReport(report) { decoder.events(report: $0, state: &state) }
+            if case .tool(let tool) = events.first { return tool.identity }
+            return nil
+        }
+
+        XCTAssertEqual(
+            announced(serial: 0x1234_5678, tool: 0x0842),
+            ToolIdentity(serial: 0x1234_5678, toolCode: 0x0842, isEraser: false, isMouse: false))
+        XCTAssertNil(announced(serial: 0x1234_5678, tool: 0x0842))
+        XCTAssertEqual(announced(serial: 0x0BAD_CAFE, tool: 0x0842)?.serial, 0x0BAD_CAFE)
+    }
+
+    /// Tool Type counts only on a vendor page, where Wacom puts it; the
+    /// standard Digitizer page assigns `0x5C` to something else.
+    func testToolTypeOnStandardPageIsIgnored() throws {
+        let hex = Self.identifiedPen.replacingOccurrences(of: "060dff095c", with: "050d095c")
+        XCTAssertNil(try layout(fromHex: hex, reportID: 0x10).toolType)
+    }
+
     // MARK: - Helpers
 
     /// A stylus with only Tip Switch, In Range, X, and Y, on report 0x10.
     private static let tipOnlyPen = "050d0902a10185100942093215002501750195028102950681030501"
         + "09300931150026ff7f751095028102c0"
+
+    /// `tipOnlyPen` plus a 32-bit serial and a Wacom vendor-page tool code,
+    /// at bytes 6 and 10 of the report.
+    private static let identifiedPen = "050d0902a10185100942093215002501750195028102950681030501"
+        + "09300931150026ff7f751095028102"
+        + "050d095b150027ffffff7f752095018102"
+        + "060dff095c150026ff7f751095018102c0"
 
     private func layout(fromHex hex: String, reportID: UInt8) throws -> GenericPenLayout {
         let parsed = try HIDReportDescriptorParser.parse(hex: hex)

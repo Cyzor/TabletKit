@@ -377,6 +377,8 @@ property GenericPenLayout.tiltX
 property GenericPenLayout.tiltY
 property GenericPenLayout.tipPressure
 property GenericPenLayout.tipSwitch
+property GenericPenLayout.toolType
+property GenericPenLayout.transducerSerial
 property GenericPenLayout.twist
 property GenericPenLayout.x
 property GenericPenLayout.y

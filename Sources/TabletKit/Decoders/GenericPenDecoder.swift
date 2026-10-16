@@ -42,6 +42,10 @@ public struct GenericPenLayout: Equatable, Sendable {
     public let tiltY: DescriptorField?
     public let twist: DescriptorField?
     public let hoverDistance: DescriptorField?
+    /// The pen's serial number, when the pen reports one.
+    public let transducerSerial: DescriptorField?
+    /// Wacom's tool code, on a Wacom vendor page.
+    public let toolType: DescriptorField?
 
     /// Declared logical maximum of the X axis, in device units.
     public let logicalMaxX: Int
@@ -86,6 +90,8 @@ public struct GenericPenLayout: Equatable, Sendable {
         var tiltY: DescriptorField?
         var twist: DescriptorField?
         var hoverDistance: DescriptorField?
+        var transducerSerial: DescriptorField?
+        var toolType: DescriptorField?
 
         for field in report.fields where !field.isConstant && field.isVariable {
             // Relative X/Y never belongs to a pen — see
@@ -127,6 +133,9 @@ public struct GenericPenLayout: Equatable, Sendable {
             case DigitizerUsage.tiltY: if tiltY == nil { tiltY = field }
             case DigitizerUsage.twist: if twist == nil { twist = field }
             case DigitizerUsage.vendorHoverDistance: if hoverDistance == nil { hoverDistance = field }
+            case DigitizerUsage.transducerSerial: if transducerSerial == nil { transducerSerial = field }
+            case DigitizerUsage.transducerToolType where field.usagePage >= 0xFF00:
+                if toolType == nil { toolType = field }
             default: continue
             }
         }
@@ -144,6 +153,7 @@ public struct GenericPenLayout: Equatable, Sendable {
             eraserSwitch: eraserSwitch, invert: invert,
             tipPressure: tipPressure, tiltX: tiltX, tiltY: tiltY, twist: twist,
             hoverDistance: hoverDistance,
+            transducerSerial: transducerSerial, toolType: toolType,
             logicalMaxX: x.logicalMax, logicalMaxY: y.logicalMax,
             logicalMaxPressure: tipPressure?.logicalMax ?? 0)
     }
@@ -161,10 +171,8 @@ extension GenericPenLayout {
 /// Decodes a HID pen digitizer report against a descriptor-derived
 /// `GenericPenLayout`.
 ///
-/// Emits `TabletPoint` directly — the same type every hand-written family
-/// decoder in `WacomFallbackDevice` builds — rather than routing through
-/// `DecodeResult`, since the fallback driver calls `onTablet(TabletPoint)`
-/// per report and has no use for a result array here.
+/// `decode(report:)` returns the point alone. `events(report:state:)` also
+/// announces the tool, which takes state between reports.
 public struct GenericPenDecoder: Sendable {
 
     public let layout: GenericPenLayout
@@ -236,5 +244,45 @@ public struct GenericPenDecoder: Sendable {
             eraser: isEraser,
             inProximity: inProximity,
             hoverDistance: layout.hoverDistance.map { extractField($0, from: payload) } ?? 0)
+    }
+}
+
+extension GenericPenDecoder {
+    /// What the decoder remembers between reports, to announce tools.
+    package struct ToolState: Sendable {
+        /// The tool last announced, or nil while no pen is in range.
+        package var current: ToolIdentity?
+
+        package init() {}
+    }
+
+    /// Tool code for a pen that doesn't identify itself, shared with
+    /// UC-Logic pens. See ``ToolIdentity/toolCode``.
+    static let toolCode: UInt16 = 0xE902
+    static let eraserToolCode: UInt16 = 0xE90A
+
+    /// Decodes one report into events: a tool enter when a pen comes into
+    /// range, flips over, or is swapped, then the point.
+    package func events(report: HIDReport, state: inout ToolState) -> [TabletEvent] {
+        guard let point = decode(report: report) else { return [] }
+        guard point.inProximity else {
+            state.current = nil
+            return [.pen(point)]
+        }
+        let identity = toolIdentity(report: report, isEraser: point.eraser)
+        guard identity != state.current else { return [.pen(point)] }
+        state.current = identity
+        return [.tool(ToolEvent(identity: identity, phase: .enter)), .pen(point)]
+    }
+
+    /// The pen in range, from its own serial and tool code where the
+    /// descriptor declares them.
+    private func toolIdentity(report: HIDReport, isEraser: Bool) -> ToolIdentity {
+        let idBytes = layout.reportID == 0 ? 0 : 1
+        let payload = Array(UnsafeBufferPointer(start: report.pointer + idBytes, count: report.count - idBytes))
+        let serial = layout.transducerSerial.map { UInt32(truncatingIfNeeded: extractField($0, from: payload)) } ?? 0
+        let reported = layout.toolType.map { UInt16(truncatingIfNeeded: extractField($0, from: payload)) } ?? 0
+        let code = reported != 0 ? reported : (isEraser ? Self.eraserToolCode : Self.toolCode)
+        return ToolIdentity(serial: serial, toolCode: code, isEraser: isEraser, isMouse: false)
     }
 }
