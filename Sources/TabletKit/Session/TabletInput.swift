@@ -60,6 +60,11 @@ package struct TabletInput {
     private var fixedTouchDecoders: [UInt8: DeviceDecoder] = [:]
     private var idleWatcher: IdleReportWatcher?
     private var pairingWatcher = DonglePairingWatcher()
+    private var batteryWatcher = DongleBatteryWatcher()
+    /// The paired tablet the receiver's battery readings belong to. Lags
+    /// `pairedProductID` by one report, so the owner moves the receiver to
+    /// that tablet before the first reading.
+    private var batteryProductID = 0
     private var relayWatcher = XencelabsRelayWatcher()
     private var remoteLinks = ExpressKeyRemoteWatcher()
 
@@ -140,6 +145,7 @@ package struct TabletInput {
         let graceEnded = toolGrace.advance(penInRange: wasInProximity)
         let decoded = decode(report, now: now, synthesizeToolEnter: isBluetooth && graceEnded, into: &output)
         output.events = gate(decoded, wasInProximity: wasInProximity, into: &output)
+        noteDongleBattery(report, into: &output)
         return output
     }
 
@@ -171,6 +177,18 @@ package struct TabletInput {
         pairedProductID = paired
         logger.info("\(name, privacy: .public): paired tablet 0x\(String(paired, radix: 16, uppercase: true), privacy: .public) — maxX=\(pairedSpec.maxX, privacy: .public) maxY=\(pairedSpec.maxY, privacy: .public) maxPressure=\(pairedSpec.maxPressure, privacy: .public)")
         output.effects.append(.pairedTablet(productID: paired))
+    }
+
+    private mutating func noteDongleBattery(_ report: HIDReport, into output: inout Output) {
+        guard isWireless, pairedProductID != 0 else { return }
+        guard pairedProductID == batteryProductID else {
+            batteryProductID = pairedProductID
+            batteryWatcher = DongleBatteryWatcher()
+            return
+        }
+        if let battery = batteryWatcher.observe(report) {
+            output.events.append(.device(.battery(percent: battery.percent, charging: battery.charging)))
+        }
     }
 
     private mutating func noteXencelabsRelay(_ report: HIDReport, into output: inout Output) {

@@ -57,6 +57,21 @@ final class TabletInputTests: XCTestCase {
         XCTAssertFalse(gated.events.contains { if case .tool = $0 { true } else { false } }, "gated again once the link drops")
     }
 
+    /// The receiver's battery reading starts on the report after the one
+    /// that names the tablet.
+    func testReceiverReportsItsTabletsBattery() throws {
+        let dongle = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0084))
+        var input = TabletInput(spec: dongle, isBluetooth: false, isWireless: true)
+        func battery(_ power: UInt8) -> [DeviceEvent.Battery] {
+            feed(&input, [0x80, 0x01, 0xDC, 0x14, 0xB3, power, 0x00, 0x28]).events.compactMap {
+                if case .device(let d) = $0 { d.battery } else { nil }
+            }
+        }
+        XCTAssertEqual(battery(0x16), [], "the naming report carries no reading")
+        XCTAssertEqual(battery(0x16).map(\.percent), [70])
+        XCTAssertEqual(battery(0x9E).map(\.charging), [true])
+    }
+
     func testXencelabsDecodesOnlyItsVendorTunnel() throws {
         let profile = try XCTUnwrap(VendorDeviceRegistry.drivableProfile(forVendorID: 0x28BD, productID: 0x520D))
         let spec = TabletSpec(
