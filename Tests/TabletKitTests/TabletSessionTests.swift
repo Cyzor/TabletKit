@@ -154,15 +154,59 @@ final class TabletSessionTests: XCTestCase {
         XCTAssertEqual(delegate.unclaimed.count + session.tablets.count, 1, "routed once the wait ran out")
     }
 
-    func testUnclaimedInterfaces() {
-        let pen: [UInt8] = [0x05, 0x0D, 0x09, 0x02, 0xA1, 0x01, 0x05, 0x01, 0x09, 0x30, 0x26, 0xFF, 0x7F,
-                            0x75, 0x10, 0x95, 0x01, 0x81, 0x02, 0xC0]
-        let (_, _, delegate) = run(
-            [iface(0x7777, page: 0x0D, usage: 2, descriptor: pen),
+    /// Only a recognized vendor's device with no decoder stays unclaimed.
+    /// Every other unknown interface gets a transport with a guessed spec.
+    func testUnknownInterfacesGetGuessedTransports() {
+        let (session, _, delegate) = run(
+            [iface(0x7777, page: 0x0D, usage: 2, descriptor: hex(TouchDescriptorFixtures.pen)),
              iface(0x006D, page: 0x01, usage: 6, vendor: 0x256C),
-             iface(0x1234, page: 0x0D, usage: 2, vendor: 0x1111, descriptor: pen)],
+             iface(0x1234, page: 0x0D, usage: 2, vendor: 0x1111, descriptor: hex(TouchDescriptorFixtures.pen))],
             [.attach(0), .attach(1), .attach(2)])
-        XCTAssertEqual(delegate.unclaimed, [.wacomFallback, .recognizedOnly, .genericDigitizer])
+        XCTAssertEqual(delegate.unclaimed, [.recognizedOnly])
+        let transports = session.tablets.flatMap(\.transports)
+        XCTAssertEqual(transports.map(\.guessedAs), [.wacomFallback, .genericDigitizer])
+        XCTAssertEqual(transports.map(\.spec.format), [.intuosV1, .descriptor])
+    }
+
+    /// An unknown tablet's interfaces share one transport, so it moves one
+    /// cursor, whichever arrives first.
+    func testUnknownTabletIsOneTransport() {
+        let pen = iface(0x7777, page: 0x0D, usage: 2, serial: "S1", descriptor: hex(TouchDescriptorFixtures.pen))
+        let touch = iface(
+            0x7777, page: 0x0D, usage: 4, serial: "S1", descriptor: hex(TouchDescriptorFixtures.precisionTouch10Finger))
+        for order in [[0, 1], [1, 0]] {
+            let (session, backend, _) = run([pen, touch], order.map { .attach($0) })
+            XCTAssertEqual(session.tablets.flatMap(\.transports).count, 1, "order \(order)")
+            let transport = session.tablets.first?.transports.first
+            XCTAssertEqual(transport?.guessedAs, .wacomFallback, "the pen leads, order \(order)")
+            XCTAssertTrue(session.transport(for: backend.interfaces[1]) === transport, "order \(order)")
+        }
+    }
+
+    /// A watched interface with no pen sibling routes alone after the wait.
+    func testWatchedInterfaceRoutesAloneAfterTheWait() {
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: [iface(0x7777, page: 0x0D, usage: 4, descriptor: hex(TouchDescriptorFixtures.precisionTouch10Finger))],
+            events: [.attach(0)]))
+        let session = TabletSession(backend: backend, delegate: RecordingDelegate())
+        session.heldSensorTimeout = 0.05
+        session.start()
+        backend.play()
+        XCTAssertTrue(session.tablets.isEmpty, "held")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        XCTAssertEqual(session.tablets.flatMap(\.transports).map(\.guessedAs), [.observeTouchOnly])
+    }
+
+    /// The debug switch reads an unknown Wacom as a standard pen.
+    func testUnknownWacomCanReadAsGeneric() {
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: [iface(0x7777, page: 0x0D, usage: 2, descriptor: hex(TouchDescriptorFixtures.pen))],
+            events: [.attach(0)]))
+        let session = TabletSession(backend: backend, delegate: RecordingDelegate())
+        session.readsUnknownWacomAsGeneric = true
+        session.start()
+        backend.play()
+        XCTAssertEqual(session.tablets.first?.transports.first?.spec.format, .descriptor)
     }
 
     func testDetachClosesTheTransportAndTablet() {
@@ -173,6 +217,13 @@ final class TabletSessionTests: XCTestCase {
         XCTAssertTrue(session.tablets.isEmpty)
         XCTAssertFalse(backend.interfaces[0].isOpen)
         XCTAssertNil(session.transport(for: backend.interfaces[0]))
+    }
+
+    private func hex(_ string: String) -> [UInt8] {
+        stride(from: 0, to: string.count, by: 2).map {
+            let start = string.index(string.startIndex, offsetBy: $0)
+            return UInt8(string[start..<string.index(start, offsetBy: 2)], radix: 16)!
+        }
     }
 
     func testBluetoothGhostMouseIsIgnored() {

@@ -30,6 +30,9 @@ public final class TabletTransport: Identifiable {
     /// The identity the first interface gave. A receiver keeps its own even
     /// after it joins the tablet it relays.
     public nonisolated let key: DeviceInstanceKey
+    /// What the registry-less guess took this for, or nil for a tablet the
+    /// registry knows.
+    public nonisolated let guessedAs: UnclaimedKind?
 
     public enum State: Sendable, Equatable {
         /// Opened, with the connect sequence still running.
@@ -69,7 +72,7 @@ public final class TabletTransport: Identifiable {
 
     init(
         id: Int, primary: any HIDInterface, spec: TabletSpec, seize: Bool, isWireless: Bool,
-        key: DeviceInstanceKey, backend: any HIDBackend, session: TabletSession
+        key: DeviceInstanceKey, guessedAs: UnclaimedKind? = nil, backend: any HIDBackend, session: TabletSession
     ) {
         self.id = id
         rawProductID = primary.productID
@@ -78,6 +81,7 @@ public final class TabletTransport: Identifiable {
         self.isWireless = isWireless
         transportName = primary.transport
         self.key = key
+        self.guessedAs = guessedAs
         self.backend = backend
         self.session = session
         connection = TabletConnection(primary: primary, spec: spec, seize: seize)

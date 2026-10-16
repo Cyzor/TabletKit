@@ -28,11 +28,15 @@ public final class TabletSession {
     public private(set) var tablets: [ConnectedTablet] = []
     /// Interfaces routed to no driver here, which the delegate may drive itself.
     public private(set) var unclaimed: [any HIDInterface] = []
-    /// Products routed as if the registry didn't know them, so their pen
-    /// interfaces reach the delegate as unclaimed. For testing fallback
-    /// drivers on a known tablet; set it before ``start()``.
+    /// Products routed as if the registry didn't know them. For testing
+    /// the guesses for unknown tablets on a known one; set it before
+    /// ``start()``.
     public var unregisteredProductIDs: Set<Int> = []
-    /// How long a touch sensor waits for its tablet before routing alone.
+    /// Reads an unknown Wacom as any other maker's standard pen, from its
+    /// descriptor alone. For testing that path on a Wacom.
+    public var readsUnknownWacomAsGeneric = false
+    /// How long a touch sensor waits for its tablet, or a watched interface
+    /// for a sibling that decodes, before routing alone.
     package var heldSensorTimeout: TimeInterval = 10
 
     private let backend: any HIDBackend
@@ -163,11 +167,23 @@ public final class TabletSession {
             parent.registerLED(interface)
 
         case .observeTouchOnly:
-            giveUp(interface, as: .observeTouchOnly)
+            // A watched interface mustn't become the primary of a tablet
+            // whose pen arrives second, so it waits for a sibling that
+            // decodes, as a touch sensor waits for its tablet.
+            heldSiblings.hold(holder(interface), under: rawProductID)
+            DispatchQueue.main.asyncAfter(deadline: .now() + heldSensorTimeout) { [weak self] in
+                guard let self, self.heldSiblings.take(self.holder(interface), under: rawProductID) else { return }
+                let identity = SessionRouting.identity(of: interface)
+                self.installGuess(
+                    interface, as: .observeTouchOnly, identity: identity,
+                    joining: self.group(for: identity, rawProductID: rawProductID))
+            }
         case .wacomFallback:
-            giveUp(interface, as: .wacomFallback)
+            installGuess(
+                interface, as: readsUnknownWacomAsGeneric ? .genericDigitizer : .wacomFallback,
+                identity: identity, joining: tablet)
         case .genericDigitizer:
-            giveUp(interface, as: .genericDigitizer)
+            installGuess(interface, as: .genericDigitizer, identity: identity, joining: tablet)
         case .skip:
             break
         }
@@ -192,15 +208,40 @@ public final class TabletSession {
         return nil
     }
 
+    /// Installs an interface the registry doesn't know, with a spec guessed
+    /// from what it says about itself.
+    private func installGuess(
+        _ interface: any HIDInterface, as kind: UnclaimedKind,
+        identity: SessionRouting.Identity, joining existing: ConnectedTablet?
+    ) {
+        let productID = identity.productID
+        let name = interface.productName ?? String(format: "Tablet 0x%04X", productID)
+        let descriptor = interface.reportDescriptor
+        let spec: TabletSpec
+        switch kind {
+        case .wacomFallback:
+            spec = .guessed(
+                forUnknownWacom: productID, name: name,
+                maxInputReportSize: interface.maxInputReportSize, descriptor: descriptor)
+        case .genericDigitizer:
+            spec = TabletSpec.described(by: descriptor, productID: productID, name: name)
+                ?? .observing(productID: productID, name: name)
+        case .observeTouchOnly, .recognizedOnly:
+            spec = .observing(productID: productID, name: name)
+        }
+        logger.info("\(name, privacy: .public): not in the registry, read as \(String(describing: kind), privacy: .public) (\(String(describing: spec.format), privacy: .public))")
+        install(interface, spec: spec, seize: false, isWireless: false, identity: identity, joining: existing, guessedAs: kind)
+    }
+
     private func install(
         _ interface: any HIDInterface, spec: TabletSpec, seize: Bool, isWireless: Bool,
-        identity: SessionRouting.Identity, joining existing: ConnectedTablet?
+        identity: SessionRouting.Identity, joining existing: ConnectedTablet?, guessedAs: UnclaimedKind? = nil
     ) {
         logger.info("\(spec.name, privacy: .public) connected\(seize ? " (seized)" : "", privacy: .public)")
         let tablet = existing ?? newTablet(key: identity.key)
         let transport = TabletTransport(
             id: takeID(), primary: interface, spec: spec, seize: seize, isWireless: isWireless,
-            key: identity.key, backend: backend, session: self)
+            key: identity.key, guessedAs: guessedAs, backend: backend, session: self)
         tablet.transports.append(transport)
         transport.tablet = tablet
         transportOf[ObjectIdentifier(interface)] = transport

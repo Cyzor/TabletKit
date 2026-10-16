@@ -452,8 +452,8 @@ public struct TabletSpec: Sendable {
     public let seizeUSB: Bool
     /// Product ID of a companion USB interface that handles LED control separately.
     /// When a Wacom device with this PID is enumerated but has no digitizer elements,
-    /// TabletManager routes it to this device's WacomKnownDevice as an LED target
-    /// rather than attaching a fallback driver or skipping it entirely.
+    /// the session routes it to this tablet's transport as an LED target
+    /// rather than reading it as an unknown tablet or skipping it entirely.
     /// nil = LED control uses the main digitizer interface (single-interface devices).
     public let ledCompanionPID: Int?
     /// Product ID of a companion USB interface carrying this tablet's finger
@@ -597,6 +597,16 @@ public struct TabletSpec: Sendable {
             hasEraser: pen.invert != nil || pen.eraserSwitch != nil,
             hasTilt: pen.tiltX != nil || pen.tiltY != nil,
             seizeUSB: false)
+    }
+
+    /// A spec that decodes nothing, for an interface that's only watched
+    /// so a capture can record it.
+    package static func observing(productID: Int, name: String) -> TabletSpec {
+        TabletSpec(
+            productID: productID, name: name, format: .descriptor,
+            maxX: 1, maxY: 1, maxPressure: 1, buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            hasTilt: false, seizeUSB: false
+        ).withQuirks { $0.readsDescriptorPens = false }
     }
 
     /// A best guess for a Wacom tablet the registry doesn't know.
@@ -2702,10 +2712,10 @@ public enum WacomDeviceRegistry: Sendable {
 
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
-        // the paired tablet.  WacomFallbackDevice auto-detects the report family.
-        // Report 0x80 carries wireless status (byte[1]: 0x02=active, 0x05=lost,
-        // 0x06=battery low).  maxX/maxY/maxPressure are 0 — queried via HID
-        // descriptor on first connection by WacomFallbackDevice.querySpec().
+        // the paired tablet. Report 0x80 carries wireless status (byte[1]:
+        // 0x02=active, 0x05=lost, 0x06=battery low) and names the paired
+        // tablet, whose row then supplies the ranges, so maxX/maxY/maxPressure
+        // are 0 here.
         .init(
             productID: 0x0084, name: "ACK-40401 Wireless Dongle",
             format: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
