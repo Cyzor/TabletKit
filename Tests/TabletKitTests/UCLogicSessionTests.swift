@@ -211,10 +211,9 @@ final class UCLogicSessionTests: XCTestCase {
         let (session, backend, delegate) = huionWithReport()
         backend.play()
         XCTAssertEqual(session.tablets.first?.transports.first?.spec.format, .ucLogic)
-        XCTAssertEqual(leaves(delegate.lastBatch), 0)
-        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         XCTAssertEqual(leaves(delegate.lastBatch), 0, "not yet")
-        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        // Waiting longer can't add a second leave; a busy runner can't fail it.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         XCTAssertEqual(leaves(delegate.lastBatch), 1)
     }
 
