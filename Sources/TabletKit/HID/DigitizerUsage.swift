@@ -7,9 +7,9 @@ import Foundation
 /// Digitizer usage *numbers*, and whether a `(page, usage)` pair carries
 /// meaning this package can decode.
 ///
-/// Kept separate from the page-scoped constants in `GenericDigitizerFrame` and
-/// the extended `(page << 16) | usage` constants in `PrecisionTouchLayout`,
-/// because the question here is deliberately page-agnostic.
+/// Kept separate from the extended `(page << 16) | usage` constants in
+/// `PrecisionTouchLayout`, because the question here is deliberately
+/// page-agnostic.
 ///
 /// The reason: **Wacom puts standard digitizer usage numbers on its own vendor
 /// pages.** A Cintiq Pro's pen report declares Tip Switch as `0xFF0D`/`0x42`,

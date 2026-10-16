@@ -85,7 +85,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``DigitizerUsage``
 - ``DigitizerInterfaceKind``
 - ``classifyDigitizerInterface(_:)``
-- ``GenericDigitizerFrame``
 - ``DescriptorLayout``
 - ``DescriptorReport``
 - ``DescriptorField``

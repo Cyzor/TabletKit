@@ -32,13 +32,11 @@ public struct PrecisionTouchSlot: Equatable, Sendable {
 /// A HID Precision-Touchpad-style multitouch input report, described entirely
 /// by the device's own report descriptor.
 ///
-/// This is the touch counterpart to `GenericDigitizerFrame`: vendor-neutral,
-/// no IOKit, and derived rather than hardcoded. Where the pen path can read
-/// IOKit element *values*, touch cannot — a multitouch report repeats the same
-/// usages once per finger, and IOKit's element list gives no way to tell which
-/// repetition a value came from. `HIDReportDescriptorParser` fills that gap:
-/// this type is built from parsed bit offsets, and the decoder consumes raw
-/// report bytes instead of element callbacks.
+/// This is the touch counterpart to `GenericPenLayout`: vendor-neutral,
+/// no IOKit, and derived rather than hardcoded. A multitouch report repeats
+/// the same usages once per finger, and IOKit's element list can't tell the
+/// repetitions apart, so this type is built from the bit offsets
+/// `HIDReportDescriptorParser` finds and the decoder reads raw report bytes.
 ///
 /// Known limitation, deliberate: only single-report frames are supported. Some
 /// devices declare fewer physical slots than their maximum contact count and

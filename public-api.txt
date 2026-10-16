@@ -15,7 +15,6 @@ enum DeviceFamily
 enum DigitizerInterfaceKind
 enum DigitizerUsage
 enum EvidenceLevel
-enum GenericDigitizerFrame.Usage
 enum HIDReportDescriptorParser
 enum HIDReportDescriptorParserError
 enum HIDReportDirection
@@ -163,7 +162,6 @@ init DongleBatteryWatcher.init()
 init DonglePairingWatcher.init()
 init EvidenceSource.init(rawValue:)
 init FeatureEvidence.init(_:_:note:)
-init GenericDigitizerFrame.init(maxX:maxY:maxPressure:hasInRange:hasPressure:)
 init GenericPenDecoder.init(layout:)
 init HIDReport.init(pointer:count:)
 init HIDUsagePair.init(page:usage:)
@@ -218,8 +216,6 @@ method DisplayPanelControl.setDisplayContrast(_:)
 method DisplayPanelControl.setDisplayGamma(_:)
 method DongleBatteryWatcher.observe(_:)
 method DonglePairingWatcher.observe(_:)
-method GenericDigitizerFrame.point()
-method GenericDigitizerFrame.update(usagePage:usage:value:)
 method GenericPenDecoder.decode(report:)
 method HIDInterface.close()
 method HIDInterface.getReport(_:id:length:)
@@ -358,11 +354,6 @@ property EvidenceSource.rawValue
 property FeatureEvidence.level
 property FeatureEvidence.note
 property FeatureEvidence.sources
-property GenericDigitizerFrame.hasInRange
-property GenericDigitizerFrame.hasPressure
-property GenericDigitizerFrame.maxPressure
-property GenericDigitizerFrame.maxX
-property GenericDigitizerFrame.maxY
 property GenericPenDecoder.layout
 property GenericPenLayout.barrelSwitch
 property GenericPenLayout.eraserSwitch
@@ -674,7 +665,6 @@ struct DongleBatteryWatcher
 struct DonglePairingWatcher
 struct EvidenceSource
 struct FeatureEvidence
-struct GenericDigitizerFrame
 struct GenericPenDecoder
 struct GenericPenLayout
 struct HIDReport
@@ -822,19 +812,6 @@ type.property EvidenceSource.openTabletDriver
 type.property EvidenceSource.publicRecording
 type.property EvidenceSource.testerHardware
 type.property FeatureEvidence.claimed
-type.property GenericDigitizerFrame.Usage.barrelSwitch
-type.property GenericDigitizerFrame.Usage.digitizerPage
-type.property GenericDigitizerFrame.Usage.eraserSwitch
-type.property GenericDigitizerFrame.Usage.genericDesktopPage
-type.property GenericDigitizerFrame.Usage.inRange
-type.property GenericDigitizerFrame.Usage.invert
-type.property GenericDigitizerFrame.Usage.secondaryBarrel
-type.property GenericDigitizerFrame.Usage.tiltX
-type.property GenericDigitizerFrame.Usage.tiltY
-type.property GenericDigitizerFrame.Usage.tipPressure
-type.property GenericDigitizerFrame.Usage.tipSwitch
-type.property GenericDigitizerFrame.Usage.x
-type.property GenericDigitizerFrame.Usage.y
 type.property HIDThread.shared
 type.property IntuosOLEDImageEncoder.height
 type.property IntuosOLEDImageEncoder.width
