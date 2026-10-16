@@ -157,6 +157,7 @@ init DeviceInstanceKey.init(productID:usbSerial:locationID:)
 init DeviceInstanceKey.init(stringValue:)
 init DigitizerSpec.DebugBitSource.init(byteIndex:bitIndex:)
 init DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:bezelButtonCount:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:tiltMaxDegrees:debugButton2Source:)
+init DongleBatteryWatcher.init()
 init DonglePairingWatcher.init()
 init EvidenceSource.init(rawValue:)
 init FeatureEvidence.init(_:_:note:)
@@ -170,6 +171,7 @@ init LEDColor.init(r:g:b:)
 init LiveButtonState.init(tipDown:eraserDown:button1Down:button2Down:button3Down:button4Down:button5Down:expressKeys:bezelButtons:touchRingActive:touchRingButtonDown:touchRing2Active:touchRing2ButtonDown:touchStrip1Active:touchStrip2Active:)
 init PadState.init(buttons:pressedThisReport:rings:strips:hardwareMode:)
 init PanSmoother.init()
+init PositionDeadBand.init(width:)
 init PrecisionTouchDecoder.init(layout:)
 init PressureSmoother.init()
 init RemotePairingSlot.init(index:serial:connected:)
@@ -212,6 +214,7 @@ method DisplayPanelControl.setColorMode(_:)
 method DisplayPanelControl.setDisplayBrightness(_:)
 method DisplayPanelControl.setDisplayContrast(_:)
 method DisplayPanelControl.setDisplayGamma(_:)
+method DongleBatteryWatcher.observe(_:)
 method DonglePairingWatcher.observe(_:)
 method GenericDigitizerFrame.point()
 method GenericDigitizerFrame.update(usagePage:usage:value:)
@@ -236,6 +239,8 @@ method LatencyProbe.recordPipelineComplete(kernelTimestamp:)
 method LatencyProbe.resetGapHistogram()
 method PanSmoother.process(raw:dt:)
 method PanSmoother.reset()
+method PositionDeadBand.apply(x:y:maxX:maxY:)
+method PositionDeadBand.reset()
 method PrecisionTouchDecoder.decode(report:)
 method PressureSmoother.applySmoothing(rawPressure:strokeStarting:dt:)
 method PressureSmoother.reset()
@@ -344,6 +349,7 @@ property DigitizerSpec.maxX
 property DigitizerSpec.maxY
 property DigitizerSpec.ringSlotCount
 property DigitizerSpec.tiltMaxDegrees
+property DongleBatteryWatcher.lastReading
 property DonglePairingWatcher.announcedProductID
 property EvidenceSource.description
 property EvidenceSource.rawValue
@@ -439,6 +445,7 @@ property PadState.pressedThisReport
 property PadState.rings
 property PadState.strips
 property PanSmoother.strength
+property PositionDeadBand.width
 property PrecisionTouchDecoder.layout
 property PrecisionTouchFrame.contactCountMismatch
 property PrecisionTouchFrame.contacts
@@ -657,6 +664,7 @@ struct DeviceEvent.Kind
 struct DeviceInstanceKey
 struct DigitizerSpec
 struct DigitizerSpec.DebugBitSource
+struct DongleBatteryWatcher
 struct DonglePairingWatcher
 struct EvidenceSource
 struct FeatureEvidence
@@ -670,6 +678,7 @@ struct LEDColor
 struct LiveButtonState
 struct PadState
 struct PanSmoother
+struct PositionDeadBand
 struct PrecisionTouchDecoder
 struct PrecisionTouchFrame
 struct PrecisionTouchLayout
@@ -797,6 +806,7 @@ type.property DigitizerUsage.vendorHoverDistance
 type.property DigitizerUsage.vendorX
 type.property DigitizerUsage.vendorY
 type.property DigitizerUsage.width
+type.property DongleBatteryWatcher.holdReports
 type.property EvidenceSource.descriptorCorpus
 type.property EvidenceSource.libwacom
 type.property EvidenceSource.linuxKernel
