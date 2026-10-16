@@ -53,6 +53,56 @@ public struct DonglePairingWatcher: Sendable {
     }
 }
 
+/// Reads the paired tablet's battery from a Wacom wireless receiver's status
+/// report (0x80). Byte 5 holds the level out of 31 in its low five bits, and
+/// bit 7 is set while the battery charges.
+///
+/// On battery, the level flickers between neighboring steps from one report
+/// to the next, so a new level counts only once it holds for
+/// `holdReports` reports. The first reading and a change in charging show at
+/// once.
+public struct DongleBatteryWatcher: Sendable {
+    /// Reports a new level must hold, about two seconds at the receiver's
+    /// half-second status rate.
+    public static let holdReports = 4
+
+    public private(set) var lastReading: DeviceEvent.Battery?
+    private var pending: DeviceEvent.Battery?
+    private var pendingCount = 0
+
+    public init() {}
+
+    /// The battery when it first appears or changes while a tablet is linked.
+    public mutating func observe(_ report: HIDReport) -> DeviceEvent.Battery? {
+        guard report.count >= 6, report[0] == 0x80 else { return nil }
+        guard report[1] & 0x01 != 0 else {
+            // Announce again on relink, even at the same level.
+            lastReading = nil
+            pending = nil
+            return nil
+        }
+        let level = Int(report[5] & 0x1F)
+        let reading = DeviceEvent.Battery(
+            percent: level * 100 / 31, charging: report[5] & 0x80 != 0)
+        guard reading != lastReading else {
+            pending = nil
+            return nil
+        }
+        if let last = lastReading, last.charging == reading.charging {
+            if reading == pending {
+                pendingCount += 1
+            } else {
+                pending = reading
+                pendingCount = 1
+            }
+            guard pendingCount >= Self.holdReports else { return nil }
+        }
+        pending = nil
+        lastReading = reading
+        return reading
+    }
+}
+
 /// Over Bluetooth, gives a pen's identity announcement a few reports to
 /// arrive before the driver assumes a generic pen.
 /// See ``TabletQuirks/toolAnnounceGraceFrames``.
