@@ -150,6 +150,22 @@ final class UCLogicSessionTests: XCTestCase {
         XCTAssertFalse(backend.interfaces[0].writes.contains("string 100"))
     }
 
+    /// The debug switch reads a Xencelabs pen display as a UGEE tablet,
+    /// but leaves Quick Keys alone.
+    func testXencelabsCanReadAsUGEE() throws {
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: [iface(vendor: 0x28BD, product: 0x520D, page: 0xFF0A, declaresOutput2: true, strings: [100: decoL]),
+                         iface(vendor: 0x28BD, product: 0x5202, page: 0xFF0A, serial: "Q1", declaresOutput2: true)],
+            events: [.attach(0), .attach(1)]))
+        let session = TabletSession(backend: backend, delegate: RecordingDelegate())
+        session.readsXencelabsAsUGEE = true
+        session.start()
+        backend.play()
+        let formats = session.tablets.flatMap(\.transports).map(\.spec.format)
+        XCTAssertEqual(formats, [.ucLogic, .xencelabs])
+        XCTAssertFalse(backend.interfaces[1].writes.contains("string 100"))
+    }
+
     /// Huion and Gaomon share 0x006F; the firmware name says which, and
     /// names the model.
     func testFirmwareNamePicksBrandAndModel() throws {

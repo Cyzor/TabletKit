@@ -40,6 +40,9 @@ public final class TabletSession {
     /// empty by default, which leaves these tablets to the standard pen
     /// path. Set it before ``start()``.
     public var experimentalTabletBrands: Set<TabletBrand> = []
+    /// Reads Xencelabs pen tablets and displays as UGEE tablets, switched on
+    /// and sized from their own answer. For testing that path on a Xencelabs.
+    public var readsXencelabsAsUGEE = false
     /// How long a touch sensor waits for its tablet, or a watched interface
     /// for a sibling that decodes, before routing alone.
     package var heldSensorTimeout: TimeInterval = 10
@@ -201,9 +204,9 @@ public final class TabletSession {
     /// Switches on an interface of an enabled brand, or holds it until a
     /// sibling answers. False when the interface isn't one.
     private func attachSwitchingOn(_ interface: any HIDInterface) -> Bool {
-        guard !experimentalTabletBrands.isEmpty, [0x256C, 0x28BD, 0x5543].contains(interface.vendorID) else {
-            return false
-        }
+        guard !experimentalTabletBrands.isEmpty || readsXencelabsAsUGEE,
+            [0x256C, 0x28BD, 0x5543].contains(interface.vendorID)
+        else { return false }
         let identity = SessionRouting.identity(of: interface)
         let rawProductID = interface.productID
         let tablet = group(for: identity, rawProductID: rawProductID)
@@ -217,7 +220,11 @@ public final class TabletSession {
             ? nil : interface.readString(index: 201).flatMap(UCLogicTabletInfo.text(ofStringDescriptor:))
         let brands = TabletBrand.brands(
             vendorID: interface.vendorID, productID: rawProductID, firmwareName: firmwareName)
-        guard !brands.isDisjoint(with: experimentalTabletBrands) else { return false }
+        // Quick Keys has no pen, so it keeps its own path.
+        let isXencelabsPen = VendorDeviceRegistry.drivableProfile(
+            forVendorID: interface.vendorID, productID: rawProductID)?.maxX != nil
+        guard !brands.isDisjoint(with: experimentalTabletBrands) || (readsXencelabsAsUGEE && isXencelabsPen)
+        else { return false }
 
         let key = identity.key
         for attempt in UCLogicTabletInfo.switchOns(for: interface) {
