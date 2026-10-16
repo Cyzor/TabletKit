@@ -25,7 +25,7 @@ UC-Logic tablets don't share a vendor ID. Huion and Gaomon use `0x256C`, XP-Pen,
 
 Xencelabs also uses `0x28BD`. Its tablets speak UGEE v2, but TabletKit has a dedicated format for them, ``ReportFormat/xencelabs``, that also handles their buttons and dials. Check ``VendorDeviceRegistry`` first, and fall back to this article's path only for tablets it doesn't list.
 
-To let people choose by maker, ``TabletBrand/brands(vendorID:productID:firmwareName:)`` says which brands a candidate may be, and never includes Xencelabs. Huion and Gaomon share product IDs, so for those pass the firmware name from string descriptor 201, which ``UCLogicTabletInfo/text(ofStringDescriptor:)`` reads. Reading 201 doesn't switch the tablet on. The same name picks the model from ``VendorDeviceRegistry/profile(forVendorID:productID:firmwareName:)``.
+``TabletBrand/brands(vendorID:productID:firmwareName:)`` says which brands a candidate may be, and does not includes Xencelabs. Huion and Gaomon share product IDs, so for those pass the firmware name from string descriptor 201, which ``UCLogicTabletInfo/text(ofStringDescriptor:)`` reads. Reading 201 doesn't switch the tablet on. The same name picks the model from ``VendorDeviceRegistry/profile(forVendorID:productID:firmwareName:)``.
 
 ## Switch It On and Read the Answer
 
@@ -93,7 +93,16 @@ if let timeout = decoder.silenceTimeout {
 
 For a Huion tablet the timeout is 100 ms, and the result is a pen sample with `inProximity` set to `false`. Other decoders return `nil` for the timeout, so the same code is safe for every tablet.
 
-## What's Not Covered Yet
+## Confirmation of Support
+
+Specs built from a tablet's answer are ``ConfidenceTier/experimental``, like a registry entry with one source. A brand or model moves up the way a Wacom entry does:
+
+- **Cross-referenced:** a recording of a real tablet's switch-on answer and pen reports agrees with an independent source, such as the Linux kernel's tests or OpenTabletDriver's entry for that model.
+- **Verified:** someone has used the tablet under macOS and the recording shows it switched on, sized correctly, and decoded pen, tilt, and buttons.
+
+Today UGEE v2 verification includes an Xencelabs Pen Display 24, which has its own format in practice. Evaluation of XP-Pen, UGEE, or Parblo tablets remain incomplete, and Huion v2 rests on recordings alone.
+
+## Not Yet Supported
 
 The decoder reads pen reports and the tablet's buttons, which arrive as a ``PadState``. It ignores dials, rings, and touch strips, and doesn't support older UC-Logic protocols that don't describe themselves. Some XP-Pen tablets switch on with `02 B0 02` instead of `02 B0 04`; that variant is untested. If you have one of these tablets, a recording of its reports would help. See the Extending Support guide in the repository.
 
