@@ -127,6 +127,11 @@ public enum ReportFormat: String, Sendable {
     /// prior art (OpenTabletDriver); the other seven PIDs sharing this
     /// decoder do not and stay experimental.
     case pl
+
+    /// A tablet the registry doesn't know, read from its own report
+    /// descriptor by `DescriptorPenDecoder`: any standard HID pen
+    /// digitizer. Pen only; no buttons, rings, or touch.
+    case descriptor
 }
 
 extension ReportFormat {
@@ -145,6 +150,7 @@ extension ReportFormat {
         case .ucLogic: return UCLogicDecoder()
         case .expressKeyRemote: return ExpressKeyRemoteDecoder()
         case .pl: return WacomPLDecoder()
+        case .descriptor: return DescriptorPenDecoder()
         }
     }
 }
@@ -250,6 +256,10 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
     /// design" — populate real entries once someone verifies which pens
     /// this hardware generation actually accepts.
     case pl
+
+    /// A tablet read from its own report descriptor. Its pens don't
+    /// identify themselves, so any tool counts as compatible.
+    case descriptor
 }
 
 // MARK: - Per-device spec
@@ -573,6 +583,22 @@ public struct TabletSpec: Sendable {
         self.quirks = TabletQuirks.defaults(for: format)
     }
 
+    /// A spec for a tablet the registry doesn't know, from the pen reports
+    /// its descriptor declares, or nil when it declares none. Ranges come
+    /// from the first pen report.
+    package static func described(by descriptor: [UInt8], productID: Int, name: String) -> TabletSpec? {
+        guard !descriptor.isEmpty, let parsed = try? HIDReportDescriptorParser.parse(descriptor),
+            let pen = GenericPenLayout.derive(from: parsed).first
+        else { return nil }
+        return TabletSpec(
+            productID: productID, name: name, format: .descriptor,
+            maxX: pen.logicalMaxX, maxY: pen.logicalMaxY, maxPressure: Swift.max(pen.logicalMaxPressure, 1),
+            buttonCount: 0, hasTouchRing: false,
+            hasEraser: pen.invert != nil || pen.eraserSwitch != nil,
+            hasTilt: pen.tiltX != nil || pen.tiltY != nil,
+            seizeUSB: false)
+    }
+
     /// Products without tilt in formats that otherwise carry it: consumer
     /// Intuos (CTL/CTH-x90, CTL-x100), CTE-460, CTL-470, DTU-class business
     /// displays, and entries with no pen (touch sensors, receivers,
@@ -698,6 +724,8 @@ public struct TabletSpec: Sendable {
             return .expressKeyRemote
         case .pl:
             return .pl
+        case .descriptor:
+            return .descriptor
         }
     }
 }

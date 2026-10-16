@@ -49,6 +49,7 @@ enum.case ConnectStep.read(purpose:reportID:result:reply:usagePage:)
 enum.case ConnectStep.wrote(reportID:value:result:usagePage:)
 enum.case DeviceFamily.bamboo
 enum.case DeviceFamily.cintiq
+enum.case DeviceFamily.descriptor
 enum.case DeviceFamily.dtu
 enum.case DeviceFamily.dtus
 enum.case DeviceFamily.expressKeyRemote
@@ -86,6 +87,7 @@ enum.case InitStep.outputReport(_:)
 enum.case InitStep.stringDescriptor(_:)
 enum.case ReportFormat.bamboo
 enum.case ReportFormat.cintiqV1
+enum.case ReportFormat.descriptor
 enum.case ReportFormat.dtu
 enum.case ReportFormat.dtus
 enum.case ReportFormat.expressKeyRemote

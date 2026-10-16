@@ -126,10 +126,19 @@ final class DecoderFuzzTests: XCTestCase {
             guard let layout = try? HIDReportDescriptorParser.parse(desc) else { continue }
             for pen in GenericPenLayout.derive(from: layout) {
                 let d = GenericPenDecoder(layout: pen)
+                var tool = GenericPenDecoder.ToolState()
                 for _ in 0..<8 {
                     let bytes = randomReport(&rng, ids: Self.ids)
                     withExactReport(bytes) { _ = d.decode(report: $0) }
+                    withExactReport(bytes) { _ = d.events(report: $0, state: &tool) }
                     _ = d.decode(report: bytes)
+                }
+            }
+            var pens = DescriptorPenDecoder()
+            if pens.add(descriptor: desc), let spec = TabletSpec.described(by: desc, productID: 1, name: "Fuzz") {
+                var decoder = DeviceDecoder(pens, digitizer: spec.digitizerSpec, family: spec.family)
+                for _ in 0..<8 {
+                    withExactReport(randomReport(&rng, ids: Self.ids)) { _ = decoder.events($0) }
                 }
             }
             for touch in PrecisionTouchLayout.derive(from: layout) {

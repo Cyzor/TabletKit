@@ -55,6 +55,9 @@ package struct TabletInput {
     }
 
     private var decoder: DeviceDecoder
+    /// The pen reports a ``ReportFormat/descriptor`` tablet's interfaces
+    /// declare, kept to rebuild `decoder` when an interface adds more.
+    private var descriptorPens = DescriptorPenDecoder()
     private var toolGrace: ToolAnnouncementGrace
     private var touchDecoders: [UInt8: PrecisionTouchDecoder] = [:]
     private var fixedTouchDecoders: [UInt8: DeviceDecoder] = [:]
@@ -117,6 +120,9 @@ package struct TabletInput {
 
     /// Adds the touch decoders `interface`'s descriptor or product ID calls for.
     package mutating func register(_ interface: any HIDInterface) {
+        if spec.format == .descriptor, descriptorPens.add(descriptor: interface.reportDescriptor) {
+            decoder = DeviceDecoder(descriptorPens, digitizer: decoder.digitizer, family: decoder.family)
+        }
         deriveTouchDecoders(from: interface.reportDescriptor)
         deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
     }

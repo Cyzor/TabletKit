@@ -521,3 +521,4 @@ API breakage: var DecoderState.toolIsMouse has been removed
 API breakage: var DecoderState.toolIsSupported has been removed
 API breakage: var DecoderState.wacom24HDTPendingContacts has been removed
 API breakage: var DecoderState.wacom24HDTRemainingContacts has been removed
+API breakage: enumelement DeviceFamily.descriptor has been added as a new enum case
