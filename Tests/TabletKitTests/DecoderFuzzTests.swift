@@ -166,6 +166,9 @@ final class DecoderFuzzTests: XCTestCase {
             iface.strings[100] = bytes
             iface.strings[200] = bytes
             _ = UCLogicTabletInfo(switchingOn: iface)
+            if let text = UCLogicTabletInfo.text(ofStringDescriptor: bytes) {
+                _ = TabletBrand.brands(vendorID: 0x256C, productID: 0x006F, firmwareName: text)
+            }
         }
     }
 }

@@ -274,7 +274,7 @@ final class PenSurfaceRunner {
         // Interfaces arrive one at a time, and only one can switch a UGEE
         // tablet on. Hold the others until the tablet answers.
         waiting[id, default: []].append(device)
-        guard let info = UCLogicTabletInfo(readingFrom: device, vendorID: vendor) else { return }
+        guard let info = UCLogicTabletInfo(switchingOn: IOKitHIDInterface(device)) else { return }
 
         let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "UC-Logic tablet"
         let (tablet, _) = tablet(

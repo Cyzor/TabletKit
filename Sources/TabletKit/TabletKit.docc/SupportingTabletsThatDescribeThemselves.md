@@ -23,6 +23,8 @@ UC-Logic tablets don't share a vendor ID. Huion and Gaomon use `0x256C`, XP-Pen,
 
 Xencelabs also uses `0x28BD`. Its tablets speak UGEE v2, but TabletKit has a dedicated format for them, ``ReportFormat/xencelabs``, that also handles their buttons and dials. Check ``VendorDeviceRegistry`` first, and fall back to this article's path only for tablets it doesn't list.
 
+To let people choose by maker, ``TabletBrand/brands(vendorID:productID:firmwareName:)`` says which brands a candidate may be, and never includes Xencelabs. Huion and Gaomon share product IDs, so for those pass the firmware name from string descriptor 201, which ``UCLogicTabletInfo/text(ofStringDescriptor:)`` reads. Reading 201 doesn't switch the tablet on. The same name picks the model from ``VendorDeviceRegistry/profile(forVendorID:productID:firmwareName:)``.
+
 ## Switch It On and Read the Answer
 
 The two protocols switch on differently, and keep their answer in different string descriptors:
@@ -35,10 +37,10 @@ The two protocols switch on differently, and keep their answer in different stri
 
 The vendor ID tells you which to try: Huion v2 for `0x256C`, UGEE v2 for `0x28BD`, and either for `0x5543`. Don't send one protocol's switch-on to the other's tablets.
 
-For a Huion tablet, reading the answer is the switch. For a UGEE tablet, send the output report to the interface that declares report `0x02`, then read descriptor 100. ``UCLogicTabletInfo/init(readingFrom:vendorID:)`` does both, and returns `nil` until it's given the interface that answers:
+For a Huion tablet, reading the answer is the switch. For a UGEE tablet, send the output report to the interface that declares report `0x02`, then read descriptor 100. ``UCLogicTabletInfo/init(switchingOn:)`` does both, and returns `nil` until it's given the interface that answers:
 
 ```swift
-guard let info = UCLogicTabletInfo(readingFrom: device, vendorID: vendorID) else { return }
+guard let info = UCLogicTabletInfo(switchingOn: IOKitHIDInterface(device)) else { return }
 ```
 
 Doing it by hand takes two things to get right. Pad the output report with zeros to the interface's declared size, as ``hidSetOutputReport(_:bytes:)`` does: the firmware ignores a three-byte write, even when the write itself succeeds. And read string descriptors from the USB device, not the HID interface; ``readStringDescriptor(_:index:)`` does that without opening the device, so it works while your own HID connection is open, and keeps the reply's two-byte header.
@@ -97,4 +99,5 @@ The decoder reads pen reports and the tablet's buttons, which arrive as a ``PadS
 
 - <doc:BuildingAMinimalDriver>
 - ``UCLogicTabletInfo``
+- ``TabletBrand``
 - ``DeviceDecoder/silenceTimeout``

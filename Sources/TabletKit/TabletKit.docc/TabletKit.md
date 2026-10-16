@@ -54,6 +54,7 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``WacomDeviceRegistry``
 - ``VendorDeviceRegistry``
 - ``VendorDeviceProfile``
+- ``TabletBrand``
 - ``BrandHeuristic``
 - ``ToolCatalog``
 - ``ToolSpec``

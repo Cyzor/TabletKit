@@ -177,6 +177,7 @@ init PressureSmoother.init()
 init RemotePairingSlot.init(index:serial:connected:)
 init RingState.init(position:buttonDown:)
 init StripState.init(position:)
+init TabletBrand.init(name:)
 init TabletControls.Kinds.init(rawValue:)
 init TabletControls.init(ringLED:labels:displayPanel:quickKeys:)
 init TabletFeature.init(rawValue:)
@@ -470,6 +471,7 @@ property ReportFormat.tiltMaxDegrees
 property RingState.buttonDown
 property RingState.position
 property StripState.position
+property TabletBrand.description
 property TabletControls.Kinds.rawValue
 property TabletControls.displayPanel
 property TabletControls.labels
@@ -684,6 +686,7 @@ struct PressureSmoother
 struct RemotePairingSlot
 struct RingState
 struct StripState
+struct TabletBrand
 struct TabletControls
 struct TabletControls.Kinds
 struct TabletFeature
@@ -729,6 +732,7 @@ type.method ModifierMath.physicalCacheIsCurrent(reportTimestampNs:cacheUpdatedAt
 type.method ModifierMath.releaseEventFlags(systemFlags:remainingSyntheticFlags:)
 type.method ModifierMath.shouldUpdatePhysicalCache(sourceStateID:)
 type.method PrecisionTouchLayout.derive(from:)
+type.method TabletBrand.brands(vendorID:productID:firmwareName:)
 type.method TabletQuirks.defaults(for:)
 type.method ToolCatalog.capabilities(forToolCode:family:)
 type.method ToolCatalog.hasRotation(toolCode:)
@@ -739,12 +743,14 @@ type.method ToolCatalog.spec(forToolCode:)
 type.method ToolCatalog.spec(forToolCodeRaw:)
 type.method ToolCatalog.toolType(forToolCode:)
 type.method ToolCatalog.tools(forFamily:)
+type.method UCLogicTabletInfo.text(ofStringDescriptor:)
 type.method VendorDeviceRegistry.canonicalProductID(for:)
 type.method VendorDeviceRegistry.connectedCompanion(forProductID:connectedProductIDs:)
 type.method VendorDeviceRegistry.connectedCompanionOwner(forProductID:connectedProductIDs:)
 type.method VendorDeviceRegistry.drivableProfile(forVendorID:productID:)
 type.method VendorDeviceRegistry.isConnectedCompanion(productID:connectedProductIDs:)
 type.method VendorDeviceRegistry.profile(forProductID:)
+type.method VendorDeviceRegistry.profile(forVendorID:productID:firmwareName:)
 type.method VendorDeviceRegistry.profiles(forVendor:)
 type.method VendorDeviceRegistry.profiles(forVendorID:productID:)
 type.method VendorDeviceRegistry.transportPriority(forRawProductID:)
@@ -837,6 +843,12 @@ type.property PrecisionTouchLayout.Usage.touchScreenCollection
 type.property PrecisionTouchLayout.Usage.width
 type.property PrecisionTouchLayout.Usage.x
 type.property PrecisionTouchLayout.Usage.y
+type.property TabletBrand.all
+type.property TabletBrand.gaomon
+type.property TabletBrand.huion
+type.property TabletBrand.parblo
+type.property TabletBrand.ugee
+type.property TabletBrand.xpPen
 type.property TabletControls.Kinds.displayPanel
 type.property TabletControls.Kinds.labels
 type.property TabletControls.Kinds.quickKeys
