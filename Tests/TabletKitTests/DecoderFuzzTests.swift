@@ -160,6 +160,12 @@ final class DecoderFuzzTests: XCTestCase {
             let bytes = (0..<rng.int(40)).map { _ in rng.int(3) == 0 ? 0xFF : rng.byte() }
             _ = UCLogicTabletInfo(huionDescriptor200: bytes)?.digitizerSpec
             _ = UCLogicTabletInfo(ugeeDescriptor100: bytes)?.digitizerSpec
+            let iface = SwitchOnInterface(
+                vendorID: [0x256C, 0x28BD, 0x5543][rng.int(3)],
+                descriptor: rng.int(2) == 0 ? UCLogicTabletInfoTests.outputReport2 : bytes)
+            iface.strings[100] = bytes
+            iface.strings[200] = bytes
+            _ = UCLogicTabletInfo(switchingOn: iface)
         }
     }
 }

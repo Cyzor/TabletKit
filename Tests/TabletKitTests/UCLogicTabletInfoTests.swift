@@ -199,4 +199,88 @@ final class UCLogicTabletInfoTests: XCTestCase {
         XCTAssertTrue(
             decoder.decodeSilence(spec: spec, state: &state, deviceFamily: .xencelabs).isEmpty)
     }
+
+    // MARK: - Switch-on
+
+    /// A vendor-page interface declaring output report 2, 8 bytes long.
+    static let outputReport2: [UInt8] = [
+        0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x02, 0x09, 0x01,
+        0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x07, 0x91, 0x02, 0xC0,
+    ]
+
+    func testHuionSwitchesOnByReading200() throws {
+        let iface = SwitchOnInterface(vendorID: 0x256C, descriptor: Self.outputReport2)
+        iface.strings[200] = huion
+        let info = try XCTUnwrap(UCLogicTabletInfo(switchingOn: iface))
+        XCTAssertEqual(info.tabletProtocol, .huionV2)
+        // Huion's vendor ID never gets UGEE's command, even where the report exists.
+        XCTAssertEqual(iface.log, ["string 200"])
+    }
+
+    func testUGEESendsTheCommandPaddedThenReads100() throws {
+        let iface = SwitchOnInterface(vendorID: 0x28BD, descriptor: Self.outputReport2)
+        iface.strings[100] = decoL
+        let info = try XCTUnwrap(UCLogicTabletInfo(switchingOn: iface))
+        XCTAssertEqual(info.tabletProtocol, .ugeeV2)
+        XCTAssertEqual(info.maxX, 0xB270)
+        XCTAssertEqual(iface.log, ["output 02 B0 04 00 00 00 00 00", "string 100"])
+    }
+
+    /// Only the interface that declares report 2 can switch a UGEE tablet on.
+    func testUGEEInterfaceWithoutTheReportIsLeftAlone() {
+        let iface = SwitchOnInterface(vendorID: 0x28BD, descriptor: [])
+        iface.strings[100] = decoL
+        XCTAssertNil(UCLogicTabletInfo(switchingOn: iface))
+        XCTAssertEqual(iface.log, [])
+    }
+
+    /// UC-Logic's own vendor ID gets both, Huion's first.
+    func testOtherVendorTriesUGEEAfterAHuionNameAnswer() throws {
+        let iface = SwitchOnInterface(vendorID: 0x5543, descriptor: Self.outputReport2)
+        let name = Array("TABLET".utf16).flatMap { [UInt8($0 & 0xFF), UInt8($0 >> 8)] }
+        iface.strings[200] = [UInt8(name.count + 2), 0x03] + name
+        iface.strings[100] = parbloA610Pro
+        let info = try XCTUnwrap(UCLogicTabletInfo(switchingOn: iface))
+        XCTAssertEqual(info.tabletProtocol, .ugeeV2)
+        XCTAssertEqual(iface.log, ["string 200", "output 02 B0 04 00 00 00 00 00", "string 100"])
+    }
+
+    func testNoAnswerIsNil() {
+        let iface = SwitchOnInterface(vendorID: 0x5543, descriptor: Self.outputReport2)
+        XCTAssertNil(UCLogicTabletInfo(switchingOn: iface))
+        XCTAssertEqual(iface.log.count, 3)
+    }
+
+    func testAnswerReadsByProtocol() {
+        XCTAssertEqual(UCLogicTabletInfo(answer: huion, to: .huionV2)?.maxX, 50000)
+        XCTAssertEqual(UCLogicTabletInfo(answer: decoL, to: .ugeeV2)?.maxX, 0xB270)
+        XCTAssertNil(UCLogicTabletInfo(answer: decoL, to: UCLogicProtocol(description: "other")))
+    }
+}
+
+/// An interface that records the switch-on's writes and string reads.
+final class SwitchOnInterface: HIDInterface, @unchecked Sendable {
+    let vendorID: Int
+    let productID = 0x0001, usagePage = 0xFF00, usage = 0x01
+    let reportDescriptor: [UInt8]
+    var maxOutputReportSize: Int { reportDescriptor.isEmpty ? 0 : 8 }
+    var strings: [UInt8: [UInt8]] = [:]
+    private(set) var log: [String] = []
+
+    init(vendorID: Int, descriptor: [UInt8]) {
+        self.vendorID = vendorID
+        reportDescriptor = descriptor
+    }
+
+    func setReport(_ kind: HIDReportKind, bytes: [UInt8]) -> IOReturn {
+        log.append("\(kind) \(bytes.map { String(format: "%02X", $0) }.joined(separator: " "))")
+        return kIOReturnSuccess
+    }
+    func getReport(_ kind: HIDReportKind, id: UInt8, length: Int) -> (IOReturn, [UInt8]) {
+        (kIOReturnUnsupported, [])
+    }
+    func readString(index: UInt8) -> [UInt8]? {
+        log.append("string \(index)")
+        return strings[index]
+    }
 }

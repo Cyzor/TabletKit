@@ -99,26 +99,64 @@ extension UCLogicTabletInfo {
     /// interface that declares it, so for those this is `nil` until that
     /// interface is passed in. The vendor ID decides which to try, so
     /// neither gets the other's command.
-    public init?(readingFrom device: IOHIDDevice, vendorID: Int) {
-        if vendorID != 0x28BD,
-            let reply = readStringDescriptor(device, index: 200),
-            let info = UCLogicTabletInfo(huionDescriptor200: reply)
-        {
-            self = info
-            return
+    public init?(switchingOn interface: any HIDInterface) {
+        for attempt in Self.switchOns(for: interface) {
+            var reply: [UInt8]?
+            for step in attempt.steps {
+                switch step {
+                case .outputReport(let bytes):
+                    _ = interface.setReport(.output, bytes: padded(bytes, toSize: interface.maxOutputReportSize))
+                case .stringDescriptor(let index):
+                    reply = interface.readString(index: UInt8(truncatingIfNeeded: index))
+                case .featureReport, .delay:
+                    break
+                }
+            }
+            if let reply, let info = UCLogicTabletInfo(answer: reply, to: attempt.tabletProtocol) {
+                self = info
+                return
+            }
         }
-        guard vendorID != 0x256C, Self.declaresOutputReport(device, 0x02) else { return nil }
-        hidSetOutputReport(device, bytes: [0x02, 0xB0, 0x04])
-        guard let reply = readStringDescriptor(device, index: 100),
-            let info = UCLogicTabletInfo(ugeeDescriptor100: reply)
-        else { return nil }
-        self = info
+        return nil
     }
 
-    private static func declaresOutputReport(_ device: IOHIDDevice, _ reportID: UInt8) -> Bool {
-        guard let hex = hidReportDescriptorHex(device),
-            let layout = try? HIDReportDescriptorParser.parse(hex: hex)
-        else { return false }
+    /// Switches a UC-Logic tablet on, as ``init(switchingOn:)`` does.
+    public init?(readingFrom device: IOHIDDevice, vendorID: Int) {
+        guard vendorID == hidIntProperty(device, kIOHIDVendorIDKey) else { return nil }
+        self.init(switchingOn: IOKitHIDInterface(device))
+    }
+
+    /// One way to switch a tablet on: the steps, and whose answer the last
+    /// one reads.
+    package struct SwitchOn: Sendable, Equatable {
+        package let tabletProtocol: UCLogicProtocol
+        package let steps: [InitStep]
+    }
+
+    /// The switch-ons worth trying on an interface, in order.
+    package static func switchOns(for interface: any HIDInterface) -> [SwitchOn] {
+        var attempts: [SwitchOn] = []
+        if interface.vendorID != 0x28BD {
+            attempts.append(SwitchOn(tabletProtocol: .huionV2, steps: [.stringDescriptor(200)]))
+        }
+        if interface.vendorID != 0x256C, declaresOutputReport(interface, 0x02) {
+            attempts.append(SwitchOn(
+                tabletProtocol: .ugeeV2, steps: [.outputReport([0x02, 0xB0, 0x04]), .stringDescriptor(100)]))
+        }
+        return attempts
+    }
+
+    /// Reads a switch-on's answer.
+    package init?(answer: [UInt8], to tabletProtocol: UCLogicProtocol) {
+        switch tabletProtocol {
+        case .huionV2: self.init(huionDescriptor200: answer)
+        case .ugeeV2: self.init(ugeeDescriptor100: answer)
+        default: return nil
+        }
+    }
+
+    private static func declaresOutputReport(_ interface: any HIDInterface, _ reportID: UInt8) -> Bool {
+        guard let layout = try? HIDReportDescriptorParser.parse(interface.reportDescriptor) else { return false }
         return layout.reports.contains { $0.direction == .output && $0.reportID == reportID }
     }
 }
