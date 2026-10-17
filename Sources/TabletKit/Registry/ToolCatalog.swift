@@ -413,27 +413,13 @@ public enum ToolCatalog: Sendable {
 
         // MARK: - Inking Pen
 
-        // Inking Pen (fine tip)
+        // Inking Pen (fine tip). A ballpoint refill on a plain barrel: no side
+        // buttons and no eraser end, as libwacom and the kernel driver list it.
         catalog[0x0812] = ToolSpec(
             toolCode: 0x0812,
             name: "Inking Pen",
             toolType: .inkingPen,
-            buttonCount: 2,
-            maxPressure: 1023,
-            hasTilt: true,
-            hasRotation: false,
-            hasWheel: false,
-            hasEraserVariant: true,
-            eraserToolCode: 0x081A,
-            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
-        )
-
-        // Inking Pen Eraser
-        catalog[0x081A] = ToolSpec(
-            toolCode: 0x081A,
-            name: "Inking Pen (Eraser)",
-            toolType: .eraser,
-            buttonCount: 2,
+            buttonCount: 0,
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,
@@ -475,27 +461,12 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuos3]
         )
 
-        // Intuos3 Inking Pen
+        // Intuos3 Inking Pen: no side buttons and no eraser end, like 0x0812.
         catalog[0x0092] = ToolSpec(
             toolCode: 0x0092,
             name: "Intuos3 Inking Pen",
             toolType: .inkingPen,
-            buttonCount: 2,
-            maxPressure: 1023,
-            hasTilt: true,
-            hasRotation: false,
-            hasWheel: false,
-            hasEraserVariant: true,
-            eraserToolCode: 0x0093,
-            supportedFamilies: [.intuos3]
-        )
-
-        // Intuos3 Inking Pen Eraser
-        catalog[0x0093] = ToolSpec(
-            toolCode: 0x0093,
-            name: "Intuos3 Inking Pen (Eraser)",
-            toolType: .eraser,
-            buttonCount: 2,
+            buttonCount: 0,
             maxPressure: 1023,
             hasTilt: true,
             hasRotation: false,

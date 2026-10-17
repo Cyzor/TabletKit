@@ -240,7 +240,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
         let accessories: [UInt16] = [
             0x1802, 0x180A,  // Grip Pen + eraser
             0x1804, 0x180C,  // Art Pen + eraser
-            0x0812, 0x081A,  // Inking Pen + eraser
+            0x0812,  // Inking Pen, which has no eraser
             0x0902, 0x090A,  // Airbrush + eraser
             0x0806,  // Intuos Mouse
         ]
