@@ -90,6 +90,31 @@ final class ReportWatcherTests: XCTestCase {
         XCTAssertEqual(seen, [61, 67])
     }
 
+    func testDongleBatteryOnlyFallsOnceSettled() {
+        var w = DongleBatteryWatcher()
+        func status(_ power: UInt8, linked: Bool = true) -> Int? {
+            HIDReport.withReport([0x80, linked ? 1 : 0, 0xDC, 0x14, 0xB3, power, 0x00, 0x28]) {
+                w.observe($0)?.percent
+            }
+        }
+        func held(_ power: UInt8) -> [Int?] {
+            (0..<DongleBatteryWatcher.holdReports).map { _ in status(power) }
+        }
+        XCTAssertEqual(status(0x1C), 90)
+        XCTAssertEqual(held(0x1D), [nil, nil, nil, 93])
+        for _ in 0..<DongleBatteryWatcher.settleReports { _ = status(0x1D) }
+        // Settled: a rise on battery is load drift, a fall still shows.
+        XCTAssertEqual(held(0x1E), [nil, nil, nil, nil])
+        XCTAssertEqual(held(0x1C), [nil, nil, nil, 90])
+        // Charging and its end show at once.
+        XCTAssertEqual(status(0x9E), 96)
+        XCTAssertEqual(status(0x1F), 100)
+        // A relink settles again.
+        XCTAssertNil(status(0x1F, linked: false))
+        XCTAssertEqual(status(0x1C), 90)
+        XCTAssertEqual(held(0x1D), [nil, nil, nil, 93])
+    }
+
     func testGraceFiresOnceWhenThePenStaysInRange() {
         var g = ToolAnnouncementGrace(frames: 4)
         let fired = [false, true, true, true, true, true, true].map { g.advance(penInRange: $0) }

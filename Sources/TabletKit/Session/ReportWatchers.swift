@@ -61,14 +61,21 @@ public struct DonglePairingWatcher: Sendable {
 /// to the next, so a new level counts only once it holds for
 /// `holdReports` reports. The first reading and a change in charging show at
 /// once.
+///
+/// The level also drifts with load over minutes, rising as the battery rests.
+/// Once the gauge settles after a link, a level on battery only falls.
 public struct DongleBatteryWatcher: Sendable {
     /// Reports a new level must hold, about two seconds at the receiver's
     /// half-second status rate.
     public static let holdReports = 4
+    /// Reports after a link during which the level may still rise, about a
+    /// minute.
+    public static let settleReports = 120
 
     public private(set) var lastReading: DeviceEvent.Battery?
     private var pending: DeviceEvent.Battery?
     private var pendingCount = 0
+    private var linkedReports = 0
 
     public init() {}
 
@@ -79,8 +86,10 @@ public struct DongleBatteryWatcher: Sendable {
             // Announce again on relink, even at the same level.
             lastReading = nil
             pending = nil
+            linkedReports = 0
             return nil
         }
+        linkedReports += 1
         let level = Int(report[5] & 0x1F)
         let reading = DeviceEvent.Battery(
             percent: level * 100 / 31, charging: report[5] & 0x80 != 0)
@@ -89,6 +98,10 @@ public struct DongleBatteryWatcher: Sendable {
             return nil
         }
         if let last = lastReading, last.charging == reading.charging {
+            if !reading.charging, reading.percent > last.percent, linkedReports > Self.settleReports {
+                pending = nil
+                return nil
+            }
             if reading == pending {
                 pendingCount += 1
             } else {
