@@ -27,17 +27,20 @@ public struct TabletControls {
     public var labels: (any LabelControl)?
     public var displayPanel: (any DisplayPanelControl)?
     public var quickKeys: (any QuickKeysControl)?
+    public var wirelessKit: (any WirelessKitControl)?
 
     public init(
         ringLED: (any RingLEDControl)? = nil,
         labels: (any LabelControl)? = nil,
         displayPanel: (any DisplayPanelControl)? = nil,
-        quickKeys: (any QuickKeysControl)? = nil
+        quickKeys: (any QuickKeysControl)? = nil,
+        wirelessKit: (any WirelessKitControl)? = nil
     ) {
         self.ringLED = ringLED
         self.labels = labels
         self.displayPanel = displayPanel
         self.quickKeys = quickKeys
+        self.wirelessKit = wirelessKit
     }
 }
 
@@ -51,20 +54,31 @@ extension TabletControls {
         public static let labels = Kinds(rawValue: 1 << 1)
         public static let displayPanel = Kinds(rawValue: 1 << 2)
         public static let quickKeys = Kinds(rawValue: 1 << 3)
+        /// Offered by a model that runs on the Wacom wireless kit, and live
+        /// only while it does.
+        public static let wirelessKit = Kinds(rawValue: 1 << 4)
     }
 }
 
 extension TabletSpec {
     /// The controls a tablet of this model offers once connected, from the
     /// spec alone, so a host can show them, greyed out, while it's unplugged.
+    /// The wireless kit's fill only while the tablet runs on its receiver.
     public var offeredControls: TabletControls.Kinds {
         var kinds: TabletControls.Kinds = []
         if Self.ringLEDFormats.contains(format) && (hasTouchRing || hasMechanicalDial) { kinds.insert(.ringLED) }
         if format == .xencelabs || hasKeyOLEDs { kinds.insert(.labels) }
         if format == .xencelabs && isPenDisplay { kinds.insert(.displayPanel) }
         if format == .xencelabs { kinds.insert(.quickKeys) }
+        if Self.wirelessKitProductIDs.contains(productID) { kinds.insert(.wirelessKit) }
         return kinds
     }
+
+    /// Intuos5 and Intuos Pro gen 1, which run on the ACK-40401 wireless kit,
+    /// and the kit's receiver itself.
+    static let wirelessKitProductIDs: Set<Int> = [
+        0x0026, 0x0027, 0x0028, 0x0029, 0x002A, 0x0314, 0x0315, 0x0317, 0x0084,
+    ]
 
     /// The formats whose ring or dial LEDs TabletKit can set.
     static let ringLEDFormats: Set<ReportFormat> = [.intuosV1, .intuosV2, .cintiqV1, .xencelabs]
@@ -123,4 +137,11 @@ public protocol QuickKeysControl: AnyObject {
     func setQuickKeysSleepMinutes(_ minutes: Int)
     /// OLED brightness, 0 (off) through 3.
     func setQuickKeysOledBrightness(_ level: Int)
+}
+
+/// Settings the Wacom wireless kit's receiver holds for its tablet.
+public protocol WirelessKitControl: AnyObject {
+    /// Turns the tablet off after `minutes` without use, in the receiver's
+    /// 5-minute steps; 0 leaves the tablet's own timer.
+    func setSleepMinutes(_ minutes: Int)
 }

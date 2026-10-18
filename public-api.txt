@@ -179,7 +179,7 @@ init RingState.init(position:buttonDown:)
 init StripState.init(position:)
 init TabletBrand.init(name:)
 init TabletControls.Kinds.init(rawValue:)
-init TabletControls.init(ringLED:labels:displayPanel:quickKeys:)
+init TabletControls.init(ringLED:labels:displayPanel:quickKeys:wirelessKit:)
 init TabletFeature.init(rawValue:)
 init TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:tiltX:tiltY:rotation:penButton1:penButton2:eraser:inProximity:hoverDistance:mouseMiddleButton:mouseWheelDelta:penButton3:penButton4:penButton5:airbrushWheel:)
 init TabletQuirks.IdleReportRule.init(reportID:liveReportIDs:timeout:)
@@ -281,6 +281,7 @@ method ToolAnnouncementGrace.advance(penInRange:)
 method ToolSpec.capabilities(forFamily:)
 method ToolSpec.isSupported(onFamily:)
 method UCLogicTabletInfo.makeDecoder()
+method WirelessKitControl.setSleepMinutes(_:)
 property BLEPenResult.isMouse
 property BLEPenResult.point
 property BLEPenResult.serial
@@ -477,6 +478,7 @@ property TabletControls.displayPanel
 property TabletControls.labels
 property TabletControls.quickKeys
 property TabletControls.ringLED
+property TabletControls.wirelessKit
 property TabletDevice.controls
 property TabletDevice.spec
 property TabletFeature.description
@@ -654,6 +656,7 @@ protocol RingLEDControl
 protocol TabletDevice
 protocol TabletInputSink
 protocol TabletSessionDelegate
+protocol WirelessKitControl
 struct BLEPenResult
 struct CursorSmoother
 struct DescriptorField
@@ -855,6 +858,7 @@ type.property TabletControls.Kinds.displayPanel
 type.property TabletControls.Kinds.labels
 type.property TabletControls.Kinds.quickKeys
 type.property TabletControls.Kinds.ringLED
+type.property TabletControls.Kinds.wirelessKit
 type.property TabletFeature.bluetooth
 type.property TabletFeature.dial
 type.property TabletFeature.displayControls

@@ -128,7 +128,8 @@ final class TabletOutputTests: XCTestCase {
     /// A relink addresses the puck, and the resync afterward puts the labels
     /// back even though they were already sent.
     /// The UI shows controls from `offeredControls` while a tablet is
-    /// unplugged, so a connected one must fill exactly those slots.
+    /// unplugged, so a connected one must fill exactly those slots. The
+    /// wireless kit's slot fills only through its receiver, tested below.
     func testControlsFillExactlyTheOfferedSlots() {
         for spec in WacomDeviceRegistry.knownDevices {
             let c = TabletOutput(spec: spec, queue: HIDOutputQueue(label: "test")).controls
@@ -136,7 +137,7 @@ final class TabletOutputTests: XCTestCase {
                 c.ringLED != nil ? .ringLED : [], c.labels != nil ? .labels : [],
                 c.displayPanel != nil ? .displayPanel : [], c.quickKeys != nil ? .quickKeys : [],
             ]
-            XCTAssertEqual(filled, spec.offeredControls, spec.name)
+            XCTAssertEqual(filled, spec.offeredControls.subtracting(.wirelessKit), spec.name)
         }
     }
 
@@ -175,6 +176,42 @@ final class TabletOutputTests: XCTestCase {
             "get feature 03", "feature 03 06 00 00 02 00 00 00 00 00 00 00 00",
             "get feature 03", "feature 03 00 00 00 03 00 00 00 00 00 00 00 00",
         ])
+    }
+
+    /// The sleep timer keeps the receiver's LED byte, isn't resent unchanged,
+    /// and stays put when the ring changes afterward.
+    func testReceiverSleepTimer() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0084))
+        let queue = HIDOutputQueue(label: "test")
+        let out = TabletOutput(spec: spec, queue: queue, isWirelessReceiver: true)
+        let receiver = RecordingHIDInterface()
+        let idle: (IOReturn, [UInt8]) = (kIOReturnSuccess, [0x03, 0, 0, 0, 0x02, 0, 0, 0, 0, 0, 0, 0, 0])
+        receiver.featureReplies = [idle, idle]
+        out.attach(primary: receiver, isBluetooth: false, isWireless: true)
+        out.setPairedProductID(0x0028)
+        XCTAssertNotNil(out.controls.wirelessKit)
+        out.setSleepMinutes(10)
+        out.setSleepMinutes(10)
+        out.setRingLED(index: 1)
+        queue.drain()
+        XCTAssertEqual(receiver.log, [
+            "get feature 03", "feature 03 02 00 00 02 00 00 00 00 00 00 00 00",
+            "get feature 03", "feature 03 02 00 00 01 00 00 00 00 00 00 00 00",
+        ])
+    }
+
+    func testReceiverSleepStepsRoundToFiveMinutes() {
+        XCTAssertEqual([0, -5, 1, 5, 7, 8, 10, 30, 60, 2000].map(TabletOutput.receiverSleepSteps(minutes:)),
+                       [0, 0, 1, 1, 1, 2, 2, 6, 12, 255])
+    }
+
+    /// The kit's settings live on its receiver: an Intuos5 offers them as a
+    /// model, but has none while on USB.
+    func testWirelessKitOnlyThroughTheReceiver() throws {
+        let i5 = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0028))
+        XCTAssertTrue(i5.offeredControls.contains(.wirelessKit))
+        XCTAssertNil(TabletOutput(spec: i5, queue: HIDOutputQueue(label: "test")).controls.wirelessKit)
+        XCTAssertFalse(try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0358)).offeredControls.contains(.wirelessKit))
     }
 
     func testRelinkAndResync() throws {

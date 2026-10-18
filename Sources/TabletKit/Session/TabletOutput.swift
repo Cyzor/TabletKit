@@ -18,7 +18,7 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "output"
 ///
 /// `@unchecked Sendable`: all state is touched only on the output queue.
 package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelControl, QuickKeysControl,
-    @unchecked Sendable
+    WirelessKitControl, @unchecked Sendable
 {
     package let spec: TabletSpec
     private let queue: HIDOutputQueue
@@ -36,6 +36,9 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
     private var ledIndex = 0
     private var ledIndex2 = 0
     private var dialSlotColors: [LEDColor?] = []
+
+    // Wireless kit: nil until set, so the receiver keeps its own.
+    private var receiverSleepSteps: UInt8?
 
     // Xencelabs.
     private var dongleIdentity: [UInt8]?
@@ -82,6 +85,8 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         self.queue = queue
         var offered = spec.offeredControls
         if isWirelessReceiver && TabletSpec.ringLEDFormats.contains(spec.format) { offered.insert(.ringLED) }
+        // The kit's settings live on its receiver, so a tablet on USB has none.
+        if !(isWirelessReceiver && spec.productID == 0x0084) { offered.remove(.wirelessKit) }
         self.offered = offered
     }
 
@@ -92,7 +97,8 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             ringLED: offered.contains(.ringLED) ? self : nil,
             labels: offered.contains(.labels) ? self : nil,
             displayPanel: offered.contains(.displayPanel) ? self : nil,
-            quickKeys: offered.contains(.quickKeys) ? self : nil)
+            quickKeys: offered.contains(.quickKeys) ? self : nil,
+            wirelessKit: offered.contains(.wirelessKit) ? self : nil)
     }
 
     private var hasDisplayPanel: Bool { offered.contains(.displayPanel) }
@@ -213,12 +219,10 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         case .intuosV1:
             let slot = UInt8(index & 0x03)
             if isWireless && pairedProductID > 0 {
-                // Through the ACK-40401: 0x03, 13 bytes, Intuos5 packing in buf[4].
-                let (ret, current) = primary.getReport(.feature, id: 0x03, length: 13)
-                let buf = Self.receiverConfig(
-                    current: ret == kIOReturnSuccess ? current : nil,
-                    led: (Self.intuos5CropLuminance << 4) | (Self.intuos5RingLuminance << 2) | slot)
-                write(.feature, buf, to: primary, tag: "\(name) IntuosV1 WL LED slot=\(index)", bestEffort: true)
+                // Through the ACK-40401: Intuos5 packing in its settings report.
+                sendReceiverConfig(
+                    led: (Self.intuos5CropLuminance << 4) | (Self.intuos5RingLuminance << 2) | slot,
+                    tag: "\(name) IntuosV1 WL LED slot=\(index)")
             } else if Self.intuos5PackedLEDProductIDs.contains(spec.productID) {
                 var buf = [UInt8](repeating: 0, count: 9)
                 buf[0] = 0x20
@@ -362,6 +366,34 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             sendVendor(XencelabsOutputProtocol.oledBrightnessPayload(UInt8(clamped), address: dongleIdentity ?? []),
                        tag: "quick keys OLED brightness \(clamped)")
         }
+    }
+
+    // MARK: - Wireless kit
+
+    package func setSleepMinutes(_ minutes: Int) {
+        queue.perform { [self] in
+            guard offered.contains(.wirelessKit) else { return }
+            let steps = Self.receiverSleepSteps(minutes: minutes)
+            guard steps != receiverSleepSteps else { return }
+            receiverSleepSteps = steps
+            sendReceiverConfig(led: nil, tag: "\(spec.name) sleep timer \(Int(steps) * 5)m")
+        }
+    }
+
+    /// Minutes to the receiver's 5-minute steps, at least one unless 0.
+    static func receiverSleepSteps(minutes: Int) -> UInt8 {
+        minutes <= 0 ? 0 : UInt8(min(max((minutes + 2) / 5, 1), 255))
+    }
+
+    /// Writes the ACK-40401's settings report, which holds both the ring LED
+    /// and the sleep timer. It reads the report first, so a nil `led` and an
+    /// unset timer keep what the receiver has. On the output queue.
+    private func sendReceiverConfig(led: UInt8?, tag: String) {
+        guard let primary else { return }
+        let (ret, current) = primary.getReport(.feature, id: 0x03, length: 13)
+        let buf = Self.receiverConfig(
+            current: ret == kIOReturnSuccess ? current : nil, led: led, sleepSteps: receiverSleepSteps)
+        write(.feature, buf, to: primary, tag: tag, bestEffort: true)
     }
 
     // MARK: - Pen display panel
@@ -556,14 +588,15 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         }
     }
 
-    /// The ACK-40401's settings report 0x03 with `led` in byte 4. Bytes 1–3
-    /// hold the receiver's sleep timer, so they come from `current`, its last
-    /// reading, when that reading is whole; zeros there reset the timer.
-    static func receiverConfig(current: [UInt8]?, led: UInt8) -> [UInt8] {
+    /// The ACK-40401's settings report 0x03: the sleep timer in byte 1 and
+    /// the ring LED in byte 4. Whatever isn't given comes from `current`, the
+    /// receiver's last reading, when that reading is whole.
+    static func receiverConfig(current: [UInt8]?, led: UInt8?, sleepSteps: UInt8?) -> [UInt8] {
         var buf = [UInt8](repeating: 0, count: 13)
         if let current, current.count == 13, current[0] == 0x03 { buf = current }
         buf[0] = 0x03
-        buf[4] = led
+        if let sleepSteps { buf[1] = sleepSteps }
+        if let led { buf[4] = led }
         return buf
     }
 
