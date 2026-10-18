@@ -157,6 +157,26 @@ final class TabletOutputTests: XCTestCase {
             TabletOutput(spec: spec, queue: HIDOutputQueue(label: "test"), isWirelessReceiver: true).controls.ringLED)
     }
 
+    /// The receiver's LED report also holds its sleep timer: a ring change
+    /// keeps what the receiver reports there, and falls back to zeros only
+    /// when the read fails.
+    func testReceiverLEDKeepsTheSleepTimer() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0084))
+        let queue = HIDOutputQueue(label: "test")
+        let out = TabletOutput(spec: spec, queue: queue, isWirelessReceiver: true)
+        let receiver = RecordingHIDInterface()
+        receiver.featureReplies = [(kIOReturnSuccess, [0x03, 0x06, 0, 0, 0x01, 0, 0, 0, 0, 0, 0, 0, 0])]
+        out.attach(primary: receiver, isBluetooth: false, isWireless: true)
+        out.setPairedProductID(0x0028)
+        out.setRingLED(index: 2)
+        out.setRingLED(index: 3)
+        queue.drain()
+        XCTAssertEqual(receiver.log, [
+            "get feature 03", "feature 03 06 00 00 02 00 00 00 00 00 00 00 00",
+            "get feature 03", "feature 03 00 00 00 03 00 00 00 00 00 00 00 00",
+        ])
+    }
+
     func testRelinkAndResync() throws {
         let spec = TabletSpec(
             productID: 0x5203, name: "Quick Keys receiver", format: .xencelabs, maxX: 0, maxY: 0,

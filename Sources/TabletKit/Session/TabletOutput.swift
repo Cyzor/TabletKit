@@ -213,11 +213,11 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         case .intuosV1:
             let slot = UInt8(index & 0x03)
             if isWireless && pairedProductID > 0 {
-                // Through the ACK-40401: 0x03, 13 bytes, Intuos5 packing in
-                // buf[4]. From the kernel; unchecked against a receiver.
-                var buf = [UInt8](repeating: 0, count: 13)
-                buf[0] = 0x03
-                buf[4] = (Self.intuos5CropLuminance << 4) | (Self.intuos5RingLuminance << 2) | slot
+                // Through the ACK-40401: 0x03, 13 bytes, Intuos5 packing in buf[4].
+                let (ret, current) = primary.getReport(.feature, id: 0x03, length: 13)
+                let buf = Self.receiverConfig(
+                    current: ret == kIOReturnSuccess ? current : nil,
+                    led: (Self.intuos5CropLuminance << 4) | (Self.intuos5RingLuminance << 2) | slot)
                 write(.feature, buf, to: primary, tag: "\(name) IntuosV1 WL LED slot=\(index)", bestEffort: true)
             } else if Self.intuos5PackedLEDProductIDs.contains(spec.productID) {
                 var buf = [UInt8](repeating: 0, count: 9)
@@ -554,6 +554,17 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         } else {
             logger.error("hidSetReport \(tag, privacy: .public) failed: \(hex, privacy: .public)")
         }
+    }
+
+    /// The ACK-40401's settings report 0x03 with `led` in byte 4. Bytes 1–3
+    /// hold the receiver's sleep timer, so they come from `current`, its last
+    /// reading, when that reading is whole; zeros there reset the timer.
+    static func receiverConfig(current: [UInt8]?, led: UInt8) -> [UInt8] {
+        var buf = [UInt8](repeating: 0, count: 13)
+        if let current, current.count == 13, current[0] == 0x03 { buf = current }
+        buf[0] = 0x03
+        buf[4] = led
+        return buf
     }
 
     private func padded(_ bytes: [UInt8], for target: any HIDInterface) -> [UInt8] {
