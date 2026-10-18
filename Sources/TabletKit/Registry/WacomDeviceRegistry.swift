@@ -621,7 +621,8 @@ public struct TabletSpec: Sendable {
     ) -> TabletSpec {
         let format: ReportFormat = maxInputReportSize > 64 ? .intuosV2 : .intuosV1
         let parsed = descriptor.isEmpty ? nil : try? HIDReportDescriptorParser.parse(descriptor)
-        let fields = parsed?.reports.filter { $0.direction == .input }.flatMap(\.fields) ?? []
+        // A relative mouse's X/Y tops out at 127, which is no tablet's range.
+        let fields = parsed?.reports.filter { $0.direction == .input }.flatMap(\.fields).filter { !$0.isRelative } ?? []
         func largest(page: UInt32, usage: UInt32) -> Int {
             fields.filter { $0.usagePage == page && $0.usage == usage }.map(\.logicalMax).max() ?? 0
         }

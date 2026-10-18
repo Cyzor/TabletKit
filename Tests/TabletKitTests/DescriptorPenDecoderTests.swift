@@ -115,6 +115,13 @@ final class DescriptorPenDecoderTests: XCTestCase {
         XCTAssertEqual(spec.initSteps, [.featureReport([0x40, 0x02])])
     }
 
+    /// A relative mouse's X/Y is no tablet's range.
+    func testUnknownWacomIgnoresRelativeMouseRange() {
+        let mouse = "05010902a10185010901a100050919012903150025019503750181029505810305010930093109381581257f750895038106c0c0"
+        let spec = TabletSpec.guessed(forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 10, descriptor: bytes(mouse))
+        XCTAssertEqual([spec.maxX, spec.maxY], [44704, 27940])
+    }
+
     /// With an opaque descriptor, the guess decodes as the registry entry
     /// for the same family does.
     func testUnknownIntuosV2DecodesLikeTheRegistry() throws {
