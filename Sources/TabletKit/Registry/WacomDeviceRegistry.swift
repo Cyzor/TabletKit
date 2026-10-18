@@ -585,10 +585,10 @@ public struct TabletSpec: Sendable {
 
     /// A spec for a tablet the registry doesn't know, from the pen reports
     /// its descriptor declares, or nil when it declares none. Ranges come
-    /// from the first pen report.
+    /// from the native-resolution pen report.
     package static func described(by descriptor: [UInt8], productID: Int, name: String) -> TabletSpec? {
         guard !descriptor.isEmpty, let parsed = try? HIDReportDescriptorParser.parse(descriptor),
-            let pen = GenericPenLayout.derive(from: parsed).first
+            let pen = GenericPenLayout.native(in: GenericPenLayout.derive(from: parsed))
         else { return nil }
         return TabletSpec(
             productID: productID, name: name, format: .descriptor,
@@ -629,7 +629,7 @@ public struct TabletSpec: Sendable {
         var maxX = largest(page: 0x01, usage: 0x30)
         var maxY = largest(page: 0x01, usage: 0x31)
         var maxPressure = largest(page: 0x0D, usage: 0x30)
-        if let pen = parsed.flatMap({ nativePen(in: GenericPenLayout.derive(from: $0)) }) {
+        if let pen = parsed.flatMap({ GenericPenLayout.native(in: GenericPenLayout.derive(from: $0)) }) {
             maxX = pen.logicalMaxX
             maxY = pen.logicalMaxY
             if pen.logicalMaxPressure > 0 { maxPressure = pen.logicalMaxPressure }
@@ -648,35 +648,6 @@ public struct TabletSpec: Sendable {
             seizeUSB: false,
             initSteps: [.featureReport([modeSwitch, 0x02])]
         ).withQuirks { $0.readsDescriptorPens = true }
-    }
-
-    /// The pen report at native resolution. Recent models declare a
-    /// HID-mode pen report first, often normalized to 32767 or at half
-    /// resolution, so this takes the full pen with the most counts per
-    /// millimeter, or the widest when a report gives no physical size.
-    private static func nativePen(in pens: [GenericPenLayout]) -> GenericPenLayout? {
-        let full = pens.filter { $0.tipPressure != nil }
-        let candidates = full.isEmpty ? pens : full
-        let perMillimeter = candidates.map { countsPerMillimeter($0.x) }
-        let keys = perMillimeter.contains(nil)
-            ? candidates.map { Double($0.logicalMaxX) } : perMillimeter.map { $0 ?? 0 }
-        // Ties keep the lowest report ID.
-        return zip(candidates, keys).max { $0.1 < $1.1 }?.0
-    }
-
-    /// An axis's resolution, when it declares a physical length in
-    /// centimeters or inches.
-    private static func countsPerMillimeter(_ axis: DescriptorField) -> Double? {
-        let millimetersPerUnit: Double
-        switch axis.unit & 0xFF {
-        case 0x11: millimetersPerUnit = 10
-        case 0x13: millimetersPerUnit = 25.4
-        default: return nil
-        }
-        let physical = Double(axis.physicalMax - axis.physicalMin)
-            * pow(10, Double(axis.unitExponent)) * millimetersPerUnit
-        guard physical > 0 else { return nil }
-        return Double(axis.logicalMax - axis.logicalMin) / physical
     }
 
     /// Products without tilt in formats that otherwise carry it: consumer

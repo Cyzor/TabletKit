@@ -168,6 +168,35 @@ extension GenericPenLayout {
     /// Generic Desktop Mouse.
     static let mouseCollection: UInt32 = 0x0001_0002
 
+    /// The pen report at native resolution. Recent Wacom models declare a
+    /// HID-mode pen report first, often normalized to 32767 or at half
+    /// resolution, so this takes the full pen with the most counts per
+    /// millimeter, or the widest when a report gives no physical size.
+    static func native(in pens: [GenericPenLayout]) -> GenericPenLayout? {
+        let full = pens.filter { $0.tipPressure != nil }
+        let candidates = full.isEmpty ? pens : full
+        let perMillimeter = candidates.map { countsPerMillimeter($0.x) }
+        let keys = perMillimeter.contains(nil)
+            ? candidates.map { Double($0.logicalMaxX) } : perMillimeter.map { $0 ?? 0 }
+        // Ties keep the lowest report ID.
+        return zip(candidates, keys).max { $0.1 < $1.1 }?.0
+    }
+
+    /// An axis's resolution, when it declares a physical length in
+    /// centimeters or inches.
+    private static func countsPerMillimeter(_ axis: DescriptorField) -> Double? {
+        let millimetersPerUnit: Double
+        switch axis.unit & 0xFF {
+        case 0x11: millimetersPerUnit = 10
+        case 0x13: millimetersPerUnit = 25.4
+        default: return nil
+        }
+        let physical = Double(axis.physicalMax - axis.physicalMin)
+            * pow(10, Double(axis.unitExponent)) * millimetersPerUnit
+        guard physical > 0 else { return nil }
+        return Double(axis.logicalMax - axis.logicalMin) / physical
+    }
+
     /// Whether a field sits in a Finger collection, on the Digitizer page or
     /// a vendor page. Contact usages don't count: Wacom declares Contact
     /// Count inside its Stylus collections.
