@@ -33,6 +33,13 @@ final class TabletQuirksTests: XCTestCase {
         XCTAssertEqual(TabletQuirks.defaults(for: .intuos3), TabletQuirks())
     }
 
+    /// The wireless kit's receiver answers report 0x03 with its settings, so
+    /// it's never read as a serial; the tablets it relays still are.
+    func testWirelessKitReceiverSkipsTheSerialQuery() {
+        XCTAssertEqual(WacomDeviceRegistry.spec(for: 0x0084)?.quirks.answersSerialQuery, false)
+        XCTAssertEqual(WacomDeviceRegistry.spec(for: 0x0028)?.quirks.answersSerialQuery, true)
+    }
+
     /// The One S and M send real pen data in report 0x06; only the three
     /// USB rows the driver exempted before quirks existed are exempt.
     func testWacomOneRowsHaveNoIdleReport() {

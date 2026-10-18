@@ -2707,7 +2707,9 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0084, name: "ACK-40401 Wireless Dongle",
             format: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
-            seizeUSB: false),
+            seizeUSB: false
+        // Report 0x03 here holds the receiver's settings, not a serial.
+        ).withQuirks { $0.answersSerialQuery = false },
 
         // ── Wireless receiver dongles (HID-based) ─────────────────────────────
         // Blueto WL tablets (Intuos4 WL, Intuos5 WL, Intuos Pro gen1 WL) pair with
