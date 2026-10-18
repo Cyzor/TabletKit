@@ -121,6 +121,17 @@ final class GenericPenDecoderTests: XCTestCase {
         XCTAssertTrue(GenericPenLayout.derive(from: parsed).isEmpty)
     }
 
+    /// An absolute Mouse with buttons and X/Y, as laptop panels declare
+    /// beside the pen, is not a pen. With a tip switch it is.
+    func testAbsoluteMouseIsNotDerivedAsPen() throws {
+        let mouse = "05010902a10185030901a10005091901290215002501950275018102950175068103"
+            + "050175109501550e6511093026760b350046760b810246720609312672068102c0c0"
+        XCTAssertTrue(GenericPenLayout.derive(from: try HIDReportDescriptorParser.parse(hex: mouse)).isEmpty)
+
+        let withTip = mouse.replacingOccurrences(of: "950175068103", with: "050d0942950175018102950175058103")
+        XCTAssertEqual(GenericPenLayout.derive(from: try HIDReportDescriptorParser.parse(hex: withTip)).map(\.reportID), [0x03])
+    }
+
     /// An axis with no positive maximum can't be mapped to the screen.
     func testAxisWithoutPositiveMaximumIsNotDerived() throws {
         // Pen collection with a tip switch, then X with the given logical

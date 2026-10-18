@@ -62,7 +62,8 @@ public struct GenericPenLayout: Equatable, Sendable {
     /// Screen or Touch Pad collection — the same negative gate
     /// `PrecisionTouchLayout` uses in the other direction, so a hybrid pen +
     /// touch interface yields a pen layout from this type and a touch layout
-    /// from that one, never a report double-counted as both.
+    /// from that one, never a report double-counted as both. An absolute
+    /// Mouse with no tip, range, or pressure doesn't qualify either.
     public static func derive(from layout: DescriptorLayout) -> [GenericPenLayout] {
         layout.reports
             .filter { $0.direction == .input }
@@ -143,6 +144,10 @@ public struct GenericPenLayout: Equatable, Sendable {
         // A malformed descriptor can declare a zero or negative maximum, and
         // mapping a position against it divides by zero.
         guard let x, let y, x.logicalMax > 0, y.logicalMax > 0 else { return nil }
+        // Laptop panels declare an absolute Mouse alongside the pen. With no
+        // tip, range, or pressure it would read as a pen always in range.
+        let isMouse = x.collectionPath.contains(Self.mouseCollection)
+        if isMouse, tipSwitch == nil, inRange == nil, tipPressure == nil { return nil }
 
         return GenericPenLayout(
             reportID: report.reportID,
@@ -160,6 +165,9 @@ public struct GenericPenLayout: Equatable, Sendable {
 }
 
 extension GenericPenLayout {
+    /// Generic Desktop Mouse.
+    static let mouseCollection: UInt32 = 0x0001_0002
+
     /// Whether a field sits in a Finger collection, on the Digitizer page or
     /// a vendor page. Contact usages don't count: Wacom declares Contact
     /// Count inside its Stylus collections.
