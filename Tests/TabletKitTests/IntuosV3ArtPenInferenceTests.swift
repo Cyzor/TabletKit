@@ -52,6 +52,7 @@ final class IntuosV3ArtPenInferenceTests: XCTestCase {
     func testAnArtPenAlreadyAnnouncedIsLeftAlone() {
         XCTAssertNil(announcedTool(infer(pen(rotation: 90), currentTool: 0x0804).results))
         XCTAssertNil(announcedTool(infer(pen(rotation: 90), currentTool: 0x1108).results))
+        XCTAssertNil(announcedTool(infer(pen(rotation: 90), currentTool: 0x0204).results))
     }
 
     func testOutOfRangeChangesNothing() {

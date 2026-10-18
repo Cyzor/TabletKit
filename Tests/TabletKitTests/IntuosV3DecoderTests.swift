@@ -1690,6 +1690,14 @@ final class IntuosV3DecoderTests: XCTestCase {
             "a stub carries no rotation, so the last real angle must persist rather than snapping to 0")
     }
 
+    /// Art Pen 2 (0x0204) reports its barrel in the same field as the Art Pen.
+    func test0x1EArtPen2RotationDecoded() {
+        var st = IntuosV3Decoder.State()
+        st.currentToolCode = 0x0204
+        let full = make0x1E(status: 0xC0, x: 30000, y: 20000, tiltX: 20, rotation: -163)
+        XCTAssertEqual(pens(decode(full, state: &st))[0].rotation, 212.6, accuracy: 1e-9)
+    }
+
     func test0x1EStubRotationIsNotHeldBeforeAnyRealReading() {
         var st = IntuosV3Decoder.State()
         st.currentToolCode = 0x0804

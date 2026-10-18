@@ -381,34 +381,21 @@ public enum ToolCatalog: Sendable {
         // multiple nibbles by the kernel's wacom_intuos_id_mangle). This value exceeds UInt16.
         // toolCode must be widened to UInt32 to catalog these extended IDs — tracked separately.
 
-        // Art Pen 2 (Intuos5/Intuos Pro gen1)
+        // Art Pen 2, the Intuos Pro gen 3 companion to Pro Pen 3. Confirmed
+        // on a PTK-870: three side buttons, pressure, and tilt, with no eraser
+        // end, as libwacom lists it.
         catalog[0x0204] = ToolSpec(
             toolCode: 0x0204,
             name: "Art Pen 2",
             toolType: .artPen,
-            buttonCount: 2,
-            maxPressure: nil,
-            hasTilt: true,
-            hasRotation: true,
-            hasWheel: false,
-            hasEraserVariant: true,
-            eraserToolCode: 0x020C,
-            supportedFamilies: [.intuos5, .intuosProGen1]
-        )
-
-        // Art Pen 2 Eraser
-        catalog[0x020C] = ToolSpec(
-            toolCode: 0x020C,
-            name: "Art Pen 2 (Eraser)",
-            toolType: .eraser,
-            buttonCount: 2,
-            maxPressure: nil,
+            buttonCount: 3,
+            maxPressure: 8191,
             hasTilt: true,
             hasRotation: true,
             hasWheel: false,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos5, .intuosProGen1]
+            supportedFamilies: [.intuosProGen3]
         )
 
         // MARK: - Inking Pen

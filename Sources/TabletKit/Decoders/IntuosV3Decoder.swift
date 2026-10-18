@@ -354,7 +354,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
 
         // Rotation (Art Pen barrel twist): signed LE16 at bytes [15..16],
         // gated on the tip switch, not on pressure. Only meaningful for Art
-        // Pen variants (0x0804, 0x1108); other pens leave this at 0/garbage.
+        // Pen variants; other pens leave this at 0/garbage.
         //
         // CORRECTED 2026-09-19: previously read as a single byte at [15]
         // (255 counts/revolution). That was really just the low byte of
@@ -363,7 +363,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         // fast, spinning the opposite direction" in both MockTab and
         // Rebelle. Confirmed against a PTK-870 USB capture:
         // a deliberate ~1-turn gesture now unwraps to exactly -1.00 laps.
-        let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
+        let isArtPen = Self.hasBarrelRotation(state.currentToolCode)
         let rawRotation = Int16(bitPattern: UInt16(report[15]) | UInt16(report[16]) << 8)
         // A raw count of exactly 0 is the tablet's "no reading this frame"
         // filler, not a real angle, and mapping it to 180° is what made
@@ -606,6 +606,12 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         return keys & ~state.lastExpressKeys
     }
 
+    /// Art Pen (0x0804, 0x1108) and Art Pen 2 (0x0204), the pens whose
+    /// barrel twist the tablet reports.
+    static func hasBarrelRotation(_ toolCode: UInt16) -> Bool {
+        toolCode == 0x0804 || toolCode == 0x1108 || toolCode == 0x0204
+    }
+
     // MARK: - 0x1A Bluetooth LE report (pen + pad, single multiplexed interface)
 
     /// PTK-470/670/870 over Bluetooth LE expose one HID interface (usage
@@ -777,7 +783,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         let point = results.lazy.compactMap { result -> TabletPoint? in
             if case .pen(let point) = result { return point } else { return nil }
         }.first
-        guard state.currentToolCode != 0x0804, state.currentToolCode != 0x1108,
+        guard !Self.hasBarrelRotation(state.currentToolCode),
             let point, point.inProximity,
             state.hasValidRotationFrame,
             abs(point.rotation - 180.0) > 2.0
