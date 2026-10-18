@@ -2713,16 +2713,16 @@ public enum WacomDeviceRegistry: Sendable {
 
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
-        // the paired tablet. Report 0x80 carries wireless status (byte[1]:
-        // 0x02=active, 0x05=lost, 0x06=battery low) and names the paired
-        // tablet, whose row then supplies the ranges, so maxX/maxY/maxPressure
-        // are 0 here.
+        // the paired tablet. Report 0x80 carries wireless status (byte[1]
+        // bit 0 set while the tablet is linked, clear while it sleeps) and
+        // names the paired tablet, whose row then supplies the ranges, so
+        // maxX/maxY/maxPressure are 0 here. Report 0x03 holds the receiver's
+        // settings: sleep timer in byte 1, ring LED in byte 4.
         .init(
             productID: 0x0084, name: "ACK-40401 Wireless Dongle",
             format: .intuosV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false
-        // Report 0x03 here holds the receiver's settings, not a serial.
         ).withQuirks { $0.answersSerialQuery = false },
 
         // ── Wireless receiver dongles (HID-based) ─────────────────────────────
