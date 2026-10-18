@@ -629,7 +629,7 @@ public struct TabletSpec: Sendable {
         var maxX = largest(page: 0x01, usage: 0x30)
         var maxY = largest(page: 0x01, usage: 0x31)
         var maxPressure = largest(page: 0x0D, usage: 0x30)
-        if let pen = parsed.flatMap({ GenericPenLayout.derive(from: $0).first }) {
+        if let pen = parsed.flatMap({ nativePen(in: GenericPenLayout.derive(from: $0)) }) {
             maxX = pen.logicalMaxX
             maxY = pen.logicalMaxY
             if pen.logicalMaxPressure > 0 { maxPressure = pen.logicalMaxPressure }
@@ -648,6 +648,37 @@ public struct TabletSpec: Sendable {
             seizeUSB: false,
             initSteps: [.featureReport([modeSwitch, 0x02])]
         ).withQuirks { $0.readsDescriptorPens = true }
+    }
+
+    /// The pen report at native resolution. Recent models declare a
+    /// HID-mode pen report first, often normalized to 32767 or at half
+    /// resolution, so this takes the full pen with the most counts per
+    /// millimeter, or the widest when a report gives no physical size.
+    private static func nativePen(in pens: [GenericPenLayout]) -> GenericPenLayout? {
+        let full = pens.filter { $0.tipPressure != nil }
+        let candidates = full.isEmpty ? pens : full
+        let perMillimeter = candidates.map { countsPerMillimeter($0.x) }
+        let keys = perMillimeter.contains(nil)
+            ? candidates.map { Double($0.logicalMaxX) } : perMillimeter.map { $0 ?? 0 }
+        // Ties keep the lowest report ID.
+        return zip(candidates, keys).max { $0.1 < $1.1 }?.0
+    }
+
+    /// An axis's resolution, when it declares a physical length in
+    /// centimeters or inches.
+    private static func countsPerMillimeter(_ axis: DescriptorField) -> Double? {
+        let millimetersPerUnit: Double
+        switch axis.unit & 0xFF {
+        case 0x11: millimetersPerUnit = 10
+        case 0x13: millimetersPerUnit = 25.4
+        default: return nil
+        }
+        // Descriptors write the exponent as a 4-bit signed nibble: 0x0D is -3.
+        let exponent = (8...15).contains(axis.unitExponent) ? axis.unitExponent - 16 : axis.unitExponent
+        let physical = Double(axis.physicalMax - axis.physicalMin)
+            * pow(10, Double(exponent)) * millimetersPerUnit
+        guard physical > 0 else { return nil }
+        return Double(axis.logicalMax - axis.logicalMin) / physical
     }
 
     /// Products without tilt in formats that otherwise carry it: consumer

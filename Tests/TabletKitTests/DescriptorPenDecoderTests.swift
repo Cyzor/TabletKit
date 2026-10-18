@@ -115,6 +115,23 @@ final class DescriptorPenDecoderTests: XCTestCase {
         XCTAssertEqual(spec.initSteps, [.featureReport([0x40, 0x02])])
     }
 
+    /// The native pen report sets the range, not the HID-mode one that
+    /// comes first at a coarser resolution over the same 349 mm.
+    func testUnknownWacomTakesNativePenRange() throws {
+        func pen(id: String, size: String, maxX: String, maxY: String, pressure: String) -> String {
+            "050d0902a10185" + id + "0920a1000942150025017501950181027507810305010930"
+                + "6511550d3500475488000015007510" + size + "27" + maxX + "8102"
+                + "0931472c4c000027" + maxY + "8102050d093026" + pressure + "75108102c0c0"
+        }
+        let hidMode = pen(id: "06", size: "", maxX: "ff7f0000", maxY: "ff7f0000", pressure: "ff0f")
+        let native = pen(id: "10", size: "7518", maxX: "a8100100", maxY: "58980000", pressure: "ff1f")
+        let parsed = try HIDReportDescriptorParser.parse(hex: hidMode + native)
+        XCTAssertEqual(GenericPenLayout.derive(from: parsed).map(\.logicalMaxX), [32767, 69800])
+        let spec = TabletSpec.guessed(
+            forUnknownWacom: 0x9999, name: "W", maxInputReportSize: 26, descriptor: bytes(hidMode + native))
+        XCTAssertEqual([spec.maxX, spec.maxY, spec.maxPressure], [69800, 39000, 8191])
+    }
+
     /// A relative mouse's X/Y is no tablet's range.
     func testUnknownWacomIgnoresRelativeMouseRange() {
         let mouse = "05010902a10185010901a100050919012903150025019503750181029505810305010930093109381581257f750895038106c0c0"
