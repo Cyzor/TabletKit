@@ -44,8 +44,8 @@ final class ReportWatcherTests: XCTestCase {
                 w.observe($0)
             }
         }
-        XCTAssertNil(status(0x0357, linked: false))
-        XCTAssertEqual(status(0x0357), 0x0357)
+        // Named while the tablet sleeps, then not again once it links.
+        XCTAssertEqual(status(0x0357, linked: false), 0x0357)
         XCTAssertNil(status(0x0357))
         XCTAssertNil(status(0))
         XCTAssertEqual(status(0x0358), 0x0358)

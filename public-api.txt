@@ -815,6 +815,7 @@ type.property DigitizerUsage.vendorX
 type.property DigitizerUsage.vendorY
 type.property DigitizerUsage.width
 type.property DongleBatteryWatcher.holdReports
+type.property DongleBatteryWatcher.settleReports
 type.property EvidenceSource.descriptorCorpus
 type.property EvidenceSource.libwacom
 type.property EvidenceSource.linuxKernel

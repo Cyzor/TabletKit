@@ -37,7 +37,8 @@ public struct IdleReportWatcher: Sendable {
 }
 
 /// Reads the paired tablet's product ID from a Wacom wireless receiver's
-/// status report (0x80).
+/// status report (0x80). The receiver names it while the tablet sleeps too,
+/// so a tablet asleep at launch still finds its window.
 public struct DonglePairingWatcher: Sendable {
     public private(set) var announcedProductID: Int?
 
@@ -45,7 +46,7 @@ public struct DonglePairingWatcher: Sendable {
 
     /// The paired product ID when it first appears or changes.
     public mutating func observe(_ report: HIDReport) -> Int? {
-        guard report.count >= 8, report[0] == 0x80, report[1] & 0x01 != 0 else { return nil }
+        guard report.count >= 8, report[0] == 0x80 else { return nil }
         let pid = Int(report[6]) << 8 | Int(report[7])  // big-endian
         guard pid > 0, pid != announcedProductID else { return nil }
         announcedProductID = pid
