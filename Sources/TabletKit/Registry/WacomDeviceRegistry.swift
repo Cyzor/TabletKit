@@ -673,10 +673,8 @@ public struct TabletSpec: Sendable {
         case 0x13: millimetersPerUnit = 25.4
         default: return nil
         }
-        // Descriptors write the exponent as a 4-bit signed nibble: 0x0D is -3.
-        let exponent = (8...15).contains(axis.unitExponent) ? axis.unitExponent - 16 : axis.unitExponent
         let physical = Double(axis.physicalMax - axis.physicalMin)
-            * pow(10, Double(exponent)) * millimetersPerUnit
+            * pow(10, Double(axis.unitExponent)) * millimetersPerUnit
         guard physical > 0 else { return nil }
         return Double(axis.logicalMax - axis.logicalMin) / physical
     }

@@ -59,6 +59,22 @@ final class HIDReportDescriptorParserTests: XCTestCase {
         XCTAssertEqual(report.totalBits, 24)
     }
 
+    /// Unit Exponent is tag 0x55 and Unit 0x65. The spec's 4-bit nibble and
+    /// a signed byte both read as -3; small positive exponents stay positive.
+    func testUnitExponentReadsNibbleAndSignedByte() throws {
+        func exponent(_ item: String) throws -> Int? {
+            let hex = "05010902a10109306511" + item + "15002610277510950181 02c0"
+            return try HIDReportDescriptorParser.parse(hex: hex.replacingOccurrences(of: " ", with: ""))
+                .reports.first?.fields.first?.unitExponent
+        }
+        XCTAssertEqual(try exponent("550d"), -3)
+        XCTAssertEqual(try exponent("55fd"), -3)
+        XCTAssertEqual(try exponent("5502"), 2)
+        XCTAssertEqual(try exponent("5500"), 0)
+        let unit = try HIDReportDescriptorParser.parse(hex: "05010902a10109306511550d150026102775109501810 2c0".replacingOccurrences(of: " ", with: ""))
+        XCTAssertEqual(unit.reports.first?.fields.first?.unit, 0x11)
+    }
+
     func testBootMouseExtractFieldRoundTrip() throws {
         let layout = try HIDReportDescriptorParser.parse(hex: bootMouseHex)
         let report = try XCTUnwrap(layout.report(.input, id: 0))

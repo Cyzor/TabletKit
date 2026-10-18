@@ -26,6 +26,7 @@ public struct DescriptorField: Equatable, Sendable {
     public var physicalMin: Int
     public var physicalMax: Int
     public var unit: UInt32
+    /// Power of ten that scales the physical range, such as -3.
     public var unitExponent: Int
     public var isConstant: Bool
     public var isVariable: Bool
@@ -305,8 +306,11 @@ private struct Walker {
         case 0x2: globals.logicalMax = signedValue
         case 0x3: globals.physicalMin = signedValue
         case 0x4: globals.physicalMax = signedValue
-        case 0x5: globals.unit = UInt32(truncatingIfNeeded: value)
-        case 0x6: globals.unitExponent = signedValue
+        case 0x5:
+            // The spec writes a 4-bit signed nibble (0x0D is -3); some
+            // descriptors write a signed byte (0xFD) instead.
+            globals.unitExponent = byteCount == 1 && (8...15).contains(value) ? Int(value) - 16 : signedValue
+        case 0x6: globals.unit = UInt32(truncatingIfNeeded: value)
         case 0x7: globals.reportSize = Int(value)
         case 0x8: globals.reportID = UInt8(truncatingIfNeeded: value); globals.hasReportID = true
         case 0x9: globals.reportCount = Int(value)

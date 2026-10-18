@@ -48,6 +48,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `DescriptorField.unit` and `unitExponent` hold the right items. The parser
+  had the two tags swapped. `unitExponent` reads the spec's 4-bit nibble as
+  signed, so `0x0D` is −3.
 - `DecoderState.btTouchMsPerCount` is 0.1 ms, not 0.225 ms. Intuos Pro
   Bluetooth touch frames are 10 ms apart, and their clock wraps every
   6.55 seconds. The earlier figure placed older frames in a container too far

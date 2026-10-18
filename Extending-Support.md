@@ -77,7 +77,7 @@ Three fields give you most of an entry:
 - **X and Y**: usage page `1` (Generic Desktop), usages `48` (`0x30`) and `49` (`0x31`). Their `logicalMax` values are `maxX` and `maxY`.
 - **Pressure**: usage page `13` (`0x0D`, Digitizer), usage `48` (`0x30`, Tip Pressure). Its `logicalMax` is `maxPressure`.
 
-The physical range of X and Y gives the active area. HID measures length in centimeters, scaled by a power of ten in `unitExponent`. Convert the result to millimeters for `activeWidthMM` and `activeHeightMM`.
+The physical range of X and Y gives the active area. HID measures length in centimeters, scaled by a power of ten in `unitExponent`. The capture records the exponent as the descriptor writes it, so 8 through 15 mean −8 through −1: `13` is −3. Convert the result to millimeters for `activeWidthMM` and `activeHeightMM`.
 
 Two cautions:
 
