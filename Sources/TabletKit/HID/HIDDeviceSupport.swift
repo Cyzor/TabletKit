@@ -19,9 +19,8 @@ public struct DigitizerSpec: Sendable {
     /// Number of programmable express-key buttons on this device.
     /// Used by BambooDecoder to select the correct pad-byte bit layout.
     public var buttonCount: Int = 0
-    /// True if this device's pen reports carry tilt data.
-    /// Currently relevant for BambooDecoder only (report[8]/report[9], 4-bit signed).
-    /// IntuosV1/V2/Intuos3 always decode tilt regardless of this flag.
+    /// True if this device's pen reports carry tilt data. No decoder reads
+    /// it: each decodes tilt wherever its format carries a field.
     public var hasTilt: Bool = false
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
     /// Used by CintiqV1Decoder to gate decoding of the second ring byte in 0x0C reports.

@@ -361,8 +361,8 @@ public struct TabletSpec: Sendable {
     /// True if the tablet senses pen tilt. Pass it to `init` to override; by
     /// default it's false for formats with no tilt field (Graphire, Bamboo,
     /// PL, DTU, DTUS), for consumer and business models that lack tilt, and
-    /// for entries with no pen, and true otherwise. `BambooDecoder` reads it
-    /// to decide whether to decode tilt; other decoders ignore it.
+    /// for entries with no pen, and true otherwise. Decoders don't read it;
+    /// it describes the hardware.
     public let hasTilt: Bool
     /// Full-scale tilt angle in degrees for this family's wire tilt value, sourced
     /// from a HID descriptor, a kernel-cited constant, or a stop-to-stop hardware
@@ -1183,7 +1183,7 @@ public enum WacomDeviceRegistry: Sendable {
         // per kernel wacom_bpt_pen — but only after the feature-report mode
         // switch [0x02, 0x02]; without it the tablet stays in boot-mouse
         // emulation (4-byte relative packets on report 0x01). Confirmed on a
-        // CTL-460 capture. BambooDecoder also keeps a legacy 0x10 path.
+        // CTL-460 capture.
         .init(
             productID: 0x00D0, name: "Bamboo Touch (CTT-460)",
             // maxPressure 0 is intentional: CTT-460 is finger-touch only, no
@@ -2631,8 +2631,8 @@ public enum WacomDeviceRegistry: Sendable {
             // separate 0x032C interface.
             //
             // 0x032C sends report 0x88, a standard HID Digitizer touch screen
-            // collection, decoded from its descriptor by `PrecisionTouchDecoder`;
-            // `Wacom27QHDTDecoder`'s kernel layout doesn't apply. maxTouchContacts
+            // collection, decoded from its descriptor by `PrecisionTouchDecoder`,
+            // not the kernel's WACOM_27QHDT layout. maxTouchContacts
             // 10 is an upper bound: 0x88 carries one contact, but the same
             // descriptor declares a 10-contact report 0x81. Active area as
             // 0x032A above.

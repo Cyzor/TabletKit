@@ -523,3 +523,7 @@ API breakage: var DecoderState.wacom24HDTPendingContacts has been removed
 API breakage: var DecoderState.wacom24HDTRemainingContacts has been removed
 API breakage: enumelement DeviceFamily.descriptor has been added as a new enum case
 API breakage: struct GenericDigitizerFrame has been removed
+
+# Package-level decoder no device routed to; the 27QHD Touch sends
+# standard HID touch.
+API breakage: struct Wacom27QHDTDecoder has been removed

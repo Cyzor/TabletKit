@@ -92,12 +92,11 @@ final class DecoderFuzzTests: XCTestCase {
     func testTouchDecoders() {
         var rng = SplitMix64(state: 3)
         let spec = DigitizerSpec(maxX: 100, maxY: 100, maxPressure: 2047, hasFingerTouch: true, maxTouchContacts: 10)
-        let a = Wacom24HDTDecoder(), b = Wacom27QHDTDecoder()
-        var sa = Wacom24HDTDecoder.State(), sb = Wacom27QHDTDecoder.State()
+        let a = Wacom24HDTDecoder()
+        var sa = Wacom24HDTDecoder.State()
         for _ in 0..<(Self.iterations * 4) {
             withExactReport(randomReport(&rng, ids: Self.ids)) { report in
                 _ = a.decode(report: report, spec: spec, state: &sa, deviceFamily: .cintiq)
-                _ = b.decode(report: report, spec: spec, state: &sb, deviceFamily: .cintiq)
                 var lx = 0, ly = 0
                 _ = decodeBLEPenReport(report: report, spec: spec, lastX: &lx, lastY: &ly)
                 _ = decodeBLEPadReport(report: report)

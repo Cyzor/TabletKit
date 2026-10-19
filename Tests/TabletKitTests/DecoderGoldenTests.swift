@@ -117,13 +117,8 @@ private func goldenRows() -> [GoldenRow] {
     // One contact: active, id 5, at (100, 200), then the frame count.
     var t24 = padded([0x01, 0x01, 0x05, 0x64, 0x00, 0, 0, 0xC8, 0x00, 0, 0, 0x0A, 0x00, 0x0C, 0x00], to: 62)
     t24[61] = 1
-    var t27 = padded([0x05, 0x01, 0x05, 0x64, 0x00, 0xC8, 0x00], to: 64)
-    t27[63] = 1
     add("touch-24HDT", "Cintiq 24HD touch", templates: [t24]) {
         DeviceDecoder(Wacom24HDTDecoder(), digitizer: touch, family: .cintiq)
-    }
-    add("touch-27QHDT", "Cintiq 27QHD touch", templates: [t27]) {
-        DeviceDecoder(Wacom27QHDTDecoder(), digitizer: touch, family: .cintiq)
     }
     return rows
 }

@@ -14,7 +14,7 @@ import Foundation
 ///   - Cintiq 22 (DTH-2242): pen `0x0059`, touch `0x005D`
 ///
 /// No capture exists from any of them. The Cintiq 27QHD Touch shares the
-/// kernel function but not this layout; see `Wacom27QHDTDecoder`.
+/// kernel function but sends standard HID touch instead.
 ///
 /// Report 0x01, 62 bytes:
 ///   [0]        report ID 0x01
