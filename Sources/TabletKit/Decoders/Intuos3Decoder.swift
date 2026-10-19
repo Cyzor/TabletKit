@@ -6,13 +6,11 @@ import Foundation
 
 /// Decoder for the Wacom Intuos3 HID report format (PTZ-xxx, 2003–2006).
 ///
-/// Named for Wacom's marketing generation, not TabletKit's internal "V"
-/// numbering — unrelated to `IntuosV3Decoder`, which covers the much
-/// newer PTK-470/670/870 Intuos Pro generation.
+/// Named for Wacom's generation; unrelated to `IntuosV3Decoder`, which
+/// covers the PTK-470/670/870. Covers the PTZ-431, 431W, 631, 631W (0x00B5),
+/// 930, 1231, and 1231W.
 ///
-/// Covers: PTZ-431, PTZ-631, PTZ-631W (0x00B5), PTZ-930, PTZ-1231, PTZ-1231W, PTZ-431W.
-///
-/// **Differs from IntuosV1Decoder (PTH-851/Intuos5) in three ways:**
+/// **Differs from IntuosV1Decoder in three ways:**
 ///
 /// 1. Proximity — bit 5 (`0x20`), as on IntuosV1, but frames with bit 6
 ///    clear are ordinary data. Both public Intuos3 recordings send runs of
@@ -25,8 +23,7 @@ import Foundation
 ///    - `0x0C` (10-byte): touch strips in bytes 1–4, plus a 4+4 express key
 ///      split in the low nibbles of bytes 5 (keys 0–3) and 6 (keys 4–7).
 ///
-/// 3. No BLE HOGP support — Intuos3 is USB-only (pre-Bluetooth hardware).
-///    Report IDs 0x01 and 0x11 are not used by this family.
+/// 3. No BLE pen or 0x11 aux reports.
 ///
 /// Everything else (USB pen coordinates, pressure, tilt, tool-change packets,
 /// wireless status, mouse subtypes) is identical to IntuosV1Decoder.
@@ -54,9 +51,8 @@ package struct Intuos3Decoder: TabletReportDecoder {
 
         // Intuos3 pad report (report ID 0x0C, 10 bytes).
         //
-        //   Bytes 1–4: touch strips. Left = (bytes[1] << 8) | bytes[2], right =
-        //   (bytes[3] << 8) | bytes[4], each a one-hot mask of 13 zones; zero
-        //   means no contact.
+        //   Bytes 1–4: left and right touch strips, each a big-endian one-hot
+        //   mask of 13 zones; zero means no contact.
         //   Bytes 5–6: express keys, 4 per low nibble. Zero on PTZ-631W.
         //
         // Bit 0 is the bottom zone on PTZ-631W, where strip scrolling runs the
@@ -65,8 +61,8 @@ package struct Intuos3Decoder: TabletReportDecoder {
             guard report.count >= 5 else { return [] }
 
             // Touch strips — bytes 1–4.
-            let leftRaw = (UInt16(report[1]) << 8) | UInt16(report[2])
-            let rightRaw = (UInt16(report[3]) << 8) | UInt16(report[4])
+            let leftRaw = UInt16(report.be16(at: 1))
+            let rightRaw = UInt16(report.be16(at: 3))
             let leftActive = leftRaw != 0
             let rightActive = rightRaw != 0
 
@@ -173,8 +169,8 @@ package struct Intuos3Decoder: TabletReportDecoder {
         state.prevInProximity = true
 
         // IntuosV1 coordinate decode: 16-bit BE with 1-bit fractional extension from byte 9.
-        let x = ((Int(report[3]) | Int(report[2]) << 8) << 1) | ((Int(report[9]) >> 1) & 1)
-        let y = ((Int(report[5]) | Int(report[4]) << 8) << 1) | (Int(report[9]) & 1)
+        let x = (report.be16(at: 2) << 1) | ((Int(report[9]) >> 1) & 1)
+        let y = (report.be16(at: 4) << 1) | (Int(report[9]) & 1)
         state.lastX = x
         state.lastY = y
 

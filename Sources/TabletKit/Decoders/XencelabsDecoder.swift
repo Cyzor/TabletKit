@@ -8,30 +8,17 @@ import Foundation
 ///
 /// Used by the Xencelabs line (VID 0x28BD): Pen Tablet Medium (0x5201) and
 /// Small (0x5204), Pen Display 24 (0x520D) and 16 (0x520B), and the Quick
-/// Keys puck (0x5202) and its wireless dongle (0x5203), which carry aux
-/// frames only. `VendorDeviceRegistry.drivableProfile` is the authoritative
-/// list. Live pen data rides **Report ID 2** (vendor usage page 0xFF0A) —
-/// confirmed from 10k+ frames captured off a real Pen Display 2026-07-02,
-/// with both driver present and absent, both pens (slim 2-button and
-/// 3-button), hover, pressure, taps, barrel buttons, eraser, and QuickKeys
-/// puck use. The device also declares a standard bit-packed digitizer
-/// collection on Report ID 7, but it never carries live data in any observed
-/// state; an earlier revision of this decoder targeted it and was wrong.
+/// Keys puck (0x5202) and its dongle (0x5203), which send aux frames only.
+/// `VendorDeviceRegistry.drivableProfile` is the authoritative list.
 ///
-/// The layout matches the Ugee/XP-Pen OTD parser family (Xencelabs hardware
-/// is Hanvon Ugee OEM and shares Ugee's actual VID). Byte offsets after the
-/// report ID byte:
+/// Pen data arrives on report ID 2 (vendor page 0xFF0A), in the UGEE/XP-Pen
+/// layout; the hardware is a UGEE OEM. The standard digitizer collection on
+/// report ID 7 never carries data.
 ///   [1]    tag bitfield (see below)
-///   [2–3]  X low u16 LE; byte [10] is X's high byte (24-bit LE total).
-///          The Pen Display's X range is 0–105000 (~200 units/mm, matching
-///          the spec'd 5080 lpi), which doesn't fit in 16 bits — byte 10
-///          flips 0→1 exactly where the low word wraps, confirmed from live
-///          mid-screen sweeps. An earlier revision read only the low word,
-///          which made X wrap mod 65536 mid-screen ("Pac-Man" cursor) and
-///          made corner sweeps report a bogus ~39150 max.
-///   [4–5]  Y low u16 LE; byte [11] is Y's high byte (always 0 in practice —
-///          Y's range is 0–59000, within 16 bits — read for symmetry)
-///   [6–7]  pressure, u16 LE (spec'd 8192 levels; observed max ~6.4k)
+///   [2–3]  X low u16 LE; [10] is X's high byte. The Pen Display's X runs
+///          0–105000, past 16 bits.
+///   [4–5]  Y low u16 LE; [11] is Y's high byte (0 in practice)
+///   [6–7]  pressure, u16 LE (8192 levels)
 ///   [8]    tilt X, signed byte
 ///   [9]    tilt Y, signed byte
 ///
@@ -40,42 +27,25 @@ import Foundation
 ///   bit 1 = barrel button 1 (lowest button, 3 Button Pen only)
 ///   bit 2 = barrel button 2 (Thin Pen's first button)
 ///   bit 3 = barrel button 3 (Thin Pen's second button)
-///   bit 4 = aux frame: QuickKeys puck buttons/dial, not pen data
+///   bit 4 = aux frame: Quick Keys buttons/dial, not pen data
 ///   bit 6 = eraser end in range
 ///   bit 7 = which pen: set for the 3 Button Pen, clear for the Thin Pen
-/// A capture with both pens on one Pen Display, in one session, shows
-/// bit 7 tracking the pen and nothing else.
-/// The out-of-range tag 0xC0 has bit 7 set regardless of pen, so it says
-/// nothing about which pen left.
+/// The out-of-range tag 0xC0 has bit 7 set either way, so it doesn't say
+/// which pen left.
 ///
-/// Aux (bit-4) frames: byte 2 bits 0–7 are the 8 express keys, reported as
-/// `AuxButtons.buttons[0...7]`.
+/// Aux (bit-4) frames:
+/// - Byte 2: the 8 keys, as `AuxButtons.buttons[0...7]`. Key N is bit N-1,
+///   in Xencelabs' numbering: puck in landscape, dial at the right, keys
+///   1–4 along the top row and 5–8 along the bottom, left to right.
+///   Confirmed on hardware with single-key presses.
+/// - Byte 3 bit 0: the mode button, as `buttons[8]`.
+/// - Byte 3 bit 1: the dial's center click, as `touchRingButtonDown`, like a
+///   Wacom ring's center button. All zero is a release.
+/// - Byte 7: dial clicks, 1 = counterclockwise, 2 = clockwise, matching the
+///   puck's own diagram.
 ///
-/// Key numbering follows Xencelabs' own scheme, anchored on the dial: hold the
-/// puck in landscape with the dial at the right, then keys 1–4 are the top row
-/// left→right and keys 5–8 the bottom row left→right (matches the vendor
-/// settings UI, and the `KeyIndex` values in its logs — KeyIndex 0 = key 1).
-/// This decoder maps key N to bit N-1, i.e. top row = bits 0–3 and bottom row
-/// = bits 4–7. **Hardware-confirmed 2026-07-18** with isolated single-key
-/// presses: key 1 alone → byte 2 == `0x01`, key 8 alone → `0x80`. (Sweep
-/// captures cannot establish this — `08 04 02 01 80 40 20 10` fits a sweep in
-/// either direction, so only isolated named presses settle it.)
-///
-/// Byte 3 bit 0 is the bottom rectangular mode
-/// button, reported as `buttons[8]` — bind it to the "Ring: Cycle" action to
-/// advance the dial mode, same as a Wacom touch-ring mode key. Byte 3 bit 1
-/// is the dial's own center click, reported via the shared
-/// `touchRingButtonDown`/`touchRingButtonBinding` field instead of the
-/// indexed array, mirroring how Wacom's ring center click is a dedicated
-/// slot rather than a numbered express key. All-zero = release. Byte 7
-/// carries dial rotation as per-click events: 1 = counter-clockwise, 2 =
-/// clockwise (confirmed on hardware 2026-08-06 against the puck's own
-/// bezel diagram, which labels physical rotation independent of any
-/// scroll-direction convention).
-///
-/// Requires a tablet-mode init first: output report `[0x02, 0xB0, 0x04]`
-/// (`InitStep.outputReport`), zero-padded to MaxOutputReportSize; without
-/// it the device stays in mouse-emulation mode.
+/// Needs output report `[0x02, 0xB0, 0x04]` first, zero-padded to the
+/// maximum output size; without it the device stays in mouse mode.
 package struct XencelabsDecoder: TabletReportDecoder {
 
     /// Vendor-tunnel report carrying all live pen and puck data.
@@ -102,21 +72,9 @@ package struct XencelabsDecoder: TabletReportDecoder {
     /// Full-scale tilt in degrees; see ``ReportFormat/tiltMaxDegrees``.
     public static let tiltMaxDegrees: Double? = ReportFormat.xencelabs.tiltMaxDegrees
 
-    /// Divisor for the signed raw tilt bytes, hardware-confirmed 2026-09-04.
-    ///
-    /// A stop-to-stop capture (0x520D, 27767 samples) holds both bytes at
-    /// exactly ±60 with every integer in between present and nothing beyond,
-    /// on both axes, reproduced independently in the hover (A0), contact (A1),
-    /// and E0 buckets. Earlier sweeps peaked at 44 only because nobody tilted
-    /// the pen to its mechanical stop.
-    ///
-    /// Read `signedMagnitudeMax` when checking this against a capture, not
-    /// `min`/`max` — a signed byte reports 0 and 255 the moment it goes
-    /// negative, and the truncated `values` list makes a signed span look like
-    /// a plateau at the truncation boundary.
-    ///
-    /// OpenTabletDriver passes the raw sbyte straight through with no scaling,
-    /// so it offers no independent check on the divisor.
+    /// Divisor for the signed raw tilt bytes: a stop-to-stop capture reaches
+    /// exactly ±60 on both axes. Check captures with `signedMagnitudeMax`,
+    /// not `min`/`max`, which read a negative byte as up to 255.
     static let tiltRawScale = 60.0
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -129,51 +87,30 @@ package struct XencelabsDecoder: TabletReportDecoder {
         state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        // Frame length varies across the family — there is no single padded
-        // size (confirmed 2026-07-18 against live HID descriptors): the wired
-        // Quick Keys declares 9 payload bytes on this tunnel (10 including the
-        // report ID, i.e. no padding at all), while the wireless dongle and the
-        // Pen Display both declare 31 (32 total). All pen fields through tilt Y
-        // fit inside 10 bytes, so gate on that floor rather than a fixed size.
+        // Frame length varies: 10 bytes on the wired Quick Keys, 32 on the
+        // dongle and Pen Display. Every pen field fits in the first 10.
         guard report.count >= 10, report[0] == Self.penReportID else { return [] }
 
         let tag = report[1]
 
-        // Vendor feature-report acknowledgements (config/init handshake echoes,
-        // opcodes 0xB0/0xB4/0xB5/0xB8) are read back on this same Report ID 2
-        // tunnel. Some of them happen to have bit 4 (the aux-frame bit) set,
-        // which without this guard latches a phantom express-key/mode-button
-        // press and sticks a mapped modifier down with no puck connected
-        // (confirmed 2026-07-05). Every known real tag value has top nibble
-        // 0x2_, 0xA_, or 0xC_; the opcode-echo family's top nibble 0xB0 never
-        // occurs in real tag data, so gate on that.
+        // Command echoes (0xB0–0xBF) arrive on this report too, some with the
+        // aux bit set; read as keys, they stuck modifiers down. No real tag
+        // has a 0xB_ top nibble.
         guard tag & 0xF0 != 0xB0 else { return [] }
 
         // ── QuickKeys puck (aux frames) ───────────────────────────────────────
-        // Real aux data always arrives with tag == 0xF0 exactly. The wireless
-        // dongle also emits one-off status/announcement frames around connect
-        // time (tags 0xF8 and 0xF2, confirmed 2026-07-06) that share bit 4
-        // with real data but aren't button presses — one decoded as a phantom
-        // press with no matching release, same failure mode as the config-echo
-        // bug above. Requiring an exact match instead of just testing the aux
-        // bit excludes those.
+        // Real aux data is exactly 0xF0. The dongle's connect-time status
+        // frames (0xF8, 0xF2) share the aux bit and would read as presses.
         if tag == Self.tagAux {
             return Self.decodeAux(report)
         }
-        // Battery GET reply (solicited — see WacomKnownDevice's periodic
-        // poll): tag 0xF2, byte[2] == 0x01 as a constant marker, byte[3] =
-        // raw 0–100 percentage. Confirmed 2026-07-14 from a live capture
-        // (`02 f2 01 5a ...` == 90%) against a wireless puck. No charging
-        // bit observed — this puck has no wired-charging state to report,
-        // so charging is always false here. Single-sample confirmation;
-        // revisit byte[2]'s role if a reply is ever seen with a different
-        // value there.
+        // Reply to a battery poll: tag 0xF2, byte 2 == 0x01 as a marker,
+        // byte 3 the percentage (`02 f2 01 5a` is 90%). No charging bit has
+        // been seen, and only one sample confirms byte 2.
         if tag == Self.tagBattery, report.count >= 4, report[2] == 0x01 {
             return [.battery(percent: Int(report[3]), charging: false)]
         }
-        // Any other tag with the aux bit set isn't a pen frame either — it's
-        // one of those dongle status frames — so don't let it fall through
-        // to the pen-decode path below and synthesize a bogus toolEnter.
+        // Other aux-bit tags are dongle status, not pen frames.
         guard tag & Self.auxBit == 0 else { return [] }
 
         // ── Out of range ──────────────────────────────────────────────────────
@@ -220,14 +157,10 @@ package struct XencelabsDecoder: TabletReportDecoder {
                         isMouse: false)))
         }
 
-        // Coordinates are 24-bit LE: low word at [2–3]/[4–5], high byte at
-        // [10]/[11]. X genuinely needs the third byte (range 0–105000);
-        // firmware clamps both axes at their active-area maxima, so no
-        // wraparound handling is needed. Clamp to spec anyway in case a
-        // different firmware overshoots slightly.
-        let x = min(Int(report[2]) | Int(report[3]) << 8 | Int(report[10]) << 16, spec.maxX)
-        let y = min(Int(report[4]) | Int(report[5]) << 8 | Int(report[11]) << 16, spec.maxY)
-        let pressure = Int(report[6]) | Int(report[7]) << 8
+        // Clamped in case some firmware overshoots its active area.
+        let x = min(report.le16(at: 2) | Int(report[10]) << 16, spec.maxX)
+        let y = min(report.le16(at: 4) | Int(report[11]) << 16, spec.maxY)
+        let pressure = report.le16(at: 6)
         state.lastX = x
         state.lastY = y
 

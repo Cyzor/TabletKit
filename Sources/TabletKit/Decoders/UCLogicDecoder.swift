@@ -110,16 +110,16 @@ package struct UCLogicDecoder: TabletReportDecoder {
     ) -> [DecodeResult] {
         let status = report[1]
         if status == Self.huionButtonsStatus {
-            return [Self.buttons(report[4], report[5], spec: spec)]
+            return [Self.buttons(report.le16(at: 4), spec: spec)]
         }
         // Pen reports have the top bit set; 0xE0 and up are the tablet's own
         // buttons and dials.
         guard status & 0x80 != 0, status < 0xE0 else { return [] }
         tabletProtocol = .huionV2
 
-        let x = Int(report[2]) | Int(report[3]) << 8 | Int(report[8]) << 16
-        let y = Int(report[4]) | Int(report[5]) << 8 | Int(report[9]) << 16
-        let pressure = Int(report[6]) | Int(report[7]) << 8
+        let x = report.le16(at: 2) | Int(report[8]) << 16
+        let y = report.le16(at: 4) | Int(report[9]) << 16
+        let pressure = report.le16(at: 6)
         // Huion's tilt Y points the other way. The kernel reverses it too.
         let tiltX = Int(Int8(bitPattern: report[10]))
         let tiltY = -Int(Int8(bitPattern: report[11]))
@@ -133,7 +133,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
     ) -> [DecodeResult] {
         let status = report[1]
         if status == Self.ugeeButtonsStatus {
-            return [Self.buttons(report[2], report[3], spec: spec)]
+            return [Self.buttons(report.le16(at: 2), spec: spec)]
         }
         // Bit 4 marks the tablet's buttons (F0) and battery (F2). Xencelabs
         // tablets also echo commands back as B0 to BF.
@@ -143,14 +143,14 @@ package struct UCLogicDecoder: TabletReportDecoder {
         guard status & Self.ugeeInRangeBit != 0 else {
             return penLeft(spec: spec, state: &state)
         }
-        var x = Int(report[2]) | Int(report[3]) << 8
+        var x = report.le16(at: 2)
         // Tablets wider than 16 bits, such as 24-inch pen displays, put X's
         // third byte at 10. Hardware-confirmed on a Xencelabs Pen Display 24.
         if spec.maxX > 0xFFFF, report.count > 10 {
             x |= Int(report[10]) << 16
         }
-        let y = Int(report[4]) | Int(report[5]) << 8
-        let pressure = (Int(report[6]) | Int(report[7]) << 8) & 0x1FFF
+        let y = report.le16(at: 4)
+        let pressure = report.le16(at: 6) & 0x1FFF
         let tiltX = Int(Int8(bitPattern: report[8]))
         let tiltY = Int(Int8(bitPattern: report[9]))
         return penInRange(
@@ -207,8 +207,7 @@ package struct UCLogicDecoder: TabletReportDecoder {
     }
 
     /// Unpacks a two-byte button bitmap, lowest bit first.
-    private static func buttons(_ low: UInt8, _ high: UInt8, spec: DigitizerSpec) -> DecodeResult {
-        let bits = Int(low) | Int(high) << 8
+    private static func buttons(_ bits: Int, spec: DigitizerSpec) -> DecodeResult {
         let count = spec.buttonCount > 0 ? min(spec.buttonCount, 16) : 16
         return .aux(AuxButtons(buttons: (0..<count).map { bits & (1 << $0) != 0 }))
     }

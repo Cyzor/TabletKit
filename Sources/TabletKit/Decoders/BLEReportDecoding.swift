@@ -26,17 +26,8 @@ import Foundation
 /// [15–16] Tool ID (LE uint16)
 /// [17–22] Reserved
 ///
-/// Tilt encoding per the spec notes: this byte is proportional to
-/// sin(tilt_angle), not degrees (`tilt_degrees = asin(raw / 127.0) *
-/// 180/pi`), unlike the classic degree-linear protocols (IntuosV2 USB/BT,
-/// Intuos3, etc.) where a hardcoded /127.0 turned out to be a real bug
-/// (descriptor-confirmed full scale was 64, not 127 — see IntuosV2Decoder).
-/// **Unverified against real hardware or a capture** — this file has no
-/// tests and no capture-derived comment, only the spec notes doc, which is
-/// itself a first-pass collection of published info, not something to
-/// treat as authoritative. Do not assume this /127.0 is correct just
-/// because the spec says so; it needs the same hardware-capture scrutiny
-/// the USB path got before it can be trusted either way.
+/// The notes say tilt is proportional to sin(angle), hence /127.0. That's
+/// unverified: on the USB protocols a hardcoded /127.0 proved wrong.
 public func decodeBLEPenReport(
     report: HIDReport,
     spec: DigitizerSpec,
@@ -51,21 +42,20 @@ public func decodeBLEPenReport(
     let barrel2 = (flags & 0x40) != 0
     let inProximity = (flags & 0x80) != 0
 
-    let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8)
-    let y = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
-    let pressure = Int(UInt16(report[6]) | (UInt16(report[7] & 0x1F) << 8))
+    let x = report.le16(at: 2)
+    let y = report.le16(at: 4)
+    let pressure = report.le16(at: 6) & 0x1FFF
     let distance = Int(report[8])
     let tiltX = Double(Int8(bitPattern: report[9])) / 127.0
     let tiltY = Double(Int8(bitPattern: report[10])) / 127.0
 
     let serial: UInt32 =
         report.count >= 15
-        ? UInt32(report[11]) | UInt32(report[12]) << 8
-            | UInt32(report[13]) << 16 | UInt32(report[14]) << 24
+        ? report.le32(at: 11)
         : 0
     let toolCode: UInt16 =
         report.count >= 17
-        ? UInt16(report[15]) | UInt16(report[16]) << 8
+        ? UInt16(report.le16(at: 15))
         : 0
 
     let isEraser = (toolCode & 0x0008) != 0
@@ -98,12 +88,7 @@ public func decodeBLEPenReport(
 /// Shared by USB, the ACK-40401 wireless dongle, and BLE — all three send
 /// the identical layout on this device family.
 ///
-/// Layout confirmed by two independent HID captures against a real PTH-850
-/// (Intuos5 L), one direct USB and one relayed through the ACK-40401 dongle:
-/// pressing express keys one at a time toggled exactly one bit at a time in
-/// byte[4] (mirrored in byte[5]); byte[1] stayed constant at 0x80 the whole
-/// session (not a keys field, contrary to the previous assumption); byte[3]
-/// only ever took values 0/1, consistent with the ring center button.
+/// Confirmed on a PTH-850 over USB and through the dongle.
 /// [0] 0x03 Report ID
 /// [1] Constant 0x80 — role unknown
 /// [2] bit 7 = ring active; bits 0–6 = ring position (0–71)

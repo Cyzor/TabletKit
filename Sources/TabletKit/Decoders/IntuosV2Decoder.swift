@@ -6,31 +6,19 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV2 HID report format.
 ///
-/// "V2" names TabletKit's protocol generation, unrelated to `Intuos3Decoder`
-/// (Wacom's own "Intuos3" marketing generation, PTZ-xxx, an older and
-/// differently-shaped protocol).
+/// "V2" is TabletKit's protocol generation, unrelated to `Intuos3Decoder`.
+/// Used by the PTH-460 (0x0392/0x03DC), PTH-660 (0x0357), PTH-860 (0x0358),
+/// and other tablets with the 192-byte IntuosV2 layout.
 ///
-/// Used by: PTH-460 (0x0392/0x03DC), PTH-660 (0x0357), PTH-860 (0x0358)
-/// and any future tablet using the 192-byte IntuosV2 report layout.
-///
-/// Report ID routing:
-/// 0x01 BLE HOGP pen report (23 bytes)
-/// 0x03 BLE HOGP pad report (9 bytes)
-/// 0x10 Standard USB pen report (192 bytes) — main path
-/// 0x1E Offset pen report (driver-compatibility mode) — hardware-confirmed
-///      against a real DTH-227 capture; see decodeOffsetPenReport
-/// 0x11 Auxiliary (express key + touch ring) report
-/// 0x80 Wireless status report (ACK-40401 RF dongle)
-///
-/// 0x21 Finger touch report (PTH-660/860, confirmed from live captures:
-///      PTH-860 2026-05-21, PTH-660 2026-07-26)
-///      44 bytes: [0]=0x21, [1]=contact count, then 5 fixed 8-byte slots:
-///      slot[i]: [0]=slot_id [1]=status(0x01=down,0x00=lift) [2..3]=X LE16 [4..5]=Y LE16
-///               [6]=touch major [7]=reserved
-///      Coordinate range: X 0–12439, Y 0–8639 (PTH-860); PTH-660 unconfirmed.
-///      TODO (finger touch): DTH-271, DTH-135, DTH-1320 (parser=.intuosV2 family)
-///      touch format is unconfirmed for these devices — do not assume 0x21 / same layout
-///      without a live capture.
+/// Report IDs:
+/// 0x01 BLE pen report (23 bytes)
+/// 0x03 BLE pad report (9 bytes)
+/// 0x10 USB pen report (192 bytes), the main path
+/// 0x11 express keys + touch ring
+/// 0x1E offset pen report; see `decodeOffsetPenReport`
+/// 0x21 finger touch (PTH-660/860); see `decodeTouchReport`. The touch
+///      format of the DTH-271, DTH-135, and DTH-1320 is unconfirmed.
+/// 0x80 wireless status, or Bluetooth Classic pen batches
 package struct IntuosV2Decoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -126,8 +114,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         // USB IntuosV2 status byte: bit6=proximity, bit5=highConfidence.
         // Kernel model (wacom_intuos_pro_irq): exit when !prox && !conf (status < 0x20).
         // Sequence at boundary: 0x60 (prox=1, conf=1) → 0x40 (prox=1, conf=0) → 0x00 (both=0).
-        // Art Pen rotation sensor causes transient oscillations (0x60 ↔ 0x40) that are not
-        // genuine exits. Only exit when BOTH bits clear.
+        // The Art Pen's rotation sensor flips 0x60 ↔ 0x40; only both bits
+        // clear is an exit.
         let prox = (status & 0x40) != 0
         let highConfidence = (status & 0x20) != 0
         let isExitSignal = !prox && !highConfidence
@@ -164,11 +152,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             return []
         }
 
-        // Boundary noise: prox=1 but highConfidence=0 (status = 0x40).
-        // The Art Pen's rotation sensor causes these oscillations during active motion —
-        // confirmed by code comment and live captures. Pass through last cached state
-        // instead of returning [] so apps see continuous data rather than a gap that
-        // resolves to a 0° snap when the exit threshold fires.
+        // Boundary noise: prox=1 but highConfidence=0 (status = 0x40), from
+        // the Art Pen's rotation sensor in motion. Repeat the last state so
+        // apps don't see a gap that snaps rotation to 0°.
         if !highConfidence {
             state.exitFrameCount += 1
             if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
@@ -198,14 +184,10 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                 ]
             }
 
-            // Below threshold — pen still likely in contact. Emit last known state so
-            // apps (Rebelle, Krita) see stable rotation rather than a dropped frame.
-            // Only use cached values if we've received at least one valid frame since
-            // tool-enter; at re-entry, skip this pass-through until the first good frame.
-            // FIX: use cached lastTiltX/lastTiltY instead of hardcoded 0 so that the
-            // azimuth angle (atan2 of tilt components) doesn't snap to 0° on every
-            // low-confidence frame — the primary cause of wobbly strokes in Rebelle.
-            // For low-confidence frames, report 0 hover (no valid measurement during noise).
+            // Below threshold, the pen is likely still down: repeat the last
+            // state, once a valid frame has arrived since tool-enter. Cached
+            // tilt keeps the azimuth from snapping to 0°, which wobbled
+            // strokes. Hover reads 0, since these frames don't measure it.
             if state.prevInProximity && state.hasValidTiltFrame {
                 return [
                     .pen(
@@ -233,12 +215,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         // Fire toolEnter whenever the active tool changes — either by serial (pens)
         // or by toolCode alone when serial = 0 (some mouse accessories).
         if report.count >= 27 {
-            let serial =
-                UInt32(report[17])
-                | UInt32(report[18]) << 8
-                | UInt32(report[19]) << 16
-                | UInt32(report[20]) << 24
-            let toolCode = UInt16(report[21]) | UInt16(report[22]) << 8
+            let serial = report.le32(at: 17)
+            let toolCode = UInt16(report.le16(at: 21))
             // Boundary-noise frames (0x40) carry zero tool code. Don't overwrite the
             // valid code from the last good frame.
             if toolCode != 0 {
@@ -275,8 +253,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         }
 
         // IntuosV2 coordinate decode — 24-bit LE (2 bytes + 1-byte extension).
-        let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8) | (Int(report[4]) << 16)
-        let y = Int(UInt16(report[5]) | UInt16(report[6]) << 8) | (Int(report[7]) << 16)
+        let x = report.le24(at: 2)
+        let y = report.le24(at: 5)
         state.lastX = x
         state.lastY = y
 
@@ -303,13 +281,10 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
         // ── Pen path ───────────────────────────────────────────────────────────
         // Pressure: 13-bit value (d[8] + lower 5 bits of d[9]) per kernel spec.
-        let pressure = Int(UInt16(report[8]) | (UInt16(report[9] & 0x1F) << 8))
-        // Tilt divisor: this report's own HID descriptor declares X/Y Tilt
-        // (usages 0x3D/0x3E) as logical/physical [-64, 63], unit 0x14
-        // (degrees) — confirmed directly from a live PTH-660 USB descriptor
-        // capture (2026-09-05), matching the BT path's hardware-measured
-        // ±64 exactly (see decodeBTFrame). /127.0 remains the fallback for
-        // families whose USB descriptor hasn't been checked.
+        let pressure = report.le16(at: 8) & 0x1FFF
+        // The PTH-660 descriptor declares tilt as [-64, 63] degrees,
+        // matching the Bluetooth path. /127.0 is the fallback for families
+        // whose descriptor hasn't been checked.
         let tiltDivisor = spec.tiltMaxDegrees != nil ? 64.0 : 127.0
         let tiltX = Double(Int8(bitPattern: report[10])) / tiltDivisor
         let tiltY = Double(Int8(bitPattern: report[11])) / tiltDivisor
@@ -324,13 +299,10 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         // Only valid for Art Pen variants (0x0804, 0x1108); other pens report garbage/defaults.
         // Cache in state.lastRotation so boundary-noise frames can hold the last real value.
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
-        let rawRot = Int16(bitPattern: UInt16(report[12]) | UInt16(report[13]) << 8)
-        // Rotation: signed Int16, 1800 counts per revolution, so 0.2 deg per count.
-        // The kernel reports raw counts on ABS_Z rather than degrees; its scale comes
-        // from input_abs_set_res(ABS_Z, 287) units/radian (287 * 2pi ~= 1800) alongside
-        // the declared -900..899 range (wacom_wac.c:3888/3900/3920).
-        // Negated here so clockwise twist produces increasing degrees, matching what
-        // macOS apps (Photoshop, Krita, Illustrator) expect from a native Wacom driver.
+        let rawRot = report.signedLE16(at: 12)
+        // Rotation: 1800 counts per revolution (0.2° each), range -900..899,
+        // as in the kernel. Negated so a clockwise twist increases degrees,
+        // which macOS apps expect.
         var rotation = isArtPen ? (900.0 - Double(rawRot)) / 5.0 : 0.0
         if rotation < 0 { rotation += 360.0 }
         if rotation >= 360 { rotation -= 360.0 }
@@ -365,19 +337,12 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
     // MARK: - Offset pen report (0x1E, driver-compatibility mode)
 
-    /// Confirmed 2026-09-08 against a real DTH-227 capture (OpenTabletDriver
-    /// PR #3858, 836 reports). `report[1]` is a constant 0x01 sub-type byte
-    /// (same convention as IntuosV3's 0x1F/0x1E), not part of the pen status —
-    /// OTD's own `NearProximity` field reads a bit of that constant byte and
-    /// is always false in the capture, so it's not something to copy. Real
-    /// status is in report[2]: only 0xC0/0xC1 appear, the same
-    /// bit7=proximity/bit6=tip-switch split as IntuosV3's 0x1E (see
-    /// `IntuosV3Decoder.decodeExtendedPenReport`).
+    /// Confirmed on a DTH-227 capture. `report[1]` is a constant 0x01
+    /// sub-type byte, as on IntuosV3's 0x1F/0x1E; the status is in
+    /// `report[2]`, with the same proximity and tip bits as IntuosV3's 0x1E.
     ///
-    /// Field map follows Wacom's own kernel parser for this format
-    /// (`wacom_Pro2022_pen_irq`, added by a Wacom engineer for the Cintiq Pro
-    /// 27 and shared by DTH-172/227/271 — their pen descriptors are all 1184
-    /// bytes and differ only in coordinate maxima):
+    /// Field map from the kernel's `wacom_Pro2022_pen_irq`, shared by the
+    /// DTH-172, 227, and 271, whose pen descriptors match:
     ///
     ///     [2] flags: bit0 tip, bits1-3 buttons, bit4 eraser, bit5 invert,
     ///                bit6 range, bit7 proximity
@@ -387,13 +352,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     ///     [19] height   [20] tool UID LE64   [28] tool type
     ///     [30] scan time            [32] sequence number
     ///
-    /// OTD's `IntuosV2OffsetReport` is *not* a reliable guide here — it reads
-    /// tilt as single bytes at 11/12 and hover at 11, which this decoder
-    /// inherited and which was corrected 2026-09-10. Pressure being plain
-    /// 16-bit at [9..10] (not 13-bit masked) does still hold.
-    ///
-    /// The device sends 192 bytes but only the first 34 carry payload; bit 3
-    /// is a third barrel button that `TabletPoint` has no field for.
+    /// OTD's `IntuosV2OffsetReport` reads tilt and hover from the wrong
+    /// bytes. Only the first 34 of the 192 bytes carry data; bit 3 is a
+    /// third barrel button that `TabletPoint` has no field for.
     private func decodeOffsetPenReport(
         report: HIDReport,
         spec: DigitizerSpec,
@@ -419,33 +380,14 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             ]
         }
 
-        let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8) | (Int(report[5]) << 16)
-        let y = Int(UInt16(report[6]) | UInt16(report[7]) << 8) | (Int(report[8]) << 16)
-        let pressure = Int(UInt16(report[9]) | UInt16(report[10]) << 8)
-        // Tilt is signed LE16, not a signed byte, and the two axes are four
-        // bytes apart — corrected 2026-09-10 from Wacom's own kernel parser
-        // (`wacom_Pro2022_pen_irq`, the Cintiq Pro 2022 format), which the
-        // 1184-byte HID descriptor for this family agrees with field for field.
-        //
-        // The previous offsets came from OpenTabletDriver's
-        // `IntuosV2OffsetReport` and were wrong in three ways at once: tiltY
-        // read byte 12, which is the *high byte of X tilt* (hence always 0 for
-        // ordinary tilt values), and hover distance read byte 11, the X tilt
-        // low byte. Checked against a real DTH-227 frame, the kernel map gives
-        // tiltX 12, tiltY 8, height 31 where ours gave 12, 0, 12 — the
-        // signature the evidence review flagged, where "hover distance" and
-        // "X tilt" track each other exactly and "Y tilt" never moves.
-        //
-        // Tilt range is ±90 per the descriptor's logical maxima, not ±127.
-        let tiltRaw = { (o: Int) -> Double in
-            let v = Int(report[o]) | (Int(report[o + 1]) << 8)
-            return Double(v >= 32768 ? v - 65536 : v)
-        }
+        let x = report.le24(at: 3)
+        let y = report.le24(at: 6)
+        let pressure = report.le16(at: 9)
         // Degrees over the device's own maximum: ±64 on the Wacom One 12, ±90
         // per the Cintiq Pro 22 descriptor, which is the fallback.
         let tiltScale = spec.tiltMaxDegrees ?? 90.0
-        let tiltX = tiltRaw(11) / tiltScale
-        let tiltY = tiltRaw(13) / tiltScale
+        let tiltX = Double(report.signedLE16(at: 11)) / tiltScale
+        let tiltY = Double(report.signedLE16(at: 13)) / tiltScale
         // Byte 19, past rotation (15) and the airbrush fingerwheel (17).
         let hoverDistance = Int(report[19])
         let isArtPen = state.currentToolCode == 0x0804 || state.currentToolCode == 0x1108
@@ -516,8 +458,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     /// [4] touch-ring position, 0–71 (5° resolution); 0x7F = no contact
     /// [5–8] reserved
     ///
-    /// Note: ring contact is indicated by posByte != 0x7F, not by ringByte.
-    /// ringByte is the center button click, which is independent of ring touch.
+    /// Ring contact is posByte != 0x7F; ringByte is the separate center button.
     private func decodeAuxReport(
         report: HIDReport
     ) -> [DecodeResult] {
@@ -546,18 +487,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     ///              [6]=touch major [7]=touch minor
     /// Lift frame: status=0x00 for one frame at the last position, then the slot goes silent.
     ///
-    /// Layout confirmed 2026-07-30 against a PTH-660's own touch report
-    /// descriptor, which — unusually for this family — is structured rather
-    /// than opaque. It declares report 0x21 with a 43-byte payload: a contact
-    /// count, then five logical collections of Contact Identifier (8 bits),
-    /// Tip Switch (1 bit + 7 pad), X (16), Y (16), Width (8), Height (8). That
-    /// is this slot layout field for field, so every offset above is now
-    /// descriptor-backed rather than inferred from sample correlation.
-    ///
-    /// The axes declare Logical Maximum 8960 × 5920 with Width/Height maxima
-    /// of 41 × 31, which
-    /// is what promoted 0x0357's registry `touchMaxX`/`touchMaxY` from
-    /// estimate to confirmed.
+    /// The PTH-660's touch descriptor declares this layout field for field,
+    /// with axes up to 8960 × 5920 and width/height up to 41 × 31.
     private func decodeTouchReport(
         report: HIDReport
     ) -> [DecodeResult] {
@@ -569,8 +500,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             let base = 2 + i * 8
             guard base + 7 < report.count else { break }
             guard report[base + 1] == 0x01 else { continue }
-            let x = Int(report[base + 2]) | (Int(report[base + 3]) << 8)
-            let y = Int(report[base + 4]) | (Int(report[base + 5]) << 8)
+            let x = report.le16(at: base + 2)
+            let y = report.le16(at: base + 4)
             let major = Int(report[base + 6])
             let minor = Int(report[base + 7])
             contacts.append(TouchContact(

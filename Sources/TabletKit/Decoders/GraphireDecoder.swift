@@ -6,24 +6,12 @@ import Foundation
 
 /// Decoder for the Wacom Graphire / PenPartner / Volito / early consumer line.
 ///
-/// Status: **experimental.** Ported from the Linux input-wacom kernel driver
-/// `wacom_graphire_irq()` (drivers/hid/wacom_wac.c) and not yet validated
-/// against real hardware. Registry entries that route here should carry
-/// `confidence: .experimental` so the UI can present an honest expectation
-/// to users.
-///
-/// Scope (in):
-///   • USB Graphire 2/3/4 — PIDs 0x0011..0x0017
-///   • PenPartner 0x0003, original Graphire 0x0004/0x0010
-///   • Volito / PenStation / Bamboo One CTF-430 (Graphire-protocol variants)
-///
-/// Scope (out):
-///   • Graphire 1 (RS-232 serial) — pre-USB, irrelevant
-///   • Graphire BT (CTE-630BT, RFCOMM/SPP) — not HID, separate transport stack
-///
-/// WACOM_MO (Bamboo Fun CTE-450/650, Bamboo MTE-450) is in scope: same pen
-/// path, own pad/ring layout in `decodePad`. Pen path confirmed on a CTE-650
-/// capture (issue #20, 2026-09-27).
+/// Ported from the kernel's `wacom_graphire_irq()`. Covers USB Graphire 2–4
+/// (0x0011–0x0017), PenPartner (0x0003), the original Graphire
+/// (0x0004/0x0010), and the Volito, PenStation, and Bamboo One CTF-430.
+/// `WACOM_MO` (Bamboo Fun CTE-450/650, MTE-450) shares the pen path and has
+/// its own pad and ring layout in `decodePad`; the pen path is confirmed on
+/// a CTE-650. Graphire BT (RFCOMM, not HID) isn't covered.
 ///
 /// **Report layout — Report ID 0x02 (kernel `WACOM_REPORT_PENABLED`), 8 bytes:**
 /// ```
@@ -44,15 +32,8 @@ import Foundation
 /// bit 0  (0x01)  BTN_TOUCH   / mouse left
 /// ```
 ///
-/// **Pressure** is 10-bit on pen tools: `d[6] | ((d[7] & 0x03) << 8)`.
-/// Distance: `d[7] & 0x3F` (G4 also uses `d[6] & 0x3F`).
-///
-/// **Pad**, signalled when pen not in proximity — see `decodePad` for the
-/// G4 and WACOM_MO layouts.
-///
-/// The kernel also handles GRAPHIRE_BT inside `wacom_graphire_irq`;
-/// that path is not reproduced here. If a future RFCOMM-aware transport layer
-/// lands, GraphireBT can be added as a sibling decoder.
+/// Pen pressure is 10-bit, in bytes 6–7. Distance is `d[7] & 0x3F`.
+/// Out of range, the report carries the pad; see `decodePad`.
 package struct GraphireDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -114,16 +95,14 @@ package struct GraphireDecoder: TabletReportDecoder {
                         isMouse: isMouse)))
         }
 
-        let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8)
-        let y = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
+        let x = report.le16(at: 2)
+        let y = report.le16(at: 4)
         state.lastX = x
         state.lastY = y
 
         if isMouse {
-            // Mouse path — left/right/middle clicks; pressure not reported.
-            // Wheel: kernel uses -(signed char)d[6] for plain mouse; G4 has its own
-            // wheel encoding in d[7] bits 3-5. Plain-mouse wheel covers the common
-            // case for Graphire 2/3 mouse accessory.
+            // No pressure. The wheel is -(signed)d[6], as in the kernel; the
+            // G4's own wheel encoding in d[7] isn't read.
             let wheelDelta = Int(Int8(bitPattern: report[6])) * -1
             results.append(
                 .pen(
@@ -141,15 +120,10 @@ package struct GraphireDecoder: TabletReportDecoder {
             return results
         }
 
-        // Pen / eraser path.
-        // Pressure: 10-bit = d[6] | ((d[7] & 0x03) << 8). Cap at maxPressure
-        // so devices with maxPressure==255 (PenPartner) aren't fed a 10-bit value.
-        let rawPressure = Int(report[6]) | ((Int(report[7]) & 0x03) << 8)
-        let pressure = min(rawPressure, spec.maxPressure)
-        // Distance: 6-bit hover height in d[7] bits 0..5 (kernel masks 0x3F).
-        // Bits 0..1 are also pressure-high; the kernel mask matches both uses.
-        // Pad models carry button bits in d[7], and the kernel reports no pen
-        // distance for them.
+        // Capped so the 8-bit PenPartner isn't fed a 10-bit value.
+        let pressure = min(report.le16(at: 6) & 0x3FF, spec.maxPressure)
+        // Pad models carry button bits in d[7], so no distance for them, as
+        // in the kernel.
         let hoverDistance = spec.buttonCount > 0 ? 0 : Int(report[7] & 0x3F)
 
         results.append(
@@ -190,8 +164,7 @@ package struct GraphireDecoder: TabletReportDecoder {
     /// d[8] bit 7 = finger on ring, bits 0..6 = position 0–71.
     /// Emitted in reading order (upper-left, upper-right, lower-left,
     /// lower-right) — kernel key names matched to the CTE-650 manual's
-    /// layout. Bits confirmed on a capture 2026-09-27; which bit is which
-    /// key is not hardware-checked.
+    /// layout. A capture confirms the bits, not which bit is which key.
     private func decodePad(
         report: HIDReport,
         spec: DigitizerSpec

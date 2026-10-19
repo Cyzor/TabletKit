@@ -6,23 +6,12 @@ import Foundation
 
 /// Decoder for the Wacom DTU HID report format.
 ///
-/// Used by: DTU-2231 (0x00CE), DTU-1631 (0x00F0). Ported from input-wacom's
-/// `wacom_dtu_irq` (`drivers/hid/wacom_wac.c` in input-wacom 4.18).
+/// Used by the DTU-2231 (0x00CE) and DTU-1631 (0x00F0). Ported from
+/// input-wacom's `wacom_dtu_irq`; not yet validated on hardware.
 ///
-/// Report ID routing:
-/// 0x02  Pen report (WACOM_REPORT_PENABLED), 8 bytes — LE16 X/Y, 9-bit pressure.
-///       The kernel function does not gate on report ID; dispatch is by device
-///       type. Only one report stream is expected from these devices.
-///
-/// No pad buttons, no tilt, no rotation, no hover distance, no serial number.
-/// Eraser vs. pen is inferred from tool-type bits in the flags byte, latched
-/// on proximity entry and held until the next out-of-proximity event.
-///
-/// Key differences from DTUSDecoder: coordinates are little-endian (not BE),
-/// pressure is 9-bit (`(data[7] & 0x01) << 8 | data[6]`), and there is no
-/// pad report.
-///
-/// Experimental: not yet validated on hardware.
+/// One 8-byte pen report (ID 0x02, unchecked, as in the kernel). No pad,
+/// tilt, rotation, hover distance, or serial. Unlike `DTUSDecoder`,
+/// coordinates are little-endian and pressure is 9-bit.
 package struct DTUDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -42,16 +31,15 @@ package struct DTUDecoder: TabletReportDecoder {
     // MARK: - Pen report
 
     /// `wacom_dtu_irq` layout (8+ bytes):
-    ///   [0]     report ID (WACOM_REPORT_PENABLED = 0x02; not checked by kernel)
+    ///   [0]     report ID 0x02
     ///   [1]     flags byte:
     ///             bit 5 (0x20): proximity
     ///             bit 4 (0x10): BTN_STYLUS2 (barrel button 2)
     ///             bits 3–2 (0x0C): tool type — non-zero = eraser
     ///             bit 1 (0x02): BTN_STYLUS (barrel button 1)
-    ///   [2–3]   X coordinate, LITTLE-endian u16
-    ///   [4–5]   Y coordinate, LITTLE-endian u16
-    ///   [6]     pressure LSB (8 bits)
-    ///   [7]     bit 0: pressure MSB → 9-bit total (0–511)
+    ///   [2–3]   X, LE u16
+    ///   [4–5]   Y, LE u16
+    ///   [6–7]   pressure, 9 bits (0–511)
     private func decodePenReport(
         report: HIDReport,
         spec: DigitizerSpec,
@@ -75,9 +63,9 @@ package struct DTUDecoder: TabletReportDecoder {
             ]
         }
 
-        let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8)
-        let y = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
-        let pressure = Int(UInt16(report[6]) | UInt16(report[7] & 0x01) << 8)
+        let x = report.le16(at: 2)
+        let y = report.le16(at: 4)
+        let pressure = report.le16(at: 6) & 0x1FF
         let isEraser = (flags & 0x0C) != 0
 
         state.prevInProximity = true

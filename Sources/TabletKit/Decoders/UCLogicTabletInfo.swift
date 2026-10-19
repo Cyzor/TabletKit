@@ -74,10 +74,10 @@ public struct UCLogicTabletInfo: Sendable, Equatable {
         // The kernel accepts 18 to 32 bytes.
         guard bytes.count >= 18, !Self.isOnlyText(bytes) else { return nil }
         tabletProtocol = .huionV2
-        maxX = Self.le24(bytes, 2)
-        maxY = Self.le24(bytes, 5)
-        maxPressure = Self.le16(bytes, 8)
-        lpi = Self.le16(bytes, 10)
+        maxX = bytes.le24(at: 2)
+        maxY = bytes.le24(at: 5)
+        maxPressure = bytes.le16(at: 8)
+        lpi = bytes.le16(at: 10)
         // Matches the key count on every Huion answer seen so far.
         tabletButtonCount = Int(bytes[13])
     }
@@ -89,19 +89,11 @@ public struct UCLogicTabletInfo: Sendable, Equatable {
         // 12 bytes is the minimum; 14-byte answers add a third byte of X.
         guard bytes.count >= 12 else { return nil }
         tabletProtocol = .ugeeV2
-        maxX = Self.le16(bytes, 2) | (bytes.count > 12 ? Int(bytes[12]) << 16 : 0)
-        maxY = Self.le16(bytes, 4)
+        maxX = bytes.le16(at: 2) | (bytes.count > 12 ? Int(bytes[12]) << 16 : 0)
+        maxY = bytes.le16(at: 4)
         tabletButtonCount = Int(bytes[6])
-        maxPressure = Self.le16(bytes, 8)
-        lpi = Self.le16(bytes, 10)
-    }
-
-    private static func le16(_ b: [UInt8], _ i: Int) -> Int {
-        Int(b[i]) | Int(b[i + 1]) << 8
-    }
-
-    private static func le24(_ b: [UInt8], _ i: Int) -> Int {
-        Int(b[i]) | Int(b[i + 1]) << 8 | Int(b[i + 2]) << 16
+        maxPressure = bytes.le16(at: 8)
+        lpi = bytes.le16(at: 10)
     }
 
     /// True when every UTF-16 character after the header is printable ASCII.

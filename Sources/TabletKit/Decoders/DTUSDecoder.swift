@@ -6,21 +6,14 @@ import Foundation
 
 /// Decoder for the Wacom DTUS HID report format.
 ///
-/// Used by: DTK-1651 (0x0343), DTU-1031 (0x00FB), DTU-1031X (0x032F),
-/// DTU-1141 (0x0336). Ported from input-wacom's `wacom_dtus_irq`
-/// (`drivers/hid/wacom_wac.c` in input-wacom 4.18).
+/// Used by the DTK-1651 (0x0343), DTU-1031 (0x00FB), DTU-1031X (0x032F),
+/// and DTU-1141 (0x0336). Ported from input-wacom's `wacom_dtus_irq`; not
+/// yet validated on hardware.
 ///
-/// Report ID routing:
-/// 0x11  Pen report, 7 bytes — BE16 X/Y, 10-bit pressure split across
-///       status byte and pressure byte. Same ID as IntuosV2's aux
-///       report, but dispatch is per-decoder so the collision is fine.
-/// 0x15  Pad report, 2 bytes — four express keys in the low nibble.
+/// - 0x11: pen, 7 bytes.
+/// - 0x15: pad, 2 bytes, four express keys in the low nibble.
 ///
-/// No tilt, no rotation, no hover distance, no serial number, no
-/// tool-code field. Eraser vs. pen is inferred from tool-type bits in
-/// the status byte each frame.
-///
-/// Experimental: not yet validated on hardware.
+/// No tilt, rotation, hover distance, serial, or tool code.
 package struct DTUSDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -57,12 +50,11 @@ package struct DTUSDecoder: TabletReportDecoder {
     ///             bits 4..3:    tool type — 1 = eraser, 2 = pen
     ///             bits 1..0:    pressure high bits
     ///   [2]     pressure low byte
-    ///   [3..4]  X, BIG-endian u16
-    ///   [5..6]  Y, BIG-endian u16
+    ///   [3..4]  X, BE u16
+    ///   [5..6]  Y, BE u16
     ///
-    /// Eraser identity is inferred per-frame from the tool-type bits;
-    /// no serial or tool-code field exists in the wire format, so no
-    /// `.toolEnter` events are produced.
+    /// The eraser comes from the tool-type bits on each frame; with no
+    /// serial or tool code, no `.toolEnter` goes out.
     private func decodePenReport(
         report: HIDReport,
         spec: DigitizerSpec,
@@ -86,10 +78,9 @@ package struct DTUSDecoder: TabletReportDecoder {
             ]
         }
 
-        // BE16 — kernel uses get_unaligned_be16, which reads high byte first.
-        let x = Int(UInt16(report[3]) << 8 | UInt16(report[4]))
-        let y = Int(UInt16(report[5]) << 8 | UInt16(report[6]))
-        let pressure = Int(UInt16(status & 0x03) << 8 | UInt16(report[2]))
+        let x = report.be16(at: 3)
+        let y = report.be16(at: 5)
+        let pressure = Int(status & 0x03) << 8 | Int(report[2])
         let toolType = (status >> 3) & 0x03  // 1 = eraser, 2 = pen
         let isEraser = toolType == 1
 

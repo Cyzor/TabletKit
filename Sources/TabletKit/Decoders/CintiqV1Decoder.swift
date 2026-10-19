@@ -6,25 +6,16 @@ import Foundation
 
 /// Decoder for Wacom Cintiq pen-display tablets using the WACOM_24HD HID report layout.
 ///
-/// Handles all old Cintiq models (`.cintiqV1` parser family):
-///   DTK-2400 (0x00F4) ✓ confirmed live, DTH-2400 (0x00F8),
-///   DTK-2200 (0x00FA/0x00F9), DTZ-2100B (0x00FB), DTZ-2100 (0x00CC),
-///   Cintiq 20WSX (0x00C0), Cintiq 13HD (0x00C4), Cintiq 12WX (0x00C6).
+/// Handles the older Cintiqs (`.cintiqV1`): DTK-2400 (0x00F4, confirmed on
+/// hardware), DTH-2400 (0x00F8), DTK-2200 (0x00FA/0x00F9), DTZ-2100B
+/// (0x00FB), DTZ-2100 (0x00CC), 20WSX (0x00C0), 13HD (0x00C4), and 12WX
+/// (0x00C6). Touch models send touch on a separate interface, decoded by
+/// `Wacom24HDTDecoder`.
 ///
-/// **Report routing:**
-///   0x01 — tip-switch (mouse-compatible collection; requires device seizure to suppress
-///           the OS's native left-click interpretation)
-///   0x02 — pen digitizer (10-byte IntuosV1, WACOM_24HD typeNibble dispatch)
-///   0x0C — touch rings + express keys (Linux kernel WACOM_24HD pad layout)
-///
-/// TODO (finger touch): DTH-2400 (single-touch) and DTH-2200 (single-touch) also
-/// have a capacitive touch surface.  Wire format unknown — touch likely arrives on
-/// a separate HID interface (different usagePage/usage than the pen digitizer) and
-/// will need a routing change in DeviceRouter so that interface lands on this
-/// decoder.  Once a real capture from one of those devices is available, add the
-/// appropriate report ID to the dispatch switch and emit `.touch([TouchContact])`.
-/// Do not guess the layout from a generic HID spec — Wacom's actual byte layout
-/// almost certainly differs from the multi-touch reference in Notes/.
+/// **Reports:**
+///   0x01 — tip switch (mouse-compatible collection)
+///   0x02 — pen (10-byte IntuosV1 layout)
+///   0x0C — touch rings + express keys (kernel WACOM_24HD pad layout)
 ///
 /// **Pen report type-nibble dispatch: `(status >> 1) & 0x0F`**
 ///   0x00–0x03: general pen packet (position, pressure, tilt, barrel buttons)
@@ -32,11 +23,10 @@ import Foundation
 ///   0x0A:      Airbrush second packet (not yet decoded; cached state forwarded)
 ///
 /// **Barrel button debounce:**
-/// Buttons are read from general packets (typeNibble 0–3) only.  The rotation
-/// sub-frame (typeNibble 5, status 0xEA) has bit 1 permanently set as part of its
-/// type encoding — reading buttons from it would latch barrel button 1 forever.
-/// Hardware pulses the button bit ~1:5 while held; clear-counter threshold 7
-/// survives up to 6 consecutive clear frames (~54 ms at 133 Hz) before releasing.
+/// Buttons come from general packets (typeNibble 0–3) only: the rotation
+/// sub-frame (status 0xEA) always has bit 1 set, which would latch barrel
+/// button 1. The hardware pulses the bit about 1 frame in 5 while held, so a
+/// release waits for 7 clear frames (~54 ms at 133 Hz).
 ///
 /// **Tip-switch synthetic pressure:**
 /// When Report 0x01 fires (tip physically down) but the concurrent 0x02 pressure
@@ -146,7 +136,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         // In-range packet (status 0x20/0x21): pen sensed at the edge of range,
         // sent before the tool-change packet on entry and after lift. Position
         // matches the neighboring data packets; tilt/pressure bytes are zero.
-        // Linux skips these (wacom_intuos_inout); we keep the position only.
+        // Linux skips these (wacom_intuos_inout); only the position is kept.
         let inRangeOnly = (status & 0xFE) == 0x20
 
         if typeNibble == 0x05 {
@@ -176,8 +166,8 @@ package struct CintiqV1Decoder: TabletReportDecoder {
 
             // Coordinate decode: 16-bit BE with 1-bit fractional extension from byte 9.
             // Kernel: X = (BE16(d2:d3)<<1) | ((d9>>1)&1) — 17-bit.
-            state.lastX = ((Int(report[3]) | Int(report[2]) << 8) << 1) | ((Int(report[9]) >> 1) & 1)
-            state.lastY = ((Int(report[5]) | Int(report[4]) << 8) << 1) | (Int(report[9]) & 1)
+            state.lastX = (report.be16(at: 2) << 1) | ((Int(report[9]) >> 1) & 1)
+            state.lastY = (report.be16(at: 4) << 1) | (Int(report[9]) & 1)
 
             // Tilt (kernel, signed ±63):
             //   tiltX = (((d7<<1) & 0x7E) | (d8>>7)) - 64
@@ -189,22 +179,15 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         }
         // typeNibble 0x0A (airbrush wheel): not yet decoded; falls through with cached state.
 
-        // Pressure: kernel (wacom_intuos_general): (d6<<3) | ((d7&0xC0)>>5) | (d1&1) — 11-bit.
-        // Only valid for general pen packets (typeNibble 0–3); rotation/airbrush frames don't
-        // carry pressure data, so forward the last cached value to avoid pressure=0 spikes that
-        // would cause rapid mouseUp/mouseDown ("dots instead of line" symptom).
+        // 11-bit: (d6<<3) | ((d7&0xC0)>>5) | (d1&1), as in the kernel. Only
+        // general packets carry it; other frames hold the last value, since
+        // a zero would break strokes into dots.
         //
-        // On 10-bit hardware (maxPressure ≤ 1023) the 11-bit form overshoots by exactly 2×
-        // and bit 0 of the status byte is not a pressure LSB, so normalize with >>1 — the
-        // same correction IntuosV1Decoder already applies. Without it, real captures of the
-        // Cintiq 12WX (0x00C6) and 21UX (0x003F) emit up to 1192 and 1280 against a declared
-        // maximum of 1023, which reads as a registry error but is not one: halving lands both
-        // inside range (596 and 640). Confirmed by parity — on those two the emitted value is
-        // even on 158/161 and 101/104 nonzero frames, while genuinely 2048-level hardware
-        // (21UX2, 0x00CC) is mixed 208/484 and is left untouched by this branch.
-        // Verified 2026-07-29 by replaying all three captures through hid-trace-sweep.
-        // `tipPressureOverride` (see type header) substitutes in below when
-        // raw pressure is 0 but the tip-switch fired.
+        // On 10-bit hardware (maxPressure ≤ 1023) the 11-bit form reads 2×
+        // high and bit 0 isn't pressure, so shift right by one, as
+        // IntuosV1Decoder does. Captures of the 12WX and 21UX confirm it.
+        // `tipPressureOverride` stands in below when pressure is 0 but the
+        // tip switch fired.
         let pressure: Int
         if inRangeOnly {
             lastPressure = 0
@@ -297,39 +280,28 @@ package struct CintiqV1Decoder: TabletReportDecoder {
 
     // MARK: - Report 0x0C: touch rings + express keys + capacitive OSD buttons
     //
-    // Two distinct pad layouts share report 0x0C across `.cintiqV1` devices —
-    // confirmed against Linux kernel `wacom_wac.c` `wacom_intuos_pad()`, which
-    // dispatches DTK-2400/24HD and 21UX2/22HD through separate, independent
-    // branches. Conflating them (as this decoder did before 2026-08-31) reads
-    // 21UX2's touch-strip position bytes as if they were 24HD's OSD buttons,
-    // producing phantom button events on a strip swipe.
+    // Two pad layouts share report 0x0C, as in the kernel's
+    // `wacom_intuos_pad()`. Mixing them up reads 21UX2 strip swipes as
+    // 24HD OSD button presses.
     //
-    // DTK-2400 / Cintiq 24HD family (bezelButtonCount > 0), live USB capture,
-    // Wacom driver 6.3.46-2:
+    // DTK-2400 / Cintiq 24HD family (bezelButtonCount > 0), from a capture:
     //   byte[1] — left  touch ring: bit7=active, [6:0]=position 0–71
     //   byte[2] — right touch ring: same encoding (dual-ring models only)
     //   byte[3] — capacitive OSD touch buttons, group A — bit4 = left button
     //   byte[4] — capacitive OSD touch buttons, group B — bit6 = middle button, bit0 = right button
-    //     Confirmed 2026-07-14 by a live capture that isolated clean single-tap
-    //     events for all three buttons at these exact bits, then a swipe across
-    //     the strip that walked a single active bit down through capA bits 4-0
-    //     and capB bits 7-0 in sequence. The OSD area is a continuous capacitive
-    //     slider under three printed icons — a discrete tap just lands on its
-    //     icon's fixed bit — so the other bits in capA/capB are transient
-    //     way-points during a swipe, not independent buttons, and are ignored.
+    //     The OSD area is one capacitive slider under three icons; a tap
+    //     lands on its icon's bit, and the other bits are swipe way-points,
+    //     ignored.
     //   byte[5] — 0x00 (padding)
     //   byte[6] — left  side express keys, full 8-bit mask
     //   byte[7] — 0x00 (padding)
     //   byte[8] — right side express keys, full 8-bit mask
     //   byte[9] — 0x00 (padding)
     //
-    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), kernel-sourced
-    // 2026-08-31, hardware-unverified — kernel's WACOM_21UX2/WACOM_22HD branch:
-    //   `buttons = (data[8]<<10) | ((data[7]&1)<<9) | (data[6]<<1) | (data[5]&1)`
-    //   byte[1]:byte[2] and byte[3]:byte[4] are touch-strip position fields on
-    //   this family (13-bit each), not buttons — not decoded here; MockTab has
-    //   no touch-strip control type yet, so strip position is dropped rather
-    //   than misread as OSD buttons.
+    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), from the kernel,
+    // unverified on hardware:
+    //   byte[1]:byte[2] and byte[3]:byte[4] are 13-bit touch-strip
+    //   positions, not decoded here.
     //   byte[5] bit0 — left  center toggle
     //   byte[6]       — left  side express keys, full 8-bit mask
     //   byte[7] bit0 — right center toggle

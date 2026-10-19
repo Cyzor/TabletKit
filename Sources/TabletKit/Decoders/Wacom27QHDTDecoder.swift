@@ -4,58 +4,30 @@
 
 import Foundation
 
-/// Decoder for the Wacom `WACOM_27QHDT` multitouch report family.
+/// Decoder for the Wacom `WACOM_27QHDT` multitouch report family, ported
+/// from the kernel's `wacom_24hdt_irq()`. Despite the shared function, its
+/// layout differs from `Wacom24HDTDecoder`'s.
 ///
-/// Ported from the Linux kernel's `wacom_24hdt_irq()` (`WACOM_27QHDT`
-/// branch) — a structurally different protocol from the similarly-named
-/// `Wacom24HDTDecoder`/`WACOM_24HDT` despite sharing that dispatch function;
-/// see `Wacom24HDTDecoder`'s doc comment for why they aren't interchangeable.
+/// The Cintiq 27QHD Touch (DTH-2700) doesn't use this: its touch interface
+/// sends a standard HID Digitizer report that `PrecisionTouchDecoder`
+/// handles. This decoder stays for any other device in the family that
+/// sends report 0x05; none has been seen on hardware.
 ///
-/// **Confirmed 2026-09-17 this is not the Cintiq 27QHD Touch's (DTH-2700)
-/// actual touch protocol** — its `0x032C` interface emits report `0x88`, a
-/// standard HID Digitizer Touch Screen collection, decoded generically by
-/// `PrecisionTouchLayout`/`PrecisionTouchDecoder` instead (see
-/// `WacomKnownDevice.deriveTouchDecoders`). Kept in case some other
-/// WACOM_27QHDT-family device genuinely emits report 0x05 — still
-/// unverified against real hardware for that case.
-///
-/// Report 0x05, 64 bytes (simpler than WACOM_24HDT — fits all ten contacts
-/// in one packet, no multi-frame reassembly needed):
+/// Report 0x05, 64 bytes, all ten contacts in one packet, so no state
+/// carries between reports:
 ///   [0]        report ID 0x05
-///   [1..6]     contact record 0
-///   [7..12]    contact record 1
-///   ...
-///   [55..60]   contact record 9
-///   [61..62]   unused, even by the kernel
+///   [1..60]    ten 6-byte contact records
+///   [61..62]   unused
 ///   [63]       active-contact count
 ///
-/// Contact record (6 bytes), offsets relative to the record's own start:
+/// Contact record, offsets from the record's start:
 ///   [0]        status; bit 0 = contact active
 ///   [1]        contact/tracking ID
 ///   [2..3]     X, LE u16
 ///   [4..5]     Y, LE u16
 ///
-/// No width/height/contact-center fields — the kernel's own 24HDT-only block
-/// that reads those (and derives touchMajor/Minor/orientation from them) is
-/// explicitly gated off for `WACOM_27QHDT`. The kernel's local `y_offset`
-/// variable (2 for 24HDT, 0 here) exists only to skip 24HDT's extra
-/// contact-center-X field before reading Y; 27QHDT's 6-byte record has no
-/// such field, so Y sits immediately after X with no offset needed — that
-/// is reflected directly in this decoder's fixed byte offsets below, not
-/// modeled as a separate parameter.
-///
-/// Byte 63 is the frame's total active-contact count, same semantic as
-/// WACOM_24HDT's byte 61 — but because up to 10 contacts (the hardware's
-/// full ceiling) fit in one 64-byte packet, a legitimate frame never needs
-/// more than one packet, unlike WACOM_24HDT's 4-per-packet cap, so this
-/// decoder keeps no state between reports.
-///
-/// The report ID itself (0x05) is not something the kernel's decode
-/// function inspects — dispatch happens by device-family type, fixed at
-/// probe time, not by report ID. 0x05 is simply what this interface emits
-/// in its full vendor touch mode; `decode(...)` below still gates on it
-/// defensively, matching every other decoder in this package's convention
-/// of checking `report[0]` before trusting a byte layout.
+/// No width or height fields; the kernel gates its 24HDT size block off for
+/// this family.
 package struct Wacom27QHDTDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -95,9 +67,8 @@ package struct Wacom27QHDTDecoder: TabletReportDecoder {
         return [.touch(contacts)]
     }
 
-    /// Decodes one 6-byte contact record starting at `base` within `report`.
-    /// Returns `nil` for an inactive slot (status bit 0 clear) — same
-    /// release-by-omission convention as `Wacom24HDTDecoder`.
+    /// Decodes the contact record at `base`, or `nil` for an inactive slot;
+    /// an omitted contact counts as released.
     private func decodeContactRecord(
         report: HIDReport,
         base: Int
@@ -106,10 +77,8 @@ package struct Wacom27QHDTDecoder: TabletReportDecoder {
         guard (status & 0x01) != 0 else { return nil }
 
         let id = Int(report[base + 1])
-        let x = Int(report[base + 2]) | (Int(report[base + 3]) << 8)
-        let y = Int(report[base + 4]) | (Int(report[base + 5]) << 8)
-
-        // No width/height on this wire format — see the type doc comment.
+        let x = report.le16(at: base + 2)
+        let y = report.le16(at: base + 4)
         return TouchContact(id: id, x: x, y: y, contactArea: nil, contactMinor: nil)
     }
 }

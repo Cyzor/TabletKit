@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Jay Petronis (Cyzor)
 // SPDX-License-Identifier: MPL-2.0
 
-// Bluetooth-side decoders for the IntuosV2 family. Split out from
-// `IntuosV2Decoder.swift` to keep each file under ~500 lines and to group
-// the shared per-frame helper next to the only callers that use it.
+// Bluetooth-side decoders for the IntuosV2 family. USB and BLE stay in
+// `IntuosV2Decoder.swift`.
 //
 // Covers:
 //   • 0x80 / 361-byte container — the same 7 packed pen frames as the
@@ -14,11 +13,8 @@
 //   • 0x80 / 99-byte container  — 7 packed pen frames only, nothing past [99]
 //   • 0x80 RF wireless status   — ACK-40401 dongle
 //
-// Length, not device model, decides which container a report is — see the
-// dispatch in `IntuosV2Decoder.decode`'s `case 0x80`. Both PTH-660 and
-// PTH-860 can land on either container; `hasFingerTouch` decides, not PID.
-//
-// USB and BLE paths remain in `IntuosV2Decoder.swift`.
+// Length, not model, decides the container; both the PTH-660 and PTH-860
+// can send either.
 
 import Foundation
 
@@ -26,32 +22,26 @@ extension IntuosV2Decoder {
 
     // MARK: - BT frame coordinate/pressure/tilt helper
 
-    /// Decode coordinate, pressure, and tilt from a BT per-frame buffer (used by both
-    /// 361-byte and 99-byte BT paths). Offsets and interpretation are identical in both formats.
-    /// Pressure formula is canonical (mask high byte first).
+    /// Decodes position, pressure, and tilt from one Bluetooth pen frame, the
+    /// same in both containers.
     ///
-    /// Tilt fraction is `rawByte / 64.0` when `spec.tiltMaxDegrees` is set — confirmed by hardware
-    /// capture across three pen tool codes (0x0802, 0x0804 Art Pen, 0x0842) on PTH-860 BT, all
-    /// saturating at exactly ±64, not ±127 (2026-09-04). Falls back to the pre-D3 `/127.0` divisor
-    /// when `tiltMaxDegrees` is `nil` (family unverified) so untested devices don't silently change.
+    /// Tilt is `rawByte / 64.0` when `spec.tiltMaxDegrees` is set: three pens
+    /// on a PTH-860 saturate at exactly ±64. Otherwise `/127.0`, so unmeasured
+    /// families don't change.
     ///
-    /// Proximity-exit threshold, used by every pen-frame loop in this file: an Art Pen's
-    /// rotation sensor causes transient signal loss at the detection boundary (bursts of
-    /// invalid frames, or `prox=1`/`inRange=0` oscillation) that isn't a real exit. Only
-    /// confirm exit after `proximityExitFrames` consecutive bad frames; reset the
-    /// counter on any good one. A genuine firmware exit (`!prox && !inRange`) fires
-    /// immediately instead, since the kernel doesn't threshold that case.
+    /// Every pen-frame loop here shares an exit threshold: an Art Pen's
+    /// rotation sensor drops frames at the boundary without leaving, so an
+    /// exit needs `proximityExitFrames` bad frames in a row. A firmware exit
+    /// (`!prox && !inRange`) takes effect at once, as in the kernel.
     func decodeBTFrame(_ f: UnsafePointer<UInt8>, spec: DigitizerSpec)
         -> (x: Int, y: Int, pressure: Int, tiltX: Double, tiltY: Double, hoverDistance: Int)
     {
-        let x = Int(UInt16(f[1]) | UInt16(f[2]) << 8)
-        let y = Int(UInt16(f[3]) | UInt16(f[4]) << 8)
-        let pressure = Int(UInt16(f[5]) | (UInt16(f[6] & 0x1F) << 8))
-        // Reads tiltMaxDegrees as "has this family's tilt been measured?", not
-        // as an angle. That holds only because every measured device so far has
-        // a raw ceiling equal to its degree range; the two are independent in
-        // principle, so a device that breaks the coincidence needs its divisor
-        // carried explicitly rather than inferred here.
+        let x = f.le16(at: 1)
+        let y = f.le16(at: 3)
+        let pressure = f.le16(at: 5) & 0x1FFF
+        // Reads tiltMaxDegrees as "measured?", not as an angle. That holds
+        // while every measured device's raw ceiling equals its degree range;
+        // one that differs needs its own divisor.
         let tiltDivisor = spec.tiltMaxDegrees != nil ? 64.0 : 127.0
         let tiltX = Double(Int8(bitPattern: f[7])) / tiltDivisor
         let tiltY = Double(Int8(bitPattern: f[8])) / tiltDivisor
@@ -61,9 +51,8 @@ extension IntuosV2Decoder {
 
     // MARK: - BT Wireless pen (0x80, Bluetooth Classic/LE transport variant)
     //
-    // Coordinates and pressure use the same LE uint16 layout as the BLE HOGP 0x01 report.
-    // Per-frame flag byte (frame[0]) — confirmed against kernel wacom_intuos_pro2_bt_pen()
-    // (drivers/hid/wacom_wac.c, INTUOSP2_BT branch):
+    // Coordinates and pressure are LE u16, as in the BLE 0x01 report. Frame
+    // flag byte, per the kernel's wacom_intuos_pro2_bt_pen():
     //   0x80 = valid frame
     //   0x40 = proximity
     //   0x20 = range (in-range vs hover/contact distinction)
@@ -72,12 +61,9 @@ extension IntuosV2Decoder {
     //   0x04 = BTN_STYLUS2 (barrel button 2)
     //   0x02 = BTN_STYLUS (barrel button 1)
     //
-    // Note: bits 4 and 5 are not additional buttons (earlier comment speculated they
-    // were — kernel confirms otherwise). Per-frame eraser detection below reads bit 3
-    // (0x08); this is empirically correct for IntuosV2 BT and consistent with the
-    // kernel's tip-mask logic, since the eraser end's contact bit lights up bit 3.
-    // The toolEnter event independently establishes eraser-ness from the tool code at
-    // bytes 103:104, so downstream consumers see the correct tool regardless.
+    // Per-frame eraser detection reads bit 3 (0x08), which the eraser end's
+    // contact lights. The toolEnter takes eraser-ness from the tool code
+    // at bytes 103:104 regardless.
 
     func decodeBTPen(
         report: HIDReport,
@@ -89,13 +75,10 @@ extension IntuosV2Decoder {
 
         var results: [DecodeResult] = []
 
-        // 361-byte BT report layout (0-indexed bytes) — see the file header
-        // for how this relates to the 99-byte container and which devices
-        // send which:
+        // 361-byte layout:
         // [0] = 0x80 (report ID)
         // [1..98] = up to 7 × 14-byte pen frames (oldest first)
-        // [99..102] = pen serial LE, the same value USB reports (confirmed on
-        //      a PTH-660 against its USB serial)
+        // [99..102] = pen serial LE, the same value USB reports
         // [103:104] = tool code LE (e.g., 0x0804 = Art Pen)
         // [281..285] = pad sub-report (center button, express keys, touch ring)
         //
@@ -107,16 +90,14 @@ extension IntuosV2Decoder {
         // 0x04 = BTN_STYLUS2 (barrel button 2)
         // 0x02 = BTN_STYLUS (barrel button 1)
 
-        // Tool identity: tool code at bytes [103:104] LE (confirmed from live BT captures).
-        let toolCode: UInt16 = report.count >= 105 ? UInt16(report[103]) | UInt16(report[104]) << 8 : 0
+        let toolCode: UInt16 = report.count >= 105 ? UInt16(report.le16(at: 103)) : 0
         // Without the serial a pen was filed under its tool code over
         // Bluetooth and its serial over USB: two entries, two sets of settings.
         let serial: UInt32 = report.count >= 105
-            ? UInt32(report[99]) | UInt32(report[100]) << 8
-                | UInt32(report[101]) << 16 | UInt32(report[102]) << 24
+            ? report.le32(at: 99)
             : 0
         let isMouse = (toolCode & 0x000F) == 0x0006
-        // Art Pen variants: 0x0804, 0x1108 (confirmed 2026-04-01).
+        // Art Pen tool codes: 0x0804, 0x1108.
         // Note: 0x1108 has bit3 set, so the standard (toolCode & 0x0008) eraser test
         // would misclassify it as eraser. Use per-frame flags bit3 for eraser instead;
         // toolEnter isEraser is only for known eraser tool codes.
@@ -262,8 +243,8 @@ extension IntuosV2Decoder {
             }
 
             // 0x10 eraser end in range or 0x08 eraser touching; 0x08 alone
-            // showed a hovering eraser as the pen (PTH-860, 2026-10-01). Weak
-            // frames carry neither bit, so they keep the last state.
+            // shows a hovering eraser as the pen. Weak frames carry neither
+            // bit, so they keep the last state.
             if inRange { state.isEraser = (flags & 0x18) != 0 }
             let isEraser = state.isEraser
             let barrel1 = (flags & 0x02) != 0
@@ -278,19 +259,15 @@ extension IntuosV2Decoder {
                     state.hasValidTiltFrame = true
                 }
 
-            // Rotation: f[9:10], signed LE16, Art Pen only.
-            // Kernel patches for wacom_intuos_pro2_bt_pen() confirm Art-Pen-specific rotation
-            // handling in BT frames with alignment correction: userspace expects 0° at left,
-            // but raw hardware has a +90° offset baked in. Subtract 900 (90° × 10), wrap to
-            // [0, 3600). Non-Art-Pen tools carry garbage in these bytes — gate strictly.
-            // Confirmed working (2026-04-02, PTH-660 BT + Art Pen).
+            // Rotation: f[9:10], signed LE16, Art Pen only; other pens send
+            // garbage here. Confirmed on a PTH-660 with an Art Pen.
             //
-            // Gate on inRange: boundary-noise frames (0xC0, !inRange) have f[9:10]=0x00.
-            // Use the last valid reading from an inRange=1 frame to suppress oscillation.
+            // Boundary-noise frames (0xC0, !inRange) carry zero, so hold the
+            // last in-range reading.
             var rotation = 0.0
             if isArtPen {
                 if inRange {
-                    let rawRot = Int(Int16(bitPattern: UInt16(f[9]) | UInt16(f[10]) << 8))
+                    let rawRot = f.signedLE16(at: 9)
                     // Invert direction to match USB path: clockwise twist → increasing degrees.
                     var r = rawRot
                     if r < 0 { r += 3600 }
@@ -315,13 +292,11 @@ extension IntuosV2Decoder {
                         hoverDistance: hoverDistance)))
         }
 
-        // Pad sub-report is embedded at a fixed offset in the 361-byte 0x80 container (byte 281).
-        // Confirmed from live capture (2026-03-27):
+        // The pad sub-report sits at byte 281 of the 361-byte container:
         // byte[281] = center button (0x40 when pressed, 0x00 otherwise)
         // byte[282] = mechanical click pulse — set for exactly one frame on physical press
         // byte[283] = capacitive touch state — set whenever finger rests on key (too sensitive alone)
-        // byte[284] = battery: bit7=charging, bits6:0=capacity 0–100 (direct %)
-        //             (kernel: wacom_intuos_pro2_bt_battery(), data[284])
+        // byte[284] = battery: bit7=charging, bits6:0=percent
         // byte[285] = ring byte: bit7=ring active, bits0-6=position (0–71); 0x7F=no touch
         if report.count >= 286 {
             let mechanicalByte = report[282]   // one-frame click pulse (rising edge)
@@ -365,17 +340,13 @@ extension IntuosV2Decoder {
 
     // MARK: - BT finger touch (embedded in 0x80 / 361-byte container)
     //
-    // Touch data is woven into the same 361-byte 0x80 report as the pen:
-    //   [109..280] = 4 frames × 43 bytes
-    // Layout matches `wacom_intuos_pro2_bt_touch()` in
-    // drivers/hid/wacom_wac.c (Linux kernel, INTUOSP2_BT branch).
+    // Touch shares the 361-byte report with the pen, at [109..280]: four
+    // 43-byte frames, per the kernel's `wacom_intuos_pro2_bt_touch()`.
     //
-    // Per frame (43 bytes):
-    //   [0] = bit7 frame-valid, bits 0..6 = total contact count for the set
-    //         (only the first valid frame in a set carries a non-zero count;
-    //         the kernel state-machines this across frames to support >5
-    //         contacts.  PTH-460/660/860 max 5 fingers, so for V1 we treat
-    //         each frame independently and ignore count==0 frames.)
+    // Per frame:
+    //   [0] = bit7 frame-valid, bits 0..6 = contact count for the set. Only
+    //         a set's first frame carries a count, for more than 5 contacts;
+    //         these tablets take 5, so each frame stands alone.
     //   [1..]: up to 5 contacts, 8 bytes each
     //
     // Per contact (8 bytes):
@@ -386,19 +357,13 @@ extension IntuosV2Decoder {
     //   [6] = touch major (w)
     //   [7] = touch minor (h)
     //
-    // Frame bytes [41..42] (past the 5 contacts) are a 16-bit little-endian
-    // device timestamp: 0.1 ms per count, consecutive sub-frames exactly
-    // 100 counts (10 ms) apart, wrapping every 6.55 s. Neither the kernel
-    // (wacom_intuos_pro2_bt_touch) nor earlier versions of this decoder read
-    // them. Hardware-measured on a PTH-660 over two live captures,
-    // 2026-09-03; unverified on the PTH-860. Recorded into
-    // `State.btTouchFrameStamps`; see `TouchFrame.deviceTime` for how to use them.
+    // Frame bytes [41..42] are the tablet's clock, LE u16 at 0.1 ms per
+    // count: sub-frames 10 ms apart, wrapping every 6.55 s. Measured on a
+    // PTH-660, not the PTH-860; the kernel doesn't read it. Recorded into
+    // `State.btTouchFrameStamps`; see `TouchFrame.deviceTime`.
     //
-    // Emits one `.touch` per valid frame so `TouchStateTracker` sees per-time-
-    // slice snapshots, mirroring the cadence of the USB 0x21 path (one frame
-    // per report there).  Lift contacts (status & 0x01 == 0) are filtered at
-    // the decoder boundary, matching the USB decoder; the tracker recovers
-    // the lift by seeing the absence on the next emission.
+    // One `.touch` per valid frame, like the USB 0x21 path. Lifted contacts
+    // are left out; an omitted contact counts as released.
     func decodeBTTouch(
         report: HIDReport,
         state: inout State
@@ -422,22 +387,19 @@ extension IntuosV2Decoder {
             for j in 0 ..< slots {
                 let cOff = off + 1 + j * 8
                 guard (report[cOff + 1] & 0x01) != 0 else { continue }  // lift → drop
-                let x = Int(report[cOff + 2]) | (Int(report[cOff + 3]) << 8)
-                let y = Int(report[cOff + 4]) | (Int(report[cOff + 5]) << 8)
+                let x = report.le16(at: cOff + 2)
+                let y = report.le16(at: cOff + 4)
                 let major = Int(report[cOff + 6])
                 let minor = Int(report[cOff + 7])
                 contacts.append(TouchContact(
                     id: Int(report[cOff]), x: x, y: y,
                     contactArea: major, contactMinor: minor))
             }
-            // Trailing two bytes of the sub-frame: the tablet's own 16-bit
-            // little-endian clock (low byte first). Recorded per emitted
-            // frame so the caller can time frames by when the device sampled
-            // them rather than when the container happened to arrive. Read
-            // last so a frame skipped above contributes no stamp.
+            // The sub-frame's clock, so callers time frames by when they were
+            // sampled. Read last so a skipped frame adds no stamp.
             let stampOff = off + 41
             state.btTouchFrameStamps.append(
-                UInt16(report[stampOff + 1]) << 8 | UInt16(report[stampOff]))
+                UInt16(report.le16(at: stampOff)))
             results.append(.touch(contacts))
         }
         return results
@@ -445,9 +407,8 @@ extension IntuosV2Decoder {
 
     // MARK: - BT Classic pen (0x80, length == 99, PTH-860)
     //
-    // The PTH-860 uses Bluetooth Classic (advertised as "BT IntuosPro L").
-    // The kernel handler wacom_intuos_pro2_bt_irq (INTUOSP2_BT) packs 7 pen frames
-    // per packet to compensate for lower BT bandwidth vs USB.
+    // Seven pen frames per packet, as in the kernel's
+    // wacom_intuos_pro2_bt_irq.
     //
     // Packet layout: [0]=header, [1..14]=frame0, [15..28]=frame1, ..., [85..98]=frame6
     //
@@ -460,10 +421,7 @@ extension IntuosV2Decoder {
     // 0x02 = BTN_STYLUS (barrel 1)
     // 0x01 = BTN_TOUCH
     //
-    // Note: tilt bytes are signed two's-complement; a kernel bug (reading unsigned)
-    // was patched — we always cast via Int8(bitPattern:).
-    // Pad reports over BT Classic use a separate sub-report embedded in the container
-    // at an unverified offset; pad decoding is deferred until hardware is available.
+    // Tilt bytes are signed. This container's pad data isn't decoded.
 
     /// Report ID `0x81` — the `INTUOSHT3_BT` Bluetooth container used by the
     /// consumer Intuos BT S/M (CTL-4100WL `0x0377`/`0x03C6`, CTL-6100WL
@@ -471,9 +429,7 @@ extension IntuosV2Decoder {
     /// `wacom_intuos_pro2_bt_irq` alongside the Pro models but with a
     /// different geometry: **four 8-byte pen frames**, not seven 14-byte ones.
     ///
-    /// Layout, verified byte-for-byte against a 627-record hardware capture of
-    /// a CTL-4100WL over Bluetooth (an OpenTabletDriver debugger recording with
-    /// its own decoded output alongside the raw bytes):
+    /// Layout, confirmed on a CTL-4100WL Bluetooth capture:
     ///
     /// | Offset | Meaning |
     /// |---|---|
@@ -489,13 +445,7 @@ extension IntuosV2Decoder {
     /// doesn't report it, unlike the Pro path above.
     ///
     /// Status bits match the Pro frames (bit 7 valid, 6 proximity, 5 range,
-    /// 4 eraser, 2/1 barrel buttons), which is what lets both share the
-    /// exit-threshold handling.
-    ///
-    /// Replaying the capture through this layout reproduced OTD's own decoded
-    /// position, pressure, and hover for 613 of 616 pen records; the three
-    /// misses are the opening records, where holding the last position has no
-    /// prior value to hold. All 622 aux-bearing records matched on byte 44.
+    /// 4 eraser, 2/1 barrel buttons), so both share the exit threshold.
     func decodeIntuosHT3BTFrames(
         report: HIDReport,
         spec: DigitizerSpec,
@@ -559,9 +509,9 @@ extension IntuosV2Decoder {
             // last good position rather than reporting them. Reporting the raw
             // bytes here is what produced periodic cursor jumps to (0,0) in
             // OTD's first attempt at this family.
-            let x = inRange ? Int(f[1]) | (Int(f[2]) << 8) : state.lastX
-            let y = inRange ? Int(f[3]) | (Int(f[4]) << 8) : state.lastY
-            let pressure = Int(f[5]) | (Int(f[6]) << 8)
+            let x = inRange ? f.le16(at: 1) : state.lastX
+            let y = inRange ? f.le16(at: 3) : state.lastY
+            let pressure = f.le16(at: 5)
             let hoverDistance = Int(f[7])
 
             state.lastX = x

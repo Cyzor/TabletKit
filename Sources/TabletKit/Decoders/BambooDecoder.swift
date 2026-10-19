@@ -6,64 +6,38 @@ import Foundation
 
 /// Decoder for the Wacom Bamboo consumer HID report format.
 ///
-/// Used by: CTT-460, CTH-460/461/470/480/490, CTH-661/670, CTL-460/470/660,
-/// and related consumer Bamboo / Wacom One series.
+/// Used by the CTT-460, CTH-460/461/470/480/490, CTH-661/670, CTL-460/470/660,
+/// and related Bamboo and Wacom One models. Report layouts, by ID and length:
 ///
-/// Two wire formats, distinguished by report ID:
+/// **0x02, 9 bytes:** the 2009–2011 Bamboo pen (kernel `wacom_bpt_pen()`),
+/// sent once feature report `[0x02, 0x02]` takes the tablet out of mouse
+/// mode (see `TabletSpec.initSteps`). Confirmed on a CTL-460 (0x00D4). The
+/// INTUOSHT models (CTH-480/680, CTL-480/680) send the same layout at 10
+/// bytes. Their INTUOSHT2 successors (CTH-490/690, CTL-490/690) use
+/// `.intuosV1`; see `BPT3ContainerDecoder` for the generations.
 ///
-/// **Report ID 0x02, 9 bytes (BAMBOO_PT / USB)** — the format the kernel's
-/// `wacom_bpt_pen()` decodes for the 2009–2011 Bamboo generation (CTL-460/660,
-/// CTH-460/461/470, CTL-470...). Only emitted after the tablet is switched out
-/// of mouse emulation with feature report `[0x02, 0x02]` (see
-/// `TabletSpec.initSteps`); in mouse mode these tablets send 4-byte
-/// relative boot-mouse packets on report ID 0x01 instead. Confirmed against a
-/// user capture of a CTL-460 (PID 0x00D4) on 2026-07-21.
+/// **0x02, 64 bytes:** the BPT3 touch/pad container, passed to
+/// `BPT3ContainerDecoder`. Checked before the pen path, which shares the ID.
 ///
-/// The same 0x02 pen format, at 10 bytes rather than 9, also covers the
-/// INTUOSHT generation (CTH-480/680, CTL-480/680 — the 2013 "Intuos Pen &
-/// Touch" / "One by Wacom" models). Those were previously assigned `.intuosV1`,
-/// which reads coordinates big-endian and produced ~130,600 for every position
-/// regardless of tablet size; reassigned 2026-07-29 after little-endian decode
-/// hit each model's registered maxX exactly. Their INTUOSHT2 successors
-/// (CTH-490/690, CTL-490/690) genuinely are `.intuosV1` and stay there — see
-/// `BPT3ContainerDecoder` for the generation table.
-///
-/// **Report ID 0x02, 64 bytes** — BPT3 touch/pad container, shared with the
-/// INTUOSHT2 generation. Routed to `BPT3ContainerDecoder`. Dispatched on length
-/// before the pen path, since both share report ID 0x02.
-///
-/// **Report ID 0x10, 10 bytes** — legacy synthesized layout, same report ID as
-/// IntuosV2 but an entirely different, shorter layout with no tool-serial
-/// negotiation. Retained for compatibility; not yet observed on hardware.
-///
-/// **CTT-460 (0x00D0) is touch-only** — it has no pen interface.  Reports will
-/// never fire (maxPressure = 0, buttonCount = 0 → decoder silently returns []).
-///
-/// **Report ID 0x02, 20 bytes (BAMBOO_PT touch, USB)** — a separate USB
-/// interface on the older CTH-460/461 chassis (kernel `wacom_bpt_touch()`).
-/// Two fixed slots, big-endian, 11-bit coordinates in a 480×320 wire space
-/// (same low-res space as CTT-460 — see that registry row's note), plus the
-/// 4 express keys, which ride this report's byte 1 rather than a separate pad
-/// byte. Confirmed against the kernel's static feature table (`BAMBOO_PT`,
-/// `touch_max = 2`) for 0x00D1/0x00D6/0x00D7/0x00DA on 2026-08-26; no direct
-/// hardware capture of this report exists yet, so those rows carry
-/// `.crossReferenced`, not `.verified`.
-///
+/// **0x02, 20 bytes:** touch on the older CTH-460/461 (kernel
+/// `wacom_bpt_touch()`), on its own interface. Two fixed slots of big-endian
+/// 11-bit coordinates in a 480×320 space, plus the 4 express keys in byte 1.
+/// From the kernel; no capture exists.
 /// ```
 /// [0]  0x02   Report ID
-/// [1]  bit 7: contact stride selector — 8 bytes/contact if set, 9 if clear
+/// [1]  bit 7: contact stride — 8 bytes/contact if set, 9 if clear
 ///      bit 3: BTN_0   bit 2: BTN_1   bit 1: BTN_2   bit 0: BTN_3
-/// For i in 0, 1 (fixed slot per finger), at offset = (bit7 ? 8*i : 9*i):
+/// For i in 0, 1, at offset = (bit7 ? 8*i : 9*i):
 ///   [offset+3] bit 7: contact down; bits 6:0 + [offset+4]: X, BE16 & 0x7FF
 ///   [offset+5:6]                     Y, BE16 & 0x7FF
 /// ```
+/// Touch on the CTH-480/680 and the CTH-470/670 arrives in the BPT3
+/// container instead.
 ///
-/// Touch on the INTUOSHT generation (CTH-480/680) and the 16FG Bamboos
-/// (CTH-470/670) instead arrives in the 64-byte BPT3 container above.
+/// **0x10, 32 or 64 bytes:** the Bamboo Pad's combined pen and touch
+/// container; see `decodeBambooPad`.
 ///
-/// ---
-///
-/// **Report layout (pen in proximity):**
+/// **0x10, 10 bytes:** an older layout, never seen on hardware:
 /// ```
 /// [0]  0x10   Report ID
 /// [1]  status — see below
@@ -84,17 +58,10 @@ import Foundation
 /// bit 0    BTN_TOUCH   (tip contact)
 /// ```
 ///
-/// Eraser is identified directly from the tool-type field — no prior
-/// enter-prox packet or serial number exchange (ABS_MISC not present).
-///
-/// **Pad report (when pen not in proximity, d7 byte):**
+/// **Pad (d7, pen out of range):**
 /// - CTH-460/470/480/490 (buttonCount ≥ 4): 0x08=btn0, 0x20=btn1, 0x10=btn2, 0x40=btn3
 /// - CTL-460/470/660    (buttonCount ≥ 2): 0x01=btn0, 0x02=btn1
-/// - CTT-460            (buttonCount = 0): no buttons, no output
-///
-/// Pad proximity signal (ABS_MISC = PAD_DEVICE_ID) fires when any button bit
-/// is non-zero; clears on all-zero.  We emit `AuxButtons` every time since
-/// InputInjector handles idempotent button state.
+/// - CTT-460 is touch-only: no pen interface and no buttons.
 package struct BambooDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -171,8 +138,8 @@ package struct BambooDecoder: TabletReportDecoder {
                         isMouse: false)))
         }
 
-        let x = Int(UInt16(report[3]) | UInt16(report[2]) << 8)
-        let y = Int(UInt16(report[5]) | UInt16(report[4]) << 8)
+        let x = report.be16(at: 2)
+        let y = report.be16(at: 4)
         state.lastX = x
         state.lastY = y
 
@@ -218,12 +185,8 @@ package struct BambooDecoder: TabletReportDecoder {
     /// No express-key bits here — CTH pad buttons ride the separate touch
     /// interface, and the CTL pen-only models have no express keys at all.
     ///
-    /// Verified 2026-07-28 against a real CTL-460 (0x00D4) capture (3613 events:
-    /// hover, tip contact, both barrel buttons, eraser, proximity exit) — every
-    /// bit and byte offset above matched with no discrepancies. Bits 0x01 (tip)
-    /// and 0x10 were observed toggling independently but aren't read here: tip
-    /// contact is inferred from pressure instead, and 0x10's role (possibly a
-    /// near/far proximity-zone flag) doesn't affect current decode correctness.
+    /// Confirmed on a CTL-460 capture. Bits 0x01 (tip) and 0x10 toggle but
+    /// aren't read: contact comes from pressure, and 0x10's role is unknown.
     private mutating func decodeBPT(
         report: HIDReport,
         spec: DigitizerSpec,
@@ -261,11 +224,11 @@ package struct BambooDecoder: TabletReportDecoder {
                         isMouse: false)))
         }
 
-        let x = Int(UInt16(report[2]) | UInt16(report[3]) << 8)
-        let y = Int(UInt16(report[4]) | UInt16(report[5]) << 8)
+        let x = report.le16(at: 2)
+        let y = report.le16(at: 4)
         state.lastX = x
         state.lastY = y
-        let pressure = Int(UInt16(report[6]) | UInt16(report[7]) << 8)
+        let pressure = report.le16(at: 6)
 
         results.append(
             .pen(
@@ -284,9 +247,8 @@ package struct BambooDecoder: TabletReportDecoder {
 
     // MARK: - BAMBOO_PT touch report (Report ID 0x02, 20 bytes)
 
-    /// Kernel `wacom_bpt_touch()` layout — see the type-level doc comment for
-    /// the byte diagram. Two fixed slots; an empty result means both fingers
-    /// lifted, matching `DecodeResult.touch`'s documented convention.
+    /// Kernel `wacom_bpt_touch()` layout; see the type's doc comment. An
+    /// empty result means both fingers lifted.
     private func decodeBPTTouch(
         report: HIDReport,
         spec: DigitizerSpec
@@ -297,8 +259,8 @@ package struct BambooDecoder: TabletReportDecoder {
             let offset = (padByte & 0x80) != 0 ? 8 * i : 9 * i
             let xHi = report[offset + 3]
             guard (xHi & 0x80) != 0 else { continue }
-            let x = Int((UInt16(xHi) << 8 | UInt16(report[offset + 4])) & 0x07FF)
-            let y = Int((UInt16(report[offset + 5]) << 8 | UInt16(report[offset + 6])) & 0x07FF)
+            let x = report.be16(at: offset + 3) & 0x07FF
+            let y = report.be16(at: offset + 5) & 0x07FF
             contacts.append(TouchContact(id: i, x: x, y: y, contactArea: nil, contactMinor: nil))
         }
 
@@ -344,9 +306,9 @@ package struct BambooDecoder: TabletReportDecoder {
                             serial: 0, toolCode: isEraser ? 0x080A : 0x0802,
                             isEraser: isEraser, isMouse: false)))
             }
-            let x = Int(UInt16(report[3]) | UInt16(report[4]) << 8)
-            let y = Int(UInt16(report[5]) | UInt16(report[6]) << 8)
-            let pressure = Int(UInt16(report[7]) | UInt16(report[8]) << 8)
+            let x = report.le16(at: 3)
+            let y = report.le16(at: 5)
+            let pressure = report.le16(at: 7)
             state.lastX = x
             state.lastY = y
             results.append(
@@ -375,7 +337,7 @@ package struct BambooDecoder: TabletReportDecoder {
             var contacts: [TouchContact] = []
             for id in 0..<4 where (header & (1 << id)) != 0 {
                 let base = 10 + id * 3
-                let x = Int(report[base]) | (Int(report[base + 1] & 0x0F) << 8)
+                let x = report.le16(at: base) & 0x0FFF
                 let y = (Int(report[base + 2]) << 4) | (Int(report[base + 1]) >> 4)
                 contacts.append(TouchContact(id: id, x: x, y: y, contactArea: nil, contactMinor: nil))
             }

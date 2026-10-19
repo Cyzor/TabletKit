@@ -17,13 +17,8 @@ import Foundation
 /// | pen report | ID 0x02, 10 bytes, LE16 (`BambooDecoder.decodeBPT`) | ID 0x10, 10 bytes, BE16 (`IntuosV1Decoder`) |
 /// | this container | ID 0x02, 64 bytes — identical | ID 0x02, 64 bytes — identical |
 ///
-/// Confirmed identical across both generations 2026-07-29: our own CTH-690
-/// (0x033E) discovery capture and INTUOSHT captures of 0x0302/0x0323 show the
-/// same message IDs and the same four-bit pad bitmap in the low nibble.
-///
-/// Note the report-ID collision *within* INTUOSHT: pen and container both use
-/// ID 0x02 and are told apart only by length (10 vs 64). Callers must dispatch
-/// on length, not report ID alone.
+/// On INTUOSHT the pen report and this container share ID 0x02, so callers
+/// dispatch on length (10 vs 64), not report ID alone.
 ///
 /// Layout: [0]=0x02, [1] bits 2:0 = message count, then up to 7 fixed
 /// 8-byte messages starting at offset 2:
@@ -38,26 +33,16 @@ import Foundation
 ///            bits firing but not which physical key is which)
 /// ```
 ///
-/// Containers carry only *changed* contacts, so the caller keeps the slots
-/// across reports and the full active set is re-emitted
-/// each time.
+/// Containers carry only changed contacts, so the caller keeps the slots
+/// across reports and the full active set goes out each time.
 ///
-/// Pen/touch arbitration is **not** done here. It used to be — contacts were
-/// dropped whenever `state.prevInProximity` was set, mirroring the kernel — but
-/// that gate misfired badly on hardware whose pen sits in a low-confidence
-/// hover (PTH-850 Grip Pen, ~50% of hover reports): the pen decoder's
-/// boundary-noise heuristic thrashed `prevInProximity`, every pen report reset
-/// the stale-proximity counter so the escape hatch never fired, and touch died
-/// for the whole time a hand rested near the tablet. `InputInjector`'s own
-/// arbitration (`touchPenConfirmedBusy` + `touchBusyHoldOff` + `staleBusyTimeout`
-/// + palm rejection) is the tuned layer and already handles this for the
-/// `.intuosV2` families, which never had a decoder-level gate. This decoder now
-/// matches them: emit every contact, let the injector decide.
+/// Pen/touch arbitration isn't done here: a decoder-level gate killed touch
+/// whenever a pen hovered weakly nearby. Every contact goes out and the
+/// app decides.
 ///
-/// Touch decoding is gated on `spec.hasFingerTouch` and pad decoding on
-/// `spec.buttonCount > 0`, independently — the pen-only CTL-480/680 have four
-/// express keys but no touch sensor, and would lose their pad if entry to this
-/// decoder were gated on touch capability.
+/// Touch is gated on `spec.hasFingerTouch` and the pad on
+/// `spec.buttonCount > 0`, separately: the pen-only CTL-480/680 have four
+/// express keys but no touch sensor.
 enum BPT3ContainerDecoder {
 
     /// Length of the container report. Callers dispatch on this.
@@ -84,7 +69,7 @@ enum BPT3ContainerDecoder {
         // Matches OpenTabletDriver's `WacomTouchReport`.
         if report[2] == 0x81 {
             guard spec.hasFingerTouch else { return [] }
-            let mask = UInt16(report[3]) | (UInt16(report[4]) << 8)
+            let mask = UInt16(report.le16(at: 3))
             // Collect first — can't remove while iterating.
             let ended = slots.keys.filter { !slotIsDown($0, in: mask) }
             for slot in ended {

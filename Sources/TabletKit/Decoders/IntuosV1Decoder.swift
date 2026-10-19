@@ -6,36 +6,24 @@ import Foundation
 
 /// Decoder for the Wacom IntuosV1 HID report format.
 ///
-/// "V1" names TabletKit's protocol generation, not Wacom's marketing
-/// generation — despite the name, Intuos3 hardware (PTZ-xxx) is handled
-/// by the separate `Intuos3Decoder`, not this one; see that file's header
-/// for the incompatible status-byte difference.
+/// "V1" is TabletKit's protocol generation, not Wacom's: Intuos3 (PTZ-xxx)
+/// hardware uses `Intuos3Decoder`. Used by the PTH-851 (0x0317), DTK-2400
+/// (0x00F4), and other tablets with the 10-byte IntuosV1 layout.
 ///
-/// Used by: PTH-851 (0x0317), DTK-2400 (0x00F4), and any tablet using
-/// the 10-byte IntuosV1 report layout. (PTZ-631W is Intuos3 hardware —
-/// see `Intuos3Decoder`, not this file, despite the name similarity.)
+/// Report IDs:
+///   0x01  BLE pen report (23 bytes)
+///   0x02  USB pen report (10 bytes), or the 64-byte BPT3 touch/pad
+///         container on INTUOSHT2 models (CTH-690)
+///   0x03  pad: ring + express keys (10 bytes), over USB and the
+///         ACK-40401 dongle alike; or, at 22 bytes, a PTK-540WL Bluetooth
+///         batch of 2 frames + power byte
+///   0x04  PTK-540WL Bluetooth batch of 3 frames + power byte (32 bytes)
+///   0x0C  Intuos4 (PTK-xxx) pad: ring + express keys
+///   0x10  USB pen report (10 bytes)
+///   0x11  express keys on some models; not seen on PTH-850
+///   0x80  wireless status (ACK-40401 dongle)
 ///
-/// Report ID routing:
-///   0x01  BLE HOGP pen report (23 bytes)  — Intuos Pro over Bluetooth LE
-///   0x03  Pad report (10 bytes): ring + express keys — sent over USB and the
-///         ACK-40401 wireless dongle alike (confirmed by capture on PTH-850);
-///         not just BLE despite the historical "HOGP" framing.
-///   0x11  Auxiliary (express key) report — some other IntuosV1-family models
-///         may use this instead; not observed on PTH-850.
-///   0x0C  Intuos4 (PTK-xxx) pad report: ring + express keys (kernel
-///         WACOM_REPORT_INTUOSPAD); distinct layout from 0x11 and 0x03.
-///   0x02  USB pen report (10 bytes, Report ID 0x02 variant)
-///   0x02  BPT3 touch/pad container (64 bytes) — INTUOSHT2 consumer
-///         pen-and-touch models (CTH-690); gated on spec.hasFingerTouch
-///   0x03  PTK-540WL BT aggregated report (22 bytes: 2 frames + power byte)
-///         — gated on length; the short BLE pad report (also 0x03) still
-///         hits its own path below.
-///   0x04  PTK-540WL BT aggregated report (32 bytes: 3 frames + power byte)
-///   0x10  USB pen report (10 bytes, Report ID 0x10 variant)
-///   0x80  Wireless status report (ACK-40401 RF dongle)
-///
-/// On BLE connections the device uses 13-bit pressure (max 8191); the decoder
-/// overrides `spec.maxPressure` to 8191 for BLE reports only.
+/// BLE pressure is 13-bit, so BLE reports use a max of 8191.
 package struct IntuosV1Decoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -88,16 +76,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         if id == 0x02 && report.count == BPT3ContainerDecoder.reportLength {
             return BPT3ContainerDecoder.decode(report: report, spec: spec, slots: &state.bpt3TouchSlots)
         }
-        // USB pen reports are exactly 10 bytes. Anything else on this ID —
-        // notably the 64-byte BPT3 container handled above, or a longer
-        // vendor payload — must not fall through to the 10-byte pen decode
-        // and be read as garbage coordinates/pressure.
-        //
-        // (An earlier note here claimed the PTH-850 has no capacitive touch
-        // and its second interface is dongle telemetry. That was wrong — the
-        // PTH-850 touch (L) has a working capacitive sensor whose 64-byte
-        // BPT3 container arrives on the 0xFF00 interface; user-confirmed on
-        // hardware 2026-08-27.)
+        // USB pen reports are exactly 10 bytes; anything longer here would
+        // read as garbage coordinates.
         guard (id == 0x02 || id == 0x10) && report.count == 10 else { return [] }
         return decodeUSBPen(
             report: report, spec: spec, state: &state, deviceFamily: deviceFamily)
@@ -156,10 +136,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
 
         // In-range state, `(data[1] & 0xFE) == 0x20`: a tool is present but
         // the tablet isn't reporting position, and bytes 6-8 arrive zeroed.
-        // Decoding them gives tilt -1.02 (outside ±1.0) and hover pegged at
-        // 63 — the PTH-850 wireless chatter. The kernel returns before
-        // `wacom_intuos_general()` here; Wacom's 6.1.6-4 kext handles it
-        // separately as `ESNID`.
+        // Decoding them gives tilt -1.02 and hover pegged at 63, the PTH-850
+        // wireless chatter. The kernel skips these too.
         //
         // An Art Pen still escalates a sustained run to an exit — its
         // rotation sensor oscillates the confidence bit at the tracking
@@ -246,8 +224,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         state.prevInProximity = true
 
         // IntuosV1 coordinate decode: 16-bit BE with 1-bit fractional extension from byte 9.
-        let x = ((Int(report[3]) | Int(report[2]) << 8) << 1) | ((Int(report[9]) >> 1) & 1)
-        let y = ((Int(report[5]) | Int(report[4]) << 8) << 1) | (Int(report[9]) & 1)
+        let x = (report.be16(at: 2) << 1) | ((Int(report[9]) >> 1) & 1)
+        let y = (report.be16(at: 4) << 1) | (Int(report[9]) & 1)
         state.lastX = x
         state.lastY = y
 
@@ -305,8 +283,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         // with pen packets. Bit 1 of its status is part of the type and bytes
         // 6–7 hold the angle, so reading it as a pen packet sent a barrel-1
         // press and bogus pressure on every other report. Confirmed on a
-        // PTH-850 with an Intuos4/5 Art Pen (2026-10-01). The next pen packet
-        // carries the angle.
+        // PTH-850 with an Intuos4/5 Art Pen. The next pen packet carries the
+        // angle.
         if subtype == 0x05 {
             if !state.toolIsMouse { state.lastRotation = intuosRotationDegrees(report) }
             return results
@@ -445,18 +423,14 @@ package struct IntuosV1Decoder: TabletReportDecoder {
 
     // MARK: - Intuos4 WL Bluetooth aggregated reports (0x03 / 0x04)
 
-    /// PTK-540WL over Bluetooth Classic (PID 0x00BD) batches 2–3 ordinary
-    /// 10-byte Intuos4 frames into one outer report to conserve BT bandwidth,
-    /// with a trailing power byte (kernel `wacom_intuos_bt_irq`):
-    ///   0x03 — [0]=0x03, [1..10] frame 1, [11..20] frame 2, [21] power
-    ///   0x04 — [0]=0x04, [1..10]/[11..20]/[21..30] frames 1–3, [31] power
-    /// Minimum lengths are load-bearing (kernel OOB-read fix,
-    /// GHSA-4mjh-m2x6-5qg4). Each embedded frame decodes exactly like USB —
-    /// pen frames (0x02/0x10) through `decodeUSBPen`, pad frames (0x0C)
-    /// through `decodeIntuos4PadReport`. Power byte: bits 2:0 index
-    /// `batcap_i4`, bit 3 charging, bit 4 external power.
-    /// Experimental: no hardware capture to confirm against, same basis as
-    /// the 0x00BD registry row.
+    /// The PTK-540WL over Bluetooth Classic (0x00BD) batches 2–3 ordinary
+    /// 10-byte Intuos4 frames into one report, plus a power byte (kernel
+    /// `wacom_intuos_bt_irq`):
+    ///   0x03 — [1..10] frame 1, [11..20] frame 2, [21] power
+    ///   0x04 — [1..10]/[11..20]/[21..30] frames 1–3, [31] power
+    /// The minimum lengths guard an out-of-bounds read, as in the kernel.
+    /// Frames decode as on USB. Power byte: bits 2:0 index `batcap_i4`,
+    /// bit 3 charging, bit 4 external power. No capture exists.
     private static let batcapI4: [Int] = [1, 15, 30, 45, 60, 70, 85, 100]
 
     private func decodeIntuos4WLAggregated(
@@ -495,18 +469,12 @@ package struct IntuosV1Decoder: TabletReportDecoder {
 
     // MARK: - Intuos4 pad report (0x0C)
 
-    /// Intuos4 (PTK-xxx) ExpressKey panel + touch ring, sent on report ID
-    /// 0x0C (kernel `WACOM_REPORT_INTUOSPAD` = 12) — a distinct report ID
-    /// and byte layout from the 0x11 path above and from Intuos5's own pad
-    /// report (id 0x03, `ring1 = data[2]`, `buttons = (data[4]<<1)|(data[3]&0x01)`).
-    /// Layout cross-referenced against input-wacom's `wacom_intuos_pad()`
-    /// (`features->type >= INTUOS4S && <= INTUOS4L` branch) and OTD's
-    /// `Intuos4AuxReport`, which agree byte-for-byte:
+    /// Intuos4 (PTK-xxx) ExpressKeys and touch ring, report 0x0C. The
+    /// kernel's `wacom_intuos_pad()` and OTD's `Intuos4AuxReport` agree:
     ///   report[1]      — ring position, bit 0x80 = valid, low 7 bits = 0-71 step
     ///   report[2] bit 0 — ring center (mode-switch) button
     ///   report[3]      — 8 mechanical ExpressKey bits
-    /// Experimental: no hardware capture to confirm against, same basis as
-    /// the `.crossReferenced` PTK-xxx registry entries.
+    /// No capture exists.
     private func decodeIntuos4PadReport(
         report: HIDReport
     ) -> [DecodeResult] {
