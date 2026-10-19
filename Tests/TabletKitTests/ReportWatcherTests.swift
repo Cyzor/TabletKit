@@ -64,14 +64,13 @@ final class ReportWatcherTests: XCTestCase {
             (0..<DongleBatteryWatcher.holdReports).map { _ in status(power)?.percent }
         }
         XCTAssertNil(status(0x9E, linked: false))
-        // The first reading and a change in charging show at once.
-        XCTAssertEqual(status(0x9E).map { [$0.percent, $0.charging ? 1 : 0] }, [96, 1])
+        // A level shows once it holds; a change in charging shows at once.
+        XCTAssertEqual(held(0x9E), [nil, nil, nil, 96])
         XCTAssertNil(status(0x9E))
         XCTAssertEqual(status(0x1F).map { [$0.percent, $0.charging ? 1 : 0] }, [100, 0])
-        // A new level on battery shows once it holds.
         XCTAssertEqual(held(0x03), [nil, nil, nil, 9])
         XCTAssertNil(status(0x03, linked: false))
-        XCTAssertEqual(status(0x03)?.percent, 9)
+        XCTAssertEqual(held(0x03), [nil, nil, nil, 9])
         // Bit 5 isn't part of the level.
         XCTAssertEqual(held(0x21), [nil, nil, nil, 3])
         XCTAssertNil(HIDReport.withReport([0x80, 1, 0, 0, 0]) { w.observe($0) })
@@ -87,10 +86,11 @@ final class ReportWatcherTests: XCTestCase {
                     w.observe($0)?.percent
                 }
             }
-        XCTAssertEqual(seen, [61, 67])
+        // It reads low for a few reports, then settles.
+        XCTAssertEqual(seen, [67])
     }
 
-    func testDongleBatteryOnlyFallsOnceSettled() {
+    func testDongleBatteryOnlyFallsOnBattery() {
         var w = DongleBatteryWatcher()
         func status(_ power: UInt8, linked: Bool = true) -> Int? {
             HIDReport.withReport([0x80, linked ? 1 : 0, 0xDC, 0x14, 0xB3, power, 0x00, 0x28]) {
@@ -100,19 +100,17 @@ final class ReportWatcherTests: XCTestCase {
         func held(_ power: UInt8) -> [Int?] {
             (0..<DongleBatteryWatcher.holdReports).map { _ in status(power) }
         }
-        XCTAssertEqual(status(0x1C), 90)
         XCTAssertEqual(held(0x1D), [nil, nil, nil, 93])
-        for _ in 0..<DongleBatteryWatcher.settleReports { _ = status(0x1D) }
-        // Settled: a rise on battery is load drift, a fall still shows.
+        // A rise on battery is load drift, a fall still shows.
         XCTAssertEqual(held(0x1E), [nil, nil, nil, nil])
         XCTAssertEqual(held(0x1C), [nil, nil, nil, 90])
         // Charging and its end show at once.
         XCTAssertEqual(status(0x9E), 96)
         XCTAssertEqual(status(0x1F), 100)
-        // A relink settles again.
+        // A relink starts over.
         XCTAssertNil(status(0x1F, linked: false))
-        XCTAssertEqual(status(0x1C), 90)
-        XCTAssertEqual(held(0x1D), [nil, nil, nil, 93])
+        XCTAssertEqual(held(0x1C), [nil, nil, nil, 90])
+        XCTAssertEqual(held(0x1D), [nil, nil, nil, nil])
     }
 
     func testGraceFiresOnceWhenThePenStaysInRange() {
