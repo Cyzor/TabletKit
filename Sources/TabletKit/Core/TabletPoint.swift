@@ -216,7 +216,7 @@ public struct AuxButtons: Sendable {
     public var touchRing2ButtonDown: Bool = false
     /// Second ring position, same encoding as `touchRingPosition`.
     public var touchRing2Position: UInt8 = 0x7F
-    /// True while a finger is on the left touch strip (Intuos3 WS).
+    /// True while a finger is on the left touch strip (Intuos3).
     public var touchStrip1Active: Bool = false
     /// Left strip position: 0 is the bottom zone, higher is farther up;
     /// `0xFF` with no contact.
@@ -270,7 +270,7 @@ public struct LiveButtonState: Equatable, Sendable {
     /// True while the second dial's own toggle key is physically pressed
     /// (PTK-670/870's right cluster center ExpressKey). Unused elsewhere.
     public var touchRing2ButtonDown: Bool = false
-    /// True while a finger is on the left touch strip (Intuos3 WS).
+    /// True while a finger is on the left touch strip (Intuos3).
     public var touchStrip1Active: Bool = false
     /// True while a finger is on the right touch strip.
     public var touchStrip2Active: Bool = false

@@ -22,8 +22,8 @@ import Foundation
 ///
 /// 2. Aux report IDs:
 ///    - `0x03` (10-byte): 8 express keys packed in byte 4. *Not* a BLE pad report.
-///    - `0x0C` (7-byte): 4+4 express key split — low nibble of byte 5 (keys 0–3)
-///      and low nibble of byte 6 (keys 4–7).
+///    - `0x0C` (10-byte): touch strips in bytes 1–4, plus a 4+4 express key
+///      split in the low nibbles of bytes 5 (keys 0–3) and 6 (keys 4–7).
 ///
 /// 3. No BLE HOGP support — Intuos3 is USB-only (pre-Bluetooth hardware).
 ///    Report IDs 0x01 and 0x11 are not used by this family.
@@ -52,17 +52,15 @@ public struct Intuos3Decoder: TabletReportDecoder {
             return [.aux(AuxButtons(buttons: (0..<8).map { (byte & (1 << $0)) != 0 }))]
         }
 
-        // Intuos3 pad report (report ID 0x0C, up to 10 bytes).
+        // Intuos3 pad report (report ID 0x0C, 10 bytes).
         //
-        // Two layouts share this ID:
-        //   PTZ-631W (WS, 10-byte): touch strip positions in bytes 1–4; bytes 5–6 unused.
-        //   Other Intuos3 (7-byte): express keys only; 4 keys per nibble in bytes 5–6.
+        //   Bytes 1–4: touch strips. Left = (bytes[1] << 8) | bytes[2], right =
+        //   (bytes[3] << 8) | bytes[4], each a one-hot mask of 13 zones; zero
+        //   means no contact.
+        //   Bytes 5–6: express keys, 4 per low nibble. Zero on PTZ-631W.
         //
-        // Touch strip encoding (PTZ-631W, bytes 1–4):
-        //   left  strip = (bytes[1] << 8) | bytes[2] — 16-bit big-endian one-hot bitmask.
-        //   right strip = (bytes[3] << 8) | bytes[4] — same encoding.
-        //   Bit N set → finger is in zone N (0 = bottom, higher = farther up the strip).
-        //   All-zero → no contact.
+        // Bit 0 is the bottom zone on PTZ-631W, where strip scrolling runs the
+        // right way. A PTZ-630 recording puts bit 0 at the top; unconfirmed.
         if id == 0x0C {
             guard report.count >= 5 else { return [] }
 
