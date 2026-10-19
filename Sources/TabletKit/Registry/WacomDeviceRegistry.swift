@@ -1116,7 +1116,7 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             productID: 0x00B1, name: "Intuos3 6×8 (PTZ-630)",  // cross-referenced: linuxwacom + OTD
             format: .intuos3, maxX: 40640, maxY: 30480, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])],
             confidence: .crossReferenced,
@@ -1124,13 +1124,13 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             productID: 0x00B2, name: "Intuos3 9×12 (PTZ-930)",  // dims confirmed 2026-08-03 — see family note
             format: .intuos3, maxX: 60960, maxY: 45720, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 305, activeHeightMM: 229),
         .init(
             productID: 0x00B3, name: "Intuos3 12×12 (PTZ-1230)",  // dims confirmed 2026-08-03 — see family note
             format: .intuos3, maxX: 60960, maxY: 60960, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 305, activeHeightMM: 305),
         .init(
@@ -1138,7 +1138,7 @@ public enum WacomDeviceRegistry: Sendable {
             // note at the top of this section.
             productID: 0x00B4, name: "Intuos3 12×19 (PTZ-1231W)",
             format: .intuos3, maxX: 97536, maxY: 60960, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 488, activeHeightMM: 305),
         .init(
