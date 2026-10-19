@@ -68,7 +68,8 @@ final class TabletInputTests: XCTestCase {
             }
         }
         XCTAssertEqual(battery(0x16), [], "the naming report carries no reading")
-        XCTAssertEqual(battery(0x16).map(\.percent), [70])
+        let held = (0..<DongleBatteryWatcher.holdReports).flatMap { _ in battery(0x16).map(\.percent) }
+        XCTAssertEqual(held, [70])
         XCTAssertEqual(battery(0x9E).map(\.charging), [true])
     }
 

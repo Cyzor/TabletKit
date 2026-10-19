@@ -58,25 +58,20 @@ public struct DonglePairingWatcher: Sendable {
 /// report (0x80). Byte 5 holds the level out of 31 in its low five bits, and
 /// bit 7 is set while the battery charges.
 ///
-/// On battery, the level flickers between neighboring steps from one report
-/// to the next, so a new level counts only once it holds for
-/// `holdReports` reports. The first reading and a change in charging show at
-/// once.
+/// The level flickers between neighboring steps from one report to the next,
+/// and reads low for a few seconds after a link, so a level counts only once
+/// it holds for `holdReports` reports. A change in charging shows at once.
 ///
-/// The level also drifts with load over minutes, rising as the battery rests.
-/// Once the gauge settles after a link, a level on battery only falls.
+/// The level also rises as the battery rests after load. Without charging,
+/// capacity only falls, so once shown, a level on battery only falls.
 public struct DongleBatteryWatcher: Sendable {
     /// Reports a new level must hold, about two seconds at the receiver's
     /// half-second status rate.
     public static let holdReports = 4
-    /// Reports after a link during which the level may still rise, about a
-    /// minute.
-    public static let settleReports = 120
 
     public private(set) var lastReading: DeviceEvent.Battery?
     private var pending: DeviceEvent.Battery?
     private var pendingCount = 0
-    private var linkedReports = 0
 
     public init() {}
 
@@ -87,10 +82,8 @@ public struct DongleBatteryWatcher: Sendable {
             // Announce again on relink, even at the same level.
             lastReading = nil
             pending = nil
-            linkedReports = 0
             return nil
         }
-        linkedReports += 1
         let level = Int(report[5] & 0x1F)
         let reading = DeviceEvent.Battery(
             percent: level * 100 / 31, charging: report[5] & 0x80 != 0)
@@ -98,8 +91,8 @@ public struct DongleBatteryWatcher: Sendable {
             pending = nil
             return nil
         }
-        if let last = lastReading, last.charging == reading.charging {
-            if !reading.charging, reading.percent > last.percent, linkedReports > Self.settleReports {
+        if lastReading == nil || lastReading?.charging == reading.charging {
+            if let last = lastReading, !reading.charging, reading.percent > last.percent {
                 pending = nil
                 return nil
             }
