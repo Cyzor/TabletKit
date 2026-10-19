@@ -47,7 +47,7 @@ import Foundation
 /// **Pressure** is 10-bit on pen tools: `d[6] | ((d[7] & 0x03) << 8)`.
 /// Distance: `d[7] & 0x3F` (G4 also uses `d[6] & 0x3F`).
 ///
-/// **Pad**, signalled when pen NOT in proximity — see `decodePad` for the
+/// **Pad**, signalled when pen not in proximity — see `decodePad` for the
 /// G4 and WACOM_MO layouts.
 ///
 /// The kernel also handles GRAPHIRE_BT inside `wacom_graphire_irq`;

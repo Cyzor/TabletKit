@@ -327,7 +327,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     // 2026-08-31, hardware-unverified — kernel's WACOM_21UX2/WACOM_22HD branch:
     //   `buttons = (data[8]<<10) | ((data[7]&1)<<9) | (data[6]<<1) | (data[5]&1)`
     //   byte[1]:byte[2] and byte[3]:byte[4] are touch-strip position fields on
-    //   this family (13-bit each), not buttons — NOT decoded here; MockTab has
+    //   this family (13-bit each), not buttons — not decoded here; MockTab has
     //   no touch-strip control type yet, so strip position is dropped rather
     //   than misread as OSD buttons.
     //   byte[5] bit0 — left  center toggle

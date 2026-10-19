@@ -1205,7 +1205,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Coordinates/dims mirror the USB entry above; seizeUSB=false as
             // with other BT Classic entries in this registry.
             //
-            // hasKeyOLEDs deliberately NOT set here: the Bluetooth OLED image
+            // hasKeyOLEDs deliberately not set here: the Bluetooth OLED image
             // format is 1-bit monochrome plus a bit-scramble
             // (`76543210`→`GECA6420`, per the kernel's sysfs ABI doc),
             // distinct from USB's 4-bit format. WacomOutputProtocol only
@@ -1427,7 +1427,7 @@ public enum WacomDeviceRegistry: Sendable {
             // Coordinates settled 2026-08-03 by a real CTT-460 hid-recorder
             // trace (bentiss/hid-devices events/tablet/
             // Wacom_Bamboo_2FG_056a_00D0.hid — unlicensed corpus, analysis
-            // only, do NOT vendor into Samples). Three corroborating facts:
+            // only, do not vendor into Samples). Three corroborating facts:
             // the touch interface's own HID descriptor declares logical max
             // 480×320 (physical max 12000×8000 → 120×80mm at Wacom's usual
             // 0.01mm scaling); the trace's 336 touch events (report 0x02,
@@ -1949,7 +1949,7 @@ public enum WacomDeviceRegistry: Sendable {
             // this PID `BAMBOO_PT`, same little-endian family as 0x00D2 above
             // — see its note. OTD's CTH-661.json bundles this PID (211) with
             // 0x00D8 (216) and 0x00DB (219) under one config, same 9-byte
-            // pen / 20-byte touch-and-pad split. Touch NOT enabled here: this
+            // pen / 20-byte touch-and-pad split. Touch not enabled here: this
             // is the 6x8 chassis, not the 4x5 one 0x00D1's 480×320 wire space
             // was confirmed on, and nothing has captured this size class's own
             // touch descriptor — leaving `hasFingerTouch` off rather than
@@ -2014,7 +2014,7 @@ public enum WacomDeviceRegistry: Sendable {
             // the kernel (wacom_features_0x33E); capture ranges consistent.
             // LP-190K pen has no eraser end.
             hasFingerTouch: true, maxTouchContacts: 16,
-            // NOT the 12-bit ceiling, despite the 12-bit field. The kernel
+            // not the 12-bit ceiling, despite the 12-bit field. The kernel
             // hardcodes touch ranges for this whole protocol family because
             // the touch descriptor declares nothing usable, and it splits by
             // generation (`wacom_wac.c`, the WACOM_PKGLEN_BBTOUCH3 block):
@@ -2474,7 +2474,7 @@ public enum WacomDeviceRegistry: Sendable {
             // ⚠ DIMENSIONS LIKELY WRONG the same way 0x0351's were — see the
             // correction note there. Both variants share a panel, and libwacom's
             // 508x305 gives a 1.666 aspect rather than the panel's 16:9, so this
-            // row is probably also 105286 x 59574 over 526.43 x 297.87 mm. NOT
+            // row is probably also 105286 x 59574 over 526.43 x 297.87 mm. not
             // changed: the descriptor capture that settled 0x0351 came from the
             // touch variant, and nobody has confirmed the pen-only unit reports
             // identical maxima. Fix when a DTK-2420 descriptor turns up.
@@ -2519,7 +2519,7 @@ public enum WacomDeviceRegistry: Sendable {
             // buttonCount stays 0, and that is not an omission. This display has
             // no express keys at all: Wacom's own documentation for it ships every
             // express key on a detachable ExpressKey Remote. (Correction
-            // 2026-09-08: this is NOT the same arrangement as 0x032A/Cintiq
+            // 2026-09-08: this is not the same arrangement as 0x032A/Cintiq
             // 27QHD, despite an earlier version of this comment saying so —
             // the 27QHD has its own onboard bezel controls in addition to
             // supporting the Remote; see that row's corrected comment. This
@@ -2695,7 +2695,7 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 165),
 
-        // ── Cintiq Companion / Companion 2 / Companion Hybrid — NOT added ──────
+        // ── Cintiq Companion / Companion 2 / Companion Hybrid — not added ──────
         // Considered for this pass but these are standalone Windows tablet-PCs
         // (libwacom Class=Cintiq, IntegratedIn=Display;System for 0x030A/0x0325;
         // IntegratedIn=Display for the Hybrid at 0x0307) — the digitizer is
@@ -2751,7 +2751,7 @@ public enum WacomDeviceRegistry: Sendable {
         // (4.18 branch, April 2026). Pen-only; coordinates and pressure
         // extrapolated from OTD configs and unverified on hardware.
         //
-        // PL-800-U was NOT imported — PLReportParser uses 8-byte reports
+        // PL-800-U was not imported — PLReportParser uses 8-byte reports
         // with bit-6 in-range, incompatible with our IntuosV1 decoder and
         // not worth a dedicated parser for hardware that's effectively gone.
         .init(
@@ -2830,7 +2830,7 @@ public enum WacomDeviceRegistry: Sendable {
             // above) is left at buttonCount 5/no ring pending its own capture —
             // smaller Intuos Pro units have traditionally shipped without dials.
             //
-            // The two bits in aux byte [3] are NOT dial presses: the dials rotate
+            // The two bits in aux byte [3] are not dial presses: the dials rotate
             // only. They are the center key of each express-key cluster — vendor
             // documentation describes "four customizable keys on the outside and
             // one in the middle" per cluster, which is where the eight outer keys
@@ -2993,7 +2993,7 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 314, activeHeightMM: 238),
 
-        // ── Tablet-PC ISDV4 PIDs 0x0090/0x0093 — deliberately NOT added ────────
+        // ── Tablet-PC ISDV4 PIDs 0x0090/0x0093 — deliberately not added ────────
         // Considered for this pass (early Tablet-PC ISDV4 PIDs) but both
         // libwacom entries carry IntegratedIn=Display;System:
         //   wacom-isdv4-90.tablet (ASUS R1E/R1F)      — laptop-integrated digitizer
@@ -3210,7 +3210,7 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 256, activeHeightMM: 144),
-        // ── 0x4900 — deliberately NOT a row (removed 2026-09-11) ──────────────
+        // ── 0x4900 — deliberately not a row (removed 2026-09-11) ──────────────
         // Previously present as "Wacom DTC121 (alt 2)", recognition-only. It is
         // neither a DTC121 nor a USB device. The sysinfo dump it came from is
         // filed under "Wacom One 13", and its device path reads
@@ -3657,7 +3657,7 @@ public enum WacomDeviceRegistry: Sendable {
         // ── Legacy Bluetooth devices (serial-port based, out-of-scope) ─────────
         // CTE-630BT (Graphire4 Bluetooth, PID 0x0081) and XD-0608-BT (Intuos2
         // Bluetooth, PID 0x0CA) use RFCOMM/SPP (serial port over Bluetooth)
-        // instead of the HID Profile. They do NOT enumerate as IOHIDDevices;
+        // instead of the HID Profile. They do not enumerate as IOHIDDevices;
         // instead they appear as /dev/cu.* serial ports. These require a
         // completely different driver architecture (serial I/O, not IOHIDManager).
         // Not implemented; documented for reference.

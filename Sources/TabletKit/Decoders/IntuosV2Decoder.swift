@@ -126,7 +126,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         // USB IntuosV2 status byte: bit6=proximity, bit5=highConfidence.
         // Kernel model (wacom_intuos_pro_irq): exit when !prox && !conf (status < 0x20).
         // Sequence at boundary: 0x60 (prox=1, conf=1) → 0x40 (prox=1, conf=0) → 0x00 (both=0).
-        // Art Pen rotation sensor causes transient oscillations (0x60 ↔ 0x40) that are NOT
+        // Art Pen rotation sensor causes transient oscillations (0x60 ↔ 0x40) that are not
         // genuine exits. Only exit when BOTH bits clear.
         let prox = (status & 0x40) != 0
         let highConfidence = (status & 0x20) != 0
@@ -516,7 +516,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     /// [4] touch-ring position, 0–71 (5° resolution); 0x7F = no contact
     /// [5–8] reserved
     ///
-    /// Note: ring contact is indicated by posByte != 0x7F, NOT by ringByte.
+    /// Note: ring contact is indicated by posByte != 0x7F, not by ringByte.
     /// ringByte is the center button click, which is independent of ring touch.
     private func decodeAuxReport(
         report: HIDReport

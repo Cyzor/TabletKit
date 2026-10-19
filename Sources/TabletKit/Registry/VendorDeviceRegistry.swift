@@ -2415,7 +2415,7 @@ public enum VendorDeviceRegistry: Sendable {
         // (`upstream/libwacom/data/xencelabs-pen-display-16.tablet`, model
         // LPH1612U-A) — PID and physical dimensions are libwacom-confirmed;
         // no MockTab hardware capture yet, unlike the 24 above. maxX/maxY
-        // are NOT from a capture: they're extrapolated from the 24's
+        // are not from a capture: they're extrapolated from the 24's
         // confirmed density (105000/527.04mm ≈ 199.32 units/mm, isotropic)
         // applied to this model's 344x194mm active area. Treat as a strong
         // estimate, not fact, until a real Pen Display 16 capture confirms
@@ -2426,7 +2426,7 @@ public enum VendorDeviceRegistry: Sendable {
         // plausible, not verified).
         //
         // Checked 2026-09-08 against a real 520B HID descriptor dump
-        // (linuxwacom/wacom-hid-descriptors#618) — deliberately NOT used to
+        // (linuxwacom/wacom-hid-descriptors#618) — deliberately not used to
         // correct maxX/maxY above. That descriptor's standard Digitizer
         // collection (report 0x07) declares logical maxima of X=22352,
         // Y=13970 against this device's own 344x194mm physical size — a
@@ -2463,7 +2463,7 @@ public enum VendorDeviceRegistry: Sendable {
         //
         // Source is OpenTabletDriver's own configurations (XenceLabs/Pen Tablet
         // Medium.json, Pen Tablet Small.json), the same origin as `otdParser`
-        // elsewhere in this file. NOT from a capture, and no MockTab hardware has
+        // elsewhere in this file. not from a capture, and no MockTab hardware has
         // seen either one — treat as recognition plus a strong estimate, on the
         // same footing as the Pen Display 16 above.
         //

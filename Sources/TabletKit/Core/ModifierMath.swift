@@ -63,10 +63,10 @@ public enum ModifierMath: Sendable {
     /// `remainingSyntheticFlags`; the caller must already have removed any
     /// bits it intends to release from that value.
     ///
-    /// IMPORTANT: do not pass `hidSystemState` as the managed-bit source.
+    /// Do not pass `hidSystemState` as the managed-bit source.
     /// `hidSystemState` is polluted by our own injected events; using it for
     /// managed bits would re-assert the very bits the release event is meant
-    /// to clear. Pass it ONLY for non-managed bits via `systemFlags`.
+    /// to clear. Pass it only for non-managed bits via `systemFlags`.
     public static func releaseEventFlags(
         systemFlags: UInt64,
         remainingSyntheticFlags: UInt64
@@ -95,7 +95,7 @@ public enum ModifierMath: Sendable {
     /// `InputInjector.currentEventFlags`.
     ///
     /// - For managed bits: take physical OR synthetic. Physical state comes
-    ///   from the listen-only tap cache (`tapLastPhysicalFlags`), NOT from
+    ///   from the listen-only tap cache (`tapLastPhysicalFlags`), not from
     ///   `hidSystemState` — the latter lags one or more run-loop cycles
     ///   behind real keyboard events.
     /// - For non-managed bits: preserve `systemFlags` unchanged.
