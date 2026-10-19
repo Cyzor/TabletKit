@@ -58,7 +58,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// thousand units short of the limit, so nothing ever rails and the gate
     /// never arms. Three captures deliberately worrying at that band
     /// (`ptk-870-bt-top-bermuda-triangle-0{1,2,3}.txt`) contained 96 barrel
-    /// jumps between them, and EVERY one occurred with the gate disarmed and
+    /// jumps between them, and every one occurred with the gate disarmed and
     /// the previous sample at Y >= 1500 — never at a limit. Widening the arm
     /// condition to this band takes all of them, plus the four edge-bounce
     /// and full-width see-saw captures, to zero.
@@ -348,7 +348,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         //
         // A stub's 255 is the absence of a hover reading, not a measurement,
         // which is why rotation below replays its last value instead of
-        // resetting. The off-surface gate further down does NOT exempt stubs;
+        // resetting. The off-surface gate further down does not exempt stubs;
         // see the note there.
         let tipSwitch = (status & 0x40) != 0
 
@@ -417,7 +417,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
         // Do not widen it further. The reference hover frame below survives
         // by 459 units at 4000 and is cut at 5000.
         //
-        // The rail alone is NOT enough, and a reference recording caught that
+        // The rail alone is not enough, and a reference recording caught that
         // before it shipped: `pen.pen-strong-vertical.hid` from
         // whot/wacom-recordings contains a legitimate hover frame reading 255
         // at X 51% / Y 11% of the surface — mid-tablet, nowhere near an edge.
@@ -608,7 +608,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     /// Requires the device's DATAMODE feature report ([0x02, 0x02]) to have
     /// been sent first — see `WacomDeviceRegistry`'s `.intuosV3` `initSteps`
     /// and `WacomKnownDevice.open()`'s BLE exception for `.intuosV3`.
-    /// Without it the tablet emits report 0x06 instead. That report is NOT
+    /// Without it the tablet emits report 0x06 instead. That report is not
     /// inert — see `decodeAltBLEReport` below, which corrects an earlier
     /// comment here that assumed it was and never routed it.
     ///
@@ -702,7 +702,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///            and cross-checked against USB, whose 0x1E report carries
     ///            the same field at its own byte [19] with the same
     ///            behaviour — railed at 255 in a groove trace, ~100-117 in
-    ///            bounds. NOT read by this decoder, deliberately: inside the
+    ///            bounds. not read by this decoder, deliberately: inside the
     ///            rim it agrees with the status byte's close-fix bit on
     ///            100.00% of 132,754 samples with zero disagreements in
     ///            either direction, so the rule below is already a distance
@@ -1133,7 +1133,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///             counted the two padding bits as one and concluded the
     ///             descriptor disagreed with the captures; it doesn't.
     ///
-    ///             **Button 2 is NOT decoded from this report — deliberately.**
+    ///             **Button 2 is not decoded from this report — deliberately.**
     ///             Bit2 (`0x04`) never appears in either capture's aggregate
     ///             byte-2 value set, and unlike bit1/bit5/bit6 above, that
     ///             absence is not explained away as "no capture happened to
@@ -1154,7 +1154,7 @@ public struct IntuosV3Decoder: TabletReportDecoder {
     ///             doesn't. The second barrel switch's state may only be
     ///             reachable via `decodePenReport`'s `0x1F` path, which
     ///             requires the DATAMODE-2 feature write to actually take —
-    ///             confirmed NOT happening on this reporter's unit (both
+    ///             confirmed not happening on this reporter's unit (both
     ///             captures show only `0x06` ever streaming, never `0x1F`).
     ///             That is a separate, still-open bug from this report's
     ///             decode. Since we can't be certain the descriptor is

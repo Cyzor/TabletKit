@@ -98,7 +98,7 @@ public enum ToolCatalog: Sendable {
 
         // Art Pen variant (toolCode 0x1108 — confirmed from live BT capture 2026-04-02).
         // Reports over Bluetooth Classic as Art Pen; rotation available over USB only.
-        // Bit3 of toolCode (0x0008) is set, but this pen is NOT an eraser.
+        // Bit3 of toolCode (0x0008) is set, but this pen is not an eraser.
         catalog[0x1108] = ToolSpec(
             toolCode: 0x1108,
             name: "Art Pen",

@@ -72,7 +72,7 @@ extension IntuosV2Decoder {
     //   0x04 = BTN_STYLUS2 (barrel button 2)
     //   0x02 = BTN_STYLUS (barrel button 1)
     //
-    // Note: bits 4 and 5 are NOT additional buttons (earlier comment speculated they
+    // Note: bits 4 and 5 are not additional buttons (earlier comment speculated they
     // were — kernel confirms otherwise). Per-frame eraser detection below reads bit 3
     // (0x08); this is empirically correct for IntuosV2 BT and consistent with the
     // kernel's tip-mask logic, since the eraser end's contact bit lights up bit 3.

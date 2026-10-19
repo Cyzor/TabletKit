@@ -87,7 +87,7 @@ import Foundation
 /// Eraser is identified directly from the tool-type field — no prior
 /// enter-prox packet or serial number exchange (ABS_MISC not present).
 ///
-/// **Pad report (when pen NOT in proximity, d7 byte):**
+/// **Pad report (when pen not in proximity, d7 byte):**
 /// - CTH-460/470/480/490 (buttonCount ≥ 4): 0x08=btn0, 0x20=btn1, 0x10=btn2, 0x40=btn3
 /// - CTL-460/470/660    (buttonCount ≥ 2): 0x01=btn0, 0x02=btn1
 /// - CTT-460            (buttonCount = 0): no buttons, no output

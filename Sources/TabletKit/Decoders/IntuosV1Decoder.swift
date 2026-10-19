@@ -208,7 +208,7 @@ public struct IntuosV1Decoder: TabletReportDecoder {
 
         let subtype = (status >> 1) & 0x0F
 
-        // Note: high-confidence bit (status & 0x40) is intentionally NOT filtered here.
+        // Note: high-confidence bit (status & 0x40) is intentionally not filtered here.
         // PTH-851 lift reports are already low-pressure in the raw bytes; decoding normally
         // lets pressure fall to zero naturally. Tablets with touch (PTH-850 Intuos5) emit
         // low-confidence reports during palm contact mid-stroke — special-casing them would
