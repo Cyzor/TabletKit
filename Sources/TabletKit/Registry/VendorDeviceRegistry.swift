@@ -2,13 +2,11 @@
 //
 // Vendor-neutral recognition registry for non-Wacom tablets.
 //
-// Bulk-imported from OpenTabletDriver's per-vendor JSON configs via
-// the app repo's `tools/registry/import_vendor_configs.py`.  The generated entries carry no decoder
-// dispatch — they exist so the app can name a device it doesn't yet support
-// and route the user to log-capture instead of an opaque "unknown device"
-// error.  Devices MockTab can actually drive are marked separately by the
-// hand-maintained `drivableProfile(forVendorID:productID:)` below (Xencelabs
-// only, at present); the rest of this registry remains recognition-only.
+// Imported from OpenTabletDriver's per-vendor configs by the app repo's
+// `tools/registry/import_vendor_configs.py`. The generated entries only name
+// a device, so the app can offer a log capture instead of "unknown device".
+// The hand-maintained `drivableProfile(forVendorID:productID:)` below marks
+// the devices MockTab can drive.
 //
 // To refresh from a newer OTD snapshot, from the app repo:
 //
@@ -48,9 +46,8 @@ public enum VendorDeviceRegistry: Sendable {
     /// A profile matching a product ID alone, regardless of vendor ID.
     /// Useful when a caller has a canonical productID but can't reliably
     /// obtain the matching vendor ID (e.g. UI code reading a device context
-    /// mid-connect). PID collisions *across* vendors aren't a concern in
-    /// this registry today (Huion/XP-Pen/Xencelabs don't share PID space);
-    /// this returns the first match if that ever changes.
+    /// mid-connect). No PID collides across vendors here; if one ever does,
+    /// this returns the first match.
     public static func profile(forProductID productID: Int) -> VendorDeviceProfile? {
         knownDevices.first { $0.productID == productID }
     }
@@ -59,27 +56,18 @@ public enum VendorDeviceRegistry: Sendable {
     /// decoder exists and the init handshake is known), or nil when the device
     /// is recognition-only.
     ///
-    /// Deliberately a hand-maintained allowlist rather than a flag on the
-    /// generated entries: the generated registry is bulk-imported and
-    /// regenerated wholesale, and drivability is a property of our decoder
-    /// coverage, not of the imported data.
+    /// A hand-maintained allowlist, not a flag on the generated entries,
+    /// which are regenerated wholesale: drivability depends on decoder
+    /// coverage, not on the imported data.
     ///
-    /// Current coverage: Xencelabs Pen Tablet Medium (0x5201) and Small
-    /// (0x5204), Pen Display 24 (0x520D), Pen Display 16 (0x520B), Quick Keys
-    /// (0x5202, aux-only), and the Quick Keys wireless USB Dongle (0x5203,
-    /// aux-only), via `XencelabsDecoder` (report-2 layout confirmed on real
-    /// Pen Display 24 and Quick Keys hardware 2026-07-02; the Pen Tablets and
-    /// the Pen Display 16 are assumed to share it — same OEM firmware family
-    /// — pending their own hardware pass; see the 0x520B entry below for the
-    /// Pen Display 16's still-unconfirmed logical coordinate maxima).
-    /// The dongle was confirmed 2026-07-06 to relay an already-paired puck's
-    /// input reports completely transparently — identical report-2 0xF0 aux
-    /// frames, byte-for-byte, as talking to the puck directly over USB — so
-    /// it reuses `XencelabsDecoder` unchanged rather than needing its own
-    /// decode path. MockTab only drives an already-paired dongle; pairing a
-    /// dongle to a puck stays the native Xencelabs driver's job.
-    /// Huion / XP-Pen PID collisions need string-descriptor
-    /// discrimination before any of their entries can be promoted here.
+    /// Covers the Xencelabs Pen Tablet Medium (0x5201) and Small (0x5204),
+    /// Pen Display 24 (0x520D) and 16 (0x520B), Quick Keys (0x5202), and the
+    /// Quick Keys dongle (0x5203), all through `XencelabsDecoder`. The layout
+    /// is confirmed on the Pen Display 24 and Quick Keys; the others are
+    /// assumed to share their firmware family. The dongle relays an
+    /// already-paired puck's frames byte for byte, so it needs no decode path
+    /// of its own; pairing stays the Xencelabs driver's job. Huion and XP-Pen
+    /// entries need string-descriptor matching before they can join.
     public static func drivableProfile(
         forVendorID vendorID: Int, productID: Int
     ) -> VendorDeviceProfile? {
@@ -150,23 +138,16 @@ public enum VendorDeviceRegistry: Sendable {
     /// what this returns — a rank only matters when two slots are live at
     /// once, which is the case this exists for.
     ///
-    /// Xencelabs Quick Keys puck (policy 2026-07-31): USB wins, so a
-    /// direct-wired puck always owns the live context over the wireless
-    /// dongle. 0x520D is the Pen Display tunneling the dongle's own traffic
-    /// (not a third physical path), so it ranks alongside the dongle rather
-    /// than above or below it — the two are not expected to compete in
-    /// practice, but a decidable order avoids surprises if they ever do.
+    /// Xencelabs Quick Keys: USB wins, so a wired puck owns the context over
+    /// the dongle. 0x520D is the Pen Display carrying the dongle's traffic,
+    /// so it ranks with the dongle; the two shouldn't compete, but the order
+    /// stays decidable.
     ///
-    /// Wacom Bluetooth/dongle PIDs (any key of
-    /// `WacomDeviceRegistry.canonicalPIDMap`): rank below their canonical USB
-    /// PID, for the same reason — USB's electrically solid signal is more
-    /// reliable than Bluetooth's on every axis this project has traced
-    /// (mode-switch init timing, proximity signal cleanliness, tool-identity
-    /// announcement reliability). Before this, a Wacom BT-then-USB hotplug
-    /// (e.g. PTK-870 live over BLE, then the cable is plugged in) tied at 0
-    /// for both slots, and `driverSlots.max` picked one via undefined
-    /// dictionary iteration order rather than deterministically preferring
-    /// the newly-arrived, more reliable USB transport.
+    /// Wacom Bluetooth and dongle PIDs (keys of
+    /// `WacomDeviceRegistry.canonicalPIDMap`) rank below their USB PID: USB
+    /// has been more reliable on every axis traced (init timing, proximity
+    /// signal, tool announcements). Without a rank, a Bluetooth-then-USB
+    /// hotplug picked a slot by dictionary order.
     ///
     /// The Wacom ACK-40401 RF dongle (0x0084) ranks with them. It has no
     /// canonical-PID entry because its paired tablet is only known at
@@ -2360,48 +2341,25 @@ public enum VendorDeviceRegistry: Sendable {
             productStringRegex: nil),
         // END GENERATED
 
-        // Hand-added, not from the OTD import. maxX/maxY confirmed 2026-07-03
-        // from real physical corner sweeps captured directly off the raw HID
-        // stream (tools/hid_input_capture.c): both axes clamp at round
-        // firmware ceilings of exactly 105000 × 59000, isotropic ~200
-        // units/mm, consistent with the published 5080 lpi over the
-        // 527.04 × 296.46 mm active area (527.04 × 200 = 105408). X exceeds
-        // 16 bits, so it's carried as 24-bit LE in the report — see
-        // XencelabsDecoder. Four earlier values were wrong, in order:
-        // 65535×65535 and 22352×13970 (report-7 digitizer descriptor —
-        // generic/unreliable, never carries live data), 65535×59050 (an edge
-        // glide that measured the low 16-bit word's wrap, mistaken for a
-        // sensor overscan ceiling), and 39150×59050 (corner sweeps decoded
-        // with only 16 bits of X — 105000 mod 65536 ≈ 39464 — which made the
-        // sensor look anisotropic; it isn't). maxPressure per spec (8192
-        // levels); observed ceiling ~6.4k under hard hand pressure.
-        // penButtonCount covers the 3-button pen. auxButtonCount is nil —
-        // the QuickKeys puck's 8 express keys + bottom mode button (9) are
-        // the puck/dongle companion's own capability, not the display's (see
-        // `companions` below); this entry previously carried 9 here too, from
-        // before the puck was split into its own device. The display also
-        // has 3 onboard capacitive touch buttons of its own (bezelButtonCount)
-        // — confirmed 2026-07-14 via live capture: they ride the exact same
-        // aux frame format as the puck's express keys (report 2, tag 0xF0,
-        // bits 0-2 one-hot on a clean tap), remapped to the bezel-button
-        // slots in WacomKnownDevice since this device has no puck of its own
-        // to disambiguate them from.
-        // Covers the Pen Display 24 and, most likely, the Pen Display 24+ (2025):
-        // the two are understood to be the same panel and digitizer, with the
-        // plus adding color-calibration software rather than hardware, and a
-        // curated catalog lists both under one model number (LPH2412U-A). Nothing
-        // here needs to change if that holds — the plus would enumerate as this
-        // PID and inherit everything. Deliberately left generic in name for that
-        // reason. If a 24+ ever turns up reporting a PID of its own, that is the
-        // signal to revisit; the color software is host-side and out of scope
-        // either way.
+        // Hand-added, not from the OTD import. Corner sweeps of the raw HID
+        // stream clamp at 105000 × 59000: isotropic, ~200 units/mm, consistent
+        // with 5080 lpi over the 527.04 × 296.46 mm area. X exceeds 16 bits
+        // (see XencelabsDecoder). The report-7 descriptor's maxima are
+        // meaningless; that collection never carries data. maxPressure per
+        // spec (8192 levels); hard pressure reaches about 6.4k.
+        // penButtonCount covers the 3-button pen. auxButtonCount is nil: the
+        // Quick Keys keys belong to the puck/dongle companion (see
+        // `companions` below). The display's own 3 capacitive buttons
+        // (bezelButtonCount) arrive in the same 0xF0 aux frame as the puck's
+        // keys, bits 0-2, and `TabletInput` moves them to the bezel slots.
+        // Probably covers the Pen Display 24+ (2025) too: a curated catalog
+        // lists both under model LPH2412U-A, the plus adding host-side color
+        // software. A 24+ with its own PID would be the signal to revisit.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520D,
             productName: "Xencelabs Pen Display",
-            // Confirmed 2026-07-02 from Xencelabs' own published spec: active
-            // drawing area 527.04 x 296.46 mm, 16:9. Doesn't feed the
-            // coordinate mapping (maxX/maxY do, see above) — cosmetic only.
+            // Xencelabs' published active area, 527.04 x 296.46 mm, 16:9.
             activeWidthMM: 527.04, activeHeightMM: 296.46,
             maxX: 105000, maxY: 59000,
             maxPressure: 8191,
@@ -2411,39 +2369,17 @@ public enum VendorDeviceRegistry: Sendable {
             isPenDisplay: true,
             companions: [0x5202, 0x5203]),
 
-        // Hand-added 2026-07-17, sourced from the pinned libwacom snapshot
+        // Hand-added from libwacom
         // (`upstream/libwacom/data/xencelabs-pen-display-16.tablet`, model
-        // LPH1612U-A) — PID and physical dimensions are libwacom-confirmed;
-        // no MockTab hardware capture yet, unlike the 24 above. maxX/maxY
-        // are not from a capture: they're extrapolated from the 24's
-        // confirmed density (105000/527.04mm ≈ 199.32 units/mm, isotropic)
-        // applied to this model's 344x194mm active area. Treat as a strong
-        // estimate, not fact, until a real Pen Display 16 capture confirms
-        // or corrects them — same OEM firmware family as the 24 makes the
-        // report-2 protocol itself the safer assumption than the coordinate
-        // maxima. bezelButtonCount/companions mirrored from the 24 pending
-        // its own confirmation (same onboard capacitive-button hardware is
-        // plausible, not verified).
+        // LPH1612U-A), which confirms the PID and dimensions. maxX/maxY apply
+        // the 24's density (~199.32 units/mm) to 344x194mm: a strong
+        // estimate until a capture. bezelButtonCount and companions mirror
+        // the 24's, unverified.
         //
-        // Checked 2026-09-08 against a real 520B HID descriptor dump
-        // (linuxwacom/wacom-hid-descriptors#618) — deliberately not used to
-        // correct maxX/maxY above. That descriptor's standard Digitizer
-        // collection (report 0x07) declares logical maxima of X=22352,
-        // Y=13970 against this device's own 344x194mm physical size — a
-        // density of ~65/~72 units/mm, anisotropic and nothing like this
-        // family's real ~199.3 units/mm (confirmed on the 24, extrapolated
-        // here and on the Medium/Small below). That mismatch is exactly the
-        // trap XencelabsDecoder's own doc comment already flags: report
-        // 0x07 is a standard descriptor-declared collection that never
-        // carries live data on this OEM family (report 2, vendor page
-        // 0xFF0A, does) — its numbers describe an inert collection, not
-        // this device's real coordinate system. The 0xFF0A report on the
-        // same dump (interface 000D) is fully opaque at the descriptor
-        // level (undifferentiated 31-byte blob, no field semantics), so it
-        // offers nothing either. Net result: this descriptor package
-        // confirms identity (PID, vendor page layout matches the family)
-        // but contributes no usable coordinate data — the extrapolated
-        // maxX/maxY above are still the best available estimate.
+        // A descriptor dump (linuxwacom/wacom-hid-descriptors#618) confirms
+        // the PID and vendor page but gives no usable maxima: its report-7
+        // values (22352 x 13970) belong to the collection that never carries
+        // data, and the 0xFF0A report is opaque.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x520B,
@@ -2457,36 +2393,18 @@ public enum VendorDeviceRegistry: Sendable {
             isPenDisplay: true,
             companions: [0x5202, 0x5203]),
 
-        // Hand-added 2026-07-29. These two pen tablets — the products Xencelabs
-        // is best known for, usually bundled with the Quick Keys puck — had no
-        // entry at all, so they were being ignored outright.
+        // Hand-added from OpenTabletDriver's configs (XenceLabs/Pen Tablet
+        // Medium.json, Pen Tablet Small.json). No capture; a strong estimate,
+        // like the Pen Display 16 above, because:
         //
-        // Source is OpenTabletDriver's own configurations (XenceLabs/Pen Tablet
-        // Medium.json, Pen Tablet Small.json), the same origin as `otdParser`
-        // elsewhere in this file. not from a capture, and no MockTab hardware has
-        // seen either one — treat as recognition plus a strong estimate, on the
-        // same footing as the Pen Display 16 above.
+        // 1. Both land on exactly 200 units/mm (52324/261.62 and 29600/148;
+        //    35600/178 and 20200/101), the family's density.
+        // 2. OTD gives them `XenceLabsReportParser`, the displays' parser.
+        // 3. OTD's init string is 0x02 0xB0 0x04, the family's tablet-mode init.
         //
-        // Three independent things make the estimate strong rather than a guess:
-        //
-        // 1. Both land on exactly 200 units/mm on both axes (52324/261.62 and
-        //    29600/148; 35600/178 and 20200/101), matching the density the Pen
-        //    Display 24's real corner sweeps established for this family.
-        // 2. OTD assigns them `XenceLabsReportParser` — the same parser as the
-        //    displays, so `XencelabsDecoder` should serve them unchanged.
-        // 3. OTD's output-init string decodes to 0x02 0xB0 0x04, byte for byte
-        //    the family tablet-mode init documented on the puck below.
-        //
-        // The three onboard buttons OTD reports are modeled as bezel buttons, not
-        // aux buttons, following the Pen Display 24's precedent: on that device
-        // the onboard capacitive buttons ride the identical report-2 0xF0 aux
-        // frame as the puck's express keys, so they occupy the bezel slots to
-        // stay distinguishable from a companion puck's keys. Unverified here.
-        //
-        // auxButtonCount is nil (not 3, an earlier OTD-import artifact from
-        // before the Quick Keys puck was modeled as its own companion
-        // device): the tablet itself has no onboard express keys or ring —
-        // those belong to the puck/dongle companion, see `companions` below.
+        // The three onboard buttons are bezel buttons, following the Pen
+        // Display 24 (unverified here). auxButtonCount is nil: the express
+        // keys belong to the puck/dongle companion (see `companions` below).
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5201,
@@ -2511,7 +2429,7 @@ public enum VendorDeviceRegistry: Sendable {
             productStringRegex: nil,
             companions: [0x5202, 0x5203]),
 
-        // Hand-added, confirmed 2026-07-02 over direct USB on real hardware.
+        // Hand-added, confirmed over USB on real hardware.
         // Aux-only device (8 express keys, bottom mode button, clickable dial):
         // no pen digitizer, so no coordinate maxima or pressure. Mute until it
         // receives the family's standard tablet-mode init (`[0x02, 0xB0, 0x04]`
@@ -2526,13 +2444,9 @@ public enum VendorDeviceRegistry: Sendable {
             otdParser: nil,
             productStringRegex: nil),
 
-        // Confirmed 2026-07-04 via native Xencelabs driver's own diagnostic
-        // panel (PID_5203, "Xencelabs Dongle"), and confirmed 2026-07-06 via
-        // a raw HID input-report capture (tools/hid_input_capture.c) taken
-        // while an already-paired puck operated through it: the dongle
-        // relays the puck's report-2 aux frames byte-for-byte identically to
-        // a direct-USB connection, so it's aux-only (like the puck itself)
-        // and reuses XencelabsDecoder unchanged — no new decode path needed.
+        // A capture with a paired puck shows the dongle relaying its report-2
+        // aux frames byte for byte, so it's aux-only and XencelabsDecoder
+        // handles it unchanged.
         VendorDeviceProfile(
             vendor: "Xencelabs",
             vendorID: 0x28BD, productID: 0x5203,
