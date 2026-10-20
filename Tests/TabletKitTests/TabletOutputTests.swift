@@ -59,7 +59,12 @@ final class TabletOutputTests: XCTestCase {
         let (i4, i4Iface, q1) = try output(0x00B8)
         i4.setRingLED(index: 2)
         q1.drain()
-        XCTAssertEqual(i4Iface.writes, ["feature 20 06 0a 14 0a 00 00 00 00"])
+        XCTAssertEqual(i4Iface.writes, ["feature 20 06 0a 14 0a 00 00 00 00"], "no key displays: kernel defaults")
+
+        let (oled, oledIface, q3) = try output(0x00B9)
+        oled.setRingLED(index: 1)
+        q3.drain()
+        XCTAssertEqual(oledIface.writes, ["feature 20 05 0a 28 1a 00 00 00 00"], "key displays on, awake")
 
         let (i5, i5Iface, q2) = try output(0x0028)
         i5.setRingLED(index: 3)
@@ -111,7 +116,8 @@ final class TabletOutputTests: XCTestCase {
     /// Each key's display gets a start, its image chunks, and a stop, and
     /// only when its label changes.
     func testIntuos4KeyDisplaysSendChangedKeysOnly() throws {
-        let (out, primary, queue) = try output(0x00B8)
+        XCTAssertNil(try output(0x00B8).0.controls.labels, "the PTK-440 has no key displays")
+        let (out, primary, queue) = try output(0x00B9)
         XCTAssertNotNil(out.controls.labels)
         out.setAuxKeyLabels(["Undo", "Redo"])
         queue.drain()
@@ -123,6 +129,43 @@ final class TabletOutputTests: XCTestCase {
         out.setKeyOLEDsRotated180(true)
         queue.drain()
         XCTAssertEqual(primary.writes.count - first, 6 + 12, "turning resends both keys")
+    }
+
+    /// Idle key displays dim, then go dark; the ring stays lit throughout.
+    func testIntuos4KeyDisplayIdleLevels() {
+        func report(_ idle: TabletOutput.KeyDisplayIdle?, _ pid: Int) -> [UInt8] {
+            Array(TabletOutput.intuos4LEDReport(slot: 2, idle: idle, productID: pid)[2...4])
+        }
+        XCTAssertEqual(report(.awake, 0x00B9), [10, 40, 0x1A])
+        XCTAssertEqual(report(.dimmed, 0x00B9), [10, 40, 0x15])
+        XCTAssertEqual(report(.off, 0x00B9), [10, 10, 0x00])
+        XCTAssertEqual(report(.awake, 0x00BC), [10, 40, 0x1C])
+        XCTAssertEqual(report(.dimmed, 0x00BC), [10, 40, 0x17])
+        XCTAssertEqual(report(.off, 0x00BC), [10, 10, 0x00])
+        XCTAssertEqual(report(nil, 0x00B8), [10, 20, 10])
+        XCTAssertEqual(TabletOutput.intuos4LEDReport(slot: 2, idle: .off, productID: 0x00B9)[0...1], [0x20, 0x06])
+
+        let dims = [0x00B8, 0x00B9, 0x00BA, 0x00BB, 0x00BC, 0x00BD, 0x0028].filter {
+            WacomDeviceRegistry.spec(for: $0).map(TabletOutput.dimsKeyDisplays) ?? false
+        }
+        XCTAssertEqual(dims, [0x00B9, 0x00BA, 0x00BB, 0x00BC])
+    }
+
+    /// The idle cycle runs on the output queue; input wakes it.
+    func testIntuos4KeyDisplaysDimWhenIdle() throws {
+        let (out, primary, queue) = try output(0x00B9)
+        out.keyDisplayIdleInterval = 100 * NSEC_PER_MSEC
+        out.setRingLED(index: 0)
+        queue.drain()
+        func displayBytes() -> [String] { primary.writes.map { String($0.split(separator: " ")[5]) } }
+        XCTAssertEqual(displayBytes(), ["1a"])
+        Thread.sleep(forTimeInterval: 0.5)
+        queue.drain()
+        XCTAssertEqual(displayBytes(), ["1a", "15", "00"], "dimmed, then off")
+        out.noteActivity()
+        queue.drain()
+        XCTAssertEqual(displayBytes(), ["1a", "15", "00", "1a"], "input wakes them")
+        out.stop()
     }
 
     /// A relink addresses the puck, and the resync afterward puts the labels

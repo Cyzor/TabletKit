@@ -60,6 +60,12 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
     // Intuos4 key displays.
     private var sentKeyLabels: [String] = []
     private var keyOLEDsRotated180 = false
+    private var keyDisplayIdle = KeyDisplayIdle.awake
+    private var lastActivityNs: UInt64 = 0
+    private var idleTimer: DispatchSourceTimer?
+    /// Key displays dim after this long without input, and go dark after
+    /// twice it, to spare the OLEDs. Settable for tests.
+    var keyDisplayIdleInterval: UInt64 = 300 * NSEC_PER_SEC
 
     private static let maxPendingVendorWrites = 64
     /// Intuos5 and Intuos Pro gen 1 pack the slot and both luminances into one byte.
@@ -69,11 +75,6 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
     /// Ring and crop-mark luminance for those, 2-bit: 0 low, 1 medium, 2 high, 3 off.
     private static let intuos5RingLuminance: UInt8 = 0
     private static let intuos5CropLuminance: UInt8 = 0
-    /// Intuos4 LED report luminances, 0–127: the kernel's defaults. A zero
-    /// key display brightness can leave the displays dark.
-    private static let intuos4RingLuminance: UInt8 = 10
-    private static let intuos4PressedLuminance: UInt8 = 20
-    private static let intuos4OLEDBrightness: UInt8 = 10
 
     /// The slots `controls` fills.
     package let offered: TabletControls.Kinds
@@ -229,16 +230,16 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
                 buf[1] = (Self.intuos5CropLuminance << 4) | (Self.intuos5RingLuminance << 2) | slot
                 write(.feature, buf, to: capable ?? primary, tag: "\(name) Intuos5 LED slot=\(index)", bestEffort: capable == nil)
             } else {
-                // Intuos4: [0x20, 0x04 | slot, ring, pressed-key, key display
-                // brightness, 0…]. Best effort until the interface that
-                // declares feature reports registers.
-                var buf = [UInt8](repeating: 0, count: 9)
-                buf[0] = 0x20
-                buf[1] = 0x04 | slot
-                buf[2] = Self.intuos4RingLuminance
-                buf[3] = Self.intuos4PressedLuminance
-                buf[4] = Self.intuos4OLEDBrightness
+                // Intuos4. Best effort until the interface that declares
+                // feature reports registers. The first write starts the
+                // key displays' idle clock.
+                let idle = Self.dimsKeyDisplays(spec) && !isBluetooth ? keyDisplayIdle : nil
+                let buf = Self.intuos4LEDReport(slot: slot, idle: idle, productID: spec.productID)
                 write(.feature, buf, to: capable ?? primary, tag: "\(name) Intuos4 LED slot=\(index)", bestEffort: capable == nil)
+                if idle != nil, idleTimer == nil {
+                    lastActivityNs = DispatchTime.now().uptimeNanoseconds
+                    scheduleIdleTimer()
+                }
             }
         case .xencelabs:
             // Every dial mode change reasserts the screen orientation the
@@ -329,6 +330,89 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             }
             write(.feature, WacomOutputProtocol.imageStopPayload(), to: primary, tag: "Intuos4 OLED key\(index) stop", bestEffort: true)
         }
+    }
+
+    // MARK: - Intuos4 key display dimming
+
+    enum KeyDisplayIdle: Int, Comparable {
+        case awake, dimmed, off
+        static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
+    }
+
+    /// Tablets whose key displays dim when idle: the Intuos4 models with
+    /// displays, over USB.
+    static func dimsKeyDisplays(_ spec: TabletSpec) -> Bool {
+        spec.format == .intuosV1 && spec.hasKeyOLEDs
+    }
+
+    /// Report 0x20: `[0x20, 0x04 | slot, ring, ring while the pen is down,
+    /// key displays, 0…]`. Luminances run 0–127; the key display byte is a
+    /// 0–15 level plus 0x10 to turn the displays on. A nil `idle` (no key
+    /// displays) keeps the kernel's defaults.
+    static func intuos4LEDReport(slot: UInt8, idle: KeyDisplayIdle?, productID: Int) -> [UInt8] {
+        var levels: (ring: UInt8, penDown: UInt8, displays: UInt8) = (10, 20, 10)
+        if let idle {
+            // The PTK-540WL's displays run a little brighter.
+            let wireless = productID == 0x00BC
+            switch idle {
+            case .awake: levels = (10, 40, 0x10 | (wireless ? 12 : 10))
+            case .dimmed: levels = (10, 40, 0x10 | (wireless ? 7 : 5))
+            case .off: levels = (10, 10, 0)
+            }
+        }
+        return [0x20, 0x04 | (slot & 0x03), levels.ring, levels.penDown, levels.displays, 0, 0, 0, 0]
+    }
+
+    /// Decoded input: wakes dimmed key displays and restarts their idle clock.
+    package func noteActivity() {
+        queue.perform { [self] in
+            guard Self.dimsKeyDisplays(spec), !isBluetooth else { return }
+            lastActivityNs = DispatchTime.now().uptimeNanoseconds
+            guard keyDisplayIdle != .awake else { return }
+            keyDisplayIdle = .awake
+            logger.info("\(self.spec.name, privacy: .public): input — key displays awake")
+            sendRingLED()
+            scheduleIdleTimer()
+        }
+    }
+
+    /// Sets the timer for the end of the current idle stage. While awake,
+    /// input only moves `lastActivityNs`; the timer finds the newer stamp
+    /// when it fires and sets itself again. On the output queue.
+    private func scheduleIdleTimer() {
+        let stages: UInt64
+        switch keyDisplayIdle {
+        case .awake: stages = 1
+        case .dimmed: stages = 2
+        case .off:
+            idleTimer?.cancel()
+            idleTimer = nil
+            return
+        }
+        let timer: DispatchSourceTimer
+        if let idleTimer {
+            timer = idleTimer
+        } else {
+            timer = DispatchSource.makeTimerSource(queue: queue.dispatchQueue)
+            timer.setEventHandler { [weak self] in self?.idleTimerFired() }
+            timer.resume()
+            idleTimer = timer
+        }
+        let deadline = lastActivityNs &+ stages * keyDisplayIdleInterval
+        timer.schedule(deadline: DispatchTime(uptimeNanoseconds: max(deadline, DispatchTime.now().uptimeNanoseconds)))
+    }
+
+    private func idleTimerFired() {
+        let idle = DispatchTime.now().uptimeNanoseconds &- lastActivityNs
+        // Half a second of slack, so a timer that fires early still counts.
+        let stages = (idle + min(NSEC_PER_SEC / 2, keyDisplayIdleInterval / 10)) / keyDisplayIdleInterval
+        let due: KeyDisplayIdle = stages >= 2 ? .off : stages == 1 ? .dimmed : .awake
+        if due > keyDisplayIdle {
+            keyDisplayIdle = due
+            logger.info("\(self.spec.name, privacy: .public): idle — key displays \(due == .dimmed ? "dimmed" : "off", privacy: .public)")
+            sendRingLED()
+        }
+        scheduleIdleTimer()
     }
 
     // MARK: - Quick Keys
@@ -509,6 +593,9 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         queue.performAndWait { [self] in
             batteryPoll?.cancel()
             batteryPoll = nil
+            idleTimer?.cancel()
+            idleTimer = nil
+            keyDisplayIdle = .awake
             pendingVendorWrites.removeAll()
             pendingVendorWritesDropped = false
         }

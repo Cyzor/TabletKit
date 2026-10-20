@@ -214,6 +214,7 @@ public final class TabletTransport: Identifiable {
         let output = output
         let backend = backend
         let notesReports = spec.format == .xencelabs
+        let notesActivity = TabletOutput.dimsKeyDisplays(spec)
         // Siblings open only when accepted, so only the primary needs the check.
         let primary = primary
         let rejectsPrimary = !Self.accepts(primary, spec: spec)
@@ -229,6 +230,12 @@ public final class TabletTransport: Identifiable {
             if notesReports, ns &- input.lastNotedReportNs >= 1_000_000_000 {
                 input.lastNotedReportNs = ns
                 output.noteReport(at: ns)
+            }
+            // Decoded input wakes the key displays. Each stamp moves the dim
+            // deadline, so once a second is enough.
+            if notesActivity, !result.events.isEmpty, ns &- input.lastNotedActivityNs >= 1_000_000_000 {
+                input.lastNotedActivityNs = ns
+                output.noteActivity()
             }
             if let timeout = input.value.silenceTimeout {
                 Self.watchSilence(timeout, on: interface, input: input, backend: backend, sink: sink)
@@ -331,6 +338,8 @@ final class InputBox: @unchecked Sendable {
     var value: TabletInput
     /// When the output queue last heard of a report, for Xencelabs.
     var lastNotedReportNs: UInt64 = 0
+    /// When the output queue last heard of decoded input, for Intuos4.
+    var lastNotedActivityNs: UInt64 = 0
     /// When the last report arrived, and whether a silence check is set,
     /// for tablets that never say the pen left.
     var lastReportAt: UInt64 = 0

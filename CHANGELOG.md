@@ -9,6 +9,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Intuos4 key displays dim after 5 minutes without input and turn off after
+  10, and any input wakes them. The ring LED stays lit. On models with key
+  displays, report 0x20 now turns the displays on explicitly, and the ring
+  brightens further while the pen is down.
 - **Source-breaking:** decoders take an `HIDReport` instead of a raw pointer
   and length. `TabletReportDecoder.decode(report:spec:state:deviceFamily:)`,
   `decodeBLEPenReport`, `decodeBLEPadReport`, and `decodeWirelessReport` all
