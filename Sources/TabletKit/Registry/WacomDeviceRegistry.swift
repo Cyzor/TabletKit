@@ -1145,12 +1145,13 @@ public enum WacomDeviceRegistry: Sendable {
             initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
 
         // ── Intuos4 (PTK-xxx, 2009–2012) — intuosV1 parser ───────────────────
-        // Key OLEDs; 2048 pressure levels. maxX/maxY are the native 200 lpmm
+        // Key OLEDs on all but the PTK-440 (Wacom's driver excludes 0x00B8 in
+        // HasOLEDS); 2048 pressure levels. maxX/maxY are the native 200 lpmm
         // values (OTD and Wacom's manual agree), and active areas follow them.
         .init(
             productID: 0x00B8, name: "Intuos4 S (PTK-440)",
             format: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 6, hasTouchRing: true, hasKeyOLEDs: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98)
             .withQuirks(intuos4USB),

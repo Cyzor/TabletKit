@@ -12,15 +12,13 @@ import Foundation
 /// `sanette/intuos4-oled`'s `intuos4oled.py`, an independent third-party
 /// tool built against that same documented interface).
 ///
-/// **Not hardware-verified.** No Intuos4 has been available to capture
-/// against; every byte below is read from kernel source, not from a live
-/// device. Treat this the same as `setTouchEnabled`'s commented-out payload
-/// elsewhere in this codebase — believed correct, unconfirmed.
+/// The USB framing is confirmed on a PTK-640 against Wacom's own driver
+/// (`CPTKUSBGraphicsTablet::SendImageToDisplay`), byte for byte.
 ///
-/// Intuos4-exclusive: `TabletSpec.hasKeyOLEDs` gates this, kernel-
-/// confirmed to apply only to `INTUOS4S`/`INTUOS4`/`INTUOS4WL`/`INTUOS4L` —
-/// Intuos5 and Intuos Pro share the same `.intuosV1` wire *decoder* but have
-/// no per-key OLED hardware at all.
+/// Intuos4-exclusive: `TabletSpec.hasKeyOLEDs` gates this — every USB
+/// Intuos4 but the PTK-440, which has no key displays. Intuos5 and Intuos Pro
+/// share the same `.intuosV1` wire *decoder* but have no per-key OLED
+/// hardware at all.
 ///
 /// Unlike `XencelabsOutputProtocol`, these are HID **feature** reports, not
 /// output reports — sent via `IOHIDDeviceSetReport` with

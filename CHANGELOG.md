@@ -58,6 +58,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   onto two centered lines when one would be too small, instead of clipping a
   single 18 pt line: "Toggle Display" showed as "gle Disp". Tested on a
   PTK-640.
+- Intuos4 S (PTK-440) no longer has `hasKeyOLEDs`: it has no ExpressKey
+  displays, and Wacom's driver excludes it too.
 - `DecoderState.btTouchMsPerCount` is 0.1 ms, not 0.225 ms. Intuos Pro
   Bluetooth touch frames are 10 ms apart, and their clock wraps every
   6.55 seconds. The earlier figure placed older frames in a container too far
