@@ -48,6 +48,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Intuos4 S (PTK-440) no longer has `hasKeyOLEDs`: it has no key displays,
+  so it doesn't offer `.labels`.
 - `IntuosOLEDImageEncoder.renderTextLabel` sizes a label to fit and wraps it
   onto two centered lines when that reads larger. A long label used to clip:
   "Toggle Display" showed as `gle Disp`.

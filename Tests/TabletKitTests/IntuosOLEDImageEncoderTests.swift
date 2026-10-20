@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Intuos4 OLED packing, against hand-built images. Not hardware-verified.
+// Intuos4 OLED packing, against hand-built images.
 import XCTest
 @testable import TabletKit
 
