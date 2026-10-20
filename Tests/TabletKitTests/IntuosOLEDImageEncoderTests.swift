@@ -90,4 +90,128 @@ final class IntuosOLEDImageEncoderTests: XCTestCase {
         let payloads = WacomOutputProtocol.keyImagePayloadsUSB(image: packed!, buttonID: 2)
         XCTAssertEqual(payloads.count, 4)
     }
+
+    // MARK: Layout
+
+    /// Lit bounding box of a rendered bitmap, or nil when nothing is lit.
+    private func inkBox(_ buffer: [UInt8]) -> (x0: Int, x1: Int, y0: Int, y1: Int)? {
+        var x0 = w, x1 = -1, y0 = h, y1 = -1
+        for row in 0..<h {
+            for x in 0..<w where buffer[row * w + x] > 0 {
+                x0 = min(x0, x); x1 = max(x1, x)
+                y0 = min(y0, row); y1 = max(y1, row)
+            }
+        }
+        return x1 < 0 ? nil : (x0, x1, y0, y1)
+    }
+
+    /// Rows between y0 and y1 that are entirely dark — one separates two
+    /// wrapped lines; none means the label is on a single line.
+    private func blankRowsInside(_ buffer: [UInt8], _ box: (x0: Int, x1: Int, y0: Int, y1: Int)) -> [Int] {
+        (box.y0...box.y1).filter { row in
+            !buffer[(row * w)..<(row * w + w)].contains { $0 > 0 }
+        }
+    }
+
+    /// Regression: a long label used to be drawn at a fixed 18 pt on one line
+    /// and clipped, so "Toggle Display" showed as `gle Disp` — lit pixels
+    /// touching both edges. It now wraps and keeps margins.
+    func testRenderTextLabelLongLabelWrapsInsteadOfClipping() {
+        let buffer = IntuosOLEDImageEncoder.renderTextLabel("Toggle Display")
+        guard let box = inkBox(buffer) else {
+            return XCTFail("expected a long label to render something")
+        }
+        XCTAssertGreaterThan(box.x0, 0, "ink should keep a left margin, not run off the display")
+        XCTAssertLessThan(box.x1, w - 1, "ink should keep a right margin, not run off the display")
+        XCTAssertGreaterThan(box.y0, 0, "ink should keep a top margin")
+        XCTAssertLessThan(box.y1, h - 1, "ink should keep a bottom margin")
+        XCTAssertFalse(blankRowsInside(buffer, box).isEmpty,
+                       "a label too wide for one line should wrap, leaving a blank row between lines")
+    }
+
+    /// A short label still gets one full-size line — wrapping must not be the
+    /// default for text that already fits.
+    func testRenderTextLabelShortLabelStaysOnOneLine() {
+        let buffer = IntuosOLEDImageEncoder.renderTextLabel("Ctrl")
+        guard let box = inkBox(buffer) else {
+            return XCTFail("expected a short label to render something")
+        }
+        XCTAssertTrue(blankRowsInside(buffer, box).isEmpty,
+                      "a label that fits should stay on a single line")
+    }
+
+    /// Wrapped or not, the ink keeps a dark margin on every edge rather than
+    /// being clipped by it.
+    func testRenderTextLabelKeepsMarginsOnEveryEdge() {
+        for label in ["Toggle Display", "Ctrl+Alt+Delete", "X", "P"] {
+            guard let box = inkBox(IntuosOLEDImageEncoder.renderTextLabel(label)) else {
+                XCTFail("\(label) should render"); continue
+            }
+            XCTAssertTrue(box.x0 > 0 && box.x1 < w - 1, "\(label) should keep side margins")
+            XCTAssertTrue(box.y0 > 0 && box.y1 < h - 1, "\(label) should keep top and bottom margins")
+        }
+    }
+
+    /// Horizontal extent of each line's row band, split at the blank row.
+    private func lineBandWidths(_ buffer: [UInt8], _ box: (x0: Int, x1: Int, y0: Int, y1: Int)) -> [Int]? {
+        guard let blank = blankRowsInside(buffer, box).first else { return nil }
+        func width(of rows: Range<Int>) -> Int {
+            var x0 = w, x1 = -1
+            for row in rows {
+                for x in 0..<w where buffer[row * w + x] > 0 {
+                    x0 = min(x0, x); x1 = max(x1, x)
+                }
+            }
+            return x1 < 0 ? 0 : x1 - x0 + 1
+        }
+        return [width(of: box.y0..<blank), width(of: (blank + 1)..<(box.y1 + 1))]
+    }
+
+    /// Regression: the first line has to be the upper one. Stacking upward
+    /// from the bottom made "A LongerWord" read as "LongerWord" over "A" —
+    /// words in the wrong order.
+    func testRenderTextLabelFirstLineDrawsOnTop() {
+        for label in ["A LongerWord", "LongerWord A"] {
+            let buffer = IntuosOLEDImageEncoder.renderTextLabel(label)
+            guard let box = inkBox(buffer), let widths = lineBandWidths(buffer, box) else {
+                return XCTFail("\(label) should render on two lines")
+            }
+            let narrowIsOnTop: Bool
+            if label == "A LongerWord" {
+                narrowIsOnTop = widths[0] < widths[1]
+            } else {
+                narrowIsOnTop = widths[0] > widths[1]
+            }
+            XCTAssertTrue(narrowIsOnTop,
+                          "\(label): upper line width \(widths[0]), lower \(widths[1]) — the first word should be on top")
+        }
+    }
+
+    /// Regression: each line is centered on its own. Sharing a left edge made
+    /// the lines step in and out with their word lengths — a ladder.
+    func testRenderTextLabelCentersEachLineIndependently() {
+        let buffer = IntuosOLEDImageEncoder.renderTextLabel("A LongerWord")
+        guard let box = inkBox(buffer) else {
+            return XCTFail("expected a label to render")
+        }
+        let blank = blankRowsInside(buffer, box).first
+        guard let blank else { return XCTFail("expected two lines") }
+
+        func horizontalCenter(_ rows: Range<Int>) -> (CGFloat, Int) {
+            var x0 = w, x1 = -1
+            for row in rows {
+                for x in 0..<w where buffer[row * w + x] > 0 {
+                    x0 = min(x0, x); x1 = max(x1, x)
+                }
+            }
+            return (CGFloat(x0 + x1) / 2, x1 - x0 + 1)
+        }
+        let (topCenter, _) = horizontalCenter(box.y0..<blank)
+        let (bottomCenter, _) = horizontalCenter((blank + 1)..<(box.y1 + 1))
+
+        // Two or three pixels of slack for glyph side bearings, not the
+        // width of a word.
+        XCTAssertLessThanOrEqual(abs(topCenter - bottomCenter), 4,
+                                 "each line should be centered, not left-aligned")
+    }
 }
