@@ -294,12 +294,14 @@ extension IntuosV2Decoder {
 
         // The pad sub-report sits at byte 281 of the 361-byte container:
         // byte[281] = center button (0x40 when pressed, 0x00 otherwise)
-        // byte[282] = mechanical click pulse — set for exactly one frame on physical press
-        // byte[283] = capacitive touch state — set whenever finger rests on key (too sensitive alone)
+        // byte[282] = keys pressed, one bit each from the top, set for as long
+        //             as a key is held (PTH-860, observed)
+        // byte[283] = keys touched: set while a finger rests on a key, pressed
+        //             or not, so it can't stand for a press
         // byte[284] = battery: bit7=charging, bits6:0=percent
         // byte[285] = ring byte: bit7=ring active, bits0-6=position (0–71); 0x7F=no touch
         if report.count >= 286 {
-            let mechanicalByte = report[282]   // one-frame click pulse (rising edge)
+            let mechanicalByte = report[282]   // keys held down
             let ringByte = report[285]
             let btnByte = report[281]
             if mechanicalByte != state.lastBTPadKeys   // catches both press (0→n) and release (n→0)

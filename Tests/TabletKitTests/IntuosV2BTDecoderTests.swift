@@ -301,7 +301,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
 
         var bytes = make361(toolCode: 0x0842)
         bytes[281] = 0x40  // center button down
-        bytes[282] = 0x01  // mechanical key 0 click pulse
+        bytes[282] = 0x01  // key 0 down
         bytes[283] = 0x00
         bytes[285] = 0x10  // ring position 16, active (≠ 0x7F)
 
@@ -314,6 +314,27 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         XCTAssertEqual(aux?.touchRingActive, true)
         XCTAssertEqual(aux?.touchRingPosition, 0x10)
         XCTAssertEqual(aux?.buttons.first, true, "Mechanical key 0 should be set")
+    }
+
+    func testHeldKeyStaysDownAcrossContainers() {
+        // A PTH-860 over Bluetooth Classic holds byte 282 for as long as the
+        // key is down; byte 283 (touched) rises first and falls last.
+        var state = IntuosV2Decoder.State()
+        state.lastToolCode = 0x0842
+        state.lastBTPadRing = 0x7F
+        func keys(_ pressed: UInt8, touched: UInt8) -> [AuxButtons] {
+            var bytes = make361(toolCode: 0x0842)
+            bytes[282] = pressed
+            bytes[283] = touched
+            bytes[285] = 0x7F
+            return decode(bytes, state: &state).compactMap { r -> AuxButtons? in
+                if case .aux(let a) = r { return a } else { return nil }
+            }
+        }
+        XCTAssertTrue(keys(0x00, touched: 0x01).isEmpty, "a finger on a key isn't a press")
+        XCTAssertEqual(keys(0x01, touched: 0x01).first?.buttons.first, true, "pressed")
+        XCTAssertTrue(keys(0x01, touched: 0x01).isEmpty, "still held: no change to report")
+        XCTAssertEqual(keys(0x00, touched: 0x01).first?.buttons.first, false, "let go")
     }
 
     // MARK: - 99-byte path
