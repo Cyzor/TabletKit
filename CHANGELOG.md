@@ -48,6 +48,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- `IntuosOLEDImageEncoder.renderTextLabel` sizes a label to fit and wraps it
+  onto two centered lines when that reads larger. A long label used to clip:
+  "Toggle Display" showed as `gle Disp`.
 - `DescriptorField.unit` and `unitExponent` hold the right items. The parser
   had the two tags swapped. `unitExponent` reads the spec's 4-bit nibble as
   signed, so `0x0D` is −3.

@@ -57,11 +57,38 @@ public enum IntuosOLEDImageEncoder: Sendable {
         interleaveRows(grayscale, rotated180: false)
     }
 
-    /// Renders a short label as white-on-black 64×32 grayscale for
-    /// `interleaveRows`: one centered line, clipped rather than wrapped.
+    /// The largest size tried; a short label renders at it on one line.
+    private static let maxFontSize: CGFloat = 18
+    /// Below this the render stops shrinking and clips.
+    private static let minFontSize: CGFloat = 6
+    /// Blank rows between wrapped lines. Antialiasing fills one, so a single
+    /// row runs the lines together.
+    private static let lineGap: CGFloat = 2
+    /// Dark rows and columns kept clear at each edge.
+    private static let margin: CGFloat = 1
+
+    /// Renders a label as white-on-black 64×32 grayscale for
+    /// `interleaveRows`, centered and sized to fit. A label wraps onto two
+    /// lines when that reads larger than one line; "Toggle Display" is about
+    /// 130 px wide at 18 pt.
     public static func renderTextLabel(_ text: String) -> [UInt8] {
-        guard !text.isEmpty else {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             return [UInt8](repeating: 0, count: width * height)
+        }
+
+        // A tie stays on one line. A word is cut in half only when it can't
+        // fit on one line at any size.
+        let single = fittedSize(for: [trimmed])
+        let split = splitAtSeparator(trimmed) ?? (single == nil ? splitInHalf(trimmed) : nil)
+        let both = split.flatMap { fittedSize(for: $0) }
+        let lines: [String], size: CGFloat
+        if let single, single >= (both ?? 0) {
+            (lines, size) = ([trimmed], single)
+        } else if let split, let both {
+            (lines, size) = (split, both)
+        } else {
+            (lines, size) = ([trimmed], single ?? minFontSize)
         }
 
         let colorSpace = CGColorSpaceCreateDeviceGray()
@@ -77,27 +104,129 @@ public enum IntuosOLEDImageEncoder: Sendable {
         context.setFillColor(gray: 0.0, alpha: 1.0)
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-        let font = CTFontCreateWithName("Helvetica" as CFString, 18, nil)
-        let attributes: [CFString: Any] = [
-            kCTFontAttributeName: font,
-            kCTForegroundColorAttributeName: CGColor(gray: 1.0, alpha: 1.0),
-        ]
-        let attributedString = CFAttributedStringCreate(
-            nil, text as CFString, attributes as CFDictionary)
-        let line = CTLineCreateWithAttributedString(attributedString!)
-        let lineBounds = CTLineGetBoundsWithOptions(line, [])
-
-        // CGContext's origin is bottom-left; center the text both axes.
-        let x = (CGFloat(width) - lineBounds.width) / 2 - lineBounds.origin.x
-        let y = (CGFloat(height) - lineBounds.height) / 2 - lineBounds.origin.y
-        context.textPosition = CGPoint(x: x, y: y)
-        CTLineDraw(line, context)
+        draw(lines, at: size, in: context)
 
         guard let data = context.data else {
             return [UInt8](repeating: 0, count: width * height)
         }
-        return Array(UnsafeBufferPointer(
+        let bitmap = Array(UnsafeBufferPointer(
             start: data.assumingMemoryBound(to: UInt8.self),
             count: width * height))
+        return centeredByInk(bitmap)
+    }
+
+    private static func makeLine(_ text: String, size: CGFloat) -> CTLine? {
+        guard !text.isEmpty else { return nil }
+        let font = CTFontCreateWithName("Helvetica" as CFString, size, nil)
+        let attributes: [CFString: Any] = [
+            kCTFontAttributeName: font,
+            kCTForegroundColorAttributeName: CGColor(gray: 1.0, alpha: 1.0),
+        ]
+        guard let attributed = CFAttributedStringCreate(
+            nil, text as CFString, attributes as CFDictionary)
+        else { return nil }
+        return CTLineCreateWithAttributedString(attributed)
+    }
+
+    /// One line's bounds at `size`, with the baseline at 0.
+    private static func bounds(of text: String, size: CGFloat) -> CGRect {
+        guard let line = makeLine(text, size: size) else { return .zero }
+        return CTLineGetBoundsWithOptions(line, [])
+    }
+
+    /// Ascent plus descent. The 1.2 em line box would cost a couple of font
+    /// sizes on a 32 px display.
+    private static func lineHeight(at size: CGFloat) -> CGFloat {
+        let font = CTFontCreateWithName("Helvetica" as CFString, size, nil)
+        return CTFontGetAscent(font) + CTFontGetDescent(font)
+    }
+
+    /// The largest size at which `lines` fit inside the margins, or nil.
+    private static func fittedSize(for lines: [String]) -> CGFloat? {
+        guard !lines.isEmpty else { return nil }
+        let availWidth = CGFloat(width) - margin * 2
+        let availHeight = CGFloat(height) - margin * 2
+        for size in stride(from: maxFontSize, through: minFontSize, by: -1) {
+            let widest = lines.map { bounds(of: $0, size: size).width }.max() ?? 0
+            let blockHeight = lineHeight(at: size) * CGFloat(lines.count)
+                + lineGap * CGFloat(lines.count - 1)
+            if widest <= availWidth, blockHeight <= availHeight {
+                return size
+            }
+        }
+        return nil
+    }
+
+    /// Two lines split at the separator (space, `+`, `/`, …) that best evens
+    /// their widths, or nil when the label has none.
+    private static func splitAtSeparator(_ text: String) -> [String]? {
+        let separators: Set<Character> = [" ", "+", "/", "|", "&", "-", "_", "·"]
+        let chars = Array(text)
+        var best: (lines: [String], width: CGFloat)?
+        for i in 1..<chars.count where separators.contains(chars[i - 1]) {
+            let first = String(chars[0..<i]).trimmingCharacters(in: .whitespaces)
+            let second = String(chars[i...]).trimmingCharacters(in: .whitespaces)
+            guard !first.isEmpty, !second.isEmpty else { continue }
+            let width = max(bounds(of: first, size: maxFontSize).width,
+                            bounds(of: second, size: maxFontSize).width)
+            if width < best?.width ?? .greatestFiniteMagnitude {
+                best = ([first, second], width)
+            }
+        }
+        return best?.lines
+    }
+
+    private static func splitInHalf(_ text: String) -> [String]? {
+        let chars = Array(text)
+        guard chars.count > 1 else { return nil }
+        let mid = chars.count / 2
+        return [String(chars[0..<mid]), String(chars[mid...])]
+    }
+
+    /// Draws `lines` top down, each centered on its own. `centeredByInk`
+    /// settles the final placement.
+    private static func draw(_ lines: [String], at size: CGFloat, in context: CGContext) {
+        let lineHeight = lineHeight(at: size)
+        // CGContext's origin is bottom left.
+        var baseline = CGFloat(height) - margin - lineHeight
+        for text in lines {
+            guard let line = makeLine(text, size: size) else { continue }
+            let box = CTLineGetBoundsWithOptions(line, [])
+            context.textPosition = CGPoint(
+                x: (CGFloat(width) - box.width) / 2 - box.origin.x,
+                y: baseline - box.origin.y)
+            CTLineDraw(line, context)
+            baseline -= lineHeight + lineGap
+        }
+    }
+
+    /// Moves the lit pixels so their bounding box is centered. Line metrics
+    /// include leading and descent the glyphs may not use, which pushed
+    /// two-line labels against an edge.
+    private static func centeredByInk(_ buffer: [UInt8]) -> [UInt8] {
+        var x0 = width, x1 = -1, y0 = height, y1 = -1
+        for row in 0..<height {
+            for x in 0..<width where buffer[row * width + x] > 0 {
+                x0 = min(x0, x); x1 = max(x1, x)
+                y0 = min(y0, row); y1 = max(y1, row)
+            }
+        }
+        guard x1 >= x0, y1 >= y0 else { return buffer }
+
+        let dx = (width - (x1 - x0 + 1)) / 2 - x0
+        let dy = (height - (y1 - y0 + 1)) / 2 - y0
+        guard dx != 0 || dy != 0 else { return buffer }
+
+        var shifted = [UInt8](repeating: 0, count: width * height)
+        for row in y0...y1 {
+            let targetRow = row + dy
+            guard targetRow >= 0, targetRow < height else { continue }
+            for x in x0...x1 {
+                let targetX = x + dx
+                guard targetX >= 0, targetX < width else { continue }
+                shifted[targetRow * width + targetX] = buffer[row * width + x]
+            }
+        }
+        return shifted
     }
 }
