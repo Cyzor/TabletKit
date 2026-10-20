@@ -46,6 +46,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   recordings of Huion tablets and tested on a Xencelabs pen display; dials and
   touch strips aren't decoded yet.
 
+- `Intuos4DisplayProperties`, which builds Intuos4 report 0x20 (ring LED
+  slot and brightness, ExpressKey display brightness) and describes the idle
+  cycle Wacom's driver runs on it: displays dimmed after 5 minutes without
+  input, dark after 10. Bytes, timing and models are read from Wacom's macOS
+  driver 6.3.41-2; tested on a PTK-640.
+
 ### Fixed
 
 - `IntuosOLEDImageEncoder.renderTextLabel` sizes a label to fit, wrapping it
