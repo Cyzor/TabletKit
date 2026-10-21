@@ -168,66 +168,27 @@ package struct Intuos3Decoder: TabletReportDecoder {
         }
         state.prevInProximity = true
 
-        // IntuosV1 coordinate decode: 16-bit BE with 1-bit fractional extension from byte 9.
-        let x = (report.be16(at: 2) << 1) | ((Int(report[9]) >> 1) & 1)
-        let y = (report.be16(at: 4) << 1) | (Int(report[9]) & 1)
+        let (x, y) = IntuosPenPacket.position(report)
         state.lastX = x
         state.lastY = y
 
-        // Mouse subtype 0x06 (KC-100 cordless mouse / Intuos3 cursor).
-        if subtype == 0x06 {
-            let buttons = report[6]
-            let whlByte = report[7]
-            let wheelDelta = Int((whlByte & 0x80) >> 7) - Int((whlByte & 0x40) >> 6)
-            results.append(
-                .pen(
-                    TabletPoint(
-                        x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
-                        pressure: 0, maxPressure: spec.maxPressure,
-                        tiltX: 0, tiltY: 0, rotation: 0.0,
-                        penButton1: (buttons & 0x01) != 0,
-                        penButton2: (buttons & 0x04) != 0,
-                        eraser: false, inProximity: true, hoverDistance: 0,
-                        mouseMiddleButton: (buttons & 0x02) != 0,
-                        mouseWheelDelta: wheelDelta)))
+        if let mouse = IntuosPenPacket.mousePoint(report, subtype: subtype, x: x, y: y, spec: spec) {
+            results.append(.pen(mouse))
             return results
         }
 
-        // Mouse subtype 0x08 (2D cursor / 4D mouse).
-        if subtype == 0x08 {
-            let btnByte = report[8]
-            let wheelDelta = Int(btnByte & 0x01) - Int((btnByte & 0x02) >> 1)
-            results.append(
-                .pen(
-                    TabletPoint(
-                        x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
-                        pressure: 0, maxPressure: spec.maxPressure,
-                        tiltX: 0, tiltY: 0, rotation: 0.0,
-                        penButton1: (btnByte & 0x04) != 0,
-                        penButton2: (btnByte & 0x10) != 0,
-                        eraser: false, inProximity: true, hoverDistance: 0,
-                        mouseMiddleButton: (btnByte & 0x08) != 0,
-                        mouseWheelDelta: wheelDelta)))
-            return results
-        }
-
-        // Pen path — same pressure/tilt encoding as IntuosV1.
-        // 11-bit pressure; right-shift for 10-bit (maxPressure ≤ 1023) devices per kernel spec.
-        // Intuos3 devices (PTZ-xxx) max out at 2046 — below the 2047 Intuos5 threshold,
-        // so status bit 0 is never part of the 11-bit pressure field for this family.
-        let statusBit = (spec.maxPressure > 1023) ? (Int(status) & 1) : 0
-        let rawPressure = (Int(report[6]) << 3) | ((Int(report[7] & 0xC0)) >> 5) | statusBit
-        let pressure = spec.maxPressure <= 1023 ? rawPressure >> 1 : rawPressure
-        let tiltXRaw = (((Int(report[7]) << 1) & 0x7E) | (Int(report[8]) >> 7)) - 64
-        let tiltYRaw = (Int(report[8]) & 0x7F) - 64
+        // Pen path — same pressure and tilt encoding as IntuosV1.
+        let pressure = IntuosPenPacket.pressure(
+            report, maxPressure: spec.maxPressure, statusBit: spec.maxPressure > 1023)
+        let tilt = IntuosPenPacket.tilt(report)
 
         results.append(
             .pen(
                 TabletPoint(
                     x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
                     pressure: pressure, maxPressure: spec.maxPressure,
-                    tiltX: Double(tiltXRaw) / 63.0,
-                    tiltY: Double(tiltYRaw) / 63.0,
+                    tiltX: tilt.x,
+                    tiltY: tilt.y,
                     rotation: 0.0,
                     penButton1: (status & 0x02) != 0,
                     penButton2: (status & 0x04) != 0,
@@ -237,24 +198,14 @@ package struct Intuos3Decoder: TabletReportDecoder {
         return results
     }
 
-    // MARK: - Tool-change packet (identical to IntuosV1Decoder)
+    // MARK: - Tool-change packet
 
     private func decodeToolChange(
         report: HIDReport,
         state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        let serial =
-            UInt32(report[3] & 0x0F) << 28
-            | UInt32(report[4]) << 20
-            | UInt32(report[5]) << 12
-            | UInt32(report[6]) << 4
-            | UInt32(report[7]) >> 4
-        let toolCode =
-            UInt16(report[2]) << 4
-            | UInt16(report[3]) >> 4
-            | UInt16(report[7] & 0x0F) << 12
-            | UInt16(report[8] & 0xF0) << 4
+        let (serial, toolCode) = IntuosPenPacket.toolChange(report)
 
         state.lastSerial = serial
         state.currentToolCode = toolCode

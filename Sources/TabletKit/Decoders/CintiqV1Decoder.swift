@@ -164,28 +164,16 @@ package struct CintiqV1Decoder: TabletReportDecoder {
                 if btn2ClearCount >= Self.buttonClearThreshold { lastButton2 = false }
             }
 
-            // Coordinate decode: 16-bit BE with 1-bit fractional extension from byte 9.
-            // Kernel: X = (BE16(d2:d3)<<1) | ((d9>>1)&1) — 17-bit.
-            state.lastX = (report.be16(at: 2) << 1) | ((Int(report[9]) >> 1) & 1)
-            state.lastY = (report.be16(at: 4) << 1) | (Int(report[9]) & 1)
-
-            // Tilt (kernel, signed ±63):
-            //   tiltX = (((d7<<1) & 0x7E) | (d8>>7)) - 64
-            //   tiltY = (d8 & 0x7F) - 64
+            (state.lastX, state.lastY) = IntuosPenPacket.position(report)
             if !inRangeOnly {
-                state.lastTiltX = Double((((Int(report[7]) << 1) & 0x7E) | (Int(report[8]) >> 7)) - 64) / 63.0
-                state.lastTiltY = Double((Int(report[8]) & 0x7F) - 64) / 63.0
+                (state.lastTiltX, state.lastTiltY) = IntuosPenPacket.tilt(report)
             }
         }
         // typeNibble 0x0A (airbrush wheel): not yet decoded; falls through with cached state.
 
-        // 11-bit: (d6<<3) | ((d7&0xC0)>>5) | (d1&1), as in the kernel. Only
-        // general packets carry it; other frames hold the last value, since
-        // a zero would break strokes into dots.
-        //
-        // On 10-bit hardware (maxPressure ≤ 1023) the 11-bit form reads 2×
-        // high and bit 0 isn't pressure, so shift right by one, as
-        // IntuosV1Decoder does. Captures of the 12WX and 21UX confirm it.
+        // Only general packets carry pressure; other frames hold the last
+        // value, since a zero would break strokes into dots. Captures of the
+        // 12WX and 21UX confirm the 10-bit halving.
         // `tipPressureOverride` stands in below when pressure is 0 but the
         // tip switch fired.
         let pressure: Int
@@ -193,8 +181,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
             lastPressure = 0
             pressure = 0
         } else if typeNibble <= 0x03 {
-            let raw11 = (Int(report[6]) << 3) | ((Int(report[7]) & 0xC0) >> 5) | (Int(status) & 1)
-            let raw = spec.maxPressure <= 1023 ? raw11 >> 1 : raw11
+            let raw = IntuosPenPacket.pressure(report, maxPressure: spec.maxPressure, statusBit: true)
             lastPressure = (raw == 0 && tipPressureOverride > 0) ? tipPressureOverride : raw
             pressure = lastPressure
         } else {
@@ -249,17 +236,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        let serial =
-            UInt32(report[3] & 0x0F) << 28
-            | UInt32(report[4]) << 20
-            | UInt32(report[5]) << 12
-            | UInt32(report[6]) << 4
-            | UInt32(report[7]) >> 4
-        let toolCode =
-            UInt16(report[2]) << 4
-            | UInt16(report[3]) >> 4
-            | UInt16(report[7] & 0x0F) << 12
-            | UInt16(report[8] & 0xF0) << 4
+        let (serial, toolCode) = IntuosPenPacket.toolChange(report)
 
         state.lastSerial = serial
         state.currentToolCode = toolCode
