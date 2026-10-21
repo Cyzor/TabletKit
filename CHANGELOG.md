@@ -9,10 +9,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
-- Intuos4 key displays dim after 5 minutes without input and turn off after
-  10, and any input wakes them. The ring LED stays lit. On models with key
-  displays, report 0x20 now turns the displays on explicitly, and the ring
-  brightens further while the pen is down.
+- On Intuos4 models with key displays, report 0x20 sets the displays' enable
+  bit along with their level.
 - **Source-breaking:** decoders take an `HIDReport` instead of a raw pointer
   and length. `TabletReportDecoder.decode(report:spec:state:deviceFamily:)`,
   `decodeBLEPenReport`, `decodeBLEPadReport`, and `decodeWirelessReport` all
@@ -27,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- `LabelControl.setKeyDisplayBrightness(_:)`, the Intuos4 key displays'
+  level, 0–15. 0 turns them off.
 - `ReportParser.makeDecoder()`, which creates the decoder for a report format.
   Formats added later need no change in your code.
 - `HIDReport`, and `decode(report:)` forms taking it on `GenericPenDecoder`

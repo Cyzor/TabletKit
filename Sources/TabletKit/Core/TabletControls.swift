@@ -108,10 +108,13 @@ public protocol LabelControl: AnyObject {
     /// Turn the key displays' images 180°, for a tablet used upside down
     /// (Intuos4).
     func setKeyOLEDsRotated180(_ rotated: Bool)
+    /// The key displays' brightness, 0–15; 0 turns them off (Intuos4).
+    func setKeyDisplayBrightness(_ level: Int)
 }
 
 extension LabelControl {
     public func setKeyOLEDsRotated180(_ rotated: Bool) {}
+    public func setKeyDisplayBrightness(_ level: Int) {}
 }
 
 /// A pen display's own panel settings, set over HID.
