@@ -17,7 +17,7 @@ package enum SessionRouting {
     package static func vendorGate(_ interface: any HIDInterface) -> VendorGate {
         let vendorID = interface.vendorID
         guard !WacomDeviceRegistry.vendorIDs.contains(vendorID) else { return .proceed(spec: nil) }
-        if let spec = drivableSpec(forVendorID: vendorID, productID: interface.productID) {
+        if let spec = VendorDeviceRegistry.drivableSpec(forVendorID: vendorID, productID: interface.productID) {
             return .proceed(spec: spec)
         }
         // Any other vendor's standard pen digitizer gets the generic floor.
@@ -27,35 +27,6 @@ package enum SessionRouting {
         let isPenDigitizer = interface.usagePage == 0x0D && interface.usage == 0x02
             && vendorID != 0x28BD && vendorID != 0xFEED
         return isPenDigitizer ? .proceed(spec: nil) : .recognizedOnly
-    }
-
-    /// The spec for a drivable non-Wacom device, from its vendor profile.
-    package static func drivableSpec(forVendorID vendorID: Int, productID: Int) -> TabletSpec? {
-        guard !WacomDeviceRegistry.vendorIDs.contains(vendorID),
-            let profile = VendorDeviceRegistry.drivableProfile(forVendorID: vendorID, productID: productID)
-        else { return nil }
-        // No coordinate range means an aux-only device: Quick Keys, whose
-        // dial is a bare encoder like the PTK-x70's.
-        let isAuxOnly = profile.maxX == nil
-        return TabletSpec(
-            productID: productID,
-            name: profile.productName,
-            format: .xencelabs,
-            maxX: profile.maxX ?? 0,
-            maxY: profile.maxY ?? 0,
-            maxPressure: profile.maxPressure ?? 8191,
-            buttonCount: profile.auxButtonCount ?? 0,
-            bezelButtonCount: profile.bezelButtonCount ?? 0,
-            hasTouchRing: isAuxOnly, hasMechanicalDial: isAuxOnly,
-            hasEraser: !isAuxOnly, hasTilt: !isAuxOnly,
-            tiltMaxDegrees: isAuxOnly ? nil : ReportFormat.xencelabs.tiltMaxDegrees,
-            isPenDisplay: profile.isPenDisplay,
-            seizeUSB: false,
-            // Without the tablet-mode handshake the device stays a mouse.
-            initSteps: [.outputReport([0x02, 0xB0, 0x04])],
-            confidence: .experimental,
-            activeWidthMM: profile.activeWidthMM,
-            activeHeightMM: profile.activeHeightMM)
     }
 
     /// Who an interface says it is.

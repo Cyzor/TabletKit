@@ -80,6 +80,39 @@ public enum VendorDeviceRegistry: Sendable {
         return profiles(forVendorID: vendorID, productID: productID).first
     }
 
+    /// The spec a drivable device runs with, built from its
+    /// ``drivableProfile(forVendorID:productID:)``, or nil when the device is
+    /// recognition-only. Available whether or not the device is connected.
+    ///
+    /// A profile with no coordinate range is an aux-only device, the Quick
+    /// Keys, whose dial is a bare encoder like the PTK-x70's. Only it gets a
+    /// ring: the pen tablets and displays have no keys or ring of their own.
+    public static func drivableSpec(forVendorID vendorID: Int, productID: Int) -> TabletSpec? {
+        guard let profile = drivableProfile(forVendorID: vendorID, productID: productID) else {
+            return nil
+        }
+        let isAuxOnly = profile.maxX == nil
+        return TabletSpec(
+            productID: productID,
+            name: profile.productName,
+            format: .xencelabs,
+            maxX: profile.maxX ?? 0,
+            maxY: profile.maxY ?? 0,
+            maxPressure: profile.maxPressure ?? 8191,
+            buttonCount: profile.auxButtonCount ?? 0,
+            bezelButtonCount: profile.bezelButtonCount ?? 0,
+            hasTouchRing: isAuxOnly, hasMechanicalDial: isAuxOnly,
+            hasEraser: !isAuxOnly, hasTilt: !isAuxOnly,
+            tiltMaxDegrees: isAuxOnly ? nil : ReportFormat.xencelabs.tiltMaxDegrees,
+            isPenDisplay: profile.isPenDisplay,
+            seizeUSB: false,
+            // Without the tablet-mode handshake the device stays a mouse.
+            initSteps: [.outputReport([0x02, 0xB0, 0x04])],
+            confidence: .experimental,
+            activeWidthMM: profile.activeWidthMM,
+            activeHeightMM: profile.activeHeightMM)
+    }
+
     /// If `productID` has a companion peripheral (per its profile's
     /// `companions` list) that's also present in `connectedProductIDs`,
     /// returns that companion's PID. Runtime-resolved rather than a static
