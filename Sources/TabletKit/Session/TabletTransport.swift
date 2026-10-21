@@ -143,9 +143,11 @@ public final class TabletTransport: Identifiable {
         interfaces.append(interface)
     }
 
-    /// Sends the init sequence again, as after sleep.
+    /// Sends the init sequence again, as after sleep, and repaints any key
+    /// displays sleep cleared.
     public func reawaken() {
         connection.reawaken()
+        output.restoreKeyDisplays()
     }
 
     /// Restores what the connect sequence changed and closes every interface.

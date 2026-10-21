@@ -301,6 +301,19 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         }
     }
 
+    /// System sleep clears an Intuos4's key images and display level, though
+    /// the labels sent before still match. Forgets them and sends the level
+    /// and every label again.
+    package func restoreKeyDisplays() {
+        queue.perform { [self] in
+            guard spec.hasKeyOLEDs, !isBluetooth else { return }
+            let shown = sentKeyLabels
+            sentKeyLabels = []
+            sendRingLED()
+            sendKeyDisplays(shown)
+        }
+    }
+
     /// Renders each changed label to its key's display, USB only. An image
     /// is about 1 KB of feature reports, so unchanged keys are skipped.
     private func sendKeyDisplays(_ labels: [String]) {

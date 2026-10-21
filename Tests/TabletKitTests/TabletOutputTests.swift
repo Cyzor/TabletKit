@@ -150,6 +150,20 @@ final class TabletOutputTests: XCTestCase {
         XCTAssertEqual(plainIface.writes, ["feature 20 04 0a 14 0a 00 00 00 00"], "no key displays: ignored")
     }
 
+    /// System sleep clears the key displays though their labels still match,
+    /// so a restore sends the level and every label again.
+    func testIntuos4KeyDisplaysRestoreAfterSleep() throws {
+        let (out, primary, queue) = try output(0x00B9)
+        out.setAuxKeyLabels(["Undo", "Redo"])
+        queue.drain()
+        let before = primary.writes.count
+        out.restoreKeyDisplays()
+        queue.drain()
+        let after = Array(primary.writes.dropFirst(before))
+        XCTAssertEqual(after.count, 1 + 2 * (1 + 4 + 1), "the LED report, then both keys")
+        XCTAssertTrue(after.first?.hasPrefix("feature 20 ") == true, "the level comes first")
+    }
+
     /// A relink addresses the puck, and the resync afterward puts the labels
     /// back even though they were already sent.
     /// The UI shows controls from `offeredControls` while a tablet is
