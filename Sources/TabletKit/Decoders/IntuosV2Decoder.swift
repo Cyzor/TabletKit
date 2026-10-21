@@ -124,30 +124,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             // Genuine firmware exit signal — both proximity and confidence lost.
             // Don't threshold this; kernel fires it immediately.
             if state.prevInProximity {
-                state.exitFrameCount = 0
-                state.prevInProximity = false
                 state.lastSerial = 0  // force toolEnter on re-entry
                 state.lastToolCode = 0
-                state.isEraser = false
-                // FIX: capture cached values before zeroing them so the exit event
-                // carries the pen's last known orientation rather than 0° / (0,0).
-                let exitRotation = state.lastRotation
-                let exitTiltX = state.lastTiltX
-                let exitTiltY = state.lastTiltY
-                state.lastRotation = 0.0
-                state.lastTiltX = 0.0
-                state.lastTiltY = 0.0
-                state.hasValidRotationFrame = false
-            state.hasValidTiltFrame = false
-                return [
-                    .pen(
-                        TabletPoint(
-                            x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
-                            pressure: 0, maxPressure: spec.maxPressure,
-                            tiltX: exitTiltX, tiltY: exitTiltY, rotation: exitRotation,
-                            penButton1: false, penButton2: false,
-                            eraser: false, inProximity: false, hoverDistance: 0))  // Exit event
-                ]
+                return [state.leaveProximity(spec: spec, holdingOrientation: true)]
             }
             return []
         }
@@ -158,30 +137,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         if !highConfidence {
             state.exitFrameCount += 1
             if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
-                state.exitFrameCount = 0
-                state.prevInProximity = false
                 state.lastSerial = 0  // force toolEnter on re-entry
                 state.lastToolCode = 0
-                state.isEraser = false
-                // FIX: capture cached values before zeroing — same mutation-before-use
-                // correction as the isExitSignal path above.
-                let exitRotation = state.lastRotation
-                let exitTiltX = state.lastTiltX
-                let exitTiltY = state.lastTiltY
-                state.lastRotation = 0.0
-                state.lastTiltX = 0.0
-                state.lastTiltY = 0.0
-                state.hasValidRotationFrame = false
-            state.hasValidTiltFrame = false
-                return [
-                    .pen(
-                        TabletPoint(
-                            x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
-                            pressure: 0, maxPressure: spec.maxPressure,
-                            tiltX: exitTiltX, tiltY: exitTiltY, rotation: exitRotation,
-                            penButton1: false, penButton2: false,
-                            eraser: false, inProximity: false, hoverDistance: 0))
-                ]
+                return [state.leaveProximity(spec: spec, holdingOrientation: true)]
             }
 
             // Below threshold, the pen is likely still down: repeat the last
@@ -559,5 +517,30 @@ extension IntuosV2Decoder {
         package var btTouchFrameStamps: [UInt16] = []
 
         package init() {}
+
+        /// Takes the pen out of range and returns the point that says so, at
+        /// the last position. `holdingOrientation` puts the last tilt and
+        /// rotation on that point instead of zeros, so the pen doesn't appear
+        /// to snap upright as it leaves.
+        mutating func leaveProximity(spec: DigitizerSpec, holdingOrientation: Bool = false) -> DecodeResult {
+            let tiltX = holdingOrientation ? lastTiltX : 0
+            let tiltY = holdingOrientation ? lastTiltY : 0
+            let rotation = holdingOrientation ? lastRotation : 0
+            exitFrameCount = 0
+            prevInProximity = false
+            isEraser = false
+            lastTiltX = 0
+            lastTiltY = 0
+            hasValidTiltFrame = false
+            lastRotation = 0
+            hasValidRotationFrame = false
+            return .pen(
+                TabletPoint(
+                    x: lastX, y: lastY, maxX: spec.maxX, maxY: spec.maxY,
+                    pressure: 0, maxPressure: spec.maxPressure,
+                    tiltX: tiltX, tiltY: tiltY, rotation: rotation,
+                    penButton1: false, penButton2: false,
+                    eraser: false, inProximity: false, hoverDistance: 0))
+        }
     }
 }

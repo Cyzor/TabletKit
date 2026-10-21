@@ -149,24 +149,8 @@ extension IntuosV2Decoder {
                 if i == 0 && state.exitFrameCount >= proximityExitFrames
                     && state.prevInProximity
                 {
-                    state.exitFrameCount = 0
-                    state.prevInProximity = false
-                    state.isEraser = false
-                    state.lastTiltX = 0.0
-                    state.lastTiltY = 0.0
-                    state.hasValidTiltFrame = false
-                    state.lastRotation = 0.0
-                    state.hasValidRotationFrame = false
                     state.lastToolCode = 0  // force toolEnter on re-entry
-                    results.append(
-                        .pen(
-                            TabletPoint(
-                                x: state.lastX, y: state.lastY,
-                                maxX: spec.maxX, maxY: spec.maxY,
-                                pressure: 0, maxPressure: spec.maxPressure,
-                                tiltX: 0, tiltY: 0, rotation: 0.0,
-                                penButton1: false, penButton2: false,
-                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    results.append(state.leaveProximity(spec: spec))
                 }
                 break
             }
@@ -182,24 +166,8 @@ extension IntuosV2Decoder {
             if isExitSignal {
                 // Genuine exit: fires immediately, no threshold.
                 if state.prevInProximity {
-                    state.exitFrameCount = 0
-                    state.prevInProximity = false
-                    state.isEraser = false
-                    state.lastTiltX = 0.0
-                    state.lastTiltY = 0.0
-                    state.hasValidTiltFrame = false
-                    state.lastRotation = 0.0
-                    state.hasValidRotationFrame = false
                     state.lastToolCode = 0  // force toolEnter on re-entry
-                    results.append(
-                        .pen(
-                            TabletPoint(
-                                x: state.lastX, y: state.lastY,
-                                maxX: spec.maxX, maxY: spec.maxY,
-                                pressure: 0, maxPressure: spec.maxPressure,
-                                tiltX: 0, tiltY: 0, rotation: 0.0,
-                                penButton1: false, penButton2: false,
-                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    results.append(state.leaveProximity(spec: spec))
                 }
                 break
             }
@@ -215,24 +183,8 @@ extension IntuosV2Decoder {
             if !inRange {
                 state.exitFrameCount += 1
                 if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
-                    state.exitFrameCount = 0
-                    state.prevInProximity = false
-                    state.isEraser = false
-                    state.lastTiltX = 0.0
-                    state.lastTiltY = 0.0
-                    state.hasValidTiltFrame = false
-                    state.lastRotation = 0.0
-                    state.hasValidRotationFrame = false
                     state.lastToolCode = 0  // force toolEnter on re-entry
-                    results.append(
-                        .pen(
-                            TabletPoint(
-                                x: state.lastX, y: state.lastY,
-                                maxX: spec.maxX, maxY: spec.maxY,
-                                pressure: 0, maxPressure: spec.maxPressure,
-                                tiltX: 0, tiltY: 0, rotation: 0.0,
-                                penButton1: false, penButton2: false,
-                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    results.append(state.leaveProximity(spec: spec))
                     break
                 }
                 // Continue to decode point data below — don't break on boundary noise
@@ -570,23 +522,7 @@ extension IntuosV2Decoder {
             // threshold — see `decodeBTFrame`'s doc comment.
             if !inProx && !inRange {
                 if state.prevInProximity {
-                    state.exitFrameCount = 0
-                    state.prevInProximity = false
-                    state.isEraser = false
-                    state.lastTiltX = 0.0
-                    state.lastTiltY = 0.0
-                    state.hasValidTiltFrame = false
-                    state.lastRotation = 0.0
-                    state.hasValidRotationFrame = false
-                    results.append(
-                        .pen(
-                            TabletPoint(
-                                x: state.lastX, y: state.lastY,
-                                maxX: spec.maxX, maxY: spec.maxY,
-                                pressure: 0, maxPressure: spec.maxPressure,
-                                tiltX: 0, tiltY: 0, rotation: 0.0,
-                                penButton1: false, penButton2: false,
-                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    results.append(state.leaveProximity(spec: spec))
                 }
                 break
             }
@@ -595,23 +531,7 @@ extension IntuosV2Decoder {
             if !inRange {
                 state.exitFrameCount += 1
                 if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
-                    state.exitFrameCount = 0
-                    state.prevInProximity = false
-                    state.isEraser = false
-                    state.lastTiltX = 0.0
-                    state.lastTiltY = 0.0
-                    state.hasValidTiltFrame = false
-                    state.lastRotation = 0.0
-                    state.hasValidRotationFrame = false
-                    results.append(
-                        .pen(
-                            TabletPoint(
-                                x: state.lastX, y: state.lastY,
-                                maxX: spec.maxX, maxY: spec.maxY,
-                                pressure: 0, maxPressure: spec.maxPressure,
-                                tiltX: 0, tiltY: 0, rotation: 0.0,
-                                penButton1: false, penButton2: false,
-                                eraser: false, inProximity: false, hoverDistance: 0)))
+                    results.append(state.leaveProximity(spec: spec))
                     break
                 }
                 // Continue to decode point data — don't suppress output on boundary noise
