@@ -52,6 +52,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Intuos4 key displays come back after system sleep. `TabletTransport.reawaken()`
+  sends their level and every label again; before, they stayed dark until a
+  label changed.
 - Intuos4 S (PTK-440) no longer has `hasKeyOLEDs`: it has no key displays,
   so it doesn't offer `.labels`.
 - `IntuosOLEDImageEncoder.renderTextLabel` sizes a label to fit and wraps it
