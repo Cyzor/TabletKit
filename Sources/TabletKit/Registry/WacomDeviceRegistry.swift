@@ -721,7 +721,8 @@ public enum WacomDeviceRegistry: Sendable {
     public static let knownDevices: [TabletSpec] = [
 
         // ── PenPartner / Graphire 1–4 ─────────────────────────────────────────
-        // graphire parser: 8-byte Report ID 0x01, ≤511 pressure levels.
+        // graphire parser: 8-byte Report ID 0x02 once the [0x02, 0x02] init takes
+        // the tablet out of mouse mode; ≤511 pressure levels.
         .init(
             // The kernel names this PID the Cintiq Partner (PTU-600), not
             // PenPartner (0x0000). No decoder handles the PTU family, so it's
@@ -746,32 +747,32 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0004, name: "Graphire",
             format: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, activeWidthMM: 127, activeHeightMM: 93),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0010, name: "Graphire",  // cross-referenced: linuxwacom + OTD
             format: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire-usb.tablet (Width=127, Height=102)
-            seizeUSB: false, confidence: .crossReferenced,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0011, name: "Graphire 2 (4×5)",  // ⚠ estimated; kernel 0x11 = Graphire2 4×5
             format: .graphire, maxX: 10206, maxY: 7422, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire2-4x5.tablet (Width=127, Height=102)
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 127, activeHeightMM: 93),
         .init(
             productID: 0x0012, name: "Graphire 2 (5×7)",  // ⚠ estimated; kernel 0x12 = Graphire2 5×7
             format: .graphire, maxX: 13918, maxY: 10206, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, confidence: .crossReferenced, activeWidthMM: 178, activeHeightMM: 127),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 178, activeHeightMM: 127),
         .init(
             productID: 0x0013, name: "Graphire 3 (4×5)",  // ⚠ estimated
             format: .graphire, maxX: 10208, maxY: 7424, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire3-4x5.tablet (Width=127, Height=102)
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 93),
         .init(
@@ -780,14 +781,14 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0014, name: "Graphire 3 (6×8)",  // ⚠ estimated
             format: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             productID: 0x0015, name: "Graphire 4 (4×5)",  // ⚠ estimated
             format: .graphire, maxX: 10208, maxY: 7424, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
             // dimensions: libwacom wacom-graphire4-4x5.tablet (Width=127, Height=102)
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 93),
         .init(
@@ -795,7 +796,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0016, name: "Graphire 4 (6×8)",  // ⚠ estimated
             format: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             // Kernel WACOM_MO "BambooFun 4x5"; libwacom CTE-450 (NumRings=1).
@@ -804,7 +805,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0017, name: "Bamboo Fun small (CTE-450)",  // ⚠ from kernel/libwacom/OTD
             format: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 148, activeHeightMM: 92),
 
         // ── Volito / PenStation ───────────────────────────────────────────────
@@ -820,7 +821,7 @@ public enum WacomDeviceRegistry: Sendable {
             // arithmetic that came out half the real value on the original
             // Graphire. OTD has no Volito config to check against, so a
             // capture would settle this too.
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 127, activeHeightMM: 102),
         .init(
@@ -831,7 +832,7 @@ public enum WacomDeviceRegistry: Sendable {
             // dimensions: input-wacom 4.18 wacom_features_0x61 (3250/50 lpmm × 2320/50 lpmm).
             // Not in libwacom; the kernel WACOM_VOLITO_RES=50 constant proved
             // ~25% off for 0x0060 — these values may be similarly low.
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 65, activeHeightMM: 46.4),
         .init(
             productID: 0x0062, name: "Volito 2",  // ⚠ estimated
@@ -841,7 +842,7 @@ public enum WacomDeviceRegistry: Sendable {
             // wacom-volito-4x5.tablet (Width=127, Height=102). Volito 2 shares
             // identical kernel max coords with Volito 1 → almost certainly the
             // same physical size. Not in libwacom directly.
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 127, activeHeightMM: 102),
         .init(
             // Kernel WACOM_MO "Wacom Bamboo"; libwacom MTE-450 (NumRings=1,
@@ -851,7 +852,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0065, name: "Bamboo (MTE-450)",  // ⚠ from kernel/libwacom/OTD
             format: .graphire, maxX: 14760, maxY: 9225, maxPressure: 511,
             buttonCount: 4, hasTouchRing: true, hasEraser: true,
-            seizeUSB: false,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 152, activeHeightMM: 102),
 
         // tiltMaxDegrees: 64.0 below (Cintiq 21UX through the end of the
@@ -2563,7 +2564,7 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0019, name: "Bamboo1 Medium",  // ⚠ from kernel (graphire family)
             format: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
-            seizeUSB: false, confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
             productID: 0x0047, name: "Intuos 2 (6×8, alt)",  // ⚠ from kernel — second XD-0608-U PID
             // Same 6×8 active area as 0x0021 (GD-0608-U) — see the Intuos 1
@@ -2576,12 +2577,12 @@ public enum WacomDeviceRegistry: Sendable {
             productID: 0x0063, name: "Volito 2 (2×3)",  // ⚠ from kernel
             format: .graphire, maxX: 3248, maxY: 2320, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, confidence: .crossReferenced),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced),
         .init(
             productID: 0x0064, name: "PenPartner2",  // ⚠ from kernel — sibling of PenStation2 0x0061
             format: .graphire, maxX: 3250, maxY: 2320, maxPressure: 511,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, confidence: .crossReferenced),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced),
         .init(
             // Active area 479.2×271.3mm per Wacom's DTK-2241/DTH-2242 booklet,
             // matching the kernel's maxX/maxY at 200 lpmm.
