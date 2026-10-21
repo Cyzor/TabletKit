@@ -337,7 +337,9 @@ def swift_int(n: Optional[int]) -> str:
 def swift_double(x: Optional[float]) -> str:
     if x is None:
         return "nil"
-    return str(int(x)) if float(x).is_integer() else f"{x:g}"
+    # Every digit upstream gave: OTD sizes carry up to four decimals, which
+    # `:g` would round off.
+    return str(int(x)) if float(x).is_integer() else repr(float(x))
 
 
 def swift_bool(b: Optional[bool]) -> str:

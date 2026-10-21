@@ -22,7 +22,6 @@ Output goes to stdout.  Redirect to a file and paste into WacomDeviceRegistry.sw
 
 import argparse
 import base64
-import glob
 import json
 import os
 import sys
@@ -76,19 +75,6 @@ TYPE_TO_PARSER = {
 }
 
 WACOM_VENDOR_ID = 1386  # 0x056A
-
-
-def parse_product_id(raw) -> Optional[int]:
-    """Accept int, decimal string, or '0xNNNN' hex string."""
-    if isinstance(raw, int):
-        return raw
-    if isinstance(raw, str):
-        raw = raw.strip()
-        try:
-            return int(raw, 0)  # handles "0x0357" or "871"
-        except ValueError:
-            return None
-    return None
 
 
 def map_parser_name(name: str) -> Optional[str]:
@@ -160,7 +146,7 @@ def extract_identifiers(cfg: dict) -> list[DeviceIdent]:
             if not isinstance(di, dict):
                 continue
             vid = di.get("VendorID", 0)
-            pid = parse_product_id(di.get("ProductID"))
+            pid = rl.parse_pid(di.get("ProductID"))
             if not pid or int(vid) != WACOM_VENDOR_ID:
                 continue
             rp  = di.get("ReportParser", "")
@@ -171,7 +157,7 @@ def extract_identifiers(cfg: dict) -> list[DeviceIdent]:
 
     # ── Legacy format ─────────────────────────────────────────────────────────
     vid = cfg.get("VendorID", 0)
-    pid = parse_product_id(cfg.get("ProductID"))
+    pid = rl.parse_pid(cfg.get("ProductID"))
     if pid and int(vid) == WACOM_VENDOR_ID:
         rp  = cfg.get("ReportParser", "")
         irl = int(cfg.get("InputReportLength", 0))
@@ -304,16 +290,6 @@ def extract_seize_usb(cfg: dict) -> bool:
     return False
 
 
-# ── Swift formatting ──────────────────────────────────────────────────────────
-
-def swift_bytes_literal(byte_list: list[int]) -> str:
-    return "[" + ", ".join(f"0x{b:02X}" for b in byte_list) + "]"
-
-
-def swift_bool(b: bool) -> str:
-    return "true" if b else "false"
-
-
 # ── Main per-file processing ──────────────────────────────────────────────────
 
 def process_config(path: str, include_existing: bool) -> list[str]:
@@ -383,8 +359,8 @@ def process_config(path: str, include_existing: bool) -> list[str]:
         fi1 = init_reports[0] if len(init_reports) >= 1 else None
         fi2 = init_reports[1] if len(init_reports) >= 2 else None
 
-        fi1_str = swift_bytes_literal(fi1) if fi1 else "nil"
-        fi2_str = swift_bytes_literal(fi2) if fi2 else "nil"
+        fi1_str = rl.swift_bytes_literal(fi1) if fi1 else "nil"
+        fi2_str = rl.swift_bytes_literal(fi2) if fi2 else "nil"
 
         # Emit featureInit2Delay only when non-default (0.15 s)
         delay_str = ""
@@ -401,19 +377,13 @@ def process_config(path: str, include_existing: bool) -> list[str]:
             f'              format: .{parser}, maxX: {max_x:6d}, maxY: {max_y:6d}, '
             f'maxPressure: {max_p:5d},',
             f'              buttonCount: {button_count}, hasTouchRing: '
-            f'{swift_bool(has_touch)}, hasEraser: {swift_bool(has_eraser)},',
-            f'              featureInit: {fi1_str}, seizeUSB: {swift_bool(seize_usb)}'
+            f'{rl.swift_bool(has_touch)}, hasEraser: {rl.swift_bool(has_eraser)},',
+            f'              featureInit: {fi1_str}, seizeUSB: {rl.swift_bool(seize_usb)}'
             + fi2_line + '),',
         ]
         entries.append("\n".join(lines))
 
     return entries
-
-
-def find_otd_configs(base: str) -> list[str]:
-    """Recursively find all *.json files under base."""
-    paths = sorted(glob.glob(os.path.join(base, "**", "*.json"), recursive=True))
-    return paths
 
 
 def main():
@@ -448,7 +418,7 @@ def main():
         print(f"ERROR: not a directory: {configs_dir}", file=sys.stderr)
         sys.exit(1)
 
-    json_files = find_otd_configs(configs_dir)
+    json_files = rl.find_otd_configs(configs_dir)
     if not json_files:
         print(f"ERROR: no *.json files found under {configs_dir}", file=sys.stderr)
         sys.exit(1)

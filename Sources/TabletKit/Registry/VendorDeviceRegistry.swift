@@ -2,15 +2,15 @@
 //
 // Vendor-neutral recognition registry for non-Wacom tablets.
 //
-// Imported from OpenTabletDriver's per-vendor configs by the app repo's
-// `tools/registry/import_vendor_configs.py`. The generated entries only name
+// Imported from OpenTabletDriver's per-vendor configs by
+// `tools/import_vendor_configs.py`. The generated entries only name
 // a device, so the app can offer a log capture instead of "unknown device".
 // The hand-maintained `drivableProfile(forVendorID:productID:)` below marks
 // the devices MockTab can drive.
 //
-// To refresh from a newer OTD snapshot, from the app repo:
+// To refresh from a newer OTD snapshot:
 //
-//     python3 tools/registry/import_vendor_configs.py \
+//     python3 tools/import_vendor_configs.py \
 //         /path/to/OpenTabletDriver/.../Configurations \
 //         --vendors Huion Xencelabs XP-Pen Gaomon UGEE Parblo \
 //         > /tmp/entries.swift
@@ -201,7 +201,7 @@ public enum VendorDeviceRegistry: Sendable {
     // MARK: - Registry
 
     public static let knownDevices: [VendorDeviceProfile] = [
-        // BEGIN GENERATED — do not hand-edit, regenerate via the app repo's tools/registry/import_vendor_configs.py
+        // BEGIN GENERATED — do not hand-edit, regenerate via tools/import_vendor_configs.py
         VendorDeviceProfile(
             vendor: "Huion",
             vendorID: 0x256C, productID: 0x0060,

@@ -82,7 +82,7 @@ final class VendorDeviceRegistryTests: XCTestCase {
         let vendors = Set(VendorDeviceRegistry.knownDevices.map(\.vendor))
         XCTAssertEqual(vendors, expected,
                        "Unexpected vendor set: \(vendors). "
-                       + "Re-import via tools/registry/import_vendor_configs.py with --vendors Huion Xencelabs XP-Pen Gaomon UGEE Parblo.")
+                       + "Re-import via tools/import_vendor_configs.py with --vendors Huion Xencelabs XP-Pen Gaomon UGEE Parblo.")
     }
 
     // MARK: - Huion same-PID-many-products invariant
