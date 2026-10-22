@@ -140,9 +140,9 @@ final class GraphireDecoderTests: XCTestCase {
 
     func testMouseWheelPositiveByte() {
         var st = GraphireDecoder.State()
-        // toolField=2 → mouse path; d[6]=0x01 → Int8(bitPattern:0x01)=1, * -1 = -1
+        // Graphire 1–3 (no pad): d[6]=0x01 → -(signed)1 = -1
         let b = makePen(status: 0x80 | 0x40, byte6: 0x01)
-        let r = decode(b, state: &st)
+        let r = decode(b, state: &st, spec: penPartner)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
         XCTAssertEqual(pt.mouseWheelDelta, -1)
@@ -150,12 +150,25 @@ final class GraphireDecoderTests: XCTestCase {
 
     func testMouseWheelNegativeByte() {
         var st = GraphireDecoder.State()
-        // d[6]=0xFF → Int8(bitPattern:0xFF) = -1, * -1 = +1
+        // d[6]=0xFF → -(signed)-1 = +1
         let b = makePen(status: 0x80 | 0x40, byte6: 0xFF)
-        let r = decode(b, state: &st)
+        let r = decode(b, state: &st, spec: penPartner)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
         XCTAssertEqual(pt.mouseWheelDelta, 1)
+    }
+
+    /// Graphire 4 and Bamboo Fun mice send the wheel in d[7] bits 0–2 and
+    /// leave d[6] for distance.
+    func testG4MouseWheelFromByte7() {
+        for (byte7, expected) in [(UInt8(0x01), -1), (0x07, 1), (0x00, 0)] {
+            var st = GraphireDecoder.State()
+            let b = makePen(status: 0x80 | 0x40, byte6: 0x2A, byte7: byte7)
+            guard case .pen(let pt)? = decode(b, state: &st).first(where: {
+                if case .pen = $0 { return true }; return false
+            }) else { return XCTFail() }
+            XCTAssertEqual(pt.mouseWheelDelta, expected, "d[7]=0x\(String(byte7, radix: 16))")
+        }
     }
 
     // MARK: - Hover distance

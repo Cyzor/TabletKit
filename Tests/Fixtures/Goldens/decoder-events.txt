@@ -9,13 +9,13 @@
 0x0012 inputs=1053 pen=236 tool=33 pad=0 dial=0 touch=0 device=0 digest=89c12dcee436746d  # Graphire 2 (5×7)
 0x0013 inputs=1052 pen=341 tool=18 pad=0 dial=0 touch=0 device=0 digest=11f39b70f8d72610  # Graphire 3 (4×5)
 0x0014 inputs=1037 pen=286 tool=28 pad=0 dial=0 touch=0 device=0 digest=38d75842e37c54d3  # Graphire 3 (6×8)
-0x0015 inputs=1040 pen=275 tool=38 pad=220 dial=0 touch=0 device=0 digest=26e504e034e6f30c  # Graphire 4 (4×5)
-0x0016 inputs=1044 pen=265 tool=23 pad=274 dial=0 touch=0 device=0 digest=2331cd5522721b7a  # Graphire 4 (6×8)
-0x0017 inputs=1042 pen=253 tool=26 pad=369 dial=0 touch=0 device=0 digest=d58b678911a85441  # Bamboo Fun small (CTE-450)
+0x0015 inputs=1040 pen=275 tool=38 pad=220 dial=0 touch=0 device=0 digest=06f11788cb6eea5c  # Graphire 4 (4×5)
+0x0016 inputs=1044 pen=265 tool=23 pad=274 dial=0 touch=0 device=0 digest=5838a3bd3586cd23  # Graphire 4 (6×8)
+0x0017 inputs=1042 pen=253 tool=26 pad=369 dial=0 touch=0 device=0 digest=352280ecafb632cf  # Bamboo Fun small (CTE-450)
 0x0060 inputs=1031 pen=233 tool=40 pad=0 dial=0 touch=0 device=0 digest=4cdf8e565d07d630  # Volito
 0x0061 inputs=1045 pen=305 tool=35 pad=0 dial=0 touch=0 device=0 digest=bdcb61bb1453a928  # PenStation2
 0x0062 inputs=1062 pen=385 tool=24 pad=0 dial=0 touch=0 device=0 digest=0c6684543e03c6f7  # Volito 2
-0x0065 inputs=1044 pen=289 tool=35 pad=256 dial=0 touch=0 device=0 digest=d1c3f6120c468c19  # Bamboo (MTE-450)
+0x0065 inputs=1044 pen=289 tool=35 pad=256 dial=0 touch=0 device=0 digest=652b40bc4577e048  # Bamboo (MTE-450)
 0x003F inputs=1044 pen=173 tool=30 pad=246 dial=0 touch=0 device=0 digest=4142d1b6b262b58f  # Cintiq 21UX (DTZ-2100)
 0x0020 inputs=1057 pen=17 tool=13 pad=254 dial=0 touch=0 device=189 digest=1643ed6e09a5efaf  # Intuos 4×5
 0x0021 inputs=1053 pen=171 tool=78 pad=268 dial=0 touch=0 device=70 digest=e12a197f7bcc499d  # Intuos 6×8
@@ -72,7 +72,7 @@
 0x03DC inputs=1048 pen=139 tool=27 pad=146 dial=0 touch=36 device=223 digest=39ced1820923f34a  # Intuos Pro S (PTH-460)
 0x006A inputs=1043 pen=291 tool=24 pad=0 dial=0 touch=0 device=0 digest=f251e9bde6389712  # Wacom CTE-460
 0x006B inputs=1048 pen=286 tool=22 pad=0 dial=0 touch=0 device=0 digest=6fcd204531a2f4a5  # Wacom CTE-660
-0x0018 inputs=1055 pen=195 tool=36 pad=326 dial=0 touch=0 device=0 digest=efa57f49573365c7  # Bamboo Fun medium (CTE-650)
+0x0018 inputs=1055 pen=195 tool=36 pad=326 dial=0 touch=0 device=0 digest=39251fa9f9c404f7  # Bamboo Fun medium (CTE-650)
 0x0069 inputs=1053 pen=303 tool=43 pad=0 dial=0 touch=0 device=0 digest=b9b208b242a7553b  # Wacom CTF-430
 0x0319 inputs=1034 pen=300 tool=31 pad=0 dial=0 touch=0 device=0 digest=9cb3e9a62f5c2f10  # Wacom CTH-300
 0x0318 inputs=1057 pen=316 tool=39 pad=0 dial=0 touch=0 device=0 digest=65101dcab4c08006  # Wacom CTH-301

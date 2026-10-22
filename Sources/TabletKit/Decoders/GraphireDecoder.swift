@@ -20,7 +20,7 @@ import Foundation
 /// [2:3] X     LE16
 /// [4:5] Y     LE16
 /// [6]   pressure low byte / mouse wheel (signed) / G4 distance
-/// [7]   pressure high (bits 0-1) / pad buttons (G4) / distance
+/// [7]   pressure high (bits 0-1) / pad buttons and mouse wheel (G4) / distance
 /// ```
 ///
 /// **Status byte d[1]:**
@@ -101,9 +101,13 @@ package struct GraphireDecoder: TabletReportDecoder {
         state.lastY = y
 
         if isMouse {
-            // No pressure. The wheel is -(signed)d[6], as in the kernel; the
-            // G4's own wheel encoding in d[7] isn't read.
-            let wheelDelta = Int(Int8(bitPattern: report[6])) * -1
+            // No pressure. Pad models (Graphire 4, Bamboo Fun) carry the
+            // wheel in d[7] bits 0–2; the rest send -(signed)d[6]. Both as
+            // in the kernel.
+            let wheelDelta =
+                spec.buttonCount > 0
+                ? Int(report[7] & 0x04) - Int(report[7] & 0x03)
+                : -Int(Int8(bitPattern: report[6]))
             results.append(
                 .pen(
                     TabletPoint(
