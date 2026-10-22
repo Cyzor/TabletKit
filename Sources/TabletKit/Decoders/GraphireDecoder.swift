@@ -32,8 +32,9 @@ import Foundation
 /// bit 0  (0x01)  BTN_TOUCH   / mouse left
 /// ```
 ///
-/// Pen pressure is 10-bit, in bytes 6–7. Distance is `d[7] & 0x3F`.
-/// Out of range, the report carries the pad; see `decodePad`.
+/// Pen pressure is 10-bit, in bytes 6–7, and counts only while the tablet
+/// sets BTN_TOUCH. Distance is `d[7] & 0x3F`. Out of range, the report
+/// carries the pad; see `decodePad`.
 package struct GraphireDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -124,8 +125,12 @@ package struct GraphireDecoder: TabletReportDecoder {
             return results
         }
 
-        // Capped so the 8-bit PenPartner isn't fed a 10-bit value.
-        let pressure = min(report.le16(at: 6) & 0x3FF, spec.maxPressure)
+        // The tablet's own contact bit decides touch, as in the kernel. Bytes
+        // 6–7 also carry light pressure while approaching, sliding, and
+        // lifting, which would otherwise press and drag. Capped so the 8-bit
+        // PenPartner isn't fed a 10-bit value.
+        let touching = (status & 0x01) != 0
+        let pressure = touching ? min(report.le16(at: 6) & 0x3FF, spec.maxPressure) : 0
         // Pad models carry button bits in d[7], so no distance for them, as
         // in the kernel.
         let hoverDistance = spec.buttonCount > 0 ? 0 : Int(report[7] & 0x3F)

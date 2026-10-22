@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Graphire decoder fixtures (Graphire 4, PenPartner).
+// Graphire decoder fixtures (Graphire 3 and 4, Bamboo, PenPartner).
 //
-// No hardware capture is available; all reports are synthesized from the
-// byte-layout comments in GraphireDecoder.swift and the input-wacom
-// wacom_graphire_irq source.
+// Most tests build their reports from the byte-layout comments in
+// GraphireDecoder.swift and the input-wacom wacom_graphire_irq source. The
+// contact tests replay reports from public hid-devices recordings of a
+// Graphire 3 (CTE-430) and a Bamboo (MTE-450).
 //
 // Report ID covered:
 //   • 0x02 — pen/eraser/mouse report, 8 bytes (LE16 X/Y, 10-bit pressure,
@@ -83,7 +84,7 @@ final class GraphireDecoderTests: XCTestCase {
         var st = GraphireDecoder.State()
         // rawPressure = d[6] | ((d[7] & 0x03) << 8)
         // d[6]=0xFF, d[7]=0x01 → 0xFF | (0x01 << 8) = 0x1FF = 511
-        let b = makePen(status: 0x80, byte6: 0xFF, byte7: 0x01)
+        let b = makePen(status: 0x81, byte6: 0xFF, byte7: 0x01)
         let r = decode(b, state: &st)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
@@ -93,7 +94,7 @@ final class GraphireDecoderTests: XCTestCase {
     func testPressureCappedAtMaxPressure() {
         var st = GraphireDecoder.State()
         // PenPartner: maxPressure=255; d[6]=0xFF, d[7]=0x03 → raw=0x3FF=1023, capped to 255
-        let b = makePen(status: 0x80, byte6: 0xFF, byte7: 0x03)
+        let b = makePen(status: 0x81, byte6: 0xFF, byte7: 0x03)
         let r = decode(b, state: &st, spec: penPartner)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail() }
@@ -301,5 +302,47 @@ extension GraphireDecoderTests {
             XCTAssertEqual(tip?.x, 0x0F42)
             XCTAssertEqual(tip?.pressure, min(0x140, row.maxPressure))
         }
+    }
+}
+
+// MARK: - Contact follows the tablet's tip bit
+
+extension GraphireDecoderTests {
+    private func pressures(_ reports: [[UInt8]], pid: Int) throws -> [Int?] {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid)).digitizerSpec
+        var st = GraphireDecoder.State()
+        return reports.map { pen(decode($0, state: &st, spec: spec))?.pressure }
+    }
+
+    /// Graphire 3: the report after a lift still carries pressure 30.
+    func testGraphire3LiftStragglerIsNotContact() throws {
+        let p = try pressures([
+            [0x02, 0x91, 0x65, 0x0F, 0xD0, 0x18, 0x6E, 0x00],
+            [0x02, 0x90, 0x68, 0x0F, 0xD5, 0x18, 0x1E, 0x00],
+        ], pid: 0x0013)
+        XCTAssertEqual(p, [110, 0])
+    }
+
+    /// Graphire 3 eraser: pressure 2 one report before it touches, far from
+    /// where it lands.
+    func testGraphire3EraserApproachIsNotContact() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0013)).digitizerSpec
+        var st = GraphireDecoder.State()
+        let before = pen(decode([0x02, 0xB0, 0x46, 0x12, 0xEE, 0x0F, 0x02, 0x00], state: &st, spec: spec))
+        let down = pen(decode([0x02, 0xB1, 0x71, 0x11, 0xAD, 0x0F, 0x48, 0x01], state: &st, spec: spec))
+        XCTAssertEqual(before?.pressure, 0)
+        XCTAssertEqual(down?.pressure, 328)
+        XCTAssertEqual(down?.eraser, true)
+    }
+
+    /// Bamboo (MTE-450): pressure climbs 15, 57 before the tablet counts the
+    /// touch at 92.
+    func testBambooApproachPressureWaitsForTipBit() throws {
+        let p = try pressures([
+            [0x02, 0x90, 0x3D, 0x18, 0x62, 0x12, 0x0F, 0x00, 0x00],
+            [0x02, 0x90, 0x3E, 0x18, 0x62, 0x12, 0x39, 0x00, 0x00],
+            [0x02, 0x91, 0x3D, 0x18, 0x62, 0x12, 0x5C, 0x00, 0x00],
+        ], pid: 0x0065)
+        XCTAssertEqual(p, [0, 0, 92])
     }
 }
