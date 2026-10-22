@@ -78,24 +78,30 @@ package struct BambooDecoder: TabletReportDecoder {
     /// ```
     /// [0] 0x02 Report ID
     /// [1] status — bit 0 tip, bit 1 barrel 1, bit 2 barrel 2,
-    ///              bit 3 eraser tool, bit 5 in proximity
+    ///              bit 3 eraser tool, bit 5 ready (pressure and barrels
+    ///              valid), bit 6 position valid, bit 7 in range
     /// [2:3] X  LE16    [4:5] Y  LE16    [6:7] pressure LE16
     /// [8] hover distance
     /// ```
     /// No express-key bits here — CTH pad buttons ride the separate touch
     /// interface, and the CTL pen-only models have no express keys at all.
     ///
-    /// Confirmed on a CTL-460 capture. Bits 0x01 (tip) and 0x10 toggle but
-    /// aren't read: contact comes from pressure, and 0x10's role is unknown.
+    /// As in the kernel, the pen arrives with its first position and stays
+    /// until the range bit clears, and only the tip bit means contact.
+    /// High in the hover the tablet sends a position without the ready bit,
+    /// and pressure runs ahead of the tip bit as the pen lands and lifts.
+    /// Bit 0x10's role is unknown.
     private mutating func decodeBPT(
         report: HIDReport,
         spec: DigitizerSpec,
         state: inout State
     ) -> [DecodeResult] {
         let status = report[1]
-        let inProximity = (status & 0x20) != 0
+        let inRange = (status & 0x80) != 0
+        let hasPosition = (status & 0x40) != 0
+        let ready = (status & 0x20) != 0
 
-        if !inProximity {
+        if !inRange {
             guard state.prevInProximity else { return [] }
             state.prevInProximity = false
             return [
@@ -109,36 +115,38 @@ package struct BambooDecoder: TabletReportDecoder {
             ]
         }
 
-        let isEraser = (status & 0x08) != 0
+        guard hasPosition || state.prevInProximity else { return [] }
         var results: [DecodeResult] = []
 
-        if !state.prevInProximity {
+        if hasPosition {
+            let isEraser = (status & 0x08) != 0
+            if !state.prevInProximity {
+                state.prevInProximity = true
+                results.append(
+                    .toolEnter(
+                        ToolIdentity(
+                            serial: 0,
+                            toolCode: isEraser ? 0x080A : 0x0802,
+                            isEraser: isEraser,
+                            isMouse: false)))
+            }
             state.isEraser = isEraser
-            state.prevInProximity = true
-            results.append(
-                .toolEnter(
-                    ToolIdentity(
-                        serial: 0,
-                        toolCode: isEraser ? 0x080A : 0x0802,
-                        isEraser: isEraser,
-                        isMouse: false)))
+            state.lastX = report.le16(at: 2)
+            state.lastY = report.le16(at: 4)
         }
 
-        let x = report.le16(at: 2)
-        let y = report.le16(at: 4)
-        state.lastX = x
-        state.lastY = y
-        let pressure = report.le16(at: 6)
+        let touching = ready && (status & 0x01) != 0
+        let pressure = touching ? report.le16(at: 6) : 0
 
         results.append(
             .pen(
                 TabletPoint(
-                    x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                    x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
                     pressure: pressure, maxPressure: spec.maxPressure,
                     tiltX: 0, tiltY: 0, rotation: 0.0,  // Tilt not reported by BAMBOO_PT
-                    penButton1: (status & 0x02) != 0,
-                    penButton2: (status & 0x04) != 0,
-                    eraser: isEraser,
+                    penButton1: ready && (status & 0x02) != 0,
+                    penButton2: ready && (status & 0x04) != 0,
+                    eraser: state.isEraser,
                     inProximity: true,
                     hoverDistance: Int(report[8]))))
 

@@ -61,7 +61,7 @@ private func padded(_ head: [UInt8], to count: Int) -> [UInt8] {
 private let formatTemplates: [ReportFormat: [[UInt8]]] = [
     .graphire: [hex("02 80 34 12 78 56 00 00"), hex("02 80 00 00 00 00 FF 01")],
     .pl: [hex("02 40 2A 20 00 1F 58 00"), hex("02 40 2A 20 08 1F 58 C8")],
-    .bamboo: [hex("02 21 34 12 45 23 E8 03 00")],
+    .bamboo: [hex("02 E1 34 12 45 23 E8 03 00")],
     .intuosV2: [hex("1E 01 C1 DB FD 00 F4 8D 00 DB 01 0C 00 08 00 00 00 00 00 1F")],
     .intuosV3: [hex("1E 01 C1 B4 83 00 75 36 00 FF 1F 20 00 06 00 00 00 00 00 14 AA 87 C0 24 00 02 10 00 00 02 D4 18 18 3D")],
     .xencelabs: [

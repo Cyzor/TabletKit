@@ -72,7 +72,7 @@ final class ConformanceHarnessTests: XCTestCase {
                 buttonCount: 0, hasTilt: false),
             deviceFamily: .bamboo,
             captureLog: """
-            [00:00.000] CTL-460             ID=02 len=9    02 21 34 12 45 23 E8 03 00
+            [00:00.000] CTL-460             ID=02 len=9    02 E1 34 12 45 23 E8 03 00
             """),
         ConformanceFixture(
             device: "Intuos Pro L gen 3 (PTK-870, 0x03F9) — real capture, whot/wacom-recordings",

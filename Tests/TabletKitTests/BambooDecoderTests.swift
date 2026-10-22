@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // Bamboo decoder fixtures, synthesized from the byte layouts in
-// BambooDecoder.swift and the kernel's wacom_bpt_pen / wacom_bpt_touch.
+// BambooDecoder.swift and the kernel's wacom_bpt_pen / wacom_bpt_touch. The
+// pen range and contact tests replay reports from public hid-devices
+// recordings of a CTL-460, CTL-480, and CTH-680.
 import XCTest
 @testable import TabletKit
 
@@ -48,7 +50,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTLE16CoordinatesAndPressure() {
         var st = BambooDecoder.State()
-        let b = makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x2345, pressure: 1000)
+        let b = makeBPT(status: 0xE0 | 0x01, x: 0x1234, y: 0x2345, pressure: 1000)
         let r = decode(b, state: &st, spec: ctl460)
         let pen = r.first { if case .pen = $0 { return true }; return false }
         guard case .pen(let pt) = pen else { return XCTFail("expected .pen") }
@@ -60,7 +62,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTToolEnterAndBarrelButtons() {
         var st = BambooDecoder.State()
-        let b = makeBPT(status: 0x20 | 0x02 | 0x04)
+        let b = makeBPT(status: 0xE0 | 0x02 | 0x04)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
         else { return XCTFail("expected .toolEnter") }
@@ -74,7 +76,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTEraserToolBit() {
         var st = BambooDecoder.State()
-        let b = makeBPT(status: 0x20 | 0x08)
+        let b = makeBPT(status: 0xE0 | 0x08)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .toolEnter(let id)? = (r.first { if case .toolEnter = $0 { return true }; return false })
         else { return XCTFail("expected .toolEnter") }
@@ -84,7 +86,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTProximityExit() {
         var st = BambooDecoder.State()
-        _ = decode(makeBPT(status: 0x20, x: 500, y: 600), state: &st, spec: ctl460)
+        _ = decode(makeBPT(status: 0xE0, x: 500, y: 600), state: &st, spec: ctl460)
         XCTAssertTrue(st.prevInProximity)
         let r = decode(makeBPT(status: 0x00), state: &st, spec: ctl460)
         guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
@@ -103,7 +105,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTHoverDistance() {
         var st = BambooDecoder.State()
-        let b = makeBPT(status: 0x20, distance: 42)
+        let b = makeBPT(status: 0xE0, distance: 42)
         let r = decode(b, state: &st, spec: ctl460)
         guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
         else { return XCTFail("expected .pen") }
@@ -112,7 +114,7 @@ final class BambooDecoderTests: XCTestCase {
 
     func testBPTTooShortReturnsEmpty() {
         var st = BambooDecoder.State()
-        XCTAssertTrue(decode(Array(makeBPT(status: 0x20).dropLast()), state: &st, spec: ctl460).isEmpty)
+        XCTAssertTrue(decode(Array(makeBPT(status: 0xE0).dropLast()), state: &st, spec: ctl460).isEmpty)
     }
 
     // MARK: - BAMBOO_PT touch report 0x02, 20 bytes (CTH-460 class, kernel wacom_bpt_touch)
@@ -209,7 +211,7 @@ extension BambooDecoderTests {
             let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
             XCTAssertEqual(row.format, .bamboo, "0x\(String(pid, radix: 16))")
             var st = BambooDecoder.State()
-            let r = decode(makeBPT(status: 0x20 | 0x01, x: 0x1234, y: 0x0567, pressure: 900),
+            let r = decode(makeBPT(status: 0xE0 | 0x01, x: 0x1234, y: 0x0567, pressure: 900),
                            state: &st, spec: row.digitizerSpec)
             guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
             else { return XCTFail("expected .pen for 0x\(String(pid, radix: 16))") }
@@ -287,5 +289,92 @@ extension BambooDecoderTests {
         XCTAssertEqual(contacts[1].y, 0)
         guard case .aux(let aux)? = results.last else { return XCTFail("no buttons") }
         XCTAssertEqual(Array(aux.buttons.prefix(2)), [true, false])
+    }
+}
+
+// MARK: - Range, position, and contact follow the tablet's own bits
+
+extension BambooDecoderTests {
+    private func hexReport(_ s: String) -> [UInt8] {
+        s.split(separator: " ").map { UInt8($0, radix: 16)! }
+    }
+
+    private func pens(_ reports: [String], pid: Int) throws -> [TabletPoint?] {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid)).digitizerSpec
+        var st = BambooDecoder.State()
+        return reports.map { report in
+            let r = decode(hexReport(report), state: &st, spec: spec)
+            guard case .pen(let pt)? = (r.first { if case .pen = $0 { return true }; return false })
+            else { return nil }
+            return pt
+        }
+    }
+
+    /// CTL-480: pressure reaches 59 while the tablet never sets its tip bit.
+    func testPressureWithoutTipBitIsNotContact() throws {
+        let p = try pens([
+            "02 f0 c0 2a 51 0e 00 00 29 00",
+            "02 f0 c1 2a 52 0e 3b 00 29 00",
+            "02 f0 c9 2a 59 0e 3b 00 29 00",
+            "02 f0 ce 2a 63 0e 06 00 29 00",
+            "02 f0 e3 2a 70 0e 00 00 29 00",
+        ], pid: 0x030E)
+        XCTAssertEqual(p.map { $0?.pressure }, [0, 0, 0, 0, 0])
+    }
+
+    /// CTH-680: the tablet lifts for two reports at pressure 39 and 34, so
+    /// one stroke becomes two.
+    func testLiftBetweenStrokesFollowsTipBit() throws {
+        let p = try pens([
+            "02 e1 70 11 7a 17 3e 00 2b 00",
+            "02 e0 7b 11 78 17 27 00 2b 00",
+            "02 e0 88 11 73 17 22 00 2b 00",
+            "02 e1 59 11 ba 17 7f 01 2b 00",
+        ], pid: 0x0303)
+        XCTAssertEqual(p.map { $0?.pressure }, [62, 0, 0, 383])
+    }
+
+    /// CTL-480: high in the hover the tablet sends a position without the
+    /// ready bit. The pen arrives and moves; pressure stays 0.
+    func testPositionWithoutReadyBitBringsPenIn() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x030E)).digitizerSpec
+        var st = BambooDecoder.State()
+        let r = decode(hexReport("02 d0 45 31 75 10 00 00 27 00"), state: &st, spec: spec)
+        guard case .toolEnter(let id)? = r.first else { return XCTFail("expected .toolEnter") }
+        XCTAssertFalse(id.isEraser)
+        guard case .pen(let pt)? = r.last else { return XCTFail("expected .pen") }
+        XCTAssertTrue(pt.inProximity)
+        XCTAssertEqual(pt.x, 0x3145)
+        XCTAssertEqual(pt.y, 0x1075)
+        XCTAssertEqual(pt.pressure, 0)
+    }
+
+    /// CTL-460: range alone, before any position, isn't an arrival.
+    func testRangeWithoutPositionDoesNotBringPenIn() {
+        var st = BambooDecoder.State()
+        XCTAssertTrue(decode(hexReport("02 80 00 00 00 00 00 00 00"), state: &st, spec: ctl460).isEmpty)
+        XCTAssertFalse(st.prevInProximity)
+    }
+
+    /// CTL-460: once in, the pen stays through range-only reports at its
+    /// last position, and leaves when range clears.
+    func testRangeOnlyHoldsPenUntilRangeClears() throws {
+        let p = try pens([
+            "02 e0 80 39 9c 10 01 00 09",
+            "02 80 00 00 00 00 00 00 00",
+            "02 00 00 00 00 00 00 00 00",
+        ], pid: 0x00D4)
+        XCTAssertEqual(p.map { $0?.inProximity }, [true, true, false])
+        XCTAssertEqual(p.map { $0?.x }, [0x3980, 0x3980, 0x3980])
+        XCTAssertEqual(p.map { $0?.pressure }, [0, 0, 0])
+    }
+
+    /// Barrel buttons count only with the ready bit, as in the kernel.
+    func testBarrelButtonsNeedReadyBit() {
+        var st = BambooDecoder.State()
+        let r = decode(makeBPT(status: 0xC0 | 0x02 | 0x04, x: 100, y: 100), state: &st, spec: ctl460)
+        guard case .pen(let pt)? = r.last else { return XCTFail("expected .pen") }
+        XCTAssertFalse(pt.penButton1)
+        XCTAssertFalse(pt.penButton2)
     }
 }

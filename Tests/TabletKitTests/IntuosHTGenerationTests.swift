@@ -111,7 +111,7 @@ final class IntuosHTGenerationTests: XCTestCase {
         var state = BambooDecoder.State()
         _ = decodeBamboo(
             penReport(status: 0xF0, x: 100, y: 100, pressure: 0), spec: ctl680, state: &state)
-        // 0xF3 = in proximity (0x20) + tip (0x01) + barrel 1 (0x02).
+        // 0xF3 = in range and ready (0xE0) + tip (0x01) + barrel 1 (0x02).
         let results = decodeBamboo(
             penReport(status: 0xF3, x: 100, y: 100, pressure: 918),
             spec: ctl680, state: &state)
