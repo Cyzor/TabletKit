@@ -59,7 +59,7 @@
 0x00D9 inputs=1034 pen=279 tool=35 pad=0 dial=0 touch=0 device=0 digest=1bf931fef3c73459  # Bamboo Touch (CTT-460A)
 0x00DC inputs=1032 pen=184 tool=24 pad=189 dial=0 touch=189 device=0 digest=669a68521e6fcdba  # Bamboo Touch (CTT-470)
 0x00C6 inputs=1051 pen=116 tool=11 pad=321 dial=0 touch=0 device=0 digest=da34f2ae71a12a68  # Cintiq 12WX
-0x00CC inputs=1045 pen=89 tool=4 pad=376 dial=0 touch=0 device=0 digest=8e480d7b31476c37  # Cintiq 21UX2 (DTK-2100)
+0x00CC inputs=1045 pen=89 tool=4 pad=376 dial=0 touch=0 device=0 digest=19ff02f648c3e9a5  # Cintiq 21UX2 (DTK-2100)
 0x00F4 inputs=1053 pen=97 tool=10 pad=266 dial=0 touch=0 device=0 digest=22bbd3b678163324  # Cintiq 24HD (DTK-2400)
 0x00F8 inputs=1047 pen=107 tool=21 pad=266 dial=0 touch=0 device=5 digest=85c974f6db41458e  # Cintiq 24HD Touch (DTH-2400)
 0x00FA inputs=1054 pen=138 tool=25 pad=281 dial=0 touch=0 device=0 digest=35b504e4c27a685c  # Cintiq 22HD (DTK-2200)

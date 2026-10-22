@@ -34,10 +34,14 @@ final class CintiqV1DecoderTests: XCTestCase {
     // this family has no capacitive OSD buttons — bytes 3-4 are touch-strip
     // position on real hardware, not buttons. See CintiqV1Decoder's pad
     // decode header comment for the kernel cross-check.
-    private let cintiq21ux2 = DigitizerSpec(
-        maxX: 87200, maxY: 65600, maxPressure: 2047,
-        buttonCount: 18, hasTilt: true, hasDualRings: false,
-        isPenDisplay: true, ringSlotCount: 4)
+    private let cintiq21ux2: DigitizerSpec = {
+        var spec = DigitizerSpec(
+            maxX: 87200, maxY: 65600, maxPressure: 2047,
+            buttonCount: 18, hasTilt: true, hasDualRings: false,
+            isPenDisplay: true, ringSlotCount: 4)
+        spec.hasTouchStrips = true
+        return spec
+    }()
 
     private func decode(
         _ bytes: [UInt8],
@@ -448,6 +452,72 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertEqual(aux2.buttons.count, 18)
         XCTAssertEqual(aux2.buttons[16], false, "left center toggle should be off")
         XCTAssertEqual(aux2.buttons[17], false, "right center toggle should be off")
+    }
+
+    // Each 21UX2 strip is a 13-zone mask, one bit per zone, as on the
+    // Intuos3; the touched zone is the lowest set bit.
+    func test21UX2StripsDecodeTouchedZone() {
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        var bytes = [UInt8](repeating: 0, count: 9)
+        bytes[0] = 0x0C
+        bytes[1] = 0x10  // left strip: bit 12, the last zone
+        bytes[4] = 0x08  // right strip: bit 3
+
+        let results = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2)
+        guard case .aux(let aux)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertTrue(aux.touchStrip1Active)
+        XCTAssertEqual(aux.touchStrip1Position, 12)
+        XCTAssertTrue(aux.touchStrip2Active)
+        XCTAssertEqual(aux.touchStrip2Position, 3)
+        XCTAssertFalse(aux.touchRingActive, "strip bytes must not read as a ring")
+
+        // The top three bits sit outside the 13 zones.
+        bytes[1] = 0xE0
+        bytes[4] = 0
+        let lifted = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2)
+        guard case .aux(let aux2)? = lifted.first else {
+            return XCTFail("Expected .aux, got \(lifted)")
+        }
+        XCTAssertFalse(aux2.touchStrip1Active)
+        XCTAssertEqual(aux2.touchStrip1Position, 0xFF)
+        XCTAssertFalse(aux2.touchStrip2Active)
+    }
+
+    // Frames from a public 21UX2 recording: a left-strip touch with a key
+    // held, a right-strip touch, and a lone top bit that sits outside the
+    // 13 zones (the kernel masks it off too).
+    func test21UX2RecordedStripFrames() {
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        func aux(_ bytes: [UInt8]) -> AuxButtons? {
+            if case .aux(let a)? = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2).first { return a }
+            return nil
+        }
+        let held = aux([0x0C, 0x00, 0x40, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00])
+        XCTAssertEqual(held?.touchStrip1Position, 6)
+        XCTAssertEqual(held?.buttons[4], true)
+        XCTAssertEqual(aux([0x0C, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])?.touchStrip2Position, 9)
+        XCTAssertEqual(aux([0x0C, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])?.touchStrip1Active, false)
+    }
+
+    // A model on the same pad layout without strips leaves bytes 1-4 alone.
+    func testStriplessCintiqIgnoresStripBytes() {
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        var spec = cintiq21ux2
+        spec.hasTouchStrips = false
+        var bytes = [UInt8](repeating: 0, count: 9)
+        bytes[0] = 0x0C
+        bytes[2] = 0x01
+        let results = decode(bytes, decoder: &decoder, state: &state, spec: spec)
+        guard case .aux(let aux)? = results.first else {
+            return XCTFail("Expected .aux, got \(results)")
+        }
+        XCTAssertFalse(aux.touchStrip1Active)
+        XCTAssertFalse(aux.touchStrip2Active)
     }
 
     func testExpressKeyReportShortLengthRejected() {

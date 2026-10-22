@@ -163,11 +163,11 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         }
     }
 
-    /// The second ring's slot, on two-ring Cintiqs, which take both rings in
-    /// one report.
+    /// The second ring's or strip's slot, on two-ring Cintiqs and the 21UX2,
+    /// which take both in one report.
     public func setRingLED2(index: Int) {
         queue.perform { [self] in
-            guard spec.format == .cintiqV1, spec.hasDualRings else { return }
+            guard spec.format == .cintiqV1, spec.hasDualRings || spec.hasTouchStrips else { return }
             ledIndex2 = index
             sendRingLED()
         }
@@ -206,7 +206,8 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             write(.feature, buf, to: primary, tag: "\(name) BT LED ring slot=\(index)")
         case .cintiqV1:
             // 0x20, 9 bytes: buf[1] = 0x44 | right ring's slot | left ring's << 4.
-            // Ring 1 is the left; checked on a DTK-2400.
+            // Ring 1 is the left; checked on a DTK-2400. The 21UX2's strips
+            // use the same packing.
             let slot1 = UInt8(index & 0x03)
             let slot2 = UInt8(ledIndex2 & 0x03)
             var buf = [UInt8](repeating: 0, count: 9)

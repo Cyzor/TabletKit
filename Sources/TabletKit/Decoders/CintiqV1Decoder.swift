@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Handles the older Cintiqs (`.cintiqV1`): DTK-2400 (0x00F4, confirmed on
 /// hardware), DTH-2400 (0x00F8), DTK-2200 (0x00FA/0x00F9), DTZ-2100B
-/// (0x00FB), DTZ-2100 (0x00CC), 20WSX (0x00C0), 13HD (0x00C4), and 12WX
+/// (0x00FB), Cintiq 21UX2 (0x00CC), 20WSX (0x00C0), 13HD (0x00C4), and 12WX
 /// (0x00C6). Touch models send touch on a separate interface, decoded by
 /// `Wacom24HDTDecoder`.
 ///
@@ -275,10 +275,11 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   byte[8] — right side express keys, full 8-bit mask
     //   byte[9] — 0x00 (padding)
     //
-    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), from the kernel,
-    // unverified on hardware:
-    //   byte[1]:byte[2] and byte[3]:byte[4] are 13-bit touch-strip
-    //   positions, not decoded here.
+    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), from the kernel
+    // and a public 21UX2 recording:
+    //   byte[1]:byte[2] — left  touch strip, big-endian, low 13 bits, one bit
+    //     per zone as on the Intuos3; 0 = no contact
+    //   byte[3]:byte[4] — right touch strip, same encoding
     //   byte[5] bit0 — left  center toggle
     //   byte[6]       — left  side express keys, full 8-bit mask
     //   byte[7] bit0 — right center toggle
@@ -294,6 +295,8 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   [8..15] = byte[8] right side express keys
     //   [16]    = byte[5] bit0, left  center toggle
     //   [17]    = byte[7] bit0, right center toggle
+    // The toggles switch strip modes. They ride the bezel slots, as
+    // the app's control map expects.
 
     private func decodeExpressKeys(
         report: HIDReport,
@@ -319,6 +322,8 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         let rightBits: [Bool] = (0..<8).map { bit in (rightByte & (1 << bit)) != 0 }
 
         let buttons: [Bool]
+        var leftStrip: UInt8 = 0xFF
+        var rightStrip: UInt8 = 0xFF
         if spec.bezelButtonCount > 0 {
             // DTK-2400 / 24HD family: bytes 3-4 are capacitive OSD buttons.
             let capA = report.count >= 4 ? report[3] : 0
@@ -330,9 +335,12 @@ package struct CintiqV1Decoder: TabletReportDecoder {
             ]
             buttons = leftBits + rightBits + osdBits
         } else {
-            // 21UX2 / 22HD family: bytes 3-4 are touch-strip position, not
-            // buttons — not decoded (no strip control type yet). Bytes 5/7
-            // bit 0 are the two center toggles the 24HD path doesn't have.
+            // 21UX2 / 22HD family: bytes 1-4 are the strips. Bytes 5/7 bit 0
+            // are the two center toggles the 24HD path doesn't have.
+            if spec.hasTouchStrips {
+                leftStrip = Self.stripZone(report.be16(at: 1))
+                rightStrip = Self.stripZone(report.be16(at: 3))
+            }
             let byte5 = report[5]
             let byte7 = report.count >= 8 ? report[7] : 0
             let centerToggleBits: [Bool] = [
@@ -349,8 +357,19 @@ package struct CintiqV1Decoder: TabletReportDecoder {
                     touchRingActive: leftRingActive,
                     touchRingPosition: leftRingPos,
                     touchRing2Active: rightRingActive,
-                    touchRing2Position: rightRingPos))
+                    touchRing2Position: rightRingPos,
+                    touchStrip1Active: leftStrip != 0xFF,
+                    touchStrip1Position: leftStrip,
+                    touchStrip2Active: rightStrip != 0xFF,
+                    touchStrip2Position: rightStrip))
         ]
+    }
+
+    /// The touched zone of a 13-zone strip mask, 0 at bit 0, or `0xFF` with
+    /// no contact.
+    static func stripZone(_ raw: Int) -> UInt8 {
+        let mask = raw & 0x1FFF
+        return mask == 0 ? 0xFF : UInt8(mask.trailingZeroBitCount)
     }
 
     // MARK: - Report 0x11: 27QHD onboard panel buttons (`WACOM_REPORT_CINTIQPAD`)

@@ -66,7 +66,10 @@ extension TabletSpec {
     /// The wireless kit's fill only while the tablet runs on its receiver.
     public var offeredControls: TabletControls.Kinds {
         var kinds: TabletControls.Kinds = []
-        if Self.ringLEDFormats.contains(format) && (hasTouchRing || hasMechanicalDial) { kinds.insert(.ringLED) }
+        // The 21UX2's strips show their modes on LEDs like a ring's.
+        if Self.ringLEDFormats.contains(format) && (hasTouchRing || hasMechanicalDial || hasTouchStrips) {
+            kinds.insert(.ringLED)
+        }
         if format == .xencelabs || hasKeyOLEDs { kinds.insert(.labels) }
         if format == .xencelabs && isPenDisplay { kinds.insert(.displayPanel) }
         if format == .xencelabs { kinds.insert(.quickKeys) }

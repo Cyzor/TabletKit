@@ -344,6 +344,7 @@ property DigitizerSpec.debugButton2Source
 property DigitizerSpec.hasDualRings
 property DigitizerSpec.hasFingerTouch
 property DigitizerSpec.hasTilt
+property DigitizerSpec.hasTouchStrips
 property DigitizerSpec.isPenDisplay
 property DigitizerSpec.maxPressure
 property DigitizerSpec.maxTouchContacts

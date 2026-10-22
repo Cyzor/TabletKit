@@ -1305,12 +1305,13 @@ public enum WacomDeviceRegistry: Sendable {
             // Kernel calls this "Cintiq 21UX2" (DTZ-2100B / second gen).
             // Distinct from the gen-1 21UX at 0x003F.
             // No bezelButtonCount (0 = default): unlike 24HD, this family has
-            // no capacitive OSD buttons — bytes 3-4 of the pad report are
-            // touch-strip position, not buttons. See CintiqV1Decoder's pad
-            // decode comment.
+            // no capacitive OSD buttons — bytes 1-4 of the pad report are the
+            // two touch strips. Each strip has four modes and its own mode
+            // toggle (buttons 16 and 17). See CintiqV1Decoder's pad decode
+            // comment.
             productID: 0x00CC, name: "Cintiq 21UX2 (DTK-2100)",  // model per libwacom (DTZ-2100 is the first-gen 21UX, 0x003F); from kernel + OTD
             format: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 2047,
-            buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 432, activeHeightMM: 330),
@@ -3003,7 +3004,7 @@ extension TabletSpec {
     /// the ``DigitizerSpec`` a decoder reads against. Use this rather
     /// than building one field by field, so a new capability can't be missed.
     public var digitizerSpec: DigitizerSpec {
-        DigitizerSpec(
+        var spec = DigitizerSpec(
             maxX: maxX,
             maxY: maxY,
             maxPressure: maxPressure,
@@ -3016,5 +3017,7 @@ extension TabletSpec {
             hasFingerTouch: hasFingerTouch,
             maxTouchContacts: maxTouchContacts,
             tiltMaxDegrees: tiltMaxDegrees)
+        spec.hasTouchStrips = hasTouchStrips
+        return spec
     }
 }
