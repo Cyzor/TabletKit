@@ -865,9 +865,10 @@ public enum WacomDeviceRegistry: Sendable {
         // ── Cintiq 21UX first-gen ─────────────────────────────────────────────
         .init(
             // Kernel wacom_features_0x3F: Cintiq 21UX, 1023 pressure, 8 keys.
+            // Two rear strips, seen in a public recording.
             productID: 0x003F, name: "Cintiq 21UX (DTZ-2100)",  // ⚠ from kernel
             format: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 8, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 432, activeHeightMM: 330),
 
@@ -1291,14 +1292,17 @@ public enum WacomDeviceRegistry: Sendable {
         // device nothing decodes is worse.
         // All use the WACOM_24HD layout in CintiqV1Decoder:
         //   Report 0x02 — pen (10-byte IntuosV1, WACOM_24HD typeNibble dispatch)
-        //   Report 0x0C — express keys + touch rings
+        //   Report 0x0C — express keys + touch rings or strips, in the
+        //                 layout `CintiqPadLayout` picks by product ID
         //   Report 0x01 — tip switch
         // 0x00C0 and 0x00C4 aren't the Cintiq 20WSX and 13HD: the kernel names
         // them DTF-720 and DTF-521. The 13HD is 0x0304 and the 20WSX 0x00C5.
         .init(
+            // Kernel wacom_features_0xC6: 10 keys. Two strips, seen in a
+            // public recording.
             productID: 0x00C6, name: "Cintiq 12WX",  // ⚠ estimated
             format: .cintiqV1, maxX: 53020, maxY: 33440, maxPressure: 1023,
-            buttonCount: 8, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 10, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 261, activeHeightMM: 163),
         .init(
@@ -1349,7 +1353,7 @@ public enum WacomDeviceRegistry: Sendable {
             // read yet; its bit order needs a capture.
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             format: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 483, activeHeightMM: 279),
         // 0x00FB is the DTU-1031 (kernel `wacom_features_0xFB`), not a 21UX.
@@ -2192,7 +2196,7 @@ public enum WacomDeviceRegistry: Sendable {
             // buttonCount 18, as on its pen-only sibling 0x00FA above.
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             format: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 18, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 4752, touchMaxY: 2673,  // 0x005E descriptor (hid-devices recording)
             isPenDisplay: true,
@@ -2611,7 +2615,7 @@ public enum WacomDeviceRegistry: Sendable {
             // match too.
             productID: 0x00C5, name: "Cintiq 20WSX (DTZ-2000W)",  // ⚠ from kernel (WACOM_BEE type)
             format: .cintiqV1, maxX: 86680, maxY: 54180, maxPressure: 1023,
-            buttonCount: 10, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 10, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 433, activeHeightMM: 271),
         .init(
@@ -3018,6 +3022,7 @@ extension TabletSpec {
             maxTouchContacts: maxTouchContacts,
             tiltMaxDegrees: tiltMaxDegrees)
         spec.hasTouchStrips = hasTouchStrips
+        if format == .cintiqV1 { spec.cintiqPadLayout = CintiqPadLayout(productID: productID) }
         return spec
     }
 }

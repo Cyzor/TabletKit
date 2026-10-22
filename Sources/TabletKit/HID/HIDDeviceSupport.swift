@@ -33,6 +33,8 @@ public struct DigitizerSpec: Sendable {
     /// True if this model has two touch strips. Used by CintiqV1Decoder to
     /// read the 21UX2's strips from bytes other models leave unused.
     public var hasTouchStrips: Bool = false
+    /// Where a Cintiq's pad report keeps its keys. Used by CintiqV1Decoder.
+    package var cintiqPadLayout: CintiqPadLayout = .standard
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Used to gate pen-display-specific UI (e.g. parallax offset calibration).
     public var isPenDisplay: Bool = false

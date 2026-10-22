@@ -297,6 +297,15 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   [17]    = byte[7] bit0, right center toggle
     // The toggles switch strip modes. They ride the bezel slots, as
     // the app's control map expects.
+    //
+    // 21UX / 12WX / 20WSX (`.splitNibbles`), from the kernel and public 21UX
+    // and 12WX recordings: strips in bytes 1–4 as above, and keys in
+    // device order, as libwacom letters them:
+    //   [0..3] = byte[5] bits 0–3    [4..7] = byte[6] bits 0–3
+    //   [8]    = byte[5] bit 4       [9]    = byte[6] bit 4
+    //
+    // DTK-2241 / DTH-2242 (`.byteSix`): keys in byte[6] alone. Bytes 1–5
+    // carry other data, so the kernel reads nothing else.
 
     private func decodeExpressKeys(
         report: HIDReport,
@@ -304,8 +313,30 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     ) -> [DecodeResult] {
         guard report.count >= 7 else { return [] }
 
+        switch spec.cintiqPadLayout {
+        case .standard: break
+        case .byteSix:
+            return [.aux(AuxButtons(buttons: (0..<8).map { (report[6] & (1 << $0)) != 0 }))]
+        case .splitNibbles:
+            let low = report[5], high = report[6]
+            let buttons = (0..<4).map { (low & (1 << $0)) != 0 } + (0..<4).map { (high & (1 << $0)) != 0 }
+                + [(low & 0x10) != 0, (high & 0x10) != 0]
+            let leftStrip = spec.hasTouchStrips ? Self.stripZone(report.be16(at: 1)) : 0xFF
+            let rightStrip = spec.hasTouchStrips ? Self.stripZone(report.be16(at: 3)) : 0xFF
+            return [
+                .aux(
+                    AuxButtons(
+                        buttons: buttons,
+                        touchStrip1Active: leftStrip != 0xFF,
+                        touchStrip1Position: leftStrip,
+                        touchStrip2Active: rightStrip != 0xFF,
+                        touchStrip2Position: rightStrip))
+            ]
+        }
+
+        // Only the 24HD family has rings; elsewhere byte 1 is a strip.
         let leftRingRaw = report[1]
-        let leftRingActive = (leftRingRaw & 0x80) != 0
+        let leftRingActive = spec.bezelButtonCount > 0 && (leftRingRaw & 0x80) != 0
         let leftRingPos = leftRingActive ? (leftRingRaw & 0x7F) : UInt8(0x7F)
 
         var rightRingActive = false
@@ -427,5 +458,25 @@ extension CintiqV1Decoder {
         package var lastTiltY: Double = 0
 
         package init() {}
+    }
+}
+
+/// Where a Cintiq's 0x0C pad report keeps its keys, after the kernel's pad
+/// types. See `CintiqV1Decoder`'s pad comment for each layout.
+package enum CintiqPadLayout: Sendable, Equatable {
+    /// The 24HD family's rings and OSD buttons, or the 21UX2 and 22HD's
+    /// strips and toggles, told apart by `bezelButtonCount`.
+    case standard
+    /// The 21UX, 12WX, and 20WSX: keys split across bytes 5 and 6.
+    case splitNibbles
+    /// The DTK-2241 and DTH-2242: keys in byte 6 alone.
+    case byteSix
+
+    package init(productID: Int) {
+        switch productID {
+        case 0x003F, 0x00C5, 0x00C6: self = .splitNibbles
+        case 0x0057, 0x0059: self = .byteSix
+        default: self = .standard
+        }
     }
 }

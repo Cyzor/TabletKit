@@ -520,6 +520,58 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertFalse(aux.touchStrip2Active)
     }
 
+    // MARK: - Pad layouts by model, from public 12WX, 21UX, 21UX2, and DTK-2241 recordings
+
+    private func registryPad(_ bytes: [UInt8], pid: Int) throws -> AuxButtons? {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid)).digitizerSpec
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        if case .aux(let a)? = decode(bytes, decoder: &decoder, state: &state, spec: spec).first { return a }
+        return nil
+    }
+
+    private func held(_ aux: AuxButtons?) -> [Int] {
+        aux.map { a in a.buttons.indices.filter { a.buttons[$0] } } ?? []
+    }
+
+    // 12WX: keys in the low nibbles of bytes 5 and 6, then bit 4 of each,
+    // in libwacom's letter order.
+    func test12WXKeysFollowDeviceOrder() throws {
+        XCTAssertEqual(held(try registryPad([0x0C, 0, 0, 0, 0, 0x04, 0, 0, 0, 0], pid: 0x00C6)), [2])
+        XCTAssertEqual(held(try registryPad([0x0C, 0, 0, 0, 0, 0x10, 0, 0, 0, 0], pid: 0x00C6)), [8])
+        XCTAssertEqual(held(try registryPad([0x0C, 0, 0, 0, 0, 0, 0x01, 0, 0, 0], pid: 0x00C6)), [4])
+        XCTAssertEqual(held(try registryPad([0x0C, 0, 0, 0, 0, 0, 0x10, 0, 0, 0], pid: 0x00C6)), [9])
+    }
+
+    func test12WXAnd21UXStrips() throws {
+        let twelve = try registryPad([0x0C, 0x00, 0x80, 0, 0, 0, 0, 0, 0, 0], pid: 0x00C6)
+        XCTAssertEqual(twelve?.touchStrip1Position, 7)
+        XCTAssertEqual(held(twelve), [])
+        let twentyOne = try registryPad([0x0C, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0], pid: 0x003F)
+        XCTAssertEqual(twentyOne?.touchStrip1Position, 0)
+        XCTAssertEqual(twentyOne?.touchRingActive, false)
+        XCTAssertEqual(held(try registryPad([0x0C, 0, 0, 0, 0, 0x08, 0, 0, 0, 0], pid: 0x003F)), [3])
+    }
+
+    func test22HDStrips() throws {
+        XCTAssertEqual(try registryPad([0x0C, 0x00, 0x20, 0, 0, 0, 0, 0, 0, 0], pid: 0x00FA)?.touchStrip1Position, 5)
+        XCTAssertEqual(try registryPad([0x0C, 0x00, 0x20, 0, 0, 0, 0, 0, 0, 0], pid: 0x005B)?.touchStrip1Position, 5)
+    }
+
+    // DTK-2241: bytes 1-5 carry other data, so neither a ring nor the
+    // 21UX2's toggles.
+    func testDTK2241ReadsKeysFromByteSixOnly() throws {
+        let idle = try registryPad([0x0C, 0xE0, 0x6D, 0xE7, 0x28, 0x1D, 0x00, 0x00, 0x00, 0x94], pid: 0x0057)
+        XCTAssertEqual(held(idle), [])
+        XCTAssertEqual(idle?.touchRingActive, false)
+        XCTAssertEqual(held(try registryPad([0x0C, 0xE0, 0x6D, 0xC9, 0x28, 0xD5, 0x02, 0x00, 0x00, 0x90], pid: 0x0057)), [1])
+    }
+
+    // 21UX2: byte 1 bit 7 sits outside the strip, and it has no ring.
+    func test21UX2HasNoRing() throws {
+        XCTAssertEqual(try registryPad([0x0C, 0x80, 0, 0, 0, 0, 0, 0, 0, 0], pid: 0x00CC)?.touchRingActive, false)
+    }
+
     func testExpressKeyReportShortLengthRejected() {
         var decoder = CintiqV1Decoder()
         var state = CintiqV1Decoder.State()
