@@ -109,6 +109,15 @@ public struct TabletQuirks: Sendable, Equatable {
 }
 
 extension TabletSpec {
+    /// The write that puts the tablet back in mouse mode when the driver
+    /// closes it, so the pen still moves the cursor after quit. Only for
+    /// tablets switched on by `[0x02, 0x02]`; PTK-x70 and Movink keep their
+    /// mode, since nothing shows what they expect.
+    package var mouseModeRestore: [UInt8]? {
+        guard format != .intuosV3, initSteps.contains(.featureReport([0x02, 0x02])) else { return nil }
+        return [0x02, 0x01]
+    }
+
     /// A copy of this entry with `quirks` in place of its family defaults.
     public func with(quirks: TabletQuirks) -> TabletSpec {
         var copy = self

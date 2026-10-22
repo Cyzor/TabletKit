@@ -116,6 +116,34 @@ final class TabletConnectionTests: XCTestCase {
         XCTAssertEqual(primary.writes, ["feature 02 02", "feature 02 02"], "init, then one resend")
     }
 
+    /// A Graphire switched out of mouse mode at connect goes back to it on
+    /// close, so the pen still moves the cursor after quit.
+    func testGraphireReturnsToMouseModeOnClose() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0013))
+        let primary = interface(productID: 0x0013, usagePage: 0x01)
+        let (connection, _) = connect(primary, spec: spec)
+        connection.output.drain()
+        XCTAssertEqual(primary.writes, ["feature 02 02"])
+        connection.close()
+        XCTAssertEqual(primary.writes, ["feature 02 02", "feature 02 01"])
+    }
+
+    /// PTK-x70 keeps its mode on close, and nothing is sent over Bluetooth.
+    func testNoMouseModeRestoreForIntuosProGen3OrBluetooth() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x03F9))
+        let pen = interface(productID: 0x03F9, usagePage: 0x01, descriptor: declaring(feature: 0x02))
+        let (usb, _) = connect(pen, spec: spec)
+        usb.output.drain()
+        usb.close()
+        XCTAssertEqual(pen.writes, ["feature 02 02"])
+
+        let ble = interface(productID: 0x0084, usagePage: 0x0D, transport: "Bluetooth")
+        let (bt, _) = connect(ble, spec: try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0013)))
+        bt.output.drain()
+        bt.close()
+        XCTAssertEqual(ble.writes, [])
+    }
+
     /// A Cintiq's own touch sensor takes its Device Mode write, and gets its
     /// earlier mode back on close.
     func testTouchSensorModeIsSavedAndRestored() throws {

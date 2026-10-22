@@ -38,6 +38,9 @@ package final class TabletConnection: @unchecked Sendable {
     package var onSerial: (@Sendable (UInt32) -> Void)?
 
     private let savedTouchModes = SavedModes()
+    /// The interface that took the mode switch, which gets mouse mode back
+    /// on close.
+    private var switchedInterface: (any HIDInterface)?
     private var onReport: (@Sendable (any HIDInterface, HIDReport, UInt64) -> Void)?
 
     package typealias ConnectStep = TabletKit.ConnectStep
@@ -199,11 +202,14 @@ package final class TabletConnection: @unchecked Sendable {
         let saved = savedTouchModes
         let name = spec.name
         let onStep = onStep
-        output.performAndWait {
-            for (interface, bytes) in saved.take() {
+        var restores = saved.take()
+        if let interface = switchedInterface, let bytes = spec.mouseModeRestore { restores.append((interface, bytes)) }
+        switchedInterface = nil
+        output.performAndWait { [restores] in
+            for (interface, bytes) in restores {
                 let ret = interface.setReport(.feature, bytes: bytes)
                 if ret != kIOReturnSuccess {
-                    logger.info("\(name, privacy: .public) restore touch mode failed: 0x\(String(ret, radix: 16), privacy: .public)")
+                    logger.info("\(name, privacy: .public) restore mode 0x\(String(bytes[0], radix: 16), privacy: .public) failed: 0x\(String(ret, radix: 16), privacy: .public)")
                 }
                 onStep?(.wrote(reportID: Int(bytes[0]), value: Int(bytes.count > 1 ? bytes[1] : 0),
                                result: ret, usagePage: interface.usagePage))
@@ -226,6 +232,9 @@ package final class TabletConnection: @unchecked Sendable {
     private func runInit(on target: (any HIDInterface)? = nil, steps: [InitStep]? = nil) {
         let interface = target ?? capableInterface ?? primary
         let steps = steps ?? spec.initSteps
+        if !isBluetooth, spec.mouseModeRestore != nil, steps.contains(.featureReport([0x02, 0x02])) {
+            switchedInterface = interface
+        }
         let readBack = steps == spec.initSteps && !isBluetooth ? spec.quirks.usbModeReadBack : nil
         let name = spec.name
         let onStep = onStep
