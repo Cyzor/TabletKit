@@ -29,6 +29,11 @@ final class TabletQuirksTests: XCTestCase {
         XCTAssertFalse(xl.answersSerialQuery)
         XCTAssertTrue(xl.reinitOnReenumeration)
 
+        let graphire = TabletQuirks.defaults(for: .graphire)
+        XCTAssertEqual(graphire.usbIdleReport?.reportID, 0x01)
+        XCTAssertEqual(graphire.usbIdleReport?.liveReportIDs, [0x02])
+        XCTAssertNotNil(WacomDeviceRegistry.spec(for: 0x0013)?.quirks.usbIdleReport)
+
         XCTAssertTrue(TabletQuirks.defaults(for: .cintiqV1).seizesTouchSensor)
         XCTAssertEqual(TabletQuirks.defaults(for: .intuos3), TabletQuirks())
     }

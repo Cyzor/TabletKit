@@ -98,6 +98,9 @@ public struct TabletQuirks: Sendable, Equatable {
             q.seizesTouchSensor = true
         case .descriptor:
             q.readsDescriptorPens = true
+        case .graphire:
+            // Mouse-mode reports (0x01) mean the tablet left Wacom mode; switch it back.
+            q.usbIdleReport = IdleReportRule(reportID: 0x01, liveReportIDs: [0x02], timeout: 0.25)
         default:
             break
         }
