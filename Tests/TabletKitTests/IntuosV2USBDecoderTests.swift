@@ -159,6 +159,67 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.tiltY ?? 0, -32.0 / 64.0, accuracy: 0.001)
     }
 
+    // MARK: - 0x10 pen path: Intuos4 Grip Pen
+
+    /// The Intuos4 Grip Pen on a PTH-860 packs its barrel buttons into
+    /// pressure: 2048 for the lower, 4096 for the upper, over 11 bits of
+    /// its own pressure. Values from PTH-860 recordings.
+    private func gripPen(status: UInt8, pressure: Int) -> TabletPoint? {
+        var state = IntuosV2Decoder.State()
+        state.lastToolCode = 0x0802
+        state.currentToolCode = 0x0802
+        state.prevInProximity = true
+        var bytes = make0x10(status: status, toolCode: 0x0802)
+        bytes[8] = UInt8(pressure & 0xFF); bytes[9] = UInt8(pressure >> 8)
+        bytes[16] = 16
+        return decode(bytes, state: &state).compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }.first
+    }
+
+    func testGripPenHoveringButtonsAreButtonsNotTip() {
+        let lower = gripPen(status: 0x61, pressure: 2048)
+        XCTAssertEqual(lower?.penButton1, true)
+        XCTAssertEqual(lower?.penButton2, false)
+        XCTAssertEqual(lower?.pressure, 0)
+
+        let upper = gripPen(status: 0x61, pressure: 4096)
+        XCTAssertEqual(upper?.penButton1, false)
+        XCTAssertEqual(upper?.penButton2, true)
+        XCTAssertEqual(upper?.pressure, 0)
+    }
+
+    func testGripPenButtonsWhileTouchingKeepTipPressure() {
+        let lower = gripPen(status: 0x61, pressure: 4012)
+        XCTAssertEqual(lower?.penButton1, true)
+        XCTAssertEqual(lower?.pressure, (4012 - 2048) * 8191 / 2047)
+
+        let upper = gripPen(status: 0x61, pressure: 6108)
+        XCTAssertEqual(upper?.penButton2, true)
+        XCTAssertEqual(upper?.pressure, (6108 - 4096) * 8191 / 2047)
+    }
+
+    func testGripPenFullPressureReachesTabletRange() {
+        let pen = gripPen(status: 0x61, pressure: 2047)
+        XCTAssertEqual(pen?.pressure, 8191)
+        XCTAssertEqual(pen?.penButton1, false)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
+    func testProPen2PressureAboveElevenBitsIsPressure() {
+        var state = IntuosV2Decoder.State()
+        state.lastToolCode = 0x0842
+        state.currentToolCode = 0x0842
+        state.prevInProximity = true
+        var bytes = make0x10(status: 0x61, toolCode: 0x0842)
+        bytes[8] = 0x00; bytes[9] = 0x10  // 4096
+        let pen = decode(bytes, state: &state).compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.pressure, 4096)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
     func testEraserBitFromStatusEmittedOnPen() {
         var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842

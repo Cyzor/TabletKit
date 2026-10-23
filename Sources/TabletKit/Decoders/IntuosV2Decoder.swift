@@ -236,7 +236,17 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
         // ── Pen path ───────────────────────────────────────────────────────────
         // Pressure: 13-bit value (d[8] + lower 5 bits of d[9]) per kernel spec.
-        let pressure = report.le16(at: 8) & 0x1FFF
+        var pressure = report.le16(at: 8) & 0x1FFF
+        var button1 = (status & 0x02) != 0
+        var button2 = (status & 0x04) != 0
+        if state.currentToolCode == 0x0802 {
+            // The Intuos4 Grip Pen's barrel buttons arrive inside pressure,
+            // bit 11 for the lower and bit 12 for the upper, with the tip bit
+            // set even while hovering. Its own pressure is the low 11 bits.
+            button1 = button1 || (pressure & 0x0800) != 0
+            button2 = button2 || (pressure & 0x1000) != 0
+            pressure = (pressure & 0x07FF) * spec.maxPressure / 0x07FF
+        }
         // The PTH-660 descriptor declares tilt as [-64, 63] degrees,
         // matching the Bluetooth path. /127.0 is the fallback for families
         // whose descriptor hasn't been checked.
@@ -281,8 +291,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
                     pressure: pressure, maxPressure: spec.maxPressure,
                     tiltX: tiltX, tiltY: tiltY, rotation: rotation,
-                    penButton1: (status & 0x02) != 0,
-                    penButton2: (status & 0x04) != 0,
+                    penButton1: button1,
+                    penButton2: button2,
                     eraser: state.isEraser,
                     inProximity: true,
                     hoverDistance: hoverDistance)))
