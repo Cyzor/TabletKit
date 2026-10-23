@@ -421,34 +421,29 @@ final class IntuosV1DecoderExtendedTests: XCTestCase {
 
     func testToolChangeDecodesMungedSerialAndCode() {
         var st = IntuosV1Decoder.State()
-        // Build a tool-change packet with known bytes and verify serial/code extraction.
-        // status=0xC2 → (status & 0xFC)==0xC0 ✓
-        // Serial = report[3][4:7]<<4 packed into 32 bits; tool code spread across [2][3][7][8].
-        // Using the same bytes as the existing test (from the source comment):
+        // Status 0xC2 is a tool change. report[3] >> 4 = 8 sets tool code
+        // bit 3, which marks the eraser.
         var b = [UInt8](repeating: 0, count: 10)
         b[0] = 0x10
         b[1] = 0xC2
-        b[2] = 0x08; b[3] = 0x02  // toolCode lower: 0x08<<4 | 0x02>>4 = 0x080
-        b[6] = 0x08; b[7] = 0x02  // toolCode upper: (0x02 & 0x0F)<<12 | (0x08 & 0xF0)<<4 ...
-        // For a straightforward test: verify isEraser from tool code bit 3.
-        // Set b[2]=0x00, b[3]=0x00, b[7]=0x08, b[8]=0x00:
-        // toolCode = (0x00<<4) | (0x00>>4) | ((0x08 & 0x0F)<<12) | ((0x00 & 0xF0)<<4)
-        //          = 0 | 0 | (8<<12) | 0 = 0x8000
-        // bit3 of 0x8000 = 0 → not eraser
-        // Try b[2]=0x00, b[3]=0x08 (report[3]>>4 contributes bit3):
-        // Wait, let me just use a value where isEraser is expected.
-        // isEraser = (toolCode & 0x0008) != 0
-        // Need bit 3 of toolCode set. toolCode = UInt16(report[2])<<4 | UInt16(report[3])>>4 | ...
-        // UInt16(report[2])<<4: any contribution. UInt16(report[3])>>4: bit3 if report[3]=0x80.
-        b = [UInt8](repeating: 0, count: 10)
-        b[0] = 0x10
-        b[1] = 0xC2
-        b[3] = 0x80  // report[3]>>4 = 8 → contributes 0x0008 to toolCode
+        b[3] = 0x80
         let r = decode(b, state: &st)
-        XCTAssertFalse(r.isEmpty)
-        guard case .toolEnter(let tool) = r[0] else {
-            return XCTFail("expected .toolEnter, got \(r[0])")
+        guard case .toolEnter(let tool)? = r.first else {
+            return XCTFail("expected .toolEnter, got \(r)")
         }
         XCTAssertTrue(tool.isEraser, "tool code bit3 should mark eraser")
+    }
+
+    /// Intuos4 at the edge of range: tool change, exit, tool change, with no
+    /// position between, then data. One tool enter.
+    func testRepeatedToolChangeWithoutPositionEntersOnce() {
+        var st = IntuosV1Decoder.State()
+        let change: [UInt8] = [0x02, 0xC2, 0x80, 0x42, 0x48, 0x0D, 0xE2, 0x11, 0x00, 0x00]
+        let exit: [UInt8] = [0x02, 0x80, 0, 0, 0, 0, 0, 0, 0, 0]
+        var enters = 0
+        for report in [change, exit, change, exit, change, [0x02, 0xE0, 0x21, 0xD3, 0x08, 0xD8, 0x00, 0x20, 0x78, 0xD1]] {
+            enters += decode(report, state: &st).filter { if case .toolEnter = $0 { return true }; return false }.count
+        }
+        XCTAssertEqual(enters, 1)
     }
 }

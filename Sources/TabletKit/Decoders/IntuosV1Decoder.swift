@@ -222,6 +222,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
             }
         }
         state.prevInProximity = true
+        state.toolAnnouncedOutOfRange = false
 
         let (x, y) = IntuosPenPacket.position(report)
         state.lastX = x
@@ -287,6 +288,13 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
         let (serial, toolCode) = IntuosPenPacket.toolChange(report)
+
+        // An Intuos4 at the edge of range repeats this packet between exits
+        // with no position in between. Announce that tool once.
+        let repeated = state.toolAnnouncedOutOfRange
+            && serial == state.lastSerial && toolCode == state.currentToolCode
+        state.toolAnnouncedOutOfRange = !state.prevInProximity
+        if repeated { return [] }
 
         state.lastSerial = serial
         state.currentToolCode = toolCode
@@ -471,6 +479,8 @@ extension IntuosV1Decoder {
         package var prevInProximity: Bool = false
         /// Whether the eraser end is in range, held through weak frames.
         package var isEraser: Bool = false
+        /// A tool change arrived and no position has followed it yet.
+        package var toolAnnouncedOutOfRange: Bool = false
         /// Whether the tool in range is a mouse.
         package var toolIsMouse: Bool = false
         /// Active BPT3 touch contacts by slot. Containers carry only changes.
