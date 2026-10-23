@@ -100,10 +100,11 @@ Problems with the MockTab app itself, like its settings window or installing it,
 
 ### What's Where
 
-- `Sources/TabletKit/Registry/` holds the registry of tablets and pens.
+- `Sources/TabletKit/Registry/` holds the registry of tablets and pens, and the evidence for what each model supports.
 - `Sources/TabletKit/Decoders/` has one decoder per report format.
 - `Sources/TabletKit/Core/` holds the types decoders share, like `TabletPoint`, `HIDReport`, and `DecodeResult`.
-- `Sources/TabletKit/HID/` is the only code that talks to macOS about tablets: reading their descriptions of their reports, switching them on, and setting lights and screens.
+- `Sources/TabletKit/HID/` talks to macOS about tablets: reading their descriptions of their reports, switching them on, and setting lights and screens.
+- `Sources/TabletKit/Session/` finds tablets as they connect, opens them, and hands their reports to the host. It and `HID/` are the only code that uses IOKit.
 - `Sources/TabletKit/Output/` builds the reports sent to tablets, such as LED colors and button labels.
 - `Sources/TabletKit/Smoothing/` holds the cursor and pressure filters.
 - `registry.json` copies the registry for scripts and other platforms. After you edit the registry, run `python3 tools/export_registry_json.py` and commit the updated file.
