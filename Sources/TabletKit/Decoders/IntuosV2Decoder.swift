@@ -189,8 +189,6 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     state.lastToolCode = toolCode
                     let isMouse = (toolCode & 0x000F) == 0x0006
                     state.toolIsMouse = isMouse
-                    // Seed scroll counter to avoid a large spurious delta on first mouse report.
-                    if isMouse { state.lastScrollPos = report[16] }
                     // Eraser: standard Wacom bit3 convention, but exclude Art Pen
                     // variants (0x0804, 0x1108) that happen to have bit3 set.
                     let artPen = toolCode == 0x0804 || toolCode == 0x1108
@@ -217,12 +215,11 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         state.lastY = y
 
         // ── Mouse path ─────────────────────────────────────────────────────────
-        // Byte [16] is an absolute 8-bit counter that wraps at 255. Signed delta
-        // via Int8(bitPattern:) handles wrap-around correctly (255→0 = +1 step).
+        // Position only. The descriptor declares byte [16] as hover distance,
+        // and a KC-100 capture moves it with height alone, so it's no wheel.
+        // The tablet sends no mouse buttons on any report.
         if (state.currentToolCode & 0x000F) == 0x0006 && state.currentToolCode != 0 {
-            let scrollPos = report[16]
-            let wheelDelta = Int(Int8(bitPattern: scrollPos &- state.lastScrollPos))
-            state.lastScrollPos = scrollPos
+            let wheelDelta = 0
             results.append(
                 .pen(
                     TabletPoint(
@@ -484,8 +481,6 @@ extension IntuosV2Decoder {
         package var lastToolCode: UInt16 = 0
         /// The tool in range.
         package var currentToolCode: UInt16 = 0
-        /// The mouse's scroll counter, for deltas.
-        package var lastScrollPos: UInt8 = 0
         /// Whether the last report had the pen in range.
         package var prevInProximity: Bool = false
         /// Whether the eraser end is in range, held through weak frames.

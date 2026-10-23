@@ -245,12 +245,14 @@ final class WacomDeviceRegistryTests: XCTestCase {
             0x0806,  // Intuos Mouse
         ]
         let proFamilies: [DeviceFamily] = [.intuosProGen1, .intuosProGen2, .intuosProGen3]
+        XCTAssertFalse(ToolCatalog.spec(forToolCodeRaw: 0x0806)?.isSupported(onFamily: .intuosProGen2) ?? true)
         for code in accessories {
             guard let spec = ToolCatalog.spec(forToolCodeRaw: code) else {
                 XCTFail("0x\(String(code, radix: 16)) is not catalogued")
                 continue
             }
-            for family in proFamilies {
+            // The Intuos Pro gen 2 tracks the mouse but reports no buttons.
+            for family in proFamilies where !(code == 0x0806 && family == .intuosProGen2) {
                 XCTAssertTrue(
                     spec.isSupported(onFamily: family),
                     "0x\(String(code, radix: 16)) \(spec.name) reports unsupported on "

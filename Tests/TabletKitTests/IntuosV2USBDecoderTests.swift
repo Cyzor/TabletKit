@@ -257,38 +257,22 @@ final class IntuosV2USBDecoderTests: XCTestCase {
 
     // MARK: - 0x10 mouse path
 
-    func testCordlessMousePathEmitsWheelDeltaFromByte16() {
-        // Mouse tool codes have low nibble = 0x6 (per kernel + decoder comment).
-        // 0x0007 is not a mouse; 0x0806 (5-button mouse) is. Use that.
+    /// Byte 16 is hover distance, as the descriptor declares and a KC-100
+    /// capture shows: moving it is no wheel turn.
+    func testCordlessMouseHoverDistanceIsNoWheel() {
         var state = IntuosV2Decoder.State()
         var bytes = make0x10(status: 0x60, toolCode: 0x0806)
         bytes[17] = 0x99  // serial
-        bytes[16] = 0x05  // initial scroll position
+        bytes[16] = 0x05
         _ = decode(bytes, state: &state)
-        XCTAssertEqual(state.lastScrollPos, 0x05)
         XCTAssertEqual(state.toolIsMouse, true)
 
-        bytes[16] = 0x08  // moved 3 ticks forward
-        let results = decode(bytes, state: &state)
-        let pen = results.compactMap { r -> TabletPoint? in
+        bytes[16] = 0x3F
+        let pen = decode(bytes, state: &state).compactMap { r -> TabletPoint? in
             if case .pen(let p) = r { return p } else { return nil }
         }.first
-        XCTAssertEqual(pen?.mouseWheelDelta, 3)
-    }
-
-    func testMouseWheelDeltaWrapsCorrectlyAcrossByteBoundary() {
-        // 254 → 1 should read as +3 (signed delta via Int8(bitPattern:)).
-        var state = IntuosV2Decoder.State()
-        var bytes = make0x10(status: 0x60, toolCode: 0x0806)
-        bytes[17] = 0x99
-        bytes[16] = 254
-        _ = decode(bytes, state: &state)
-        bytes[16] = 1
-        let results = decode(bytes, state: &state)
-        let pen = results.compactMap { r -> TabletPoint? in
-            if case .pen(let p) = r { return p } else { return nil }
-        }.first
-        XCTAssertEqual(pen?.mouseWheelDelta, 3, "Wheel counter wrap should produce +3, not -253")
+        XCTAssertNotNil(pen)
+        XCTAssertEqual(pen?.mouseWheelDelta, 0)
     }
 
     // MARK: - 0x11 aux report

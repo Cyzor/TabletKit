@@ -224,7 +224,8 @@ public enum ToolCatalog: Sendable {
             hasWheel: true,
             hasEraserVariant: false,
             eraserToolCode: nil,
-            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
+            // The Intuos Pro gen 2 tracks it but reports no buttons.
+            supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen3]
         )
 
         // MARK: - Intuos Pro Gen2 / IntuosV2 Series (0x08xx extended)
