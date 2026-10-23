@@ -281,4 +281,33 @@ final class IntuosV1DecoderBPT3TouchTests: XCTestCase {
         _ = decode(liftoffFrame(mask: 0xFFFF), state: &s)
         XCTAssertTrue(s.bpt3TouchSlots.isEmpty, "0x81 never creates a contact")
     }
+
+    /// Intuos5 S/L recordings: a liftoff mask that still lists two slots,
+    /// followed in the same report by messages lifting both.
+    func testMessagesAfterLiftoffMaskStillApply() {
+        var s = IntuosV1Decoder.State()
+        _ = decode(
+            makeContainer([
+                touchMsg(slot: 2, down: true, x: 100, y: 200),
+                touchMsg(slot: 3, down: true, x: 300, y: 400),
+            ]), state: &s)
+        // The mask in bytes 3-4 still lists slots 2 and 3.
+        let bytes = makeContainer([
+            [0x81, 0x03, 0x00], touchMsg(slot: 2, down: false, x: 0, y: 0), touchMsg(slot: 3, down: false, x: 0, y: 0),
+        ])
+        let results = decode(bytes, state: &s)
+        XCTAssertTrue(s.bpt3TouchSlots.isEmpty)
+        guard case .touch(let contacts)? = results.last else {
+            return XCTFail("expected .touch, got \(results)")
+        }
+        XCTAssertTrue(contacts.isEmpty)
+    }
+
+    /// Intuos PT S recording: a finger lands in the report that carries the mask.
+    func testFingerLandingWithLiftoffMaskIsKept() {
+        var s = IntuosV1Decoder.State()
+        let bytes = makeContainer([[0x81, 0x01, 0x00], touchMsg(slot: 2, down: true, x: 500, y: 600)])
+        _ = decode(bytes, state: &s)
+        XCTAssertEqual(Array(s.bpt3TouchSlots.keys), [2])
+    }
 }

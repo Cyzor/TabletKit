@@ -66,23 +66,25 @@ enum BPT3ContainerDecoder {
         // Liftoff bitmap: message ID 0x81 means bytes [3..4] are a 16-bit
         // mask of the slots still down, not a contact list. Without it a
         // contact's end can go unheard and stay latched for the session.
-        // Matches OpenTabletDriver's `WacomTouchReport`.
+        // Matches OpenTabletDriver's `WacomTouchReport`. The messages after
+        // it still count: they can lift or land a finger in the same report.
+        var first = 0
         if report[2] == 0x81 {
-            guard spec.hasFingerTouch else { return [] }
-            let mask = UInt16(report.le16(at: 3))
-            // Collect first — can't remove while iterating.
-            let ended = slots.keys.filter { !slotIsDown($0, in: mask) }
-            for slot in ended {
-                slots.removeValue(forKey: slot)
-                touchChanged = true
+            first = 1
+            if spec.hasFingerTouch {
+                let mask = UInt16(report.le16(at: 3))
+                // Collect first — can't remove while iterating.
+                let ended = slots.keys.filter { !slotIsDown($0, in: mask) }
+                for slot in ended {
+                    slots.removeValue(forKey: slot)
+                    touchChanged = true
+                }
             }
-            guard touchChanged else { return [] }
-            return [.touch(slots.values.sorted { $0.id < $1.id })]
         }
 
         let messageCount = min(Int(report[1] & 0x07), 7)
 
-        for i in 0..<messageCount {
+        for i in first..<max(first, messageCount) {
             let base = 2 + i * 8
             let msgID = Int(report[base])
             if (2...17).contains(msgID) {
