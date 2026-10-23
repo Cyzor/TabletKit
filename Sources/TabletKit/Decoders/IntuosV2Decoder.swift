@@ -424,6 +424,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         let buttons = (0..<8).map { bit in (mechanicalByte & (1 << bit)) != 0 }
         let ringActive = posByte != 0x7F  // finger on ring (position valid)
         let ringButtonDown = ringByte != 0  // center button pressed
+        // Hardware sets bit 7 while touched; the position is 0–71 below it.
         return [
             .aux(
                 AuxButtons(
@@ -431,7 +432,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     mechanicalMask: mechanicalByte,
                     touchRingActive: ringActive,
                     touchRingButtonDown: ringButtonDown,
-                    touchRingPosition: ringActive ? posByte : 0x7F))
+                    touchRingPosition: ringActive ? posByte & 0x7F : 0x7F))
         ]
     }
 

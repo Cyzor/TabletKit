@@ -299,6 +299,18 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(aux?.buttons.first, true, "Mechanical key 0 should be set")
     }
 
+    func testAuxRingPositionDropsTouchBit() {
+        var state = IntuosV2Decoder.State()
+        // PTH-860 capture: 0xA4 while touched reads as position 36.
+        let bytes: [UInt8] = [0x11, 0x00, 0x00, 0x00, 0xA4, 0, 0, 0, 0]
+        let results = decode(bytes, state: &state)
+        let aux = results.compactMap { r -> AuxButtons? in
+            if case .aux(let a) = r { return a } else { return nil }
+        }.first
+        XCTAssertEqual(aux?.touchRingActive, true)
+        XCTAssertEqual(aux?.touchRingPosition, 36)
+    }
+
     func testAuxRingInactiveWhenPosition0x7F() {
         var state = IntuosV2Decoder.State()
         let bytes: [UInt8] = [0x11, 0x00, 0x00, 0x00, 0x7F, 0, 0, 0, 0]
