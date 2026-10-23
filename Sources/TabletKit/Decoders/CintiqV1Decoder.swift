@@ -6,16 +6,19 @@ import Foundation
 
 /// Decoder for Wacom Cintiq pen-display tablets using the WACOM_24HD HID report layout.
 ///
-/// Handles the older Cintiqs (`.cintiqV1`): DTK-2400 (0x00F4, confirmed on
-/// hardware), DTH-2400 (0x00F8), DTK-2200 (0x00FA/0x00F9), DTZ-2100B
-/// (0x00FB), Cintiq 21UX2 (0x00CC), 20WSX (0x00C0), 13HD (0x00C4), and 12WX
-/// (0x00C6). Touch models send touch on a separate interface, decoded by
+/// Handles the older Cintiqs (`.cintiqV1`): the 24HD (0x00F4, confirmed on
+/// hardware) and 24HD Touch (0x00F8), 22HD (0x00FA) and 22HD Touch
+/// (0x005B), 21UX (0x003F), 21UX2 (0x00CC), 20WSX (0x00C5), 12WX (0x00C6),
+/// DTK-2241 (0x0057) and DTH-2242 (0x0059), and the 27QHD (0x032A/0x032B).
+/// Touch models send touch on a separate interface, decoded by
 /// `Wacom24HDTDecoder`.
 ///
 /// **Reports:**
 ///   0x01 — tip switch (mouse-compatible collection)
 ///   0x02 — pen (10-byte IntuosV1 layout)
-///   0x0C — touch rings + express keys (kernel WACOM_24HD pad layout)
+///   0x0C — express keys with rings or strips, in the layout
+///          `CintiqPadLayout` picks
+///   0x11 — the 27QHD's panel buttons
 ///
 /// **Pen report type-nibble dispatch: `(status >> 1) & 0x0F`**
 ///   0x00–0x03: general pen packet (position, pressure, tilt, barrel buttons)

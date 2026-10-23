@@ -31,7 +31,7 @@ public struct DigitizerSpec: Sendable {
     /// 21UX2/22HD-family layout (same bytes are touch-strip position instead).
     public var bezelButtonCount: Int = 0
     /// True if this model has two touch strips. Used by CintiqV1Decoder to
-    /// read the 21UX2's strips from bytes other models leave unused.
+    /// read strips from pad bytes that hold rings or nothing on other models.
     public var hasTouchStrips: Bool = false
     /// Where a Cintiq's pad report keeps its keys. Used by CintiqV1Decoder.
     package var cintiqPadLayout: CintiqPadLayout = .standard

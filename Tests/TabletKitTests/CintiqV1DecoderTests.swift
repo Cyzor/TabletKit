@@ -15,8 +15,8 @@
 //   • Barrel-button debounce uses a clear-counter threshold of 7 frames.
 //   • Tip-switch synthetic pressure activates when raw pressure is 0 at tip-down.
 //   • Tool-change packet (status bits 7:2 == 0xC0) decodes serial and tool code.
-//   • Express-key / touch-ring report (0x0C) decodes left ring and gates right
-//     ring on spec.hasDualRings.
+//   • Express-key report (0x0C) reads rings only on the 24HD family, gating
+//     the right ring on spec.hasDualRings, and each model's key layout.
 import XCTest
 @testable import TabletKit
 
