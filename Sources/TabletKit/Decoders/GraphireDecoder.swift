@@ -115,8 +115,10 @@ package struct GraphireDecoder: TabletReportDecoder {
                         x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
                         pressure: 0, maxPressure: spec.maxPressure,
                         tiltX: 0, tiltY: 0, rotation: 0.0,
-                        penButton1: (status & 0x02) != 0,  // right
-                        penButton2: (status & 0x04) != 0,  // middle
+                        // Left, right, then middle in bits 0–2, as in the
+                        // kernel; slots match the Intuos mice.
+                        penButton1: (status & 0x01) != 0,
+                        penButton2: (status & 0x02) != 0,
                         eraser: false,
                         inProximity: true,
                         hoverDistance: 0,

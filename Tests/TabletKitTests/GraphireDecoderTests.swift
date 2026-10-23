@@ -137,6 +137,21 @@ final class GraphireDecoderTests: XCTestCase {
         XCTAssertTrue(id.isMouse)
     }
 
+    /// Status bits 0–2 are left, right, and middle, as in the kernel.
+    func testMouseButtonsLeftRightMiddle() {
+        for (bit, left, right, middle) in [(UInt8(0x01), true, false, false), (0x02, false, true, false),
+                                           (0x04, false, false, true)] {
+            var st = GraphireDecoder.State()
+            let b = makePen(status: 0x80 | 0x40 | bit)
+            guard case .pen(let pt)? = decode(b, state: &st).first(where: {
+                if case .pen = $0 { return true }; return false
+            }) else { return XCTFail() }
+            XCTAssertEqual(pt.penButton1, left, "bit 0x\(String(bit, radix: 16)) left")
+            XCTAssertEqual(pt.penButton2, right, "bit 0x\(String(bit, radix: 16)) right")
+            XCTAssertEqual(pt.mouseMiddleButton, middle, "bit 0x\(String(bit, radix: 16)) middle")
+        }
+    }
+
     // MARK: - Mouse wheel
 
     func testMouseWheelPositiveByte() {
