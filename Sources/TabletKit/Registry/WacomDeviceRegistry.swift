@@ -1066,10 +1066,11 @@ public enum WacomDeviceRegistry: Sendable {
             // Coordinates match OTD's PTH-450.json and Wacom's Intuos5 product
             // booklet (157.48×98.43mm). Touch: kernel `touch_max = 16`, OTD
             // MaxX/MaxY 4095, the same BPT3 container as the hardware-verified
-            // PTH-850 (0x0028) and PTH-651 (0x0315).
+            // PTH-850 (0x0028) and PTH-651 (0x0315). 6 ExpressKeys, like the
+            // PTK-450 (libwacom's 7th button is the ring center).
             productID: 0x0026, name: "Intuos5 S (PTH-450)",
             format: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 16,
             touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
@@ -1103,10 +1104,10 @@ public enum WacomDeviceRegistry: Sendable {
         // Renamed from "Intuos5" to "Intuos Pro"; same HID format.
         .init(
             // 157.48×98.43mm per Wacom's Intuos Pro booklet and OTD's
-            // PTH-451.json; touch as 0x0026 above.
+            // PTH-451.json; touch and 6 ExpressKeys as 0x0026 above.
             productID: 0x0314, name: "Intuos Pro S (PTH-451)",
             format: .intuosV1, maxX: 31496, maxY: 19685, maxPressure: 2047,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 16,
             touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
