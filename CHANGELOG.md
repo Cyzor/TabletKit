@@ -7,901 +7,212 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-24
+
+A new decoding API, a session layer that runs tablets end to end, Huion,
+Gaomon, XP-Pen, UGEE, and Parblo pens, and many more controls on older Wacom
+tablets. Most code written against 0.5.0 needs changes; see Changed.
+
 ### Changed
 
-- On Intuos4 models with key displays, report 0x20 sets the displays' enable
-  bit along with their level.
-- **Source-breaking:** decoders take an `HIDReport` instead of a raw pointer
-  and length. `TabletReportDecoder.decode(report:spec:state:deviceFamily:)`,
-  `decodeBLEPenReport`, `decodeBLEPadReport`, and `decodeWirelessReport` all
-  changed. `HIDReport` keeps the report-ID byte at index 0, so byte offsets are
-  unchanged. Wrap the IOKit callback's buffer with
-  `HIDReport(pointer:count:)`, or a `[UInt8]` with `HIDReport.withReport(_:_:)`.
-  A report is valid only for the call that receives it.
-- **Source-breaking:** `ReportParser.ucLogic` and `DeviceFamily.ucLogic` are new
-  cases, so exhaustive switches over either need one more case. Hand
-  `.ucLogic` to `UCLogicDecoder`, or use `ReportParser.makeDecoder()` and stop
-  switching over formats.
+- **Source-breaking:** `DeviceDecoder` is the one way to decode. Create it
+  with `TabletSpec.makeDecoder()` or `DeviceDecoder(spec:)`, pass each report
+  to `events(_:)`, and handle the returned `TabletEvent` values: `.pen`,
+  `.tool`, `.pad`, `.touch`, `.dial`, and `.device`. It replaces
+  `TabletReportDecoder`, `DecodeResult`, `AuxButtons`, `DecoderState`, and the
+  per-format decoders, which are no longer public.
+- **Source-breaking:** reports arrive as `HIDReport` instead of a pointer and
+  length. Wrap the IOKit buffer with `HIDReport(pointer:count:)`, or a
+  `[UInt8]` with `HIDReport.withReport(_:_:)`. Byte offsets are unchanged.
+- **Source-breaking:** renamed `WacomDeviceSpec` to `TabletSpec`,
+  `ReportParser` to `ReportFormat`, `WacomToolCatalog` to `ToolCatalog`,
+  `WacomToolSpec` to `ToolSpec`, and `WacomToolType` to `ToolKind`. The old
+  names are gone.
+- **Source-breaking:** `ReportFormat` and `DeviceFamily` gain `.ucLogic`.
+- **Source-breaking:** `TabletDevice` keeps `open`, `close`, and `reawaken`;
+  its LED, label, display, Quick Keys, and wireless kit settings moved to
+  `TabletControls`. `decodeBLEPadReport` returns a `PadState`.
 
 ### Added
 
-- `LabelControl.setKeyDisplayBrightness(_:)`, the Intuos4 key displays'
-  level, 0–15. 0 turns them off.
-- `ReportParser.makeDecoder()`, which creates the decoder for a report format.
-  Formats added later need no change in your code.
-- `HIDReport`, and `decode(report:)` forms taking it on `GenericPenDecoder`
-  and `PrecisionTouchDecoder`. Their `[UInt8]` forms remain.
-- `touch-surface` sample: twist two fingers to rotate, as on a trackpad.
-- `UCLogicTabletInfo`, which reads what a Huion, Gaomon, XP-Pen, or UGEE tablet
-  says about itself when switched on: its coordinate range, pressure levels,
-  resolution, and button count. It turns the answer into a `DigitizerSpec`, so
-  these tablets can be sized without a registry entry.
-- `TabletReportDecoder.silenceTimeout` and `decodeSilence(spec:state:deviceFamily:)`,
-  for tablets that never report the pen leaving and just stop sending. The
-  caller keeps time and calls `decodeSilence` when the timeout passes. Both have
-  defaults, so existing decoders are unchanged.
-- A catalog entry, `0xE902`, for Huion, Gaomon, XP-Pen, and UGEE pens, which
-  send no serial or tool code. `ToolIdentity.toolCode` now documents `0xE000`
-  to `0xEFFF` as codes TabletKit assigns to such pens.
-- `UCLogicDecoder`, which reads pen reports from Huion, Gaomon, XP-Pen, UGEE,
-  and Parblo tablets, in both the Huion v2 and UGEE v2 layouts. Huion v2
-  tablets don't report the pen leaving, so it sets a 100 ms `silenceTimeout`
-  for them. It also reports the tablet's buttons. Checked against public
-  recordings of Huion tablets and tested on a Xencelabs pen display; dials and
-  touch strips aren't decoded yet.
+- `TabletSession`, which finds tablets as they connect, switches them on,
+  groups each tablet's USB and Bluetooth connections, and hands reports to
+  your `TabletInputSink`. `TabletSessionDelegate` reports what it finds, and
+  `HIDInterface` separates the device logic from IOKit.
+- `DeviceDecoder.silenceTimeout` and `eventsForSilence()`, for tablets that
+  stop sending instead of reporting the pen leaving.
+- Huion, Gaomon, XP-Pen, UGEE, and Parblo pens, in the Huion v2 and UGEE v2
+  layouts. `UCLogicTabletInfo` sizes these tablets from what they report and
+  makes their decoder, and `TabletBrand` says which brands a device may be.
+  Dials and touch strips aren't decoded yet.
+- `TabletQuirks`, for the ways a model departs from opening and reading
+  reports, and `TabletFeature` with `FeatureEvidence`, for how well each
+  feature is shown to work on a model.
+- `PositionDeadBand`, which holds a resting pen's position still.
+- `TabletSpec.hasTouchStrips`, `VendorDeviceRegistry.drivableSpec(forVendorID:productID:)`,
+  and `LabelControl.setKeyDisplayBrightness(_:)` for Intuos4 key displays.
 
 ### Fixed
 
-- Intuos4 key displays come back after system sleep. `TabletTransport.reawaken()`
-  sends their level and every label again; before, they stayed dark until a
-  label changed.
-- Intuos4 S (PTK-440) no longer has `hasKeyOLEDs`: it has no key displays,
-  so it doesn't offer `.labels`.
-- `IntuosOLEDImageEncoder.renderTextLabel` sizes a label to fit and wraps it
-  onto two centered lines when that reads larger. A long label used to clip:
-  "Toggle Display" showed as `gle Disp`.
-- `DescriptorField.unit` and `unitExponent` hold the right items. The parser
-  had the two tags swapped. `unitExponent` reads the spec's 4-bit nibble as
-  signed, so `0x0D` is −3.
-- `DecoderState.btTouchMsPerCount` is 0.1 ms, not 0.225 ms. Intuos Pro
-  Bluetooth touch frames are 10 ms apart, and their clock wraps every
-  6.55 seconds. The earlier figure placed older frames in a container too far
-  back in time.
-- `descriptor-dump` sample accepts hex with spaces or line breaks, as capture
-  tools print it.
-- `XencelabsDecoder` tells the 3 Button Pen and the Thin Pen apart, from
-  bit 7 of the status byte. The Thin Pen and its eraser have their own tool
-  codes, `0xE812` and `0xE81A`, in `WacomToolCatalog`. The 3 Button Pen keeps
-  `0xE802` and `0xE80A`.
-- Bamboo One M (CTL-671) pen range is 21600×13500, matching vendor model
-  properties and OTD. The Linux kernel's figure belongs to the CTE-660.
-- CTL-471, CTL-671, and Cintiq 13HD (DTK-1300) are now cross-referenced:
-  vendor model properties confirm their ranges and pressure.
-- Bamboo Pen CTL-460 (`0x00D4`) is back to `.crossReferenced`. 0.5.0 marked it
-  `.verified`, but it hasn't been tested on hardware. Its range, pressure, and
-  startup mode switch match vendor model properties.
+- Graphire, Volito, and early Bamboo tablets switch out of mouse mode at
+  connect and whenever they fall back. Contact follows the tablet's own bit,
+  so a light touch no longer drags, and their mouse buttons and wheels read
+  correctly.
+- Cintiq 12WX, 20WSX, 21UX, 21UX2, and 22HD read all their ExpressKeys and touch
+  strips, the 21UX2's strips get mode lights, and barrel buttons on older
+  Cintiqs release at once.
+- Intuos Pro gen 2: the Intuos4 Grip Pen's barrel buttons and full pressure
+  range, over USB and Bluetooth; ring positions without the touch bit; hover
+  distance no longer read as a mouse wheel.
+- Intuos4 key displays return after sleep, labels wrap instead of clipping,
+  and the pen is announced once at the edge of range. The Intuos4 S no longer
+  claims key displays.
+- Intuos5, Intuos Pro gen 1, and Bamboo Pen & Touch fingers no longer stick or
+  vanish.
+- Intuos5 touch S and Intuos Pro S have six ExpressKeys.
+- Tablets switched on with `[0x02, 0x02]` get `[0x02, 0x01]` when the
+  connection closes, except Intuos Pro gen 3 and Movink.
+- The Xencelabs 3 Button Pen and Thin Pen are told apart
+  (`0xE812`/`0xE81A` for the Thin Pen).
+- `DescriptorField.unit` and `unitExponent` held each other's values.
 
 ## [0.5.0] — 2026-10-01
 
-Art Pen rotation on Intuos4/5 and Intuos Pro gen 1, a hovering eraser on
-Intuos Pro gen 2 (USB and Bluetooth), gen 3 (Bluetooth), and Cintiq Pro, tilt
-at the right scale on several models, and `WacomDeviceSpec.hasTilt` filled in
-for every device. Adds the Cintiq 24 and 24 Touch, Wacom One 14 Touch, and the
-Wacom One M's Android mode; ExpressKey Remote pairing and ring mode; an Intuos
-1/2 family; `WacomDeviceSpec.digitizerSpec`; and report-format guides plus
-documentation for the core API. Two enum additions (`DecodeResult.remotePairing`,
-`DeviceFamily.intuos1And2`) are source-breaking for exhaustive switches.
-
-### Added
-
-- Documentation comments for the core API: `TabletPoint`, `AuxButtons`,
-  `DecodeResult`, `WirelessStatus`, `TouchContact`, `DecoderState`,
-  `WacomDeviceSpec`, `DigitizerSpec`, `ModifierMath`, and the decoders.
-  `ToolIdentity.isMouse` and `isEraser` now describe what the decoders actually
-  test, and the pen guide says `eraser` is true while the eraser end is in
-  range, not only in contact.
-- `WacomDeviceSpec.digitizerSpec` — the `DigitizerSpec` a decoder takes,
-  built from the registry entry. The README and samples copied fields by hand
-  and left out `tiltMaxDegrees`, so their tilt read at half scale; they now
-  use this.
-- Documentation: report-format guides for the Intuos Pro gen 3, the Intuos
-  Pro gen 2 family, and the Intuos 10-byte format, under "Report formats" in
-  the DocC catalog.
-- `pen-surface` sample: a minimal pen driver (cursor, tip and barrel-button
-  clicks, pressure, tilt) with an `--init` option to skip or replace the
-  switch-on sequence.
-- `WacomDeviceSpec.touchCompanionPID`, `WacomDeviceSpec.touchCompanionInitSteps`,
-  and `WacomDeviceRegistry.touchCompanionPIDs` — the product ID a tablet's
-  finger sensor enumerates under when it is a separate USB product rather than
-  a second interface of the pen, the init sequence to address to that sensor
-  rather than to the pen, and the set of every PID claimed that way.
-
-  The Cintiq 27QHD Touch is the first row to use it: pen 0x032B, sensor 0x032C.
-  The sensor's own registry row is name-only (`maxX` and `buttonCount` both 0),
-  so it fails a digitizer gate and never reaches a driver whose spec declares
-  `hasFingerTouch` — the gate touch decoding is derived behind. The result was
-  a device whose touch reports reached diagnostics while the OS saw no touch
-  events at all. Naming the relationship lets the routing layer hand the sensor
-  to the pen's driver instead.
-
-  The 0x032B row also gained `touchMaxX`/`touchMaxY` (15360 x 8640, read from
-  the sensor's own descriptor). They had been left at 0, which the injector
-  turns into a divisor of 1 — every contact would have collapsed into one
-  corner even once frames started arriving.
-
-  `touchCompanionInitSteps` carries the sensor's Device Mode write
-  (`[0x83, 0x02, 0x00]`, matching Linux's WACOM_27QHDT branch). The sensor
-  streams a single-contact report without it; the write is what enables the
-  10-contact report, and so everything past one finger.
-
-  Adding the parameters re-synthesized `WacomDeviceSpec`'s initializer. They are
-  defaulted, so existing call sites still compile; the signature change is
-  recorded in `api-breakage-allowlist.txt`.
-
-- `WacomDeviceRegistry` — 0x0531:0x0105, the Wacom One M (CTC-6110WL) in its
-  USB Android mode. The medium model spans three product IDs exactly as the
-  small one does — USB, Bluetooth, USB Android — but only the small model's
-  third ID was on file. Sourced from libwacom's `wacom-one-pen-m.tablet`,
-  which is alone in listing it: OpenTabletDriver carries the other two, and
-  the kernel has no 0x0531 device at all.
-
-  The two existing medium rows were both named "Wacom CTC-6110WL" with
-  nothing to tell them apart; libwacom's transport tags identify 0x0102 as
-  USB and 0x0103 as Bluetooth, so they now read like the small model's.
-
-  No CTC-6110WL has been seen here, so all three medium rows stay
-  unverified. The new one assumes the medium behaves like the small, whose
-  Android row is hardware-confirmed.
-
-- `WacomDeviceRegistry.vendorIDs` — the set of USB vendor IDs this registry is
-  keyed on. Wacom ships under two: 0x056A for the main line, and 0x0531 for the
-  consumer Wacom One CTC line. Callers deciding whether to consult `spec(for:)`
-  should test membership here rather than comparing against 0x056A, which
-  silently skips the CTC rows.
-
-- `ModifierMath.physicalCacheIsCurrent` and `ModifierMath.moveEventFlags` —
-  freshness check for the cached physical-modifier state, and the move-event
-  flag composition that depends on it.
-
-  The injector caches the keyboard's modifier state from a listen-only tap and
-  stamps it onto every pen move event. The tap and the injection path are
-  separate sources on one run loop, so a pen report can be stamped while a
-  `flagsChanged` waits behind it, and the cache then describes the keyboard
-  from before that change. Asserting it there is unrecoverable: the OS sends
-  no further `flagsChanged` for an unchanged key, so an app told a held
-  modifier is up stays wrong until the user releases and presses it again.
-
-  Comparing the cache's write stamp against the report's kernel-receipt stamp
-  says whether it can be vouched for; when it can't, physical bits are dropped
-  from that one event instead. Omitting a bit self-corrects on the next
-  report. Additive — no existing behavior changes when the cache is current.
-
-- `DecodeResult.remotePairing` and `RemotePairingSlot` — the ExpressKey
-  Remote receiver's pairing table (report 0x10), five slots of serial and
-  occupancy, decoded from the kernel's `wacom_remote_status_irq`. Diagnostic
-  only; nothing downstream acts on it.
-
-  Worth decoding because a receiver that is paired but hearing nothing looks
-  identical on the wire to one that is not paired at all. `connected` is
-  stored pairing state, not a live heartbeat — it stays set for a remote that
-  is paired but asleep.
-
-  **Source-breaking for external consumers**, same class as the enum-case
-  additions below. `DecodeResult` is switched over by consumers rather than
-  just passed around, which is the case the API design doc has in mind when
-  it calls for a frozen core.
-
-- `DeviceFamily.intuos1And2` — Intuos 1 (GD-series) and Intuos 2 (XD-series)
-  now have a family of their own. `WacomDeviceSpec.family` derives the family
-  by sniffing the device name, and these nine rows match none of its tokens,
-  so they previously fell through to `.intuosProGen1` — hardware two
-  generations later. They are now matched by product ID, which the name
-  sniffing can't get wrong.
-
-  **Source-breaking for external consumers**, same class as `ReportParser.pl`
-  in 0.4.0: adding a case to a public non-frozen enum stops an exhaustive
-  `switch` from compiling. Nothing in-tree switches over `DeviceFamily`, so
-  this needed no call-site changes.
-
-  Behaviorally contained. This value reaches tool-compatibility checking only
-  — it selects no decoder and changes no coordinate, pressure, tilt, or button
-  handling.
-
-- Tool codes `0x8822` (Grip Pen) and `0x882A` (its eraser) for the Intuos 1/2
-  family, read off a GD-0608-U capture. Neither resolved before, so the pen
-  showed as unnamed and the eraser end was indistinguishable from the tip.
-
-- `WacomDeviceSpec.defaultPressureThreshold` — a per-device factory value for
-  the pen-pressure dead zone. Zero everywhere except Intuos 1/2, whose hover
-  baseline sits above the shared hardware-noise floor.
-
-- `ModifierMath.physicalCacheAgrees` — whether the system keyboard state
-  matches the physical-modifier cache, ignoring the driver's own bits. With a
-  modifier held, `physicalCacheIsCurrent` alone fails on every report, which
-  dropped held keyboard modifiers from all pen drags; the two together only
-  distrust the cache when a change is actually pending.
-
-- `AuxButtons.touchRingHardwareMode` — the ring mode a device's own firmware
-  has selected, for hardware where the host doesn't own it. Set only by the
-  ExpressKey Remote; `nil` elsewhere.
-
-### Fixed
-
-- Tilt read at the wrong scale on several models. The Intuos Pro S
-  (PTH-460) and the Wacom One Creative Pen Display (DTC-133) fell back to
-  half scale; the Wacom One 12 (DTC-121) used the Cintiq Pro 22's ±90°
-  instead of its own ±64°. Values come from the devices' HID descriptors
-  (linuxwacom/wacom-hid-descriptors) or their family's confirmed scale, and
-  the alternate report now reads each device's scale instead of a constant.
-- `WacomDeviceSpec.hasTilt` was false for every device. It now reports
-  whether the tablet senses tilt, derived from the report format plus a list
-  of consumer, business, and pen-less products (per DrawTabData where it
-  covers the model), and can still be set explicitly.
-- Art Pen on Intuos4/5 and Intuos Pro gen 1: rotation packets were decoded as
-  pen packets, pressing barrel button 1 and setting pressure from the angle
-  on every other report. They now set the pen's rotation, which these
-  tablets didn't report before.
-- Intuos Pro (PTH-x60) over USB and Bluetooth, Intuos Pro gen 3 (PTK-x70)
-  over Bluetooth, and Cintiq Pro in the offset report format, reported the
-  eraser only while it touched the surface, so apps saw each eraser stroke
-  begin and end as the pen. The decoder now reads the Invert bit
-  (eraser end in range) and holds the eraser through weak frames at the edge
-  of range.
-- Intuos 1/2 tablets drew a faint line while the pen hovered, without touching
-  the surface. The per-tool dead zone that corrects this already existed but
-  defaulted to zero, so a fresh install still drew until the setting was found
-  by hand; it now defaults to a value clearing the measured sensor noise.
-
-- The Grip Pen, its eraser, and the Intuos 1–3 cursor logged a spurious "not
-  fully supported" line on the Cintiq 13HD Touch (DTH-1300) and on Intuos 1/2
-  tablets. `IntuosV1Decoder` synthesizes these tool codes when a device enters
-  proximity without first announcing its tool, and the catalog didn't list
-  those families as supported. Log-only; no input behavior was affected.
-
-- Over Bluetooth, an Intuos Pro gen 3 pen with no barrel sensor could inherit
-  the previous pen's rotation after a swap, and be relabeled as an Art Pen.
-  `IntuosV3Decoder` now drops the held angle on proximity exit, as USB did.
-
-- `PrecisionTouchDecoder` reported nine phantom contacts per frame on the
-  Cintiq 27QHD Touch, which fills unused finger slots with `0xFF`. Slots whose
-  position exceeds the declared range, or whose contact id repeats, are now
-  dropped.
-
-- Older Cintiqs registered a phantom generic pen each time a pen first came
-  into range, and hovering at the edge of range read as full tilt. The pen
-  sends an in-range packet before naming itself; `CintiqV1Decoder` now takes
-  only its position and waits for real pen data before assuming a generic pen.
-
-- The Pro Pen shipped with the Cintiq 13HD and 27QHD reported as an unknown
-  tool. Tool codes `0x1E02` and `0x1E0A` (its eraser) are now cataloged.
-
-- The Grip Pen and its eraser were marked "not fully supported" on Intuos Pro
-  gen 2 tablets (PTH-660/860), where they work with full pressure and tilt.
-
-- `VendorDeviceRegistry.transportPriority` ranked the Wacom ACK-40401 RF dongle
-  (0x0084) equal to USB, so a tablet reachable over both had no deterministic
-  winner. The dongle now ranks below USB, like Wacom Bluetooth PIDs.
+Art Pen rotation on older Intuos tablets, a hovering eraser on newer ones, and
+documentation for the core API.
 
 ### Changed
 
-- `WacomToolCatalog` follows libwacom for `0x0852`/`0x085A` (Intuos2 Grip
-  Pen, was "Pen 4K") and `0x0862` (Intuos Pen, was "Pen 5K"), which reports
-  neither tilt nor an eraser. The invented `0x086A` eraser entry is removed.
-- `WacomToolCatalog` names tool code `0x0832` the Stroke Pen, as the Linux
-  driver does, instead of Pro Pen 2.
-- Registry confidence for the Intuos Pro L gen 3 (`0x03F9`) and Bamboo Pen
-  CTL-460 (`0x00D4`) is now `.verified`, matching their hardware testing.
-- Registry cross-checked against vendor model properties. Pen range and pressure
-  match on 102 models; 38 more move to `.crossReferenced` as a result.
-- Pen range and pressure now follow vendor model properties on 25 models whose values
-  came from libwacom or were placeholders, among them Cintiq Pro 16, the
-  MobileStudio Pros, Cintiq 22 (DTK-2260), DTU-1141B, DTH-1152, Wacom One, and
-  Cintiq 24. Cintiq 13HD pressure is 2047. DTU-710 and DTU-1931 get the PL
-  decoder and their ranges.
-- Touch sensors that enumerate under their own product ID are now claimed by
-  their pen display: Cintiq Pro 13/16/24/32, MobileStudio Pro 13/16, DTH-1152,
-  DTH-2452, and the 24HD/22HD/13HD/Cintiq 22 Touch. The last four also send
-  Linux's `0x12 = 2` touch mode switch. Touch ranges come from vendor model properties
-  where they match the sensor's descriptor.
-- Added Cintiq 24 (DTK246, DTH246) and Wacom One 14 Touch (DTH142), and the
-  2025 USB revisions of the Intuos Pro gen 3.
+- **Source-breaking:** `DecodeResult` gains `.remotePairing`, and
+  `DeviceFamily` gains `.intuos1And2`.
+- Tool names follow libwacom and the Linux driver: `0x0842` is the Pro Pen 2,
+  `0x0832` the Stroke Pen, `0x0852` the Intuos2 Grip Pen, and `0x0862` the
+  Intuos Pen.
+- ExpressKey Remote: the ring's center button is `touchRingButtonDown`, and
+  keys 1–17 are `buttons[0...16]`.
+- Registry ranges and pressure checked against vendor model properties.
 
-- Tool code `0x0842` (and eraser `0x084A`) is now named Pro Pen 2, the pen
-  bundled with the PTH-660. It was listed as Pro Pen 3, which is `0x0200`.
+### Added
 
-- ExpressKey Remote: the ring's center button is now `touchRingButtonDown`
-  rather than `buttons[0]`, and keys 1–17 are `buttons[0...16]`. The registry
-  row's `buttonCount` is 17 and `ringSlotCount` 3.
+- `WacomDeviceSpec.digitizerSpec`, `touchCompanionPID`,
+  `touchCompanionInitSteps`, and `defaultPressureThreshold`.
+- `WacomDeviceRegistry.vendorIDs` and `touchCompanionPIDs`.
+- `RemotePairingSlot`, `AuxButtons.touchRingHardwareMode`, and
+  `ModifierMath.physicalCacheIsCurrent`, `physicalCacheAgrees`, and
+  `moveEventFlags`.
+- Cintiq 24 and 24 Touch, Wacom One 14 Touch, Wacom One M in Android mode, the
+  2025 Intuos Pro gen 3 USB revisions, and the Intuos 1/2 Grip Pen.
+- DocC documentation for the core API, report-format guides, and the
+  `pen-surface` sample.
 
-Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
-device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and
-Cintiq 27QHD panel support, an `ExpressKey Remote`/`pl`-series routing
-addition, and a large pass of active-area/coordinate-range corrections
-across the registry.
+### Fixed
+
+- Art Pen rotation on Intuos4, Intuos5, and Intuos Pro gen 1.
+- The eraser reads while hovering on Intuos Pro gen 2, gen 3 over Bluetooth,
+  and Cintiq Pro.
+- Tilt scale on several models, and `hasTilt` for every device.
+- Intuos 1/2 no longer draws while hovering. The Cintiq 27QHD Touch no longer
+  reports phantom contacts, and older Cintiqs no longer report a phantom pen.
 
 ## [0.4.0] — 2026-09-20
 
-Intuos Pro gen 3 Bluetooth support (pen tracking, dials, battery), a
-device-agnostic generic pen decoder, Wacom One S (CTC-4110WL) and
-Cintiq 27QHD panel support, an `ExpressKey Remote`/`pl`-series routing
-addition, and a large pass of active-area/coordinate-range corrections
-across the registry.
+Intuos Pro gen 3 over Bluetooth, descriptor-driven pen and touch decoders, and
+broad registry corrections.
+
+### Changed
+
+- **Source-breaking:** device families are the `DeviceFamily` enum instead of
+  strings, throughout the API.
+- **Source-breaking:** `ReportParser` gains `.pl` and `.expressKeyRemote`.
+- **Source-breaking:** `DigitizerSpec` and `WacomDeviceSpec` gain
+  `bezelButtonCount`, and `TouchContact.init` gains `contactMinor`.
+- **Source-breaking:** `XencelabsControl` is now `XencelabsOutputProtocol`.
+- `CursorSmoother` and `PressureSmoother` take the real time between samples.
 
 ### Added
 
-- Battery reporting for Intuos Pro gen 3 tablets over Bluetooth. `IntuosV3Decoder`
-  now decodes report `0x1B`, a once-per-second status report carrying the battery
-  level and charging state, and emits `.battery` like the other decoders that
-  support it. Report layout confirmed against PTK-870 captures.
-
-- `ReportParser.pl` and `ReportParser.expressKeyRemote` — new cases routing the
-  eight PL-series pen displays and the ExpressKey Remote to their own decoders.
-
-  **Source-breaking for external consumers.** `ReportParser` is a public
-  non-frozen enum, so an exhaustive `switch` over it in another module stops
-  compiling when a case is added; `@unknown default:` avoids that but is the
-  consumer's choice, not a guarantee this package can make. Pre-1.0, and
-  MockTab — the only consumer — was updated in the same change. This is the
-  break class the API design doc flags as unavoidable for an open enum, and the
-  reason `DecodeResult` is planned to gain a frozen core rather than more cases.
-
-- `XencelabsDecoder.tiltMaxDegrees` — the pen's physical tilt range (±60°),
-  hardware-confirmed. Replaces the internal `tiltScaleDegrees`, whose value
-  happened to be right for the wrong reason. `WacomDeviceSpec.tiltMaxDegrees`
-  documents that this is the physical angle, not necessarily a raw divisor.
-
-### Fixed
-
-- `Wacom24HDTDecoder` now emits an empty touch frame when every finger lifts.
-  It previously returned nothing for a zero-contact report, and since nothing
-  downstream times contacts out, the last ones stayed latched until the next
-  touch. `Wacom27QHDTDecoder` already behaved this way. Affects the Cintiq
-  22/22HD/24HD/13HD touch sensors.
-
-### Changed
-
-- `TabletPoint.tiltX`/`tiltY` now state their sign convention: the HID
-  Digitizer one (X positive right, Y positive toward the user). Decoders pass
-  the wire sign through; macOS `NSEvent.tilt.y` runs the other way, so
-  CGEvent consumers negate Y once at their own boundary.
-
-- `DecoderState.btTouchFrameStamps` — the device-clock stamp for each touch
-  frame an Intuos Pro Bluetooth container carried, in emission order. Each
-  sub-frame ends in a 16-bit little-endian timestamp that neither this package
-  nor the Linux kernel previously read: one count is 0.225 ms and consecutive
-  sub-frames are stamped 22.5 ms apart, measured on a PTH-660. A host that
-  batches frames can now time them by when the tablet sampled rather than when
-  the container arrived. Read differences only within one container — the field
-  wraps every 14.75 seconds. Companions `btTouchMsPerCount` and
-  `btTouchCountsPerFrame` carry the measured constants.
-
-- `hidReportDescriptorHex(_:)` — the device's raw HID report descriptor as
-  hex, which is the input `HIDReportDescriptorParser.parse(hex:)` expects.
-  Closes the gap where the parser had no way to get its own input from an
-  `IOHIDDevice`.
-
-- `DeviceInstanceKey` — identity of one physical device instance (canonical
-  model PID plus an instance token from USB serial, IOKit `locationID`, or
-  empty for PID-only degradation). Extracted from MockTab, where it is the key
-  for per-device settings, windows, and state. Pure value type, `Hashable` /
-  `Codable`; `stringValue` is the stable persistence form. The host policy that
-  maps an instance to a settings namespace stays in the app.
-
-- `WacomToolCatalog.hasRotation(toolCode:)` — whether a tool carries a
-  rotation sensor (Art Pen / Marker Pen). Decoders use it to scope the
-  boundary-noise proximity-exit heuristic to the tools that provoke it.
-  Unknown tool code returns false.
-
-- `TabletKit.swift` — a front-door file at the package root carrying the
-  module overview and the four-step core decode loop, so there's one
-  designated place to start reading. Deliberately no declaration in it (a
-  type named `TabletKit` inside the `TabletKit` module collides with the
-  module's own DocC landing page).
-- `registry.json` — a generated, versioned snapshot of the device registry
-  (`tools/export_registry_json.py`), for consumers without a Swift
-  toolchain. Committed like `registry_audit.csv`; regenerate after registry
-  edits.
-- `ConformanceHarnessTests` — a data-driven fixture format: add a capture
-  log body plus a `(parser, DigitizerSpec)` pair to prove a device's
-  registry assignment actually decodes to structured events, without
-  touching any decoder file. Low bar by design (catches wrong-parser/
-  garbage-coordinates bugs, not full field correctness) — see its own doc
-  comment.
-
-- `BambooDecoder` now decodes the 20-byte Report ID 0x02 touch format used
-  by the CTH-460/461 chassis (kernel `wacom_bpt_touch`) — two fixed-slot
-  contacts plus the 4 express keys, which ride this report's byte 1 rather
-  than a separate pad byte. `hasFingerTouch`/`maxTouchContacts`/`touchMaxX`/
-  `touchMaxY` are now set on 0x00D1/0x00D6/0x00D7/0x00DA, confirmed against
-  the kernel's static feature table (`BAMBOO_PT`, `touch_max = 2`); no direct
-  hardware capture of this report exists yet, so those rows stay
-  `.crossReferenced`.
-
-- `GenericPenLayout` / `GenericPenDecoder` — a descriptor-driven pen
-  digitizer decoder, the pen counterpart to `PrecisionTouchLayout`.
-  Reads tip switch, in-range, barrel/secondary barrel, eraser, invert,
-  X/Y, tip pressure, tilt, twist, and hover distance from a device's own
-  report descriptor rather than a hardcoded per-family byte table.
-  Modern Wacom hardware declares these on its vendor page using the
-  standard Digitizer usage numbers `DigitizerUsage` recognizes —
-  confirmed field-for-field against a real Cintiq Pro 24 (DTH-2420)
-  descriptor, both pen report variants it declares.
-
-- `DescriptorLayout.modeSwitchFeatureReportID()` and the
-  `modeSwitchUsages` list behind it — the report ID a device declares
-  for switching into full reporting, vendor control preferred over the
-  standard one. Returns nil for classic hardware, which declares
-  neither, so callers keep whatever legacy write they used.
-
-- ExpressKey Remote (0x0331) report structure recorded on its registry
-  row: which bits in report 0x11 carry the eighteen controls, the ring
-  position byte, and what per-action recordings could not settle. The
-  row stays name-only — this is groundwork for an implementer with the
-  hardware, not a decoder.
-
-- `RepeatingReportStructureDetector` (SPI, `@_spi(TabletKitInternals)`) —
-  finds repeating byte-stride structure in a report using only
-  per-position variance statistics, no descriptor required. Exists for
-  reports the descriptor-driven tools cannot help with — classic Wacom BT
-  reports declare every field as opaque vendor usage, so there is nothing
-  to derive a layout from — and confirmed against a real PTH-860 BT
-  capture, where it recovers the kernel-documented 4×43-byte frame /
-  5×8-byte contact layout from statistics alone, plus a CTH-690 capture
-  with no repeating structure, correctly reporting none. Behind SPI
-  because the only caller is a capture-tooling path; its three result
-  types (`ByteVarianceSignature`, `RepeatingRun`, `RepeatingReportStructure`)
-  moved with it.
-
-- Graphire device-family string was `"bamboo2"`, a value no `WacomDeviceSpec.family`
-  lookup could produce, so the four tool specs written for this hardware
-  (PenPartner Pen, Graphire Pen, its eraser, Graphire Mouse — all
-  `supportedFamilies: [.graphire]`) were unreachable and reported unsupported
-  on every device. Returns `.graphire` now. `GraphireDecoder` synthesises
-  Grip-Pen tool codes and never runs the compatibility check, so runtime
-  decoding is unchanged; the family string simply names what it describes.
-
-- `PrecisionTouchLayout` / `PrecisionTouchDecoder` — a device-agnostic decoder
-  for HID Precision-Touchpad-style multitouch reports (Contact Identifier,
-  Contact Count, per-finger collections), the touch counterpart to
-  `GenericDigitizerFrame`. The layout is derived from the device's own report
-  descriptor via `HIDReportDescriptorParser` rather than hardcoded per family,
-  so it carries its own axis maxima and adapts to slot counts and optional
-  fields. As of 2026-08-06, `WacomKnownDevice` derives one for any touch
-  report ID `IntuosV2Decoder` doesn't reserve — this is what fixed touch on
-  Cintiq Pro/DTH devices whose reports were previously discarded by a
-  report-ID dispatch gap.
-
-- Backfilled `touchMaxX`/`touchMaxY` on five Cintiq Pro/DTH registry entries
-  (0x0350, 0x0354, 0x03C0, 0x03C4, 0x03EC) from the `linuxwacom/wacom-hid-descriptors`
-  corpus, with provenance comments on each row.
-
-- `CursorSmoother.applySmoothing(rawPoint:enteringProximity:)` and
-  `PressureSmoother.applySmoothing(rawPressure:strokeStarting:)` now take a
-  `dt` (real elapsed seconds since the previous sample). Both filters'
-  cutoff math previously assumed a fixed one-sample time unit (`Te=1`),
-  which drifts across devices with different report rates; passing real
-  dt makes the filters behave consistently regardless of rate.
-
-### Fixed
-
-- `IntuosV3Decoder`'s 0x1E extended pen report (PTK-470/670/870, Intuos Pro
-  gen3) checked the wrong status bit for proximity — bit 6, an unverified
-  port from IntuosV2. Real PTK-870 captures (`whot/wacom-recordings`) show
-  bit 7 is proximity and bit 6 is the tip switch; the old check dropped
-  every hovering frame, which precedes each stroke, and misfired
-  proximity-exit at the hover/touch boundary. Also fixed this report's tilt
-  scale: a real Movink 13 capture (also 0x1E via this decoder) shows raw
-  tilt only spans -64...63, i.e. it's already in degrees, not a 16-bit
-  fraction — the old `/Int16.max` divisor collapsed real tilt to near
-  zero. Both fixes are now hardware-confirmed across two devices, with
-  real-capture test fixtures replacing the synthesized ones; the
-  previously-unconfirmed penButton1/2/3 bits are also now confirmed by the
-  Movink capture, which presses each individually.
-
-- `IntuosV2Decoder`'s 0x1E offset pen report (DTH-227/271/172, DTK-168, and
-  other family members sharing this report ID) also checked the wrong
-  proximity bit — and additionally had pressure width, hover-distance byte
-  offset, and the eraser bit all wrong. Confirmed against a real DTH-227
-  capture (OpenTabletDriver PR #3858) and OTD's own `IntuosV2OffsetReport`
-  struct: proximity is bit 7 of report[2] (report[1] is a constant sub-type
-  byte, not part of the status — OTD's own proximity field reads that
-  constant byte and is always false); pressure is plain 16-bit, not 13-bit
-  masked; hover distance is byte 11 (aliased with tiltX), not byte 16;
-  eraser is bit 4, not bit 3.
-
-- CTL-4100/4100WL (0x0374/0x0376/0x03C5) carried an already-verified
-  dimension correction (confirmed 2026-08-03 against Wacom's IPI manual,
-  cross-referenced with OTD's own `IntuosV2ReportParser`/192-byte report
-  assignment) but were left at the default `.experimental` confidence —
-  their sibling 0x0377 got promoted to `.crossReferenced` from the same
-  sourcing pass and these three didn't. Promoted to match.
-
-- `WacomDeviceRegistry` — 0x00D2 (CTH-461), 0x00D3/0x00D8 (CTH-661), and
-  0x00DF (CTH-670) were assigned the big-endian `.intuosV1` parser; the
-  kernel's static feature table declares all four `BAMBOO_PT`, the same
-  little-endian 2009-2011 generation as 0x00D1/0x00D6/0x00D7/0x00DA.
-  Corrected to `.bamboo`. 0x00D2 also gets `hasFingerTouch` (same 480×320
-  wire space as its 0x00D1-class siblings); 0x00D3/0x00D8's 6x8 chassis
-  touch space is unconfirmed and left off. 0x00DF's active-area dimensions
-  were also wrong (152×102mm, mismatched its own maxX/maxY) — corrected to
-  216.48×137mm.
-
-- Cintiq Pro 32 (DTH-3220, `0x0352`) carried no init step, the only
-  IntuosV2 pen display in the registry missing one, so the device would
-  have stayed in its default reporting mode. Sends `[0x02, 0x02]` now, as
-  its thirty-five siblings already did.
-
-- Cintiq Pro 32 active area was libwacom's 686 × 381 mm. OpenTabletDriver
-  and Wacom's own spec sheet both put it near 700 × 396 mm, so the row now
-  reads 701.92 × 396.58 mm (`maxX` 140384, `maxY` 79316) and is promoted to
-  `.crossReferenced`.
-
-- `IntuosV2Decoder`'s report-ID dispatch had no case for `0x0C`, silently
-  discarding every touch report from Cintiq Pro/DTH pen displays. Touch
-  frames on those devices now decode via `PrecisionTouchDecoder`.
-
-- Intuos Pro M (PTH-651, `0x0315`) declared no finger touch and no touch
-  ring, so both were dead on a device that has them. Discovery captures
-  show its touch arriving as the same 64-byte BPT3 container already
-  decoded for Intuos5 L and CTH-690, and its ring streaming in the pad
-  report. Both are enabled now; no decoder change was required. Touch
-  coordinate maximums are derived rather than measured — the sensor
-  normalizes each axis independently to the full 12-bit range, which the
-  captures confirm by exceeding any isotropic prediction by 38%.
-
-- Intuos Pro M (PTH-651, `0x0315`), Intuos5 S (PTK-450, `0x0029`) and
-  Intuos5 M (PTK-650, `0x002A`) carried rounded spec-sheet active areas
-  instead of the digitizer's real extent. Every other tablet in this
-  family agrees with its own coordinate range to within half a
-  millimetre; these three were off by up to 12 mm, stretching the mapping
-  from tablet to screen. Corrected to match their coordinate ranges.
-
-- `IntuosV1Decoder` treated a plain stylus's sustained low-confidence hover
-  (status `0x20` — position live, pressure zero) as a proximity-exit
-  precursor, the same way it does for an Art Pen. On a PTH-850 Grip Pen that
-  hover state is roughly half of all hover reports, so the decoder fabricated
-  a proximity exit every few frames — on the intuosV1 touch models that reset
-  the BPT3 pen-arbitration latch and killed capacitive touch for the whole
-  time a hand rested near the tablet. The exit-frame heuristic is now scoped
-  to tools that actually carry a rotation sensor; the genuine both-bits-clear
-  exit is unchanged.
-
-- `BPT3ContainerDecoder` no longer suppresses touch contacts while a pen is
-  in proximity. That decoder-level arbitration compounded the bug above and
-  had no equivalent on the `.intuosV2` families, which rely entirely on the
-  host's own pen/touch arbitration. This decoder now matches them: it emits
-  every contact and leaves arbitration to the host.
+- Intuos Pro gen 3 over Bluetooth: pen, dials, and battery.
+- `GenericPenDecoder` and `PrecisionTouchDecoder`, which read a device's own
+  report descriptor, plus `classifyDigitizerInterface`,
+  `DescriptorLayout.modeSwitchFeatureReportID()`, and
+  `hidReportDescriptorHex(_:)`.
+- `DeviceInstanceKey`, `WacomToolCatalog.hasRotation(toolCode:)`,
+  `XencelabsDecoder.tiltMaxDegrees`, and `DecoderState.btTouchFrameStamps`.
+- Touch on the Bamboo CTH-460 and CTH-461.
+- `registry.json`, a generated snapshot of the registry.
 
 ### Removed
 
-- The `swift-docc-plugin` dependency, and with it the package's entire
-  dependency graph — a clone now builds and tests with nothing to resolve.
-  It was only ever used to render the DocC catalog, which is now built on
-  demand by `tools/build-docs.sh` (documented in the README); `docc` ships
-  with Xcode, so nothing extra is required. No API change. Removing it also
-  drops the `Package.resolved` that churned between toolchains and was
-  deleted out from under the consuming app on every `swift test`.
-
-- `XencelabsControl`, the deprecated typealias left behind when the type was
-  renamed to `XencelabsOutputProtocol`. Source-breaking for anything still
-  using the old name; the replacement has an identical surface, so the fix is
-  a rename. Recorded in `api-breakage-allowlist.txt`.
-
-- `DecoderState.bpt3ContainersSincePen` — the container-since-pen counter that
-  drove `BPT3ContainerDecoder`'s removed proximity gate. Nothing outside the
-  package read it. Recorded in `api-breakage-allowlist.txt`.
-
-### Changed
-
-- Device family is now the `DeviceFamily` enum rather than a bare `String`.
-  The `deviceFamily:` parameter on `TabletReportDecoder.decode` and every
-  decoder, `WacomDeviceSpec.family`, and `WacomToolSpec.supportedFamilies`
-  (plus `isSupported(onFamily:)`, `capabilities(forFamily:)`,
-  `WacomToolCatalog.tools(forFamily:)` and `capabilities(forToolCode:family:)`)
-  all move from `String` to `DeviceFamily` / `DeviceFamily?`. A `nil` family
-  means "unknown, treat as universally compatible". The set is a closed
-  12 cases: adding one is a deliberate source break, so a family a `switch`
-  forgets to handle fails to compile instead of silently mismatching a tool.
-  Raw values are the same strings as before, so any `WacomToolSpec` JSON
-  round-trip is unchanged. Every affected signature is recorded in
-  `api-breakage-allowlist.txt`. `WacomDeviceSpec.family`'s `.intuosV1`
-  branch still inspects the device name to split one parser across four
-  families; replacing that with structured data is a separate task.
-- `TouchContact.init` gained a defaulted `contactMinor` parameter, which the
-  Swift API digester flags as a source-compatible but symbol-breaking change
-  (see `api-breakage-allowlist.txt`).
-- `DigitizerSpec` and `WacomDeviceSpec` gained a `bezelButtonCount` field for
-  the onboard bezel buttons on the DTK-2400 and Xencelabs Pen Display. Neither
-  declares an explicit initializer, so the added property changed both
-  synthesized memberwise signatures — source-breaking for any caller that
-  spelled out every argument (add the one new parameter). Recorded in
-  `api-breakage-allowlist.txt`.
-- `classifyDigitizerInterface` — decides whether an unrecognized HID interface
-  may have a pen driver attached, by checking whether its X/Y usages sit inside
-  a Digitizer Touch Screen or Touch Pad collection. Usages alone cannot tell pen
-  from touch (both declare Generic Desktop X/Y and a Tip Switch); the enclosing
-  application collection can. Fails open as `.undetermined` when no descriptor
-  is readable. A `.touchOnly` verdict requires evidence of more than one
-  contact — more than one finger slot, a contact count, or a per-slot
-  contact identifier — because some pen tablets declare their stylus
-  under a Touch Screen collection, and withholding the pen driver from
-  one of those would leave it with no driver at all. Relative X/Y never
-  counts as pen evidence — Windows Precision
-  Touchpad devices must declare a legacy Mouse collection alongside their touch
-  collection, and treating that as a pen would misclassify most touch hardware.
-  Exists so hosts can avoid pointing a pen driver at a multitouch interface,
-  where X/Y repeat once per finger and element values cannot be attributed to a
-  contact.
-
-### Changed
-
-- `XencelabsControl` renamed to `XencelabsOutputProtocol` (moved from
-  `Control/` to `Output/`) — the old name read as ambiguous next to
-  the report decoders. `XencelabsControl` remains available as a
-  deprecated typealias.
+- The `swift-docc-plugin` dependency. TabletKit has no dependencies.
 
 ### Fixed
 
-- Coordinate range and active area on the Bamboo Touch CTT-460 registry row
-  (`0x00D0`), settled by a real hid-recorder capture from the
-  bentiss/hid-devices corpus (analysis only — the trace itself is unlicensed
-  and not vendored). The touch interface's own HID descriptor declares
-  logical max 480×320 and physical max 120×80mm; the capture's touch events
-  stay inside that range with Y nearly reaching its max; and the kernel's
-  `WACOM_QUIRK_BBTOUCH_LOWRES` quirk (raw values shifted left by 5) confirms
-  the kernel's nominal 14720×9200 was never the wire format. Corrected
-  14720×9200/127×76mm → 480×320/120×80mm and upgraded the row to verified
-  confidence. The two later-generation touch-only siblings (CTT-460A
-  `0x00D9`, CTT-470 `0x00DC`) likely use the BBTOUCH3 4096×4096 space
-  instead, but no capture covers them — annotated as suspect, values left
-  alone. Touch decoding for all three remains an open coverage gap.
-- Active-area dimensions on both Cintiq 16 (DTK-1660) registry rows
-  (356×203mm → 348×198mm), corrected toward OpenTabletDriver's precise value
-  after Wacom's own DTK-1660 manual pointed the same direction.
-- Parser assignment on two registry rows (`0x0300` "Wacom CTL-471", `0x00DE`
-  "Wacom CTH-470"), reassigned `.intuosV1` → `.bamboo` (little-endian, no
-  fractional-bit doubling). Both were flagged as suspect on 2026-08-03 from
-  documentation alone and left unfixed pending confirmation; the evidence was
-  since upgraded by a third independent primary source — libwacom's own
-  `.tablet` files for both PIDs (`wacom-one-by-wacom-s-p.tablet`,
-  `wacom-bamboo-16fg-s-pt.tablet`) explicitly label them "third generation
-  BambooPT", `Class=Bamboo`, the same family `BambooDecoder`'s own doc
-  comment already used to describe the little-endian report path. Combined
-  with OpenTabletDriver's independent parser choice for both PIDs (the same
-  little-endian family) and, for CTL-471, an active-area figure a fourth
-  source (a community tablet-spec mastersheet) also confirms at 152×95mm,
-  three-to-four convergent sources now outweigh the prior `.intuosV1` value,
-  which was already known wrong from the active-area mismatch alone.
-  CTL-471's coordinates were also corrected (14720×9225 → 15200×9500) to
-  match; CTH-470's coordinates (14720×9200) were already correct — only its
-  parser was wrong. Still no hardware capture for either; one through
-  `tools/hid_input_capture.c` remains the definitive check.
-- Active-area dimensions on five Kernel-sweep Cintiq registry rows: 13HD
-  (DTK-1300), 13HD Touch (DTH-1300), 22 (DTK-2241), 22 Touch (DTH-2242), and
-  20WSX (DTZ-2000W). Four had no mm data at all; DTK-1300 had a stale value.
-  Every row's existing maxX/maxY was already exactly right — three pairs
-  divide out to their manual's stated active area with no rounding at all —
-  so only mm was ever in question here. This closes out the "Kernel sweep"
-  section's remaining spec-shaped gaps; what's left there (undecoded report
-  families, unconfirmed touch-sensor byte layouts, a partially-reverse-
-  engineered accessory) needs a decoder or a hardware capture, not a manual,
-  and was left alone accordingly.
-- Active-area dimensions on the Bamboo/Graphire-era CTE/CTF consumer line
-  (CTE-450, CTE-460, CTE-660, CTF-430), against Wacom's Bamboo Fun
-  (CTE-450/650) manual. CTE-650 was already exactly right and needed no
-  change; CTE-660 shared CTE-650's coordinate range but disagreed with it on
-  mm at no plausible resolution, and CTE-460/CTF-430 had no mm data at all.
-- Active-area dimensions on nine Graphire-family registry rows (original
-  Graphire ×2, Graphire 2/3/4 4×5, Graphire 3/4 6×8, Bamboo1 Medium), against
-  Wacom's own Graphire and Graphire4 manuals. All had a stale height carried
-  over from a copy-paste, unrelated to their own already-correct maxX/maxY.
-  Checked the original Graphire's coordinate range against the manual's
-  arithmetic first and found it would have been wrong — OpenTabletDriver's
-  hardware-measured value matches the registry's existing figure exactly, not
-  what the manual's printed "coordinate resolution" implies — so left
-  coordinate ranges alone everywhere in this family and corrected only the
-  dimensions the manuals directly and unambiguously settle. Volito's height
-  was left as a three-way disagreement between libwacom, a kernel constant,
-  and this pass's own manual reading, with no hardware capture available to
-  arbitrate; documented rather than resolved.
-- Active-area dimensions on three Cintiq pen-display registry rows. Cintiq
-  24HD Touch (0x00F8) had a wrong active area (533×330mm) against its own
-  confirmed-live sibling (Cintiq 24HD, 0x00F4) sharing the identical panel
-  and maxX/maxY — corrected to match. Cintiq 27QHD and 27QHD Touch (0x032A,
-  0x032B) had no activeWidthMM/Height at all — added, from Wacom's own
-  DTK-2700/DTH-2700 Important Product Information booklet. Also checked but
-  deliberately left unchanged: Cintiq Pro 24 pen-only (0x037C) and Cintiq Pro
-  32 (0x0352) each disagree with their manual's stated *display* active area
-  by several mm, but one already carries a real captured logical-maximum
-  value and the other a libwacom-sourced one — a display's active area and a
-  digitizer's logical maximum aren't guaranteed to be the same fact, so
-  neither was overwritten on a manual's word alone.
-- Active-area height on nine current-generation Wacom One/Intuos/Bamboo CTL
-  and CTH registry rows (CTL-4100/4100WL ×4, CTL-472, CTL-480, CTH-480,
-  CTL-490, CTH-490). Each carried a stale 102mm height against a maxY that
-  already meant 95mm — confirmed against Wacom's Important Product
-  Information booklets for each cluster (CTL-4100 family, One by Wacom
-  CTL-472/672, Intuos CTL-480/680 and CTH-480/680, Intuos Pen/Pen&Touch
-  CTL-490/690 and CTH-490/690). Widths, and every other row already checked
-  in this pass (CTL-6100 family, CTL-672, CTL-680, CTL-690, CTH-690,
-  CTL-671), were already correct.
-- Active-area dimensions on four Intuos5/Intuos Pro first-gen registry rows
-  (PTH-450, PTH-650, PTH-850, PTH-451). Confirmed against Wacom's own
-  Important Product Information booklet for the line and OpenTabletDriver's
-  configs. Also surfaced, but deliberately left unfixed: all four confirmed
-  touch-capable devices (PTH-450/650/850/451/651/851) carry no
-  `hasFingerTouch` in the registry, and MockTab has never decoded their touch
-  reports — a real coverage gap, not a spec question, and outside what a
-  manual can resolve on its own.
-- Active-area dimensions on two Intuos3 (PTZ-xxx) registry rows, PTZ-1231W
-  and PTZ-431W. Coordinate ranges for the whole seven-model family were
-  already exact matches against OpenTabletDriver's independently-declared
-  values; only these two rows' mm fields disagreed with their own maxX/maxY.
-  Confirmed against Wacom's own Intuos3 User's Manual.
-- Active-area dimensions on twelve Intuos4/Bamboo-family registry rows
-  (0x00B8/B9/BA/BB, 0x00D1/D2/D6/D7/D9/DA/DC/DD/DE, 0x0300) didn't match
-  their own already-correct maxX/maxY — the mm fields were stale or
-  copy-paste estimates, some off by close to 10%. Feeds real scaling math
-  (`DisplayMapper`'s relative-mode cursor speed) and the active-area diagram,
-  not just display text. Corrected against Wacom's own Intuos4 and Bamboo
-  460-family User's Manuals. Two touch-only rows (CTT-460, CTT-460A) were
-  deliberately left alone — their true touch coordinate space versus the
-  pen-chassis mm they currently borrow is still an open question, not
-  something a manual cross-check alone can settle.
-- Coordinate ranges for every Intuos 1 and Intuos 2 registry row. Each carried
-  a plain 16-bit range, but `IntuosV1Decoder` appends a 1-bit fractional
-  extension to X and Y, so the values it emits span twice that. Every one of
-  these tablets mapped only its top-left quadrant across the full screen.
-  A field report and a capture confirmed the bug and its direction on a
-  GD-0608-U (0x0021); the corrected values across the whole family — X/Y and
-  active-area mm alike — are cross-checked against Wacom's own Intuos (GD)
-  User's Manual and against OpenTabletDriver's GD-*/XD-* configs, whose
-  independently-written parser decodes X/Y/tilt with the same bit formulas
-  ours does and declares the same maxima for every PID in the family. Three
-  rows (Intuos 4×5, 9×12, 12×12/12×18) also had an unrelated pre-existing
-  active-height error corrected (102/229/305 mm → 106/241/317 mm), found via
-  the same manual cross-check.
+- Intuos Pro gen 3 and Cintiq Pro alternate pen reports: proximity, pressure,
+  hover, eraser, and tilt.
+- Touch on Cintiq Pro pen displays, and touch and ring on the Intuos Pro M
+  (PTH-651).
+- A hovering stylus no longer ends proximity on Intuos5 touch models.
+- Fingers lift on the Cintiq 22HD, 24HD, and 13HD touch sensors.
+- Intuos 1/2 mapped only the top-left quarter of the tablet. Active areas and
+  parsers corrected on many other models.
 
 ## [0.3.0] — 2026-07-22
 
-Xencelabs hardware support (display, Quick Keys, dongle), a device-agnostic
-generic digitizer decoder, a Bamboo Pen Tablet (CTL-460), pressure/stabilization
-filter overhaul, and a source reorganization into topic folders.
+Xencelabs hardware, a generic digitizer decoder, and new smoothing filters.
 
 ### Added
 
-- `GenericDigitizerFrame` — a device-agnostic decoder path for HID digitizers
-  that expose standard Usage Page 0x0D elements but have no dedicated Wacom
-  decoder, gated by `BrandHeuristic` USB-string matching.
-- CTL-460 Bamboo Pen Tablet identity and mode-2 feature-report decoding.
-- Xencelabs Pen Display 16 registry entry, brightness/contrast/gamma/color-mode
-  controls, and bezel-button backlight command.
-- Xencelabs Quick Keys: screen orientation command, dial custom colors per
-  mode, battery-level decoding, wireless dongle support (shares the wired
-  puck's identity), and correct handling of config-reply frames that were
-  previously misread as button presses.
-- Onboard bezel button decoding for the DTK-2400 and Xencelabs displays.
-- Touch and express-key support for the Intuos Art tablet.
-- `PressureSmoother` — a 1€-filter-based pressure smoother (companion to
-  `CursorSmoother`) that damps sensor noise at light touch without dulling
-  firm strokes.
-- Recognition-only registry rows for the Wacom MobileStudio Pro line:
-  13" (0x034D gen 1, 0x0398 gen 2) and 16" (0x034E gen 1, 0x0399 gen 2,
-  0x03AA alt). Dimensions derived from libwacom physical size at 5080 LPI;
-  parser guess is `.intuosV2` — the kernel drives these via descriptor-based
-  generic HID, so promotion requires a user capture. Touch lives on separate
-  paired USB devices (0x034A/0x034B/0x039A/0x039B/0x03AC) and is not claimed.
-- USB string brand heuristic for recognizing uncataloged tablets by vendor name.
-- `tablet-decode` sample executable target, demonstrating the decode loop
-  end-to-end against a captured report log.
-- Tag-triggered release workflow (`.github/workflows/release.yml`): runs the
-  test suite, pulls that version's `CHANGELOG.md` section for release notes,
-  and creates a draft GitHub Release.
+- Xencelabs Pen Display 16 and Quick Keys: display controls, bezel buttons,
+  screen orientation, dial colors, battery, and the wireless dongle.
+- `GenericDigitizerFrame`, for standard HID digitizers without a dedicated
+  decoder.
+- `PressureSmoother`. `CursorSmoother` now uses a 1€ filter.
+- Bamboo Pen CTL-460, Intuos Art touch and keys, and MobileStudio Pro
+  recognition.
+- The `tablet-decode` sample.
 
 ### Changed
 
-- `CursorSmoother`'s stabilization replaced its flat exponential-moving-average
-  with a 1€ filter (Casiez et al.) — cutoff now scales with estimated stroke
-  speed, easing off during fast strokes instead of lagging evenly throughout.
-- Product-identity and dimension corrections across current-generation Wacom
-  tablets, cross-referenced against libwacom.
-- Sources reorganized from a flat `Sources/TabletKit/` directory into
-  `Core/`, `Decoders/`, `Registry/`, `Smoothing/`, and `HID/` folders; two
-  oversized, misleadingly named files (`TabletDevice.swift`, `WacomToolSpec.swift`)
-  split along their actual concerns. No public API changed — pure file motion.
-- File headers changed from the MockTab app's header to a TabletKit-specific
-  one, reflecting the package's independent MPL-2.0 licensing.
+- Sources are organized into topic folders. No API change.
 
 ### Fixed
 
-- Intuos5 pad report decoding: express keys and the ring button now decode
-  correctly (byte-layout correction from a real PTH-850 capture).
-- Xencelabs cursor tracking, which was reading a truncated pen position.
-- Simulated modifier-key events now look identical to real key presses to
-  apps that distinguish synthetic input.
-- Stale doc comment referencing a retracted PTH-660 wireless product ID.
-- README inaccuracies: an "no IOKit" claim (IOKit HID is used, isolated in
-  `HIDDeviceSupport.swift`) and a stale test count.
-- Published the missing GitHub Release for the `0.2.0` tag, which had been
-  pushed but never published.
+- Intuos5 ExpressKeys and ring button, and Xencelabs cursor position.
 
 ## [0.2.0] — 2026-06-10
 
-First non-Wacom decoder, a registry sweep against the Linux input-wacom device
-table, and several product-identity corrections.
+The first non-Wacom decoder and a registry sweep against the Linux driver.
 
 ### Added
 
-- `XencelabsDecoder` — experimental decoder for the Xencelabs Pen Tablet
-  Medium (0x28BD:0x5201) and Small (0x5204), ported from OpenTabletDriver's
-  parser sources. Pen (position, 8191-level pressure, tilt, eraser, three
-  barrel buttons), express keys, and relative wheels. Not yet validated on
-  hardware; requires the `[0x02, 0xB0, 0x04]` output-report init.
-- `ReportParser.xencelabs` case and the matching `"xencelabs"` family string.
-- `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)` — hand-
-  maintained allowlist marking which non-Wacom profiles have a working
-  decoder, separate from the bulk-imported recognition data.
-- Registry sweep from the input-wacom kernel device table (~36 entries):
-  decoder-family matches with kernel dimensions (Bamboo1 Medium, Intuos2 6×8
-  alt PID, Volito2 2×3, PenPartner2, DTK-2241, DTH-2242, Cintiq 20WSX,
-  Bamboo Pen 6×8, Cintiq 27QHD pen/touch, Cintiq 13HD Touch) plus a
-  name-only tier (`maxX: 0`, never routed to a driver) covering the PL
-  display line, companion touch-sensor interfaces, the ExpressKey Remote,
-  and the DFU bootloader PID.
-- `canonicalPIDMap` rows for Intuos4 WL (0x00BD → 0x00BC), Intuos BT S/M
-  (0x03C6/0x03C8 → CTL-4100WL/6100WL), and PTH-460 BT (0x0393/0x03DD), with
-  a test asserting every map target has a registry entry.
+- `XencelabsDecoder` and `ReportParser.xencelabs`.
+- `VendorDeviceRegistry.drivableProfile(forVendorID:productID:)`.
+- About 36 registry rows from the Linux driver's device table.
 
 ### Changed
 
-- Registry lookups (`spec(for:)` and the product-string overload) are now
-  dictionary-indexed by PID instead of linear scans.
-- Product-identity corrections sourced from input-wacom/libwacom/OTD:
-  - 0x0352 is the **Cintiq Pro 32 (DTH-3220)**, not "Intuos Pro S"; the real
-    PTH-460 is 0x0392/0x03DC USB and 0x0393/0x03DD BT (entries promoted to
-    cross-referenced with ring, touch, and kernel coordinates). The
-    fabricated 0x035B entry and the dangling 0x035F mapping are gone.
-  - 0x0003 is the **Cintiq Partner (PTU-600)**, not PenPartner; the real
-    PenPartner is 0x0000. Both are name-only (PTU/PENPARTNER report
-    families have no decoder).
-  - 0x009A is the **ISDv4 9A** built-in digitizer, not a wireless receiver.
-  - 0x0301 is kernel "Bamboo One M" — renamed, moved to the bamboo parser,
-    dimensions corrected.
-  - Dimension drift fixes vs kernel feature structs: Cintiq 22HD, 22HD
-    Touch, Cintiq Companion 2.
-- BLE/Bluetooth and wireless doc comments corrected where they referenced
-  the wrong PTH-460/PTH-860 PIDs.
+- Registry lookups are indexed by product ID, and several product identities
+  are corrected: `0x0352` is the Cintiq Pro 32, `0x0003` the Cintiq Partner,
+  and `0x009A` an ISDv4 digitizer.
 
 ### Removed
 
-- `typealias WacomDecoder = TabletReportDecoder` — the source-compatibility alias kept in 0.1.0 is gone. All conforming decoders and any `any WacomDecoder` annotations now use `TabletReportDecoder` directly.
+- **Source-breaking:** `typealias WacomDecoder`. Use `TabletReportDecoder`.
 
 ## [0.1.0] — 2026-05-28
 
-Introduces the first public API. Extracted from the MockTab app so the decoder layer can stand alone.
+The first public API, separated from the MockTab app.
 
 ### Added
 
-- `TabletReportDecoder` protocol — vendor-neutral entry point that converts one HID input report into `[DecodeResult]`. Replaces the internal `WacomDecoder`; keeps `typealias WacomDecoder = TabletReportDecoder` temporarily for MockTab source compatibility (to be removed before 1.0).
-- Public value types: `DecodeResult`, `TabletPoint`, `ToolIdentity`, `AuxButtons`, `TouchContact`, `WirelessStatus`, `DigitizerSpec`, `DecoderState`.
-- `WacomDeviceRegistry`, now public in the package target, with:
-  - `spec(forProductID:productString:)` overload for USB string disambiguation (prepares for vendors like Huion that reuse PIDs across models).
-  - `activeWidthMM` / `activeHeightMM` on `WacomDeviceSpec` and derived `lpi: (x:, y:)?`. Hand-measured six `.verified` devices (PTZ-631W, PTH-851, PTH-660, PTH-860 USB + BT, DTK-2400); backfilled 78 entries from libwacom `.tablet` files; filled 22 more using Wacom's 2540 LPI consumer standard or direct spec sheets; filled 11 more (Graphire `0x0010`/`0x0011`/`0x0013`/`0x0015`, Volito `0x0060`/`0x0062`, PenStation2 `0x0061`, DTU-1031 `0x00FB`, Bamboo One `0x0069`, Bamboo Pad `0x0318`/`0x0319`) from libwacom data, falling back to `input-wacom` 4.18 features tables only where libwacom has no entry. The libwacom verification pass also corrected six previously-kernel-derived values where the family-wide resolution constants (`WACOM_VOLITO_RES`, `WACOM_INTUOS_RES`) proved approximate — the Volito 0x0060 height was off by 25%, DTU-1031 height by ~10%, the Graphire 4×5 family height by ~10%. Now 128 of 135 entries include physical dimensions (up from 6); the remaining 7 are four early Graphire/Bamboo variants whose PIDs collide between libwacom, kernel, and OTD, and three wireless receivers (no active area). An LPI consistency check rejected libwacom rows that conflicted with `maxX`/`maxY` ratios (including incorrect Movink 13 data), substituted with Wacom specs instead.
-  - `InitStep` enum replaces `featureInit`, `featureInit2`, and `featureInit2Delay` with ordered `initSteps: [InitStep]`. Cases: `.featureReport`, `.outputReport`, `.delay`, `.stringDescriptor` (the latter two reserved for future vendor init flows such as Xencelabs and Huion).
-  - Promoted 4 entries from `.experimental` to `.crossReferenced` after auditing against `linuxwacom/wacom-hid-descriptors`: Graphire (`0x0010`), Intuos3 6×8 (`0x00B1`), Cintiq Pro 27 (`0x03C0`), Cintiq Pro 22 (`0x03D0`).
-  - Added 12 recognition-only entries from real linuxwacom sysinfo dumps: Cintiq Pro 16 (`0x0350`/`0x0354`), Cintiq Pro 17 (`0x03C4`), Cintiq Companion 2 (`0x0325`/`0x0326`), One Pen Display 13 (`0x03CB`), DTH134 (`0x03EC`), DTC121 (`0x03CF`/`0x03ED`/`0x4900`), Movink 13 alt PID (`0x03F2`), Intuos BT M (`0x0379`). Marked `.experimental`; pen decode remains unverified.
-- `VendorDeviceProfile` and `VendorDeviceRegistry` — vendor-neutral recognition for non-Wacom tablets. Imported 154 profiles from OpenTabletDriver (Huion, Xencelabs, XP-Pen). No decoder dispatch yet; the app can identify but not decode these devices. Lookup returns `[Profile]` (not `Profile?`) because some vendors multiplex many models behind one PID and distinguish them via USB string descriptors.
-- `TabletManager` expands IOHIDManager matching from Wacom (`0x056A`) to include Huion (`0x256C`), Xencelabs / XP-Pen (`0x28BD`), and UC-Logic (`0x5543`). The system looks up non-Wacom devices in `VendorDeviceRegistry`, logs them (`recognized Huion device — H1060P (…) — no decoder support yet`), and ignores them. Previously, the app did not detect these devices.
-- `CaptureLogParser` (test target) parses both the in-app HID capture format and the upstream `hid-recorder` format (https://github.com/hidutils/hid-recorder) into `[CaptureRecord]`. This enables rapid regression tests: parse a user log, replay it through a decoder, and assert on `[DecodeResult]`.
-- SwiftPM `library` product: `TabletKit`.
-- Per-file MPL-2.0 SPDX headers for all files in the TabletKit target.
-- `LICENSES/MPL-2.0.txt`.
-
-### Changed
-
-- Renamed SwiftPM target `MockTabDecoders` → `TabletKit`. Downstream code now imports `TabletKit`. Renamed test target to `TabletKitTests`; kept on-disk path `Tests/MockTabDecodersTests/` for now.
-- Updated `WacomDeviceSpec`: replaced `featureInit`, `featureInit2`, and `featureInit2Delay` with `initSteps: [InitStep]`. Migrated existing Intuos3 PTZ sequences directly to `[.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])]`. Preserves behavior for all supported devices.
+- `TabletReportDecoder` and its value types: `DecodeResult`, `TabletPoint`,
+  `ToolIdentity`, `AuxButtons`, `TouchContact`, `WirelessStatus`,
+  `DigitizerSpec`, and `DecoderState`.
+- `WacomDeviceRegistry`, with physical dimensions and ordered `initSteps`.
+- `VendorDeviceProfile` and `VendorDeviceRegistry`, which recognize Huion,
+  Xencelabs, and XP-Pen tablets.
 
 ### Notes
 
-- The MockTab app remains GPL-3.0-or-later; this package uses MPL-2.0. See `README.md` for the dual-license rationale.
+- The MockTab app is GPL-3.0-or-later; this package uses MPL-2.0. See
+  `README.md` for why.

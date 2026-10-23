@@ -9,7 +9,7 @@
 .package(url: "https://github.com/Cyzor/TabletKit.git", branch: "main")
 ```
 
-Then add `"TabletKit"` to your target's dependencies and `import TabletKit`. The examples here need the latest code on `main`, which is newer than the 0.5.0 release.
+Then add `"TabletKit"` to your target's dependencies and `import TabletKit`. TabletKit releases continuously from `main`, and tags mark occasional checkpoints; [CHANGELOG.md](CHANGELOG.md) lists what changed since the last one. To stay on a tagged version instead, use `from: "0.6.0"`.
 
 ## Quick Start
 
