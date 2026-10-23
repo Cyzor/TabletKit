@@ -28,8 +28,10 @@ import Foundation
 /// **Barrel button debounce:**
 /// Buttons come from general packets (typeNibble 0–3) only: the rotation
 /// sub-frame (status 0xEA) always has bit 1 set, which would latch barrel
-/// button 1. The hardware pulses the bit about 1 frame in 5 while held, so a
-/// release waits for 7 clear frames (~54 ms at 133 Hz).
+/// button 1. A DTK-2400 pulsed the bit about 1 frame in 5 while held, so on
+/// the 24HD family a release waits for 7 clear frames (~54 ms at 133 Hz).
+/// Public recordings of the other models hold the bit steady, so they
+/// release at once.
 ///
 /// **Tip-switch synthetic pressure:**
 /// When Report 0x01 fires (tip physically down) but the concurrent 0x02 pressure
@@ -152,19 +154,20 @@ package struct CintiqV1Decoder: TabletReportDecoder {
             // here, not from rotation frames.
             let curBtn1 = (status & 0x02) != 0
             let curBtn2 = (status & 0x04) != 0
+            let clearThreshold = spec.bezelButtonCount > 0 ? Self.buttonClearThreshold : 1
             if curBtn1 {
                 btn1ClearCount = 0
                 lastButton1 = true
             } else {
                 btn1ClearCount += 1
-                if btn1ClearCount >= Self.buttonClearThreshold { lastButton1 = false }
+                if btn1ClearCount >= clearThreshold { lastButton1 = false }
             }
             if curBtn2 {
                 btn2ClearCount = 0
                 lastButton2 = true
             } else {
                 btn2ClearCount += 1
-                if btn2ClearCount >= Self.buttonClearThreshold { lastButton2 = false }
+                if btn2ClearCount >= clearThreshold { lastButton2 = false }
             }
 
             (state.lastX, state.lastY) = IntuosPenPacket.position(report)

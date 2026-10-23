@@ -159,6 +159,20 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertEqual(pen?.penButton1, true, "Single clear frame must not release the button")
     }
 
+    // Outside the 24HD family the bit holds steady, so the first clear frame
+    // releases.
+    func testBarrelButtonsReleaseAtOnceOn21UX2() {
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        _ = decode(generalPacket(btn1: true, btn2: true), decoder: &decoder, state: &state, spec: cintiq21ux2)
+        let results = decode(generalPacket(), decoder: &decoder, state: &state, spec: cintiq21ux2)
+        let pen = results.compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }.first
+        XCTAssertEqual(pen?.penButton1, false)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
     func testBarrelButton1ReleasedAtClearThreshold() {
         // 7 consecutive clear frames is the documented threshold.
         var decoder = CintiqV1Decoder()
