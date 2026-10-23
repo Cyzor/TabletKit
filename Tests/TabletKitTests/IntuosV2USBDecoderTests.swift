@@ -206,6 +206,14 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertEqual(pen?.penButton2, false)
     }
 
+    func testGripPenEraserPressureIsNotButtons() {
+        let pen = gripPen(status: 0x71, pressure: 4878)  // invert + tip
+        XCTAssertEqual(pen?.eraser, true)
+        XCTAssertEqual(pen?.pressure, 4878)
+        XCTAssertEqual(pen?.penButton1, false)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
     func testProPen2PressureAboveElevenBitsIsPressure() {
         var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0842

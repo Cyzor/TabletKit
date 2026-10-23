@@ -141,6 +141,68 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         XCTAssertFalse(toolEnter?.isEraser ?? true, "Art Pen 0x1108 must not be flagged eraser")
     }
 
+    // MARK: - Intuos4 Grip Pen
+
+    /// Over Bluetooth, as over USB, the Grip Pen packs its barrel buttons into
+    /// pressure: 2048 for the lower, 4096 for the upper. Values from a
+    /// PTH-860 recording.
+    private func gripPenPoint(_ bytes: [UInt8], state: inout IntuosV2Decoder.State) -> TabletPoint? {
+        decode(bytes, state: &state).compactMap { r -> TabletPoint? in
+            if case .pen(let p) = r { return p } else { return nil }
+        }.first
+    }
+
+    private func gripPen361(pressure: Int) -> [UInt8] {
+        var bytes = make361(toolCode: 0x0802, frame0Flags: 0xE1)
+        bytes[6] = UInt8(pressure & 0xFF); bytes[7] = UInt8(pressure >> 8)
+        bytes[14] = 20  // hovering
+        return bytes
+    }
+
+    func testGripPenHoveringButtonsOverBluetooth() {
+        var state = IntuosV2Decoder.State()
+        let lower = gripPenPoint(gripPen361(pressure: 2048), state: &state)
+        XCTAssertEqual(lower?.penButton1, true)
+        XCTAssertEqual(lower?.penButton2, false)
+        XCTAssertEqual(lower?.pressure, 0)
+
+        let upper = gripPenPoint(gripPen361(pressure: 4096), state: &state)
+        XCTAssertEqual(upper?.penButton1, false)
+        XCTAssertEqual(upper?.penButton2, true)
+        XCTAssertEqual(upper?.pressure, 0)
+    }
+
+    func testGripPenButtonWhileTouchingOverBluetooth() {
+        var state = IntuosV2Decoder.State()
+        let pen = gripPenPoint(gripPen361(pressure: 6050), state: &state)
+        XCTAssertEqual(pen?.penButton2, true)
+        XCTAssertEqual(pen?.pressure, (6050 - 4096) * 8191 / 2047)
+    }
+
+    /// The tablet keeps the tip's tool code while erasing over Bluetooth, so
+    /// the eraser flag alone keeps eraser pressure from reading as buttons.
+    func testGripPenEraserPressureIsNotButtonsOverBluetooth() {
+        var state = IntuosV2Decoder.State()
+        var bytes = gripPen361(pressure: 4878)
+        bytes[1] = 0xF1  // valid + prox + range + invert + tip
+        let pen = gripPenPoint(bytes, state: &state)
+        XCTAssertEqual(pen?.eraser, true)
+        XCTAssertEqual(pen?.pressure, 4878)
+        XCTAssertEqual(pen?.penButton1, false)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
+    /// The 99-byte container names no tool, so it reads pressure as is.
+    func testGripPenLayoutNotAppliedTo99ByteContainer() {
+        var state = IntuosV2Decoder.State()
+        state.currentToolCode = 0x0802
+        var bytes = make99(frame0Flags: 0xE1)
+        bytes[6] = 0x00; bytes[7] = 0x08  // 2048
+        let pen = gripPenPoint(bytes, state: &state)
+        XCTAssertEqual(pen?.pressure, 2048)
+        XCTAssertEqual(pen?.penButton1, false)
+    }
+
     // MARK: - 361-byte path: proximity exit state machine
 
     func testGenuineProximityExitOnFirstFrameEmitsInProximityFalse() {

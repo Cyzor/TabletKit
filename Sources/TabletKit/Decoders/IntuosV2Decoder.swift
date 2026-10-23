@@ -102,6 +102,21 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     // BT-side decoders (0x80 in its many shapes) and the shared per-frame
     // helper live in `IntuosV2Decoder+BT.swift`.
 
+    /// The Intuos4 Grip Pen's barrel buttons arrive inside pressure, over USB
+    /// and Bluetooth alike: bit 11 for the lower, bit 12 for the upper, with
+    /// the tip bit set even while hovering. Its own pressure is the low 11
+    /// bits. The eraser end, other tools, and Bluetooth reports that keep
+    /// the tip's tool code while erasing pass through unchanged.
+    static func unpackGripPen(
+        toolCode: UInt16, isEraser: Bool, pressure: Int, button1: Bool, button2: Bool,
+        maxPressure: Int
+    ) -> (pressure: Int, button1: Bool, button2: Bool) {
+        guard toolCode == 0x0802, !isEraser else { return (pressure, button1, button2) }
+        return ((pressure & 0x07FF) * maxPressure / 0x07FF,
+                button1 || (pressure & 0x0800) != 0,
+                button2 || (pressure & 0x1000) != 0)
+    }
+
     // MARK: - Standard pen report (0x10)
 
     private func decodePenReport(
@@ -236,17 +251,11 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
         // ── Pen path ───────────────────────────────────────────────────────────
         // Pressure: 13-bit value (d[8] + lower 5 bits of d[9]) per kernel spec.
-        var pressure = report.le16(at: 8) & 0x1FFF
-        var button1 = (status & 0x02) != 0
-        var button2 = (status & 0x04) != 0
-        if state.currentToolCode == 0x0802 {
-            // The Intuos4 Grip Pen's barrel buttons arrive inside pressure,
-            // bit 11 for the lower and bit 12 for the upper, with the tip bit
-            // set even while hovering. Its own pressure is the low 11 bits.
-            button1 = button1 || (pressure & 0x0800) != 0
-            button2 = button2 || (pressure & 0x1000) != 0
-            pressure = (pressure & 0x07FF) * spec.maxPressure / 0x07FF
-        }
+        let (pressure, button1, button2) = Self.unpackGripPen(
+            toolCode: state.currentToolCode, isEraser: (status & 0x18) != 0,
+            pressure: report.le16(at: 8) & 0x1FFF,
+            button1: (status & 0x02) != 0, button2: (status & 0x04) != 0,
+            maxPressure: spec.maxPressure)
         // The PTH-660 descriptor declares tilt as [-64, 63] degrees,
         // matching the Bluetooth path. /127.0 is the fallback for families
         // whose descriptor hasn't been checked.
