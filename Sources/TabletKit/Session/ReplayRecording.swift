@@ -53,9 +53,8 @@ package struct ReplayRecording: Sendable {
 // MARK: - Report traces
 
 extension ReplayRecording {
-    /// Reads a report trace, one JSON object per line, as MockTab's
-    /// temporary report trace writes it. Connect-time reads attach to the
-    /// interfaces on the usage page they were read from.
+    /// Reads a report trace, one JSON object per line. Connect-time reads
+    /// attach to the interfaces on the usage page they were read from.
     package init(trace: String) throws {
         var interfaces: [Interface] = []
         var index: [Int: Int] = [:]
