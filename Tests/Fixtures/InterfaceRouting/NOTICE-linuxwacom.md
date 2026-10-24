@@ -11,5 +11,5 @@ the license of the database it derives from. Any rights in individual
 contents are licensed under the same terms as the source. The rest of this
 directory is covered by the repository's license.
 
-Regenerate it with `tools/build-interface-routing-corpus.py` in the MockTab
-app repository, given a local clone of the database.
+Regenerate it with `tools/build_interface_routing_corpus.py`, given a local
+clone of the database.
