@@ -45,10 +45,10 @@ public struct TabletPoint: Sendable {
     /// brush shows bristles on the correct side, in every direction, for
     /// Xencelabs and Wacom pens.
     ///
-    /// Do not re-derive this from an event-stream probe alone. Reading
-    /// `NSEvent.tilt` under two drivers with two tablets attached produced
-    /// contradictory signs for days; judge polarity at a brush that renders
-    /// its own preview, with one tablet connected.
+    /// Don't re-derive this from an event-stream probe alone: with two
+    /// drivers or two tablets attached, `NSEvent.tilt` reads contradictory
+    /// signs. Judge polarity at a brush that renders its own preview, with
+    /// one tablet connected.
     public var tiltY: Double
     /// Pen rotation (twist), 0.0..360.0 degrees (approximate)
     public var rotation: Double = 0.0

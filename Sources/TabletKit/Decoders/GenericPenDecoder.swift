@@ -7,20 +7,13 @@ import Foundation
 /// A pen digitizer input report, described entirely by the device's own
 /// report descriptor rather than by a per-family byte-offset table.
 ///
-/// This is the pen counterpart to `PrecisionTouchLayout`: where that type
-/// exists because a multitouch report repeats the same usages once per
-/// finger and needs bit offsets rather than element values, this one exists
-/// because the fallback path for an *unrecognized* Wacom device currently
-/// guesses which byte-offset family applies from `maxInputReportSize` alone
-/// — a proxy that fails on modern hardware, whose ~26-byte pen report is
-/// closer in size to the decades-older Intuos1 format than to the Intuos2
-/// family it actually needs.
-///
-/// A modern Wacom pen report does not need that guess. It declares itself
-/// field by field, on Wacom's vendor page (`0xFF0D`) but under the *standard*
-/// Digitizer usage numbers `DigitizerUsage` recognizes — confirmed against a
-/// real Cintiq Pro 24 (DTH-2420) descriptor, where every field this type
-/// reads matched the device's own declared bit offsets exactly.
+/// The pen counterpart to `PrecisionTouchLayout`. Guessing an unknown
+/// tablet's byte-offset family from its report size fails on modern
+/// hardware, whose ~26-byte pen report is closer in size to the Intuos1
+/// format than to the Intuos2 family it needs. A modern Wacom pen report
+/// doesn't need the guess: it declares itself field by field, on Wacom's
+/// vendor page (`0xFF0D`) but under the standard Digitizer usage numbers
+/// `DigitizerUsage` recognizes.
 public struct GenericPenLayout: Equatable, Sendable {
 
     /// Report ID this layout decodes.

@@ -16,10 +16,8 @@ public enum ToolCatalog: Sendable {
 
         // MARK: - Intuos Pro / Intuos5 Series (0x08xx family)
 
-        // Grip Pen (standard Intuos Pro pen). Confirmed on a PTH-860 gen2 over
-        // Bluetooth (2026-09-29) and 2026-09-18 on a PTK-870 gen3 — see the
-        // 0x0842 Pro Pen 2 comment below for the capture this and its eraser
-        // variant were confirmed alongside.
+        // Grip Pen (standard Intuos Pro pen). Seen on a PTH-860 over
+        // Bluetooth and on a PTK-870.
         //
         // `.intuos1And2` and `.cintiq` because this code is also
         // `IntuosV1Decoder`'s synthesized fallback when a device enters
@@ -65,8 +63,7 @@ public enum ToolCatalog: Sendable {
             ]
         )
 
-        // Art Pen. Identity confirmed on a PTK-870 against a pen of known
-        // serial (2026-09-16); rotation decoded on gen 2 and gen 3.
+        // Art Pen. Rotation decoded on gen 2 and gen 3.
         catalog[0x0804] = ToolSpec(
             toolCode: 0x0804,
             name: "Art Pen",
@@ -96,8 +93,7 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuos4, .intuosProGen3]
         )
 
-        // Art Pen variant (toolCode 0x1108 — confirmed from live BT capture 2026-04-02).
-        // Reports over Bluetooth Classic as Art Pen; rotation available over USB only.
+        // Art Pen variant (toolCode 0x1108). Reports over Bluetooth Classic as Art Pen; rotation available over USB only.
         // Bit3 of toolCode (0x0008) is set, but this pen is not an eraser.
         catalog[0x1108] = ToolSpec(
             toolCode: 0x1108,
@@ -261,14 +257,9 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Pro Pen 2 (KP-504E, bundled with the PTH-660), per libwacom and
-        // a pen on hand; was misnamed Pro Pen 3,
-        // which is 0x0200. Confirmed 2026-09-18, alongside the Grip Pen
-        // and Art Pen, to also decode correctly (real pressure/tilt) on a
-        // PTK-870 gen3 — a three-pen sweep capture with each pen used in
-        // turn, all three read correct position/pressure/tilt through
-        // IntuosV3Decoder's existing gen3 report path. Not the same physical
-        // pen as 0x0200 (Pro Pen 3 native to gen3 hardware, see below).
+        // Pro Pen 2 (KP-504E, bundled with the PTH-660), per libwacom. It
+        // also decodes correctly on a PTK-870 through IntuosV3Decoder. Not
+        // the same pen as 0x0200 (Pro Pen 3, native to gen 3; see below).
         catalog[0x0842] = ToolSpec(
             toolCode: 0x0842,
             name: "Pro Pen 2",
@@ -855,10 +846,7 @@ public enum ToolCatalog: Sendable {
 
         // MARK: - Movink Pens
 
-        // Pro Pen 3 (PTK-470/670/870 Intuos Pro gen 3, 2025). Confirmed
-        // 2026-09-16 from a real PTK-870 capture, decoded byte-for-byte
-        // against a known-identity pen (Wacom Art Pen, 0x0804) to pin down
-        // IntuosV3Decoder's serial/tool-code field offsets. Distinct
+        // Pro Pen 3 (PTK-470/670/870 Intuos Pro gen 3, 2025). Distinct
         // from 0x0842 (Pro Pen 2, an older pen) and from 0x0202
         // (Pro Pen 3E, Movink 13's bundled pen — a different physical pen
         // entirely). Per Wacom's own product page, this pen has no eraser

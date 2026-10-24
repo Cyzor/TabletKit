@@ -123,7 +123,7 @@ public enum XencelabsOutputProtocol: Sendable {
     }
 
     /// Pen Display panel brightness write: `02 B5 01 03 00 00 <0–100> 00`.
-    /// Subcommand 3, user-confirmed on hardware 2026-07-10.
+    /// Subcommand 3.
     public static func displayBrightnessPayload(
         _ percent: UInt8, address: [UInt8] = []
     ) -> [UInt8] {

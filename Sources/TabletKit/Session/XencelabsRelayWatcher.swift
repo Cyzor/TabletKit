@@ -11,8 +11,8 @@ package enum RemoteLinkChange: Sendable, Equatable {
 /// Tracks a wireless Quick Keys puck's link through the receiver relaying it,
 /// and says when the driver should send the relink handshake.
 ///
-/// Confirmed 2026-07-06: the dongle only relays a paired puck's live 0xF0
-/// aux data once the driver re-sends the tablet-mode init
+/// The dongle relays a paired puck's live 0xF0 aux data only once the
+/// driver re-sends the tablet-mode init
 /// ([0x02, 0xB0, 0x04]) with the puck's own 6-byte hardware identifier
 /// appended at offset 10-15 — without it the dongle sits sending
 /// connect-time status frames (tags 0xF8/0xF2) forever and never
@@ -30,9 +30,8 @@ package struct XencelabsRelayWatcher: Sendable {
     /// therefore need the relink/re-arm/resync handling: the standalone USB
     /// dongle, and the Pen Display — no radio of its own, but when the dongle
     /// sits in the display's USB slot the display firmware aggregates the
-    /// puck traffic into its own vendor tunnel (confirmed 2026-07-08 via two
-    /// discovery captures — 0xF8/0xF2 status frames with the puck's identity
-    /// trailer, plus live 0xF0 aux data, all arriving on 0x520D).
+    /// puck traffic into its own vendor tunnel (0xF8/0xF2 status frames with
+    /// the puck's identity trailer, plus live 0xF0 aux data, on 0x520D).
     package static let relayProductIDs: Set<Int> = [0x5203, 0x520D]
     package static let identityLength = 6
 
@@ -87,16 +86,9 @@ package struct XencelabsRelayWatcher: Sendable {
         // connect/restart announcement (tag 0xF8, byte[2]==0x02,
         // byte[3]==0x01) carries it at offset 10, but ordinary ongoing
         // traffic (live 0xF0 aux/button frames, and the 0xF2 battery-poll
-        // reply) carries it two bytes later, at offset 12 — confirmed
-        // 2026-07-14 by diffing a captured aux frame against the announce
-        // frame byte-for-byte. Getting this wrong silently "succeeds": the
-        // wrong offset still yields a nonzero-looking value (it overlaps the
-        // real identity, just shifted), so every subsequent write gets
-        // addressed to a garbled identity that the puck quietly drops — no
-        // relink ever visibly fails, but nothing it addresses ever arrives
-        // either. This is why battery (and potentially OLED/LED) only worked
-        // right after a power-cycle: only the announce frame happened to use
-        // the offset this code originally assumed.
+        // reply) carries it two bytes later, at offset 12. The wrong offset
+        // fails silently: it still yields a plausible value, so every later
+        // write goes to a garbled identity the puck ignores.
         let identityOffset = status == true ? 10 : 12
         if status != false, !dongleRelinked, length >= identityOffset + Self.identityLength,
             report[0] == XencelabsDecoder.penReportID,
