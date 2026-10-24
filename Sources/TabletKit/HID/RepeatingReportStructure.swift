@@ -60,7 +60,7 @@ import Foundation
 }
 
 /// Finds repeating byte-stride structure in a report using only the kind of
-/// per-position variance statistics `DiscoveryAccumulator` already collects —
+/// per-position variance statistics `CaptureAccumulator` already collects —
 /// no descriptor, no knowledge of what the bytes mean.
 ///
 /// Exists because the descriptor-driven tools (`PrecisionTouchLayout`,
