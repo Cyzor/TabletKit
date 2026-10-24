@@ -1935,7 +1935,7 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             tiltMaxDegrees: 64.0,  // descriptor: vendor 0x10 tilt [-64,63] degrees
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 279, activeHeightMM: 152),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 294.34, activeHeightMM: 165.56),
         .init(
             // Touch wiring and range: vendor model properties.
             productID: 0x03C0, name: "Wacom Cintiq Pro 27 (DTH-271)",  // cross-referenced: linuxwacom + libwacom + OTD
@@ -2147,13 +2147,9 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 223, activeHeightMM: 126),
         .init(
-            // Pen range and pressure: vendor model properties.
-            // libwacom wacom-one.tablet: DeviceMatch usb|056a|03a6;usb|056a|03bd,
-            // Width=279 Height=152mm — same physical panel already registered
-            // as 0x03A6 "Wacom DTC-133" above (identical dims). 0x03BD is a
-            // second PID for the same hardware sold under the "Wacom One"
-            // branding; added as its own entry rather than folded into the
-            // 0x03A6 spec since productID is this table's primary key.
+            // Pen range and pressure: vendor model properties. libwacom
+            // lists this PID with 0x03A6 as one model, but the range here
+            // is slightly smaller, so it's likely a later revision.
             productID: 0x03BD, name: "Wacom One (DTC-133)",  // ⚠ groundwork only
             format: .intuosV2, maxX: 29376, maxY: 16524, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
