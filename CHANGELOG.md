@@ -7,6 +7,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- `TabletSpec.touchStripCount`. The Intuos3 4×5 and 4×6 have one strip.
+- Preliminary Graphire 3 Wireless (CTE-630BT) support over Bluetooth,
+  untested on hardware.
+
+### Fixed
+
+- Intuos4, Intuos5, and Intuos Pro gen 1 hold side buttons through the
+  in-range reports near the edge of range.
+- The Bamboo Touch (CTT-460) reads its four ExpressKeys.
+- Intuos4 key displays paint once when the tablet turns, not first with
+  the old labels.
+
 ## [0.6.0] — 2026-10-24
 
 A new decoding API, a session layer that runs tablets end to end, Huion,
