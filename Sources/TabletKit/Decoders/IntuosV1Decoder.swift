@@ -168,7 +168,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                 ]
             }
             // Mid-stroke, mirror the kernel's flush: tip up, hover to max,
-            // position held. Otherwise report nothing.
+            // position and side buttons held. Otherwise report nothing.
             guard state.prevInProximity else { return [] }
             return [
                 .pen(
@@ -177,7 +177,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                         pressure: 0, maxPressure: spec.maxPressure,
                         tiltX: 0, tiltY: 0,
                         rotation: toolHasRotation ? state.lastRotation : 0.0,
-                        penButton1: false, penButton2: false,
+                        penButton1: state.lastPenButtons.0, penButton2: state.lastPenButtons.1,
                         eraser: state.isEraser, inProximity: true,
                         hoverDistance: Self.maxHoverDistance))
             ]
@@ -261,6 +261,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         let pressure = IntuosPenPacket.pressure(
             report, maxPressure: spec.maxPressure, statusBit: spec.maxPressure == 2047)
         let tilt = IntuosPenPacket.tilt(report)
+        state.lastPenButtons = ((status & 0x02) != 0, (status & 0x04) != 0)
 
         results.append(
             .pen(
@@ -271,8 +272,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                     tiltY: tilt.y,
                     rotation: ToolCatalog.hasRotation(toolCode: state.currentToolCode)
                         ? state.lastRotation : 0.0,
-                    penButton1: (status & 0x02) != 0,
-                    penButton2: (status & 0x04) != 0,
+                    penButton1: state.lastPenButtons.0,
+                    penButton2: state.lastPenButtons.1,
                     eraser: state.isEraser,
                     inProximity: true,
                     hoverDistance: (Int(report[9]) >> 2),
@@ -491,6 +492,8 @@ extension IntuosV1Decoder {
         package var toolIsSupported: Bool = true
         /// Airbrush wheel, held because it arrives in its own report.
         package var lastAirbrushWheel: Int? = nil
+        /// Side buttons from the last pen packet, held through in-range frames.
+        package var lastPenButtons: (Bool, Bool) = (false, false)
         /// Last valid Art Pen rotation, in degrees.
         package var lastRotation: Double = 0
         /// Whether real tilt has arrived since the pen entered.

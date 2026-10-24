@@ -354,6 +354,17 @@ final class IntuosV1DecoderTests: XCTestCase {
         XCTAssertEqual(inRange?.y, held?.y, "position holds — Y is absent from the flush")
     }
 
+    /// A side button held as the pen drifts high stays held, as in the
+    /// kernel; releasing it there sent a release and a second press.
+    func testInRangeFrameHoldsSideButtons() {
+        var state = IntuosV1Decoder.State()
+        _ = decode([0x02, 0xE2, 0x57, 0xF3, 0x1E, 0xAF, 0x00, 0x17, 0xCB, 0xA1], state: &state)
+        let inRange = penPoint(
+            decode([0x02, 0x20, 0x51, 0xA9, 0x20, 0x06, 0x00, 0x00, 0x00, 0xFC], state: &state))
+        XCTAssertEqual(inRange?.penButton1, true)
+        XCTAssertEqual(inRange?.penButton2, false)
+    }
+
     /// Before proximity entry, nothing to flush — the kernel's `return 1`.
     func testInRangeFrameWithNoPriorProximityReportsNothing() {
         var state = IntuosV1Decoder.State()
