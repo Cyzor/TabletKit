@@ -1008,12 +1008,9 @@ public enum ToolCatalog: Sendable {
 
         // MARK: - Intuos 1 / Intuos 2 (GD/XD-series, 0x88xx family)
 
-        // GD-series Grip Pen and its eraser end, both from one GD-0608-U
-        // capture 2026-09-22 (same serial 0x998005E5 — two ends of one pen).
-        // Neither resolved before: `spec(forToolCodeRaw:)` masks only the
-        // eraser bit, so 0x882A fell back to 0x8822, itself absent. The
-        // decoder's unknown-tool path kept input working, but the pen showed
-        // unnamed and the eraser was indistinguishable from the tip.
+        // GD-series Grip Pen and its eraser end. `spec(forToolCodeRaw:)`
+        // masks only the eraser bit, so 0x882A falls back to 0x8822; both
+        // need rows, or the pen shows unnamed and its eraser reads as the tip.
         catalog[0x8822] = ToolSpec(
             toolCode: 0x8822,
             name: "Grip Pen",

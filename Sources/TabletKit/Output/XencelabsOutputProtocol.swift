@@ -8,10 +8,9 @@ import Foundation
 /// Keys OLED text, LED color, dial sensitivity, and the pen displays' image
 /// controls (brightness, contrast, gamma, color mode).
 ///
-/// Decoded 2026-07-02 from captured host-to-device traffic during pairing,
-/// dial-mode cycling, and a structured palette/brightness sweep. All writes are output reports with report
-/// ID 0x02 (the same vendor tunnel the input protocol uses), padded by the
-/// sender to the device's MaxOutputReportSize.
+/// All writes are output reports with report ID 0x02 (the same vendor tunnel
+/// the input protocol uses), padded by the sender to the device's
+/// MaxOutputReportSize.
 ///
 /// The device is never told what a key or the dial *does* — bindings are
 /// interpreted host-side from input events. These writes only affect what
@@ -19,12 +18,10 @@ import Foundation
 ///
 /// Bytes 10–15 of each payload carry a 6-byte device address, passed as
 /// `address` on every builder. It selects the target peripheral when routing
-/// through the wireless dongle, which serves up to two paired devices; the
-/// dongle-relay path has been live since 2026-07-07 and callers thread the
-/// paired address through (`WacomKnownDevice` passes `xencelabsDongleIdentity`).
-/// Over direct USB the address is optional — it defaults to empty, and the
-/// captures show direct-USB firmware accepting the frames either way (address
-/// echoes appear in both addressed and unaddressed traffic).
+/// through the wireless dongle, which serves up to two paired devices;
+/// `TabletOutput` passes its dongle identity. Over direct USB the address is
+/// optional: it defaults to empty, and the firmware accepts the frames
+/// either way.
 public enum XencelabsOutputProtocol: Sendable {
 
     /// OLED text field selectors (payload byte 2 of an 0xB1 write).
@@ -39,8 +36,8 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Xencelabs' factory dial-mode palette at Medium brightness, indexed by
     /// mode slot 0–3 (orange, red, yellow, green — the colors their software
-    /// assigns to Modus 1–4 by default). Values are LED-calibrated RGB as
-    /// captured from the vendor driver, not sRGB.
+    /// assigns to Modus 1–4 by default). Values are LED-calibrated RGB, not
+    /// sRGB.
     public static let defaultSlotColors: [(r: UInt8, g: UInt8, b: UInt8)] = [
         (0xAA, 0x2B, 0x00),  // orange
         (0xA4, 0x07, 0x00),  // red
@@ -54,8 +51,6 @@ public enum XencelabsOutputProtocol: Sendable {
     /// 1 = 90°, 2 = 180°, 3 = 270° — the wire byte is steps + 1). The
     /// saved orientation is sent again on reconnect, which is what earlier
     /// captures showed as a fixed `b1 01` ("upright") write.
-    /// Confirmed on hardware 2026-07-10: varying the byte visibly rotates
-    /// the display.
     public static func orientationPayload(
         rotationSteps: Int, address: [UInt8] = []
     ) -> [UInt8] {
@@ -67,9 +62,8 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Xencelabs' factory 8-color swatch palette for RGB backlights, in the
     /// vendor UI's swatch order (white, magenta, blue, cyan, green, yellow,
-    /// orange, red). Values are LED-calibrated RGB at full brightness as
-    /// captured from the vendor driver setting the pen display's bezel LED
-    /// (2026-07-15) — note "white" is warm-compensated, not 0xFFFFFF.
+    /// orange, red). Values are LED-calibrated RGB at full brightness; "white"
+    /// is warm-compensated, not 0xFFFFFF.
     public static let ledPalette: [(r: UInt8, g: UInt8, b: UInt8)] = [
         (0xFF, 0x78, 0x5A),  // white
         (0xFF, 0x00, 0x42),  // magenta
@@ -82,11 +76,9 @@ public enum XencelabsOutputProtocol: Sendable {
     ]
 
     /// Dial LED color write: `02 B4 01 01 00 00 R G B 00 <addr>`.
-    /// Brightness is pre-scaled into the RGB values by the host (the vendor
-    /// driver sends e.g. red at 0x52/0xA4/0xF7 peak for Dim/Medium/Hell).
-    /// The pen display's bezel-button backlight LED answers to the exact
-    /// same frame (captured from the vendor driver 2026-07-15), so this
-    /// builder serves both devices.
+    /// The host pre-scales brightness into the RGB values (red peaks at
+    /// 0x52/0xA4/0xF7 for Dim/Medium/Bright). The pen display's bezel-button
+    /// backlight answers to the same frame, so this builder serves both.
     public static func dialColorPayload(
         r: UInt8, g: UInt8, b: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
@@ -187,13 +179,10 @@ public enum XencelabsOutputProtocol: Sendable {
     }
 
     /// Quick Keys auto-sleep timer write: `02 B4 08 01 <minutes> ... <addr>`.
-    /// `minutes` is the literal sleep delay (0 = never sleep). Decoded and
-    /// hardware-confirmed 2026-07-26 from captured traffic while
-    /// stepping the vendor settings panel's sleep-timer options (30/60/90/120/Never →
-    /// wire bytes `1e/3c/5a/78/00`); a value set this way was independently
-    /// confirmed to survive a puck power cycle, so this is safe to persist.
-    /// Byte 3 = `0x01` marks this as a SET, matching the resync GET poll's
-    /// `0x00` at the same offset (see `WacomKnownDevice.resyncXencelabsOutputsAfterRelink`).
+    /// `minutes` is the literal sleep delay (0 = never sleep). The puck keeps
+    /// the value across a power cycle, so it's safe to persist. Byte 3 =
+    /// `0x01` marks a set, against the `0x00` of the status poll in
+    /// `TabletOutput.resyncAfterRelink()`.
     public static func sleepTimerPayload(
         minutes: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
@@ -203,11 +192,8 @@ public enum XencelabsOutputProtocol: Sendable {
     }
 
     /// Quick Keys OLED brightness write: `02 B1 0A 01 <level> ... <addr>`.
-    /// `level` is a 4-step enum, 0 (off) through 3 (bright) — decoded and
-    /// hardware-confirmed 2026-07-26 from captured traffic while
-    /// stepping the vendor settings panel's OLED-brightness slider from Bright to Off
-    /// (wire bytes `03/02/01/00`). Byte 3 = `0x01` marks this as a SET, same
-    /// convention as the resync GET poll (`WacomKnownDevice.resyncXencelabsOutputsAfterRelink`).
+    /// `level` is a 4-step enum, 0 (off) through 3 (bright). Byte 3 = `0x01`
+    /// marks a set, as in `sleepTimerPayload`.
     /// Distinct from the `0xB5` pen-display panel brightness family
     /// (`displayBrightnessPayload`) — this is the Quick Keys' own OLED, not a
     /// pen display's backlight.

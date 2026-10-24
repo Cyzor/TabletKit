@@ -1112,8 +1112,8 @@ public enum WacomDeviceRegistry: Sendable {
             touchMaxX: 4095, touchMaxY: 4095,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
-        // 0x0316 is deliberately not a row. No kernel, Wacom driver, or
-        // recording knows it; the PTH-651 enumerates as 0x0315.
+        // 0x0316 is deliberately not a row. No kernel entry or recording
+        // knows it; the PTH-651 enumerates as 0x0315.
         .init(
             // Dimensions corrected to kernel wacom_features_0x317 (65024×40640).
             // Previous values (44704×27940) were the PTH-651 M-size by mistake.
@@ -1865,8 +1865,8 @@ public enum WacomDeviceRegistry: Sendable {
             // Dimensions match the kernel and vendor model properties. maxPressure 2047
             // per vendor model properties and OTD; the kernel's 1023
             // disagrees with its own 13HD Touch (0x0333) on the same panel.
-            // Parser .intuosV1 like 0x0333: Wacom's driver and the kernel
-            // (WACOM_13HD) treat both as one model. Not hardware-tested.
+            // Parser .intuosV1 like 0x0333: the kernel (WACOM_13HD) treats
+            // both as one model. Not hardware-tested.
             productID: 0x0304, name: "Wacom Cintiq 13HD (DTK-1300)",  // ⚠ from kernel, OTD + vendor model properties
             format: .intuosV1, maxX: 59552, maxY: 33848, maxPressure: 2047,
             buttonCount: 9, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,

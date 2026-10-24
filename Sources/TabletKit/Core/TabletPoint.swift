@@ -41,9 +41,9 @@ public struct TabletPoint: Sendable {
     /// macOS event builder negates `tilt.y` to reach the Pointer Events sign
     /// and says why. Consumers that build `CGEvent`s therefore negate Y once
     /// at their own boundary, not here; MockTab does this in
-    /// `resolveEffectivePose`. Confirmed at the application on 2026-09-05: a
-    /// Rebelle flat brush shows bristles on the correct side, in every
-    /// direction, for Xencelabs and Wacom pens, and matches the vendor drivers.
+    /// `resolveEffectivePose`. Checked at the application: a Rebelle flat
+    /// brush shows bristles on the correct side, in every direction, for
+    /// Xencelabs and Wacom pens.
     ///
     /// Do not re-derive this from an event-stream probe alone. Reading
     /// `NSEvent.tilt` under two drivers with two tablets attached produced

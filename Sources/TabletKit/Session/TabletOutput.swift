@@ -234,9 +234,9 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             }
         case .xencelabs:
             // Every dial mode change reasserts the screen orientation the
-            // user set, as the vendor driver does; leaving it out lets the
-            // text drift back upright. Then the slot's color, and the dial
-            // sensitivity the vendor driver always pairs with it.
+            // user set; leaving it out lets the text drift back upright.
+            // Then the slot's color, and the dial sensitivity that goes
+            // with it.
             let address = dongleIdentity ?? []
             let steps = lastOrientation >= 0 ? lastOrientation : 0
             sendVendor(XencelabsOutputProtocol.orientationPayload(rotationSteps: steps, address: address),
@@ -458,8 +458,7 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
 
     /// A color-space preset by row: 0 Adobe RGB through 6 Custom. On the wire
     /// each preset is one higher than its row; 0 isn't a preset. The commit
-    /// frame after it resets any stray gamma or contrast, as the vendor
-    /// driver's own preset switch does.
+    /// frame after it resets any stray gamma or contrast.
     package func setColorMode(_ index: Int) {
         queue.perform { [self] in
             guard hasDisplayPanel, index != lastColorMode else { return }
@@ -499,8 +498,8 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         }
     }
 
-    /// Puts the LED and labels back once a relink has settled. The status
-    /// polls match what the vendor driver sends at this point.
+    /// Puts the LED and labels back once a relink has settled, after polling
+    /// the puck's status.
     package func resyncAfterRelink() {
         queue.perform { [self] in
             if let identity = dongleIdentity {

@@ -64,7 +64,7 @@ package struct XencelabsRelayWatcher: Sendable {
         // The receiver's 0xF8 status frame says whether a paired puck is
         // online: byte 2 bit 1, slot in byte 3. Each online frame means the
         // puck (re)connected and needs the handshake and display again; an
-        // offline frame means it left. The vendor driver acts on these alone.
+        // offline frame means it left. These frames alone are enough.
         let status: Bool? = {
             guard length >= 4, report[0] == 0x02, report[1] == 0xF8, report[2] != 0,
                 (1...2).contains(report[3])
