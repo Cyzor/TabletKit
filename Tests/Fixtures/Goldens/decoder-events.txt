@@ -9,6 +9,7 @@
 0x0012 inputs=1053 pen=236 tool=33 pad=0 dial=0 touch=0 device=0 digest=ff1bdb410c5cfc55  # Graphire 2 (5×7)
 0x0013 inputs=1052 pen=341 tool=18 pad=0 dial=0 touch=0 device=0 digest=4460605b3efaa755  # Graphire 3 (4×5)
 0x0014 inputs=1037 pen=286 tool=28 pad=0 dial=0 touch=0 device=0 digest=c59637a40d3b9463  # Graphire 3 (6×8)
+0x0081 inputs=1055 pen=162 tool=18 pad=275 dial=0 touch=0 device=40 digest=5e9b8170c899455c  # Graphire 3 Wireless (CTE-630BT)
 0x0015 inputs=1040 pen=275 tool=38 pad=220 dial=0 touch=0 device=0 digest=fc7a26597c750e0e  # Graphire 4 (4×5)
 0x0016 inputs=1044 pen=265 tool=23 pad=274 dial=0 touch=0 device=0 digest=ef00ffac8802e559  # Graphire 4 (6×8)
 0x0017 inputs=1042 pen=253 tool=26 pad=369 dial=0 touch=0 device=0 digest=513b2a318b9ffec1  # Bamboo Fun small (CTE-450)

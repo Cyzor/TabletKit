@@ -53,9 +53,14 @@ package enum SessionRouting {
     }
 
     /// The ghost mouse collection Bluetooth tablets expose next to their
-    /// real interfaces. Other page 0x01 collections are real.
+    /// real interfaces. Other page 0x01 collections are real, and so is the
+    /// Graphire Wireless's: its one interface leads with a mouse and carries
+    /// the pen too.
     package static func isBluetoothGhostMouse(_ interface: any HIDInterface) -> Bool {
-        identity(of: interface).isBluetooth && interface.usagePage == 0x01 && interface.usage == 0x02
+        let identity = identity(of: interface)
+        guard identity.isBluetooth, interface.usagePage == 0x01, interface.usage == 0x02 else { return false }
+        let isWacom = WacomDeviceRegistry.vendorIDs.contains(interface.vendorID)
+        return !(isWacom && WacomDeviceRegistry.spec(for: identity.productID)?.format == .graphire)
     }
 
     /// The descriptor's largest X, Y, and tip pressure, across every report,

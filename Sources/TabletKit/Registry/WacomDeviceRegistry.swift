@@ -788,6 +788,18 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151),
         .init(
+            // Bluetooth only. Kernel wacom_features_0x81 (GRAPHIRE_BT): the
+            // 6×8's range, 512 levels, and two keys along the top
+            // (libwacom). Switched on as in the kernel's
+            // wacom_bt_query_tablet_data, at its high report rate. A public
+            // recording matches the kernel's report layout.
+            productID: 0x0081, name: "Graphire 3 Wireless (CTE-630BT)",  // ⚠ from kernel/libwacom
+            format: .graphire, maxX: 16704, maxY: 12064, maxPressure: 511,
+            buttonCount: 2, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x03, 0x00]), .featureReport([0x06, 0x00])],
+            confidence: .crossReferenced, activeWidthMM: 209, activeHeightMM: 151)
+            .withQuirks { $0.initOverBluetooth = true },
+        .init(
             productID: 0x0015, name: "Graphire 4 (4×5)",  // ⚠ estimated
             format: .graphire, maxX: 10208, maxY: 7424, maxPressure: 511,
             buttonCount: 2, hasTouchRing: false, hasEraser: true,
@@ -3031,6 +3043,7 @@ extension TabletSpec {
             tiltMaxDegrees: tiltMaxDegrees)
         spec.hasTouchStrips = hasTouchStrips
         if format == .cintiqV1 { spec.cintiqPadLayout = CintiqPadLayout(productID: productID) }
+        spec.isGraphireBluetooth = format == .graphire && productID == 0x0081
         return spec
     }
 

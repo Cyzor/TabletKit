@@ -7,9 +7,11 @@
 // contact tests replay reports from public hid-devices recordings of a
 // Graphire 3 (CTE-430) and a Bamboo (MTE-450).
 //
-// Report ID covered:
+// Report IDs covered:
 //   • 0x02 — pen/eraser/mouse report, 8 bytes (LE16 X/Y, 10-bit pressure,
 //             mouse wheel, hover distance, G4 pad buttons in d[7])
+//   • 0x03 — the same over Bluetooth on the Graphire Wireless (CTE-630BT),
+//             with 9-bit pressure, pad buttons, and battery in d[7]
 import XCTest
 @testable import TabletKit
 
@@ -359,5 +361,66 @@ extension GraphireDecoderTests {
             [0x02, 0x91, 0x3D, 0x18, 0x62, 0x12, 0x5C, 0x00, 0x00],
         ], pid: 0x0065)
         XCTAssertEqual(p, [0, 0, 92])
+    }
+
+    // MARK: - Graphire Wireless (Bluetooth, report 0x03)
+
+    private var graphireBT: DigitizerSpec { WacomDeviceRegistry.spec(for: 0x0081)!.digitizerSpec }
+
+    private func auxButtons(_ results: [DecodeResult]) -> [Bool]? {
+        for case .aux(let a) in results { return a.buttons }
+        return nil
+    }
+
+    func testGraphireWirelessReadsReport3Only() {
+        var st = GraphireDecoder.State()
+        XCTAssertNil(pen(decode(makePen(status: 0x81), state: &st, spec: graphireBT)), "report 2 isn't its pen")
+        var usb = GraphireDecoder.State()
+        XCTAssertNil(pen(decode([0x03, 0x81, 0, 0, 0, 0, 0, 0], state: &usb)), "report 3 isn't a USB Graphire's pen")
+    }
+
+    func testGraphireWirelessPressureTakesItsTopBitFromStatus() {
+        var st = GraphireDecoder.State()
+        // In range, touching, status bit 3 set: 0x100 | 0x2C.
+        let p = pen(decode([0x03, 0x89, 0x10, 0x20, 0x30, 0x0D, 0x2C, 0x1C], state: &st, spec: graphireBT))
+        XCTAssertEqual(p?.pressure, 0x12C)
+        XCTAssertEqual(p?.x, 0x2010)
+        XCTAssertEqual(p?.y, 0x0D30)
+        XCTAssertEqual(p?.hoverDistance, 0, "byte 7 holds keys and battery, not distance")
+    }
+
+    func testGraphireWirelessKeysAreBits1And0() {
+        var st = GraphireDecoder.State()
+        XCTAssertEqual(auxButtons(decode([0x03, 0x00, 0, 0, 0, 0, 0, 0x1E], state: &st, spec: graphireBT)), [true, false])
+        XCTAssertEqual(auxButtons(decode([0x03, 0x00, 0, 0, 0, 0, 0, 0x1D], state: &st, spec: graphireBT)), [false, true])
+    }
+
+    func testGraphireWirelessBatteryOnlyOnChange() {
+        var st = GraphireDecoder.State()
+        func battery(_ byte7: UInt8) -> (Int, Bool)? {
+            for case .battery(let percent, let charging) in decode(
+                [0x03, 0x00, 0, 0, 0, 0, 0, byte7], state: &st, spec: graphireBT) { return (percent, charging) }
+            return nil
+        }
+        XCTAssertEqual(battery(0x10).map { $0.0 }, 50, "level 4")
+        XCTAssertNil(battery(0x10), "unchanged")
+        let plugged = battery(0x1C)
+        XCTAssertEqual(plugged?.0, 100)
+        XCTAssertEqual(plugged?.1, true, "level 7 is plugged in")
+    }
+
+    func testGraphireWirelessMouseWheel() {
+        var st = GraphireDecoder.State()
+        // Mouse with wheel (tool 2), wheel bit 0: one step down.
+        let p = pen(decode([0x03, 0xC0, 0, 0, 0, 0, 0x01, 0x1C], state: &st, spec: graphireBT))
+        XCTAssertEqual(p?.mouseWheelDelta, -1)
+        XCTAssertEqual(pen(decode([0x03, 0xC0, 0, 0, 0, 0, 0x02, 0x1C], state: &st, spec: graphireBT))?.mouseWheelDelta, 1)
+    }
+
+    func testGraphireWirelessRowSwitchesOnOverBluetooth() {
+        let spec = WacomDeviceRegistry.spec(for: 0x0081)
+        XCTAssertEqual(spec?.quirks.initOverBluetooth, true)
+        XCTAssertEqual(spec?.initSteps, [.featureReport([0x03, 0x00]), .featureReport([0x06, 0x00])])
+        XCTAssertNil(spec?.mouseModeRestore)
     }
 }

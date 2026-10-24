@@ -11,7 +11,8 @@ import Foundation
 /// (0x0004/0x0010), and the Volito, PenStation, and Bamboo One CTF-430.
 /// `WACOM_MO` (Bamboo Fun CTE-450/650, MTE-450) shares the pen path and has
 /// its own pad and ring layout in `decodePad`; the pen path is confirmed on
-/// a CTE-650. Graphire BT (RFCOMM, not HID) isn't covered.
+/// a CTE-650. The Graphire Wireless (CTE-630BT, 0x0081) sends the same
+/// report over Bluetooth with its own ID and bytes 6–7; see `isGraphireBluetooth`.
 ///
 /// **Report layout — Report ID 0x02 (kernel `WACOM_REPORT_PENABLED`), 8 bytes:**
 /// ```
@@ -35,6 +36,11 @@ import Foundation
 /// Pen pressure is 10-bit, in bytes 6–7, and counts only while the tablet
 /// sets BTN_TOUCH. Distance is `d[7] & 0x3F`. Out of range, the report
 /// carries the pad; see `decodePad`.
+///
+/// **Graphire Wireless — Report ID 0x03, 8 bytes** (kernel `GRAPHIRE_BT`):
+/// pressure is 9-bit, `d[6]` plus status bit 3 as its top bit; the mouse
+/// wheel is `d[6]` bits 0–1; `d[7]` holds the two pad buttons in bits 1 and 0
+/// and a battery level in bits 2–4.
 package struct GraphireDecoder: TabletReportDecoder {
 
     /// Creates a decoder. ``DeviceDecoder`` keeps one per device, with its state.
@@ -47,7 +53,8 @@ package struct GraphireDecoder: TabletReportDecoder {
         state: inout State,
         deviceFamily: DeviceFamily
     ) -> [DecodeResult] {
-        guard report.count >= 8, report[0] == 0x02 else { return [] }
+        let bluetooth = spec.isGraphireBluetooth
+        guard report.count >= 8, report[0] == (bluetooth ? 0x03 : 0x02) else { return [] }
 
         let status = report[1]
         let inProximity = (status & 0x80) != 0
@@ -57,6 +64,7 @@ package struct GraphireDecoder: TabletReportDecoder {
         let isEraser = toolField == 1
 
         var results: [DecodeResult] = []
+        if bluetooth { appendBattery(&results, report: report, state: &state) }
 
         // ── Proximity exit ────────────────────────────────────────────────────
         if !inProximity {
@@ -106,7 +114,9 @@ package struct GraphireDecoder: TabletReportDecoder {
             // wheel in d[7] bits 0–2; the rest send -(signed)d[6]. Both as
             // in the kernel.
             let wheelDelta =
-                spec.buttonCount > 0
+                bluetooth
+                ? (toolField == 2 ? ((report[6] & 0x01) != 0 ? -1 : (report[6] & 0x02) != 0 ? 1 : 0) : 0)
+                : spec.buttonCount > 0
                 ? Int(report[7] & 0x04) - Int(report[7] & 0x03)
                 : -Int(Int8(bitPattern: report[6]))
             results.append(
@@ -132,7 +142,8 @@ package struct GraphireDecoder: TabletReportDecoder {
         // lifting, which would otherwise press and drag. Capped so the 8-bit
         // PenPartner isn't fed a 10-bit value.
         let touching = (status & 0x01) != 0
-        let pressure = touching ? min(report.le16(at: 6) & 0x3FF, spec.maxPressure) : 0
+        let raw = bluetooth ? Int(report[6]) | Int(status & 0x08) << 5 : report.le16(at: 6) & 0x3FF
+        let pressure = touching ? min(raw, spec.maxPressure) : 0
         // Pad models carry button bits in d[7], so no distance for them, as
         // in the kernel.
         let hoverDistance = spec.buttonCount > 0 ? 0 : Int(report[7] & 0x3F)
@@ -181,6 +192,9 @@ package struct GraphireDecoder: TabletReportDecoder {
         spec: DigitizerSpec
     ) -> [DecodeResult] {
         let padByte = report[7]
+        if spec.isGraphireBluetooth {
+            return [.aux(AuxButtons(buttons: [(padByte & 0x02) != 0, (padByte & 0x01) != 0]))]
+        }
         // Only the MO models have four buttons; G4 has two.
         if spec.buttonCount >= 4, report.count >= 9 {
             let ringByte = report[8]
@@ -202,6 +216,16 @@ package struct GraphireDecoder: TabletReportDecoder {
         ]
         return [.aux(AuxButtons(buttons: buttons))]
     }
+
+    /// The Graphire Wireless's battery, from `d[7]` bits 2–4, when it
+    /// changes. Level 7 means it's plugged in; the percentages are the kernel's.
+    private func appendBattery(_ results: inout [DecodeResult], report: HIDReport, state: inout State) {
+        let level = Int(report[7] >> 2 & 0x07)
+        guard level != state.lastBatteryLevel else { return }
+        state.lastBatteryLevel = level
+        let percent = [1, 15, 25, 35, 50, 70, 100, 100][level]
+        results.append(.battery(percent: percent, charging: level == 7))
+    }
 }
 
 extension GraphireDecoder {
@@ -217,6 +241,8 @@ extension GraphireDecoder {
         package var isEraser: Bool = false
         /// Whether the tool in range is a mouse.
         package var toolIsMouse: Bool = false
+        /// The Graphire Wireless's last battery level, sent again only on a change.
+        package var lastBatteryLevel: Int? = nil
 
         package init() {}
     }

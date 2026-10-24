@@ -232,4 +232,17 @@ final class TabletSessionTests: XCTestCase {
         XCTAssertTrue(session.tablets.isEmpty)
         XCTAssertTrue(delegate.unclaimed.isEmpty)
     }
+
+    /// The Graphire Wireless's one interface leads with a mouse but carries
+    /// the pen, so it attaches and gets switched on over Bluetooth.
+    func testGraphireWirelessMouseLedInterfaceAttaches() throws {
+        let (session, backend, delegate) = run(
+            [iface(0x0081, page: 0x01, usage: 2, transport: "Bluetooth",
+                   pairs: [HIDUsagePair(page: 0x01, usage: 2), HIDUsagePair(page: 0x0D, usage: 1)])],
+            [.attach(0)])
+        XCTAssertEqual(delegate.log, ["attach 0x81 to 0x81"])
+        let transport = try XCTUnwrap(session.tablets.first?.transports.first)
+        transport.connection.output.drain()
+        XCTAssertEqual(backend.interfaces[0].writes, ["feature 03 00", "feature 06 00"])
+    }
 }
