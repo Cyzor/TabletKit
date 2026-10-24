@@ -15,7 +15,7 @@ import Foundation
 ///
 /// This type carries both. The instance token comes from the USB serial when
 /// the device reports one, else the IOKit `locationID` (stable per port), else
-/// empty — which degrades to PID-only behaviour.
+/// empty — which degrades to PID-only behavior.
 public struct DeviceInstanceKey: Hashable, Codable, Sendable {
     /// Canonical model PID (transport variants already folded by the host's
     /// `canonicalProductID` mapping).

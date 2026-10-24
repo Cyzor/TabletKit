@@ -197,7 +197,7 @@ public enum CaptureLogParser {
     /// Parse a `hid-recorder` text dump (the format produced by
     /// https://github.com/hidutils/hid-recorder and the older `hid-tools`).
     ///
-    /// The line types recognised:
+    /// The line types recognized:
     ///
     ///     E: <secs>.<usecs> <size> <hex bytes…>   ← event (a HID report)
     ///     N: <device name>                        ← captured as deviceTag
@@ -275,7 +275,7 @@ public enum CaptureLogParser {
                             length: length, bytes: bytes))
         }
 
-        // Normalise timestamps so the first record is t=0 (matches mockTab format).
+        // Normalize timestamps so the first record is t=0 (matches mockTab format).
         guard let base = raws.first?.usecs else { return [] }
         return raws.map { r in
             CaptureRecord(

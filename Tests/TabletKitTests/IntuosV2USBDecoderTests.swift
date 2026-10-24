@@ -11,7 +11,7 @@
 // The proximity-exit state machine on the 0x10 path differs from the 0x80 BT path
 // (status bits 6 and 5, not frame-flag bit 7/6/5), and the existing BT fixtures
 // don't exercise it. These tests lock in the dispatch, the genuine vs boundary
-// exit behaviour, and the pen / mouse / aux sub-paths.
+// exit behavior, and the pen / mouse / aux sub-paths.
 import XCTest
 @testable import TabletKit
 

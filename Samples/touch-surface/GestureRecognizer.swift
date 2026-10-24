@@ -88,7 +88,7 @@ final class GestureRecognizer {
     /// tunables below into device units.
     private static let pointsToMM = 0.3528
 
-    /// Device units per physical millimetre for the connected device,
+    /// Device units per physical millimeter for the connected device,
     /// from its registry `touchMaxX`/`activeWidthMM`. This varies a lot
     /// across Wacom's touch-capable lineup, so it's supplied per device at
     /// init rather than hardcoded.

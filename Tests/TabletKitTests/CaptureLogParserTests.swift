@@ -164,7 +164,7 @@ final class CaptureLogParserTests: XCTestCase {
     // MARK: - hid-recorder format
 
     /// Minimal hid-recorder dump shape — three event lines plus the metadata
-    /// lines that real `hid-recorder` output always carries.  Modelled on the
+    /// lines that real `hid-recorder` output always carries.  Modeled on the
     /// format documented at https://man.archlinux.org/man/hid-recorder.1.en
     /// (verified 2026-05-26).
     private static let hidRecorderSample = """
@@ -197,7 +197,7 @@ final class CaptureLogParserTests: XCTestCase {
 
     func testHidRecorderNormalisesTimestampToZeroOrigin() throws {
         // Source timestamps: 0.000123, 0.005678, 0.010234 seconds.
-        // After normalisation: 0 ms, 5 ms (truncated from 5.555), 10 ms.
+        // After normalization: 0 ms, 5 ms (truncated from 5.555), 10 ms.
         let records = try CaptureLogParser.parseHidRecorder(Self.hidRecorderSample)
         XCTAssertEqual(records[0].timestampMs, 0)
         XCTAssertEqual(records[1].timestampMs, 5)

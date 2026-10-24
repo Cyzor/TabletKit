@@ -276,7 +276,7 @@ public enum DeviceFamily: String, Codable, Sendable, CaseIterable {
 ///
 ///   * **Dimensions, 9 rows:** OTD's maxima work out to exactly 100.0
 ///     units/mm (CTE-460, CTE-660, CTL-671), back-computed from rounded
-///     millimetres. Ours match the kernel.
+///     millimeters. Ours match the kernel.
 /// Entries marked ⚠ are estimated from driver sources and unverified on
 /// hardware; the `⚠ recognition-only` variant additionally means the parser
 /// family and `maxX`/`maxY` are guesses by similarity — the device will be
@@ -414,7 +414,7 @@ public struct TabletSpec: Sendable {
     /// How well-vetted this entry is (see `ConfidenceTier`).
     /// Defaults to `.experimental` — promote explicitly when verified.
     public let confidence: ConfidenceTier
-    /// Active-area width in millimetres, or nil if unknown. Lets the mapping
+    /// Active-area width in millimeters, or nil if unknown. Lets the mapping
     /// layer compute LPI per axis (`maxX / activeWidthMM × 25.4`) and offer
     /// 1:1 mapping.
     ///
@@ -438,7 +438,7 @@ public struct TabletSpec: Sendable {
     /// `cross-referenced: libwacom`, `⚠ from OTD`, and so on). 0x0351
     /// (Cintiq Pro 24 touch) shows (1) and (3) diverging by ~4%.
     public let activeWidthMM: Double?
-    /// Active-area height in millimetres.  See `activeWidthMM`.
+    /// Active-area height in millimeters.  See `activeWidthMM`.
     public let activeHeightMM: Double?
     /// Optional substring matched against the device's `kIOHIDProductKey`
     /// string when multiple specs share a `productID`.  Used to disambiguate
@@ -2855,7 +2855,7 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Standalone wireless button/ring accessory, no digitizer, decoded
             // by `ExpressKeyRemoteDecoder`. The kernel's `wacom_remote_irq`
-            // agrees with a bit mapping worked out from five labelled
+            // agrees with a bit mapping worked out from five labeled
             // recordings in the MIT-licensed `whot/wacom-recordings` (facts
             // recorded, no fixtures committed). Byte 11 bits 6–7 follow the
             // kernel: the active ring mode. `.crossReferenced`: no hardware
@@ -2941,7 +2941,7 @@ public enum WacomDeviceRegistry: Sendable {
         Dictionary(grouping: knownDevices, by: \.productID)
 
     /// PIDs some other row claims as its touch sensor (`touchCompanionPID`).
-    /// Lets the routing layer recognise a sensor interface before the tablet
+    /// Lets the routing layer recognize a sensor interface before the tablet
     /// that claims it has enumerated — arrival order between the two is not
     /// guaranteed.
     public static let touchCompanionPIDs: Set<Int> =

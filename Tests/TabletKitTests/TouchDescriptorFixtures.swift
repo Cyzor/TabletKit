@@ -150,8 +150,8 @@ enum TouchDescriptorFixtures {
     /// `linuxwacom/wacom-hid-descriptors` and TabletKit's own
     /// `descriptor-dump` tool, 2026-08-06. `IntuosV2Decoder`'s report-ID
     /// switch has no case for `0x0C` — every one of these devices' touch
-    /// frames were silently discarded until `WacomKnownDevice` started
-    /// deriving a `PrecisionTouchDecoder` for report IDs it doesn't reserve.
+    /// frames go to a `PrecisionTouchDecoder` that `TabletInput` derives for
+    /// report IDs it doesn't reserve.
     ///
     /// One finger slot (Tip Switch, Contact Identifier, X/Y, Width/Height) —
     /// the real devices declare several, but one is enough to exercise the

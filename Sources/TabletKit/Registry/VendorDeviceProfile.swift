@@ -33,9 +33,9 @@ public struct VendorDeviceProfile: Equatable, Sendable {
     public let productID: Int
     /// Marketing name as published by OTD (e.g. "H1060P", "Pen Tablet Medium").
     public let productName: String
-    /// Active-area width in millimetres, when published.
+    /// Active-area width in millimeters, when published.
     public let activeWidthMM: Double?
-    /// Active-area height in millimetres, when published.
+    /// Active-area height in millimeters, when published.
     public let activeHeightMM: Double?
     /// Logical X coordinate maximum (device units), when published.
     public let maxX: Int?

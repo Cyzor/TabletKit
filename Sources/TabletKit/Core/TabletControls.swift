@@ -62,7 +62,7 @@ extension TabletControls {
 
 extension TabletSpec {
     /// The controls a tablet of this model offers once connected, from the
-    /// spec alone, so a host can show them, greyed out, while it's unplugged.
+    /// spec alone, so a host can show them, grayed out, while it's unplugged.
     /// The wireless kit's fill only while the tablet runs on its receiver.
     public var offeredControls: TabletControls.Kinds {
         var kinds: TabletControls.Kinds = []

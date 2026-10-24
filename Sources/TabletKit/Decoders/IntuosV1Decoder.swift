@@ -94,7 +94,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         let status = report[1]
 
         // Tool-change packet: status bits 7:2 == 0xC0.
-        // Must check BEFORE testing the inProximity bit — status 0xC0 has that bit clear
+        // Check this before the inProximity bit — status 0xC0 has that bit clear
         // and would otherwise fall through to proximity-out logic.
         if (status & 0xFC) == 0xC0 {
             return decodeToolChange(report: report, state: &state, deviceFamily: deviceFamily)

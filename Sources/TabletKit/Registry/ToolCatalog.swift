@@ -378,7 +378,7 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuos3, .intuos4]
         )
 
-        // NOTE: The Intuos4 Art Pen KP-701E-2 reports as 0x10804 (extended ID assembled from
+        // The Intuos4 Art Pen KP-701E-2 reports as 0x10804 (extended ID assembled from
         // multiple nibbles by the kernel's wacom_intuos_id_mangle). This value exceeds UInt16.
         // toolCode must be widened to UInt32 to catalog these extended IDs — tracked separately.
 
@@ -846,7 +846,7 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuos4, .intuos5, .intuosProGen1, .intuosProGen2, .intuosProGen3]
         )
 
-        // NOTE: Intuos4 Airbrush KP-400E-2 extended ID (0x10902), Inking Pen KP-130E (0x12802),
+        // Intuos4 Airbrush KP-400E-2 extended ID (0x10902), Inking Pen KP-130E (0x12802),
         // Classic Pen KP-300E-2 (0x40802), and Intuos Pro gen2 reference codes (0x10100/0x10224/
         // 0x10184) all exceed UInt16 — they require toolCode widening to UInt32 (tracked separately).
         // The Intuos4 primary Airbrush uses 0x0902 (above); 0x10902 is a secondary extended variant.
@@ -879,7 +879,7 @@ public enum ToolCatalog: Sendable {
         )
 
         // Pro Pen 3E (Movink 13 bundled pen). Wire has no tool-identity field
-        // for this family (see IntuosV3Decoder) — WacomKnownDevice synthesizes
+        // for this family (see IntuosV3Decoder) — the session synthesizes
         // this code on first proximity as the device's known default, not
         // read from a report.
         catalog[0x0202] = ToolSpec(

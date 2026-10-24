@@ -709,7 +709,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
 
         // Art Pen barrel rotation: -900..899, 5 counts per degree, as on USB,
         // but 12 bits in [13..14], with [14]'s high nibble a frame counter.
-        // Sign-extend from bit 11. Tracks labelled poses within 2°.
+        // Sign-extend from bit 11. Tracks labeled poses within 2°.
         //
         // Not gated on tool identity: the BLE announcement often never
         // arrives in a session. Ungated is safe, since pens without a

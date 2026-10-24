@@ -95,17 +95,16 @@ package enum DecodeResult: Sendable {
     /// wheel (0 = left, 1 = right); `delta` is the signed per-frame step count
     /// (positive = clockwise / up, negative = counter-clockwise / down).
     /// Routed through `touchRingSlots[index]` in InputInjector so the user can
-    /// configure scroll vs. key-press behaviour through the existing ring UI.
+    /// configure scroll vs. key-press behavior through the existing ring UI.
     case wheel(index: Int, delta: Int)
     /// Capacitive finger-touch contact frame.  One emission carries the full
     /// set of active contacts; an empty array signals "all fingers lifted".
     /// Coordinates are in the same device-units space as `TabletPoint`
     /// (decoder must scale to `spec.maxX`/`spec.maxY`).  See `TouchContact`.
     ///
-    /// Emitted by `IntuosV2Decoder`'s BPT3-style per-family touch path and, as
-    /// of 2026-08-06, by `PrecisionTouchDecoder` for Cintiq Pro/DTH devices
-    /// whose touch report `WacomKnownDevice` derives a decoder for at
-    /// connect time. Devices with no recoverable touch coordinate maxima
+    /// Emitted by `IntuosV2Decoder`'s BPT3-style per-family touch path and by
+    /// `PrecisionTouchDecoder` for Cintiq Pro/DTH devices whose touch report
+    /// `TabletInput` derives a decoder for at connect time. Devices with no recoverable touch coordinate maxima
     /// still emit nothing; see `WacomDeviceRegistry`'s `touchMaxX`/`touchMaxY`
     /// provenance comments for which devices those are.
     case touch([TouchContact])

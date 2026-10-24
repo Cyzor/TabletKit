@@ -33,21 +33,21 @@ public enum WacomOutputProtocol: Sendable {
         /// `WAC_CMD_ICON_XFER` — chunk-transfer command over USB.
         public static let iconXferUSB: UInt8 = 0x23
         /// `WAC_CMD_ICON_BT_XFER` — chunk-transfer command over Bluetooth.
-        /// Not currently used: `keyImagePayloads` only implements the USB
+        /// Not currently used: `keyImagePayloadsUSB` only implements the USB
         /// image encoding (4-bit grayscale). Bluetooth uses a different
         /// encoding (1-bit monochrome plus a bit-scramble) not implemented
-        /// here — see `keyImagePayloads`'s doc for detail.
+        /// here — see `keyImagePayloadsUSB`'s doc for detail.
         public static let iconXferBT: UInt8 = 0x26
     }
 
     /// The "begin an OLED image transfer" feature report: `21 01`.
-    /// Must precede the chunk payloads from `keyImagePayloads`.
+    /// Must precede the chunk payloads from `keyImagePayloadsUSB`.
     public static func imageStartPayload() -> [UInt8] {
         [ImageCommand.iconStart, 0x01]
     }
 
     /// The "end an OLED image transfer" feature report: `21 00`.
-    /// Must follow the chunk payloads from `keyImagePayloads`.
+    /// Must follow the chunk payloads from `keyImagePayloadsUSB`.
     public static func imageStopPayload() -> [UInt8] {
         [ImageCommand.iconStart, 0x00]
     }

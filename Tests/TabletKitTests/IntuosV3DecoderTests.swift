@@ -887,7 +887,7 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertTrue(pens(decodeBLE(exit, state: &st)).isEmpty)
     }
 
-    /// Real hover-only frame from the labelled stand capture
+    /// Real hover-only frame from the labeled stand capture
     /// (a PTK-870 Bluetooth capture, "0°" section) — the pen sat in
     /// a fixed stand with no tip contact at all, confirming rotation isn't
     /// tip-switch-gated on BLE the way it is on USB. Bytes [13..14] pack a
@@ -1191,7 +1191,7 @@ final class IntuosV3DecoderTests: XCTestCase {
             "gate stays armed for subsequent barrel samples")
     }
 
-    /// The labelled pair that settles what "out of bounds" means on this
+    /// The labeled pair that settles what "out of bounds" means on this
     /// hardware, from two captures made to answer exactly that.
     ///
     /// One PTK-870 Bluetooth capture traces the real top border of the drawable
@@ -1791,7 +1791,7 @@ final class IntuosV3DecoderTests: XCTestCase {
     }
 
     /// The counterpart: a nonzero count always wins, including one that
-    /// decodes near neutral, so a genuinely centred barrel still reports.
+    /// decodes near neutral, so a genuinely centered barrel still reports.
     func test0x1ENonZeroRotationOverwritesHeldValue() {
         var (st, _) = artPenState(rotation: -252)
         // raw 1 -> (900 - 1) / 5 = 179.8, a real reading just off neutral.
