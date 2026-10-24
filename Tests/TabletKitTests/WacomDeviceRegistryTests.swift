@@ -33,6 +33,18 @@ final class WacomDeviceRegistryTests: XCTestCase {
         XCTAssertEqual(viaOverload?.productID, viaLegacy?.productID)
     }
 
+    // MARK: - Touch strips
+
+    func testSmallIntuos3HasOneStrip() {
+        for pid in [0x00B0, 0x00B7] {
+            let spec = WacomDeviceRegistry.spec(for: pid)
+            XCTAssertEqual(spec?.hasTouchStrips, true)
+            XCTAssertEqual(spec?.touchStripCount, 1)
+        }
+        XCTAssertEqual(WacomDeviceRegistry.spec(for: 0x00B1)?.touchStripCount, 2)
+        XCTAssertEqual(WacomDeviceRegistry.spec(for: 0x00B8)?.touchStripCount, 0)
+    }
+
     // MARK: - lpi derivation
 
     func testLPIIsNilWhenDimensionsMissing() {

@@ -437,7 +437,7 @@ package struct TabletInput {
     /// identity, format, and init stay.
     private static func applyingTouchCapability(_ paired: TabletSpec, to base: TabletSpec) -> TabletSpec {
         guard paired.hasFingerTouch else { return base }
-        return TabletSpec(
+        var spec = TabletSpec(
             productID: base.productID, name: base.name, format: base.format,
             maxX: base.maxX, maxY: base.maxY, maxPressure: base.maxPressure,
             buttonCount: base.buttonCount, bezelButtonCount: base.bezelButtonCount,
@@ -452,5 +452,7 @@ package struct TabletInput {
             confidence: base.confidence, productStringMatch: base.productStringMatch,
             activeWidthMM: base.activeWidthMM, activeHeightMM: base.activeHeightMM)
             .with(quirks: base.quirks)
+        spec.touchStripCount = base.touchStripCount
+        return spec
     }
 }

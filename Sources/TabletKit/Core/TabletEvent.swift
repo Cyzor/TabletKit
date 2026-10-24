@@ -167,7 +167,7 @@ struct PadShape: Sendable {
 
     init(spec: TabletSpec) {
         rings = spec.hasDualRings ? 2 : (spec.hasTouchRing || spec.hasMechanicalDial ? 1 : 0)
-        strips = spec.hasTouchStrips ? 2 : 0
+        strips = spec.touchStripCount
     }
 }
 

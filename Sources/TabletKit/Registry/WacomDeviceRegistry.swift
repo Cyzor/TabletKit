@@ -318,8 +318,11 @@ public struct TabletSpec: Sendable {
     /// True if this model has two touch rings (one per bezel), e.g. Cintiq 24HD.
     /// Implies hasTouchRing.  The two rings are independently assignable.
     public let hasDualRings: Bool
-    /// True if this model has dual capacitive touch strips (Intuos3 WS).
+    /// True if this model has capacitive touch strips (Intuos3, older Cintiqs).
     public let hasTouchStrips: Bool
+    /// How many touch strips the model has: two on most, one on the small
+    /// Intuos3 models.
+    public internal(set) var touchStripCount: Int
     /// True if this model has a capacitive touch surface for finger input in
     /// addition to the pen digitizer.  Gates the Touch settings pane and the
     /// touch-enable feature-report path.
@@ -485,6 +488,7 @@ public struct TabletSpec: Sendable {
         self.hasDualRings = hasDualRings
         self.hasKeyOLEDs = hasKeyOLEDs
         self.hasTouchStrips = hasTouchStrips
+        self.touchStripCount = hasTouchStrips ? 2 : 0
         self.hasFingerTouch = hasFingerTouch
         self.maxTouchContacts = maxTouchContacts
         self.touchMaxX = touchMaxX
@@ -949,9 +953,10 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             productID: 0x00B0, name: "Intuos3 4×5 (PTZ-430)",  // dims confirmed — see family note
             format: .intuos3, maxX: 25400, maxY: 20320, maxPressure: 1023,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 4, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
-            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 127, activeHeightMM: 102),
+            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 127, activeHeightMM: 102)
+            .withOneTouchStrip(),
         .init(
             productID: 0x00B1, name: "Intuos3 6×8 (PTZ-630)",  // cross-referenced: linuxwacom + OTD
             format: .intuos3, maxX: 40640, maxY: 30480, maxPressure: 1023,
@@ -993,9 +998,10 @@ public enum WacomDeviceRegistry: Sendable {
             // — see the family note at the top of this section.
             productID: 0x00B7, name: "Intuos3 4×6 (PTZ-431W)",
             format: .intuos3, maxX: 31496, maxY: 19685, maxPressure: 1023,
-            buttonCount: 4, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 4, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false,
-            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
+            initSteps: [.featureReport([0x02, 0x02]), .delay(0.15), .featureReport([0x04, 0x00])], confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98)
+            .withOneTouchStrip(),
 
         // ── Intuos4 (PTK-xxx, 2009–2012) — intuosV1 parser ───────────────────
         // Key OLEDs on all but the PTK-440; 2048 pressure levels. maxX/maxY
@@ -3024,6 +3030,13 @@ extension TabletSpec {
             tiltMaxDegrees: tiltMaxDegrees)
         spec.hasTouchStrips = hasTouchStrips
         if format == .cintiqV1 { spec.cintiqPadLayout = CintiqPadLayout(productID: productID) }
+        return spec
+    }
+
+    /// A copy with a single touch strip, read as the first.
+    func withOneTouchStrip() -> TabletSpec {
+        var spec = self
+        spec.touchStripCount = 1
         return spec
     }
 }

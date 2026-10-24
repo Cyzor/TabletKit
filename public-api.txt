@@ -568,6 +568,7 @@ property TabletSpec.touchCompanionInitSteps
 property TabletSpec.touchCompanionPID
 property TabletSpec.touchMaxX
 property TabletSpec.touchMaxY
+property TabletSpec.touchStripCount
 property TabletTransport.controls
 property TabletTransport.deliveringInterfaces
 property TabletTransport.digitizer
