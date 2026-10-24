@@ -48,7 +48,7 @@
 0x0352 inputs=1056 pen=112 tool=29 pad=247 dial=0 touch=0 device=9 digest=661d2d50f6bbc7e3  # Cintiq Pro 32 (DTH-3220)
 0x0357 inputs=1056 pen=344 tool=43 pad=178 dial=0 touch=0 device=59 digest=d18ad99cf1febd07  # Intuos Pro M (PTH-660)
 0x0358 inputs=1061 pen=425 tool=94 pad=81 dial=0 touch=0 device=11 digest=39b2a65a3bfe2b4b  # Intuos Pro L (PTH-860)
-0x00D0 inputs=1032 pen=150 tool=26 pad=0 dial=0 touch=205 device=0 digest=a0c27c479764cb76  # Bamboo Touch (CTT-460)
+0x00D0 inputs=1032 pen=150 tool=26 pad=205 dial=0 touch=205 device=0 digest=3557fdc82865e864  # Bamboo Touch (CTT-460)
 0x00D1 inputs=1047 pen=320 tool=23 pad=0 dial=0 touch=0 device=0 digest=0728d60383588e4a  # Bamboo Pen & Touch (CTH-460)
 0x00D4 inputs=1055 pen=242 tool=26 pad=0 dial=0 touch=207 device=0 digest=f69d140114694321  # Bamboo Pen (CTL-460)
 0x00D5 inputs=1045 pen=123 tool=13 pad=0 dial=0 touch=215 device=0 digest=7cf2866735a3ca88  # Bamboo Pen (CTL-660)

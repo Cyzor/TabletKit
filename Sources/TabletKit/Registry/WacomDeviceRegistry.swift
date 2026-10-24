@@ -1203,9 +1203,10 @@ public enum WacomDeviceRegistry: Sendable {
             // 480×320 over 120×80mm, the touches stay inside it, and the
             // kernel's BBTOUCH_LOWRES quirk only scales this space up to the
             // pen chassis's 14720×9200. Touch decodes through BambooDecoder's
-            // 20-byte path (`decodeBPTTouch`).
+            // 20-byte path (`decodeBPTTouch`), with its 4 keys in byte 1,
+            // each pressed in that recording.
             format: .bamboo, maxX: 480, maxY: 320, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
+            buttonCount: 4, hasTouchRing: false, hasEraser: false,
             hasFingerTouch: true, maxTouchContacts: 2, touchMaxX: 480, touchMaxY: 320,
             seizeUSB: false, confidence: .verified,
             activeWidthMM: 120, activeHeightMM: 80),

@@ -1047,7 +1047,7 @@
       "maxX": 480,
       "maxY": 320,
       "maxPressure": 0,
-      "buttonCount": 0,
+      "buttonCount": 4,
       "maxTouchContacts": 2,
       "touchMaxX": 480,
       "touchMaxY": 320,
