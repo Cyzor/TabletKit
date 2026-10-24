@@ -298,7 +298,12 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             keyOLEDsRotated180 = rotated
             let shown = sentKeyLabels
             sentKeyLabels = []
-            sendKeyDisplays(shown)
+            // Labels sent with the turn are queued already. They paint first,
+            // turned, so each key changes once; the old ones repaint only if
+            // none came.
+            queue.perform { [self] in
+                if sentKeyLabels.isEmpty { sendKeyDisplays(shown) }
+            }
         }
     }
 

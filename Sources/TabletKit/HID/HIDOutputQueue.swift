@@ -38,8 +38,10 @@ package final class HIDOutputQueue: @unchecked Sendable {
         }
     }
 
-    /// Blocks until every write enqueued so far has been sent.
+    /// Blocks until every write enqueued so far has been sent, and any work
+    /// that work queued in turn.
     package func drain() {
+        queue.sync {}
         queue.sync {}
     }
 

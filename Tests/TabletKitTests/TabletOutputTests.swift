@@ -131,6 +131,19 @@ final class TabletOutputTests: XCTestCase {
         XCTAssertEqual(primary.writes.count - first, 6 + 12, "turning resends both keys")
     }
 
+    /// Labels that follow a turn paint once, already turned, rather than
+    /// after a repaint of the old ones.
+    func testIntuos4TurnWithNewLabelsPaintsOnce() throws {
+        let (out, primary, queue) = try output(0x00B9)
+        out.setAuxKeyLabels(["Undo", "Redo"])
+        queue.drain()
+        let before = primary.writes.count
+        out.setKeyOLEDsRotated180(true)
+        out.setAuxKeyLabels(["Redo", "Undo"])
+        queue.drain()
+        XCTAssertEqual(primary.writes.count - before, 12, "each key once")
+    }
+
     /// The key display level rides in report 0x20; 0 turns them off.
     func testIntuos4KeyDisplayBrightness() throws {
         let (out, primary, queue) = try output(0x00B9)
