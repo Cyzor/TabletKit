@@ -450,6 +450,20 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         toolCode == 0x0804 || toolCode == 0x1108 || toolCode == 0x0204
     }
 
+    /// A Bluetooth pen's identity for the end in range. The announcement
+    /// carries the tip's code either way; the eraser takes the code the
+    /// catalog gives it, or the generic eraser's.
+    static func bleIdentity(serial: UInt32, tipCode: UInt16, eraser: Bool) -> ToolIdentity {
+        guard eraser else {
+            let artPen = tipCode == 0x0804 || tipCode == 0x1108
+            return ToolIdentity(
+                serial: serial, toolCode: tipCode,
+                isEraser: !artPen && (tipCode & 0x0008) != 0, isMouse: false)
+        }
+        let code = ToolCatalog.spec(forToolCodeRaw: tipCode)?.eraserToolCode ?? 0x0008
+        return ToolIdentity(serial: serial, toolCode: code, isEraser: true, isMouse: false)
+    }
+
     // MARK: - 0x1A Bluetooth LE report (pen + pad, single multiplexed interface)
 
     /// Barrel rotation decodes on every Bluetooth frame whatever the pen, and
@@ -552,13 +566,9 @@ package struct IntuosV3Decoder: TabletReportDecoder {
                 if toolChanged {
                     state.lastSerial = serial
                     state.lastToolCode = toolCode
-                    let artPen = toolCode == 0x0804 || toolCode == 0x1108
+                    state.bleAnnouncedEraser = state.bleEraser
                     var announceResults: [DecodeResult] = [
-                        .toolEnter(
-                            ToolIdentity(
-                                serial: serial, toolCode: toolCode,
-                                isEraser: !artPen && (toolCode & 0x0008) != 0,
-                                isMouse: false))
+                        .toolEnter(Self.bleIdentity(serial: serial, tipCode: toolCode, eraser: state.bleEraser))
                     ]
                     emitToolCompatibility(
                         toolCode: toolCode, deviceFamily: deviceFamily,
@@ -611,6 +621,8 @@ package struct IntuosV3Decoder: TabletReportDecoder {
             // signal that says so.
             state.lastSerial = 0
             state.lastToolCode = 0
+            state.bleEraser = false
+            state.bleAnnouncedEraser = false
             // The held rotation belongs to the pen that left; replayed onto
             // the next pen's filler frames, it passed that pen off as a
             // twisted Art Pen.
@@ -739,16 +751,31 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         state.lastTiltY = tiltY
         state.hasValidTiltFrame = true
 
+        // 0x10 Eraser (pressed) or 0x20 Invert (eraser end in range), the
+        // same layout as the kernel's Pro2022 report: Eraser alone made the
+        // eraser exist only in contact over Bluetooth. Both can read 0 in
+        // high hover (bit 6 clear) with the eraser down, so only a close
+        // frame without them means the tip.
+        if (status & 0x30) != 0 {
+            state.bleEraser = true
+        } else if (status & 0x40) != 0 {
+            state.bleEraser = false
+        }
+        // The announcement names the tip's code for either end, so the end
+        // the frames show is announced here once the pen is known: its own
+        // eraser code with the pen's serial, as USB names it.
+        if state.lastToolCode != 0, state.bleEraser != state.bleAnnouncedEraser {
+            state.bleAnnouncedEraser = state.bleEraser
+            results.append(.toolEnter(Self.bleIdentity(
+                serial: state.lastSerial, tipCode: state.lastToolCode, eraser: state.bleEraser)))
+        }
         var blePoint = TabletPoint(
             x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
             pressure: pressure, maxPressure: spec.maxPressure,
             tiltX: tiltX, tiltY: tiltY, rotation: rotation,
             penButton1: (status & 0x02) != 0,
             penButton2: (status & 0x04) != 0,
-            // 0x10 Eraser (pressed) or 0x20 Invert (eraser end in range), the
-            // same layout as the kernel's Pro2022 report: Eraser alone made
-            // the eraser exist only in contact over Bluetooth.
-            eraser: (status & 0x30) != 0,
+            eraser: state.bleEraser,
             inProximity: true, hoverDistance: 0)
         // Same third barrel button as the USB extended report — see the
         // comment on decodeExtendedPenReport's equivalent assignment.
@@ -886,6 +913,10 @@ extension IntuosV3Decoder {
         package var bleBarrelDropCount: Int = 0
         /// ExpressKey byte from the last pad report, for telling a press from a hold.
         package var lastExpressKeys: UInt8 = 0
+        /// Over Bluetooth, whether the eraser end was down at the last close reading.
+        package var bleEraser: Bool = false
+        /// Over Bluetooth, whether the last identity announced was the eraser.
+        package var bleAnnouncedEraser: Bool = false
 
         package init() {}
     }

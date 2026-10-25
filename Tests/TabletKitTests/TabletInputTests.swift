@@ -59,6 +59,42 @@ final class TabletInputTests: XCTestCase {
         XCTAssertTrue(outputs.allSatisfy { $0.effects.isEmpty })
     }
 
+    /// Over Bluetooth the announcement names the tip's code for either end,
+    /// and only close frames carry the eraser bits. The eraser end is named
+    /// with its own code and the pen's serial, whichever arrives first, and
+    /// high hover keeps it.
+    func testBluetoothEraserEndIsNamed() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x03F9))  // PTK-870
+        func frame(_ status: UInt8) -> [UInt8] {
+            [0x1A, 0x02, 0x00, status, 0x28, 0x7A, 0xE0, 0xBB, 0x02] + [UInt8](repeating: 0, count: 11)
+        }
+        let far = frame(0x80), closeTip = frame(0xC0), closeEraser = frame(0xE0), out = frame(0x00)
+        let announcement: [UInt8] = [0x1A, 0x21, 0x84, 0xC0, 0x01, 0x02, 0x03, 0x04, 0x42, 0x08, 0x10] + [UInt8](repeating: 0, count: 9)
+        func run(_ reports: [[UInt8]]) -> [String] {
+            var input = TabletInput(spec: spec, isBluetooth: true, isWireless: false)
+            return reports.enumerated().flatMap { i, r in
+                feed(&input, r, seconds: 0.005 * Double(i)).events.compactMap { event -> String? in
+                    switch event {
+                    case .tool(let t) where t.phase == .enter:
+                        return String(format: "enter %04X %@", t.identity.toolCode, t.identity.isEraser ? "eraser" : "tip")
+                    case .pen(let p) where p.inProximity:
+                        return p.eraser ? "pen eraser" : "pen tip"
+                    default: return nil
+                    }
+                }
+            }
+        }
+        // Eraser bit after the announcement: the eraser is named before its point.
+        XCTAssertEqual(
+            run([far, announcement, closeEraser, far, out, far, announcement, closeTip]),
+            ["pen tip", "enter 0842 tip", "enter 084A eraser", "pen eraser", "pen eraser",
+             "pen tip", "enter 0842 tip", "pen tip"])
+        // Eraser bit first: the announcement names the eraser directly.
+        XCTAssertEqual(
+            run([far, closeEraser, announcement, closeEraser]),
+            ["pen tip", "pen eraser", "enter 084A eraser", "pen eraser"])
+    }
+
     /// A receiver holds the pen back until its link is up, names its tablet
     /// once, and asks for init when the link comes up.
     func testReceiverGatesUntilLinkUpAndNamesItsTablet() throws {
