@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // TabletInput's effects and gates on paths the report traces don't reach:
-// the idle-report resend, a wireless receiver's pairing and link gate, and
-// the Xencelabs Pen Display.
+// the idle-report resend, a wireless receiver's pairing and link gate, the
+// Xencelabs Pen Display, and a PTK-870's missed Bluetooth announcement.
 import Foundation
 import XCTest
 @testable import TabletKit
@@ -27,6 +27,36 @@ final class TabletInputTests: XCTestCase {
         for t in stride(from: 0.0, through: rule.timeout + 1, by: 1) {
             XCTAssertTrue(feed(&bluetooth, [rule.reportID, 0, 0, 0], seconds: t).effects.isEmpty)
         }
+    }
+
+    /// Over Bluetooth a PTK-870's announcement usually lands 3 to 8 reports
+    /// after the pen enters, and sometimes never. Until it does, no pen is
+    /// made up and no init is resent, however long the pen sat idle.
+    func testMissedBluetoothAnnouncementAddsNoPen() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x03F9))  // PTK-870
+        var input = TabletInput(spec: spec, isBluetooth: true, isWireless: false)
+        let inRange: [UInt8] = [0x1A, 0x02, 0x00, 0x80, 0x28, 0x7A, 0xE0, 0xBB, 0x02] + [UInt8](repeating: 0, count: 11)
+        let outOfRange: [UInt8] = [0x1A, 0x02, 0x00, 0x00] + [UInt8](repeating: 0, count: 16)
+        let announcement: [UInt8] = [0x1A, 0x21, 0x84, 0xC0, 0x01, 0x02, 0x03, 0x04, 0x42, 0x08, 0x10] + [UInt8](repeating: 0, count: 9)
+        func tools(_ outputs: [TabletInput.Output]) -> [ToolIdentity] {
+            outputs.flatMap(\.events).compactMap {
+                if case .tool(let tool) = $0, tool.phase == .enter { return tool.identity } else { return nil }
+            }
+        }
+
+        var outputs = (0..<12).map { feed(&input, inRange, seconds: 0.005 * Double($0)) }
+        XCTAssertEqual(tools(outputs), [])
+        XCTAssertTrue(outputs.allSatisfy { $0.effects.isEmpty })
+
+        outputs = [feed(&input, announcement, seconds: 0.1)]
+        XCTAssertEqual(tools(outputs).map(\.toolCode), [0x0842])
+        XCTAssertEqual(tools(outputs).map(\.serial), [0x0403_0201])
+
+        // Picked up again after a long idle, announcement missed.
+        _ = feed(&input, outOfRange, seconds: 1)
+        outputs = (0..<12).map { feed(&input, inRange, seconds: 20 + 0.005 * Double($0)) }
+        XCTAssertEqual(tools(outputs), [])
+        XCTAssertTrue(outputs.allSatisfy { $0.effects.isEmpty })
     }
 
     /// A receiver holds the pen back until its link is up, names its tablet

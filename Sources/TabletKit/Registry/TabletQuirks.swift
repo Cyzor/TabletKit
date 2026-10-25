@@ -32,9 +32,6 @@ public struct TabletQuirks: Sendable, Equatable {
     /// Over USB, a mode switch that can be ignored without an error, so it's
     /// read back and resent until it takes.
     public var usbModeReadBack: ModeReadBack?
-    /// Over Bluetooth, reports to wait for the pen's identity before
-    /// assuming a generic pen.
-    public var toolAnnounceGraceFrames: Int?
     /// Pen reports its descriptor declares are read from the descriptor,
     /// ahead of the family decoder.
     package var readsDescriptorPens = false
@@ -86,7 +83,6 @@ public struct TabletQuirks: Sendable, Equatable {
             q.initNeedsDeclaringInterface = true
             // PTK-x70 and Movink sit on report 0x06 until DATAMODE lands.
             q.usbIdleReport = IdleReportRule(reportID: 0x06, liveReportIDs: [0x1E, 0x1B], timeout: 5)
-            q.toolAnnounceGraceFrames = 4
         case .intuosV1, .bamboo:
             q.initNeedsDeclaringInterface = true
         case .xencelabs:

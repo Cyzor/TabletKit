@@ -11,11 +11,11 @@ private let logger = Logger(subsystem: "com.cyzor.tabletkit", category: "input")
 ///
 /// Holds everything between "a report arrived" and "these are its events":
 /// the checks that run before decoding, the decoders (including touch
-/// sensors read from a descriptor or a fixed layout), the IntuosV3
-/// Bluetooth identity fix-ups, and the wireless receiver's link gate. It
-/// does no I/O. What needs a write comes back as an ``Effect`` for the
-/// owner of the interfaces to carry out. Time comes from each report's
-/// arrival, so replaying a recording gives the same result as the live run.
+/// sensors read from a descriptor or a fixed layout), and the wireless
+/// receiver's link gate. It does no I/O. What needs a write comes back as an
+/// ``Effect`` for the owner of the interfaces to carry out. Time comes from
+/// each report's arrival, so replaying a recording gives the same result as
+/// the live run.
 ///
 /// Call from the input executor only.
 package struct TabletInput {
@@ -32,8 +32,8 @@ package struct TabletInput {
 
     /// Something the owner of the interfaces should do.
     package enum Effect: Sendable, Equatable {
-        /// Send init again: the tablet sat on its idle report, the pen's
-        /// announcement stopped arriving, or a receiver's link came up.
+        /// Send init again: the tablet sat on its idle report, or a
+        /// receiver's link came up.
         case resendInit(InitReason)
         /// A wireless receiver named the tablet it's paired with.
         case pairedTablet(productID: Int)
@@ -44,7 +44,6 @@ package struct TabletInput {
 
     package enum InitReason: Sendable, Equatable {
         case stuckOnIdleReport(reportID: UInt8)
-        case toolAnnouncementDrought
         case wirelessLinkUp
     }
 
@@ -59,7 +58,6 @@ package struct TabletInput {
     /// ``TabletQuirks/readsDescriptorPens``. Ahead of `decoder`.
     private var descriptorPens = DescriptorPenDecoder()
     private var descriptorDecoder: DeviceDecoder?
-    private var toolGrace: ToolAnnouncementGrace
     private var touchDecoders: [UInt8: PrecisionTouchDecoder] = [:]
     private var fixedTouchDecoders: [UInt8: DeviceDecoder] = [:]
     private var idleWatcher: IdleReportWatcher?
@@ -72,22 +70,12 @@ package struct TabletInput {
     private var relayWatcher = XencelabsRelayWatcher()
     private var remoteLinks = ExpressKeyRemoteWatcher()
 
-    private var lastRealToolAnnouncementNs: UInt64?
-    private var lastAnnouncementRecoveryNs: UInt64?
-    private var lastRealToolIdentity: ToolIdentity?
-
     private var wirelessReady = false
     private var wirelessLinkConfirmed = false
     private var batteryWarningLogged = false
     private var wirelessLastAcceptedPoint: TabletPoint?
     private var lastRemotePairingSummary: String?
 
-    /// How long a Bluetooth LE session can go without a real announcement
-    /// before it's treated as stuck. It can stop arriving for 30 s or more
-    /// after enough proximity cycling.
-    private static let toolAnnouncementDroughtNs: UInt64 = 8_000_000_000
-    /// Debounce for the drought's init resend.
-    private static let toolAnnouncementRecoveryCooldownNs: UInt64 = 8_000_000_000
     /// Log-only check for receiver chatter: a corrupted byte over RF tends to
     /// jump one axis while the other stays put.
     private static let wirelessOutlierFraction = 0.2
@@ -104,7 +92,6 @@ package struct TabletInput {
         self.isBluetooth = isBluetooth
         self.isWireless = isWireless
         decoder = DeviceDecoder(format: spec.format, digitizer: spec.digitizerSpec, family: spec.family)
-        toolGrace = ToolAnnouncementGrace(frames: spec.quirks.toolAnnounceGraceFrames ?? 0)
         idleWatcher = spec.quirks.usbIdleReport.map(IdleReportWatcher.init)
     }
 
@@ -156,8 +143,7 @@ package struct TabletInput {
         noteRemoteLinks(report)
 
         let wasInProximity = penInRange
-        let graceEnded = toolGrace.advance(penInRange: wasInProximity)
-        let decoded = decode(report, now: now, synthesizeToolEnter: isBluetooth && graceEnded, into: &output)
+        let decoded = decode(report)
         output.events = gate(decoded, wasInProximity: wasInProximity, into: &output)
         noteDongleBattery(report, into: &output)
         return output
@@ -228,11 +214,9 @@ package struct TabletInput {
     // MARK: - Decoding
 
     /// Decodes with the touch decoder for the report's ID, or the main
-    /// decoder plus the IntuosV3 Bluetooth identity fix-ups.
-    private mutating func decode(
-        _ report: HIDReport, now: UInt64, synthesizeToolEnter: Bool, into output: inout Output
-    ) -> [TabletEvent] {
-        let name = spec.name
+    /// decoder. A pen whose announcement is missed sends no tool event, so
+    /// the consumer's current pen carries over.
+    private mutating func decode(_ report: HIDReport) -> [TabletEvent] {
         if report.count > 0, var fixed = fixedTouchDecoders[report[0]] {
             // A hand-specified layout wins over a derived one.
             fixed.digitizer = decoder.digitizer
@@ -246,48 +230,7 @@ package struct TabletInput {
         if descriptorPens.handles(report), let events = descriptorDecoder?.events(report) {
             return events
         }
-        var decoded = decoder.events(report)
-        // Over Bluetooth the decoder also announces an Art Pen it infers from
-        // a twisted barrel, alongside that frame's pen point. A real
-        // announcement arrives alone, so only that one counts here.
-        var point: TabletPoint?
-        var toolEnter: ToolIdentity?
-        for event in decoded {
-            switch event {
-            case .pen(let p) where point == nil: point = p
-            case .tool(let t) where toolEnter == nil && t.phase == .enter: toolEnter = t.identity
-            default: break
-            }
-        }
-        let inferredArtPen = spec.format == .intuosV3 && isBluetooth && point != nil
-        if let toolEnter, !(inferredArtPen && toolEnter.serial == 0 && toolEnter.toolCode == 0x0804) {
-            lastRealToolAnnouncementNs = now
-            lastRealToolIdentity = toolEnter
-        }
-        let decoderEmittedToolEnter = toolEnter != nil
-        if synthesizeToolEnter, !decoderEmittedToolEnter, decoder.penInRange, let point {
-            // Most sessions use one pen, so a missed announcement usually
-            // means the same pen came back: reuse its identity if the end
-            // matches, rather than a generic one.
-            let identity: ToolIdentity
-            if let cached = lastRealToolIdentity, cached.isEraser == point.eraser {
-                identity = cached
-            } else {
-                identity = ToolIdentity(
-                    serial: 0, toolCode: point.eraser ? 0x0008 : 0x0000, isEraser: point.eraser, isMouse: false)
-            }
-            decoded.insert(.tool(ToolEvent(identity: identity, phase: .enter)), at: 0)
-            // The real announcement can stop arriving entirely; init brings
-            // it back. Debounced so a stuck session isn't resent every frame.
-            let sinceReal = lastRealToolAnnouncementNs.map { now &- $0 } ?? .max
-            let sinceRecovery = lastAnnouncementRecoveryNs.map { now &- $0 } ?? .max
-            if sinceReal > Self.toolAnnouncementDroughtNs, sinceRecovery > Self.toolAnnouncementRecoveryCooldownNs {
-                lastAnnouncementRecoveryNs = now
-                logger.info("\(name, privacy: .public): no real BLE tool announcement in over 8s — re-sending DATAMODE to recover")
-                output.effects.append(.resendInit(.toolAnnouncementDrought))
-            }
-        }
-        return decoded
+        return decoder.events(report)
     }
 
     // MARK: - Gating

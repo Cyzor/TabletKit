@@ -19,7 +19,6 @@ final class TabletQuirksTests: XCTestCase {
         XCTAssertEqual(v3.usbIdleReport?.reportID, 0x06)
         XCTAssertEqual(v3.usbIdleReport?.liveReportIDs, [0x1E, 0x1B])
         XCTAssertEqual(v3.usbIdleReport?.timeout, 5)
-        XCTAssertEqual(v3.toolAnnounceGraceFrames, 4)
 
         for format in [ReportFormat.intuosV1, .bamboo] {
             XCTAssertTrue(TabletQuirks.defaults(for: format).initNeedsDeclaringInterface)
@@ -61,6 +60,6 @@ final class TabletQuirksTests: XCTestCase {
             buttonCount: 0, hasTouchRing: false, hasEraser: false, seizeUSB: false)
         let changed = spec.withQuirks { $0.usbIdleReport = nil }
         XCTAssertNil(changed.quirks.usbIdleReport)
-        XCTAssertEqual(changed.quirks.toolAnnounceGraceFrames, 4)
+        XCTAssertTrue(changed.quirks.initOverBluetooth)
     }
 }

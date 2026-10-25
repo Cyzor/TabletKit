@@ -109,20 +109,3 @@ public struct DongleBatteryWatcher: Sendable {
         return reading
     }
 }
-
-/// Over Bluetooth, gives a pen's identity announcement a few reports to
-/// arrive before the driver assumes a generic pen.
-/// See ``TabletQuirks/toolAnnounceGraceFrames``.
-public struct ToolAnnouncementGrace: Sendable {
-    public let frames: Int
-    private var framesInRange = 0
-
-    public init(frames: Int) { self.frames = frames }
-
-    /// Call once per report with whether the pen was in range before it.
-    /// True on the one report where the grace runs out.
-    public mutating func advance(penInRange: Bool) -> Bool {
-        framesInRange = penInRange ? min(framesInRange + 1, frames + 1) : 0
-        return frames > 0 && framesInRange == frames
-    }
-}

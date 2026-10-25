@@ -527,3 +527,9 @@ API breakage: struct GenericDigitizerFrame has been removed
 # Package-level decoder no device routed to; the 27QHD Touch sends
 # standard HID touch.
 API breakage: struct Wacom27QHDTDecoder has been removed
+
+# 0.7.0: the Bluetooth grace window and drought resend for missed pen
+# announcements are gone. A missed announcement now sends no tool event.
+API breakage: var TabletQuirks.toolAnnounceGraceFrames has been removed
+API breakage: struct ToolAnnouncementGrace has been removed
+API breakage: enumelement TabletInput.InitReason.toolAnnouncementDrought has been removed

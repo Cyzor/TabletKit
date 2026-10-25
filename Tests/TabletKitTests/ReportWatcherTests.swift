@@ -112,17 +112,4 @@ final class ReportWatcherTests: XCTestCase {
         XCTAssertEqual(held(0x1C), [nil, nil, nil, 90])
         XCTAssertEqual(held(0x1D), [nil, nil, nil, nil])
     }
-
-    func testGraceFiresOnceWhenThePenStaysInRange() {
-        var g = ToolAnnouncementGrace(frames: 4)
-        let fired = [false, true, true, true, true, true, true].map { g.advance(penInRange: $0) }
-        XCTAssertEqual(fired, [false, false, false, false, true, false, false])
-        XCTAssertFalse(g.advance(penInRange: false))
-        XCTAssertEqual((0..<4).map { _ in g.advance(penInRange: true) }, [false, false, false, true])
-    }
-
-    func testZeroFramesNeverFires() {
-        var g = ToolAnnouncementGrace(frames: 0)
-        XCTAssertFalse((0..<5).contains { _ in g.advance(penInRange: true) })
-    }
 }

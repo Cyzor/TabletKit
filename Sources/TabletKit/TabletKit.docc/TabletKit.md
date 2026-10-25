@@ -134,7 +134,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``IdleReportWatcher``
 - ``DongleBatteryWatcher``
 - ``DonglePairingWatcher``
-- ``ToolAnnouncementGrace``
 
 ### Live device control
 
