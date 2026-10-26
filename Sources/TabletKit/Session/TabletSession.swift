@@ -89,9 +89,13 @@ public final class TabletSession {
 
     public func stop() {
         // Transports first: closing puts touch sensor modes back, which
-        // needs the devices still open.
-        for tablet in tablets {
-            for transport in tablet.transports { transport.close() }
+        // needs the devices still open. One bounded wait for all of them,
+        // so a dead Bluetooth link can't hold up quit.
+        let transports = tablets.flatMap(\.transports)
+        for transport in transports { transport.close() }
+        let deadline = DispatchTime.now() + .milliseconds(250)
+        for transport in transports where !transport.connection.output.drain(until: deadline) {
+            logger.info("\(transport.spec.name, privacy: .public): writes still pending at stop")
         }
         backend.stop()
         tablets.removeAll()

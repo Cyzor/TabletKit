@@ -196,7 +196,8 @@ package final class TabletConnection: @unchecked Sendable {
     }
 
     /// Restores any touch sensor mode the connect sequence changed, then
-    /// closes every interface.
+    /// closes every interface. Both happen on the output queue, behind any
+    /// writes still pending, so main doesn't wait on a slow link.
     @MainActor
     package func close() {
         let saved = savedTouchModes
@@ -205,7 +206,8 @@ package final class TabletConnection: @unchecked Sendable {
         var restores = saved.take()
         if let interface = switchedInterface, let bytes = spec.mouseModeRestore { restores.append((interface, bytes)) }
         switchedInterface = nil
-        output.performAndWait { [restores] in
+        let closing = interfaces + (ledInterface.map { [$0] } ?? [])
+        output.perform { [restores] in
             for (interface, bytes) in restores {
                 let ret = interface.setReport(.feature, bytes: bytes)
                 if ret != kIOReturnSuccess {
@@ -214,9 +216,8 @@ package final class TabletConnection: @unchecked Sendable {
                 onStep?(.wrote(reportID: Int(bytes[0]), value: Int(bytes.count > 1 ? bytes[1] : 0),
                                result: ret, usagePage: interface.usagePage))
             }
+            for interface in closing { interface.close() }
         }
-        for interface in interfaces { interface.close() }
-        ledInterface?.close()
         interfaces.removeAll()
         ledInterface = nil
         capableInterface = nil

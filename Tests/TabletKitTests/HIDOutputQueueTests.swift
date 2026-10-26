@@ -44,4 +44,14 @@ final class HIDOutputQueueTests: XCTestCase {
         XCTAssertLessThan(DispatchTime.now().uptimeNanoseconds - start, 10_000_000)
         queue.drain()
     }
+
+    func testTimedDrainGivesUpBehindStuckWork() {
+        let queue = HIDOutputQueue(label: "test")
+        XCTAssertTrue(queue.drain(until: .now() + .milliseconds(100)), "an idle queue drains at once")
+        let release = DispatchSemaphore(value: 0)
+        queue.perform { release.wait() }
+        XCTAssertFalse(queue.drain(until: .now() + .milliseconds(50)))
+        release.signal()
+        XCTAssertTrue(queue.drain(until: .now() + .seconds(1)))
+    }
 }

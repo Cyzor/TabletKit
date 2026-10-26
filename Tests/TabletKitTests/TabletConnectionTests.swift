@@ -125,6 +125,7 @@ final class TabletConnectionTests: XCTestCase {
         connection.output.drain()
         XCTAssertEqual(primary.writes, ["feature 02 02"])
         connection.close()
+        connection.output.drain()
         XCTAssertEqual(primary.writes, ["feature 02 02", "feature 02 01"])
     }
 
@@ -135,12 +136,14 @@ final class TabletConnectionTests: XCTestCase {
         let (usb, _) = connect(pen, spec: spec)
         usb.output.drain()
         usb.close()
+        usb.output.drain()
         XCTAssertEqual(pen.writes, ["feature 02 02"])
 
         let ble = interface(productID: 0x0084, usagePage: 0x0D, transport: "Bluetooth")
         let (bt, _) = connect(ble, spec: try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0013)))
         bt.output.drain()
         bt.close()
+        bt.output.drain()
         XCTAssertEqual(ble.writes, [])
     }
 
@@ -158,6 +161,7 @@ final class TabletConnectionTests: XCTestCase {
         connection.output.drain()
         XCTAssertEqual(sensor.writes, ["feature 12 02"])
         connection.close()
+        connection.output.drain()
         XCTAssertEqual(sensor.writes, ["feature 12 02", "feature 12 00"], "the earlier mode goes back")
         XCTAssertFalse(sensor.isOpen)
         XCTAssertFalse(pen.isOpen)

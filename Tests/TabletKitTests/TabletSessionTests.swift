@@ -210,11 +210,14 @@ final class TabletSessionTests: XCTestCase {
     }
 
     func testDetachClosesTheTransportAndTablet() {
+        var transport: TabletTransport?
         let (session, backend, delegate) = run(
             [iface(0x0357, page: 0xFF00, serial: "S1"), iface(0x0357, page: 0x01, serial: "S1")],
-            [.attach(0), .attach(1), .detach(1)])
+            [.attach(0), .attach(1), .detach(1)], onAttach: { transport = $0 })
         XCTAssertEqual(delegate.log, ["attach 0x357 to 0x357", "detach 0x357"])
         XCTAssertTrue(session.tablets.isEmpty)
+        // Interfaces close on the output queue, after any pending writes.
+        transport?.connection.output.drain()
         XCTAssertFalse(backend.interfaces[0].isOpen)
         XCTAssertNil(session.transport(for: backend.interfaces[0]))
     }

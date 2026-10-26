@@ -45,6 +45,14 @@ package final class HIDOutputQueue: @unchecked Sendable {
         queue.sync {}
     }
 
+    /// Waits until every write enqueued so far has been sent, or until
+    /// `deadline`. Returns false if the deadline came first.
+    package func drain(until deadline: DispatchTime) -> Bool {
+        let done = DispatchSemaphore(value: 0)
+        queue.async { done.signal() }
+        return done.wait(timeout: deadline) == .success
+    }
+
     /// Runs `work` on the queue, in order with the writes around it.
     package func perform(_ work: @escaping @Sendable () -> Void) {
         queue.async(execute: work)

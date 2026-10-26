@@ -533,8 +533,9 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
         }
     }
 
+    /// Queued behind any writes still pending; returns at once.
     package func stop() {
-        queue.performAndWait { [self] in
+        queue.perform { [self] in
             batteryPoll?.cancel()
             batteryPoll = nil
             pendingVendorWrites.removeAll()

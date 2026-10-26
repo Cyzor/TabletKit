@@ -134,6 +134,23 @@ final class TabletSessionReplayTests: XCTestCase {
         XCTAssertEqual(failures, [])
     }
 
+    /// Stop waits for each tablet's restore writes before the backend
+    /// closes the devices, so a Graphire is back in mouse mode at quit.
+    func testStopRestoresModeBeforeTheBackendCloses() {
+        var r = ReplayRecording.Interface()
+        r.vendorID = 0x056A
+        r.productID = 0x0013
+        r.usagePage = 0x01
+        r.transport = "USB"
+        let backend = ReplayBackend(ReplayRecording(interfaces: [r], events: [.attach(0)]))
+        let session = TabletSession(backend: backend, delegate: RecordingDelegate())
+        session.start()
+        backend.play()
+        XCTAssertEqual(session.tablets.count, 1)
+        session.stop()
+        XCTAssertEqual(backend.interfaces[0].writes, ["feature 02 02", "feature 02 01"])
+    }
+
     private func unzip(_ arguments: [String]) -> Data? {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")

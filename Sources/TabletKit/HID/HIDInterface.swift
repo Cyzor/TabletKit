@@ -78,8 +78,8 @@ extension HIDInterface {
 /// An ``HIDInterface`` backed by an `IOHIDDevice`.
 ///
 /// `@unchecked Sendable`: IOKit's report calls are safe from any thread, and
-/// the open state is touched only by `open` and `close`, which callers run
-/// on one thread.
+/// the open state is touched only by `open` and `close`, which callers
+/// never run at the same time.
 public final class IOKitHIDInterface: HIDInterface, @unchecked Sendable {
     public let device: IOHIDDevice
     /// The open callback's state, while one is registered.
