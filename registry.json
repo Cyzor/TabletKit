@@ -1306,7 +1306,7 @@
       "productID": "0x00CC",
       "name": "Cintiq 21UX2 (DTK-2100)",
       "parser": "cintiqV1",
-      "confidence": "crossReferenced",
+      "confidence": "verified",
       "productStringMatch": null,
       "maxX": 87200,
       "maxY": 65600,

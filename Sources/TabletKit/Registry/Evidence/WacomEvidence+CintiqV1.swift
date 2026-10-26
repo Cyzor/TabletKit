@@ -34,9 +34,12 @@ extension WacomEvidence {
             .pressure: .init(.recorded, [.publicRecording, .linuxKernel]),
         ],
         0x00CC: [  // Cintiq 21UX2 (DTK-2100)
-            .penPosition: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
-            .pressure: .init(.recorded, [.publicRecording, .linuxKernel, .openTabletDriver]),
-            .tabletButtons: .init(.sourced, [.libwacom]),
+            .penPosition: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
+            .pressure: .init(.hardware, [.testerHardware, .publicRecording, .linuxKernel, .openTabletDriver]),
+            .tilt: .init(.hardware, [.testerHardware]),
+            .eraser: .init(.hardware, [.testerHardware]),
+            .tabletButtons: .init(.hardware, [.testerHardware, .libwacom]),
+            .strips: .init(.hardware, [.testerHardware]),
         ],
         0x00F4: [  // Cintiq 24HD (DTK-2400)
             .penPosition: .init(.hardware, [.maintainerHardware, .publicRecording, .linuxKernel]),

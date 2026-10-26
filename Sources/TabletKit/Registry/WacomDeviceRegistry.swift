@@ -1333,12 +1333,12 @@ public enum WacomDeviceRegistry: Sendable {
             // two touch strips. Each strip has four modes and its own mode
             // toggle (buttons 16 and 17). See CintiqV1Decoder's pad decode
             // comment.
-            productID: 0x00CC, name: "Cintiq 21UX2 (DTK-2100)",  // model per libwacom (DTZ-2100 is the first-gen 21UX, 0x003F); from kernel + OTD
+            productID: 0x00CC, name: "Cintiq 21UX2 (DTK-2100)",  // ✓ confirmed live; model per libwacom (DTZ-2100 is the first-gen 21UX, 0x003F); from kernel + OTD
             format: .cintiqV1, maxX: 87200, maxY: 65600, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 432, activeHeightMM: 330),
+            confidence: .verified, activeWidthMM: 432, activeHeightMM: 330),
         .init(
             productID: 0x00F4, name: "Cintiq 24HD (DTK-2400)",  // ✓ confirmed live
             format: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
