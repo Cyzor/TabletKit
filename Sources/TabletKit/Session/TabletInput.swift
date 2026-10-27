@@ -118,8 +118,13 @@ package struct TabletInput {
         if spec.quirks.readsDescriptorPens, descriptorPens.add(descriptor: interface.reportDescriptor) {
             descriptorDecoder = DeviceDecoder(descriptorPens, digitizer: decoder.digitizer, family: decoder.family)
         }
-        deriveTouchDecoders(from: interface.reportDescriptor)
-        deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
+        // A fixed-layout sensor's descriptor also declares standard touch
+        // reports, on IDs the pen uses (0x02 on the 24HD Touch).
+        if DeviceDecoder.fixedLayoutTouchProductIDs.contains(interface.productID) {
+            deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
+        } else {
+            deriveTouchDecoders(from: interface.reportDescriptor)
+        }
     }
 
     /// Records a Quick Keys relink write's result. Returns the relink

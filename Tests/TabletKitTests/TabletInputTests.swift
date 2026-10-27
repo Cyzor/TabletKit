@@ -172,4 +172,52 @@ final class TabletInputTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(pad.buttons.count, 19)
         XCTAssertEqual(Array(pad.buttons[16..<19]), [false, true, false])
     }
+
+    /// The 24HD Touch's sensor also declares a standard touch report on
+    /// 0x02, the pen's report ID. Registering the sensor must leave the
+    /// pen's reports to the pen decoder.
+    func testTouchSensorLeavesThePenReportToThePen() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x00F8))  // DTH-2400
+        var input = TabletInput(spec: spec, isBluetooth: false, isWireless: false)
+        input.register(Sensor(productID: 0x00F6, descriptor: Self.dth2400SensorDescriptor))
+        let toolIn: [UInt8] = [0x02, 0xC2, 0x80, 0x2A, 0xB0, 0x77, 0x31, 0x21, 0x60, 0x00]
+        let hover: [UInt8] = [0x02, 0xE0, 0x55, 0xF0, 0x33, 0x44, 0x00, 0x00, 0xF0, 0x60]
+        _ = feed(&input, toolIn)
+        let events = feed(&input, hover).events
+        XCTAssertTrue(events.contains { if case .pen = $0 { true } else { false } })
+        XCTAssertTrue(input.penInRange)
+    }
+
+    private final class Sensor: HIDInterface {
+        let productID: Int
+        let reportDescriptor: [UInt8]
+        init(productID: Int, descriptor hex: String) {
+            self.productID = productID
+            reportDescriptor = stride(from: 0, to: hex.count, by: 2).map {
+                let start = hex.index(hex.startIndex, offsetBy: $0)
+                return UInt8(hex[start..<hex.index(start, offsetBy: 2)], radix: 16)!
+            }
+        }
+        var vendorID: Int { 0x056A }
+        var usagePage: Int { 0x0D }
+        var usage: Int { 0x04 }
+        var maxOutputReportSize: Int { 0 }
+        func setReport(_ kind: HIDReportKind, bytes: [UInt8]) -> IOReturn { kIOReturnUnsupported }
+        func getReport(_ kind: HIDReportKind, id: UInt8, length: Int) -> (IOReturn, [UInt8]) { (kIOReturnUnsupported, []) }
+        func readString(index: UInt8) -> [UInt8]? { nil }
+    }
+
+    private static let dth2400SensorDescriptor =
+        "050d0904a10185010922a10209421500250175019501810209328102950681037508095195018102050175109502550e" +
+        "651109302640143500464014810246a80c093126a80c8102050d95010948810209498102c0050d0922a1020942150025" +
+        "0175019501810209328102950681037508095195018102050175109502550e651109302640143500464014810246a80c" +
+        "093126a80c8102050d95010948810209498102c0050d0922a10209421500250175019501810209328102950681037508" +
+        "095195018102050175109502550e651109302640143500464014810246a80c093126a80c8102050d9501094881020949" +
+        "8102c0050d0922a10209421500250175019501810209328102950681037508095195018102050175109502550e651109" +
+        "302640143500464014810246a80c093126a80c8102050d95010948810209498102c0050d27ffffff0f75209501095681" +
+        "02095426ff00950175088102851009559502250ab10285110600ff09c5960001b102c0050d090ea10185120923a10209" +
+        "5209531500250a75089502b102c0c0050d0904a10185020922a102094215002501750195018102093281029506810375" +
+        "08095195018102050175109502550e651109302640143500464014810246a80c093126a80c8102050d95010948810209" +
+        "498102c0050d27ffffff0f7520950109568102c005010902a10185030901a10005091901290215002501950275018102" +
+        "950175068103050175109501550e651109302640143500464014810246a80c093126a80c8102c0c0"
 }

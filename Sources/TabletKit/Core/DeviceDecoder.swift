@@ -163,7 +163,7 @@ extension TabletSpec {
 extension DeviceDecoder {
     /// Touch sensors whose finger reports use a fixed vendor layout rather
     /// than one their descriptor describes, by the sensor's own product ID.
-    private static let fixedLayoutTouchProductIDs: Set<Int> = [
+    package static let fixedLayoutTouchProductIDs: Set<Int> = [
         0x0335,  // Cintiq 13HD Touch (DTH-1300)
         0x00F6,  // Cintiq 24HD Touch (DTH-2400)
         0x005E,  // Cintiq 22HD Touch
