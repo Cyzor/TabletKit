@@ -15,6 +15,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Firm presses no longer read as side buttons on Grip Pens that send native
+  pressure on Intuos Pro (2017). Button unpacking now applies only to a pen
+  that shows it packs buttons into pressure.
 - Intuos4, Intuos5, and Intuos Pro gen 1 hold side buttons through the
   in-range reports near the edge of range.
 - The Bamboo Touch (CTT-460) reads its four ExpressKeys.
