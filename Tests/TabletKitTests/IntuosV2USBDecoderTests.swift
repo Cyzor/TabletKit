@@ -164,17 +164,99 @@ final class IntuosV2USBDecoderTests: XCTestCase {
     /// The Intuos4 Grip Pen on a PTH-860 packs its barrel buttons into
     /// pressure: 2048 for the lower, 4096 for the upper, over 11 bits of
     /// its own pressure. Values from PTH-860 recordings.
-    private func gripPen(status: UInt8, pressure: Int) -> TabletPoint? {
+    /// A pen that has already proved it packs, unless `proven` is false.
+    private func gripPen(status: UInt8, pressure: Int, proven: Bool = true) -> TabletPoint? {
+        var state = gripPenState(serial: 0, proven: proven)
+        return gripPenFrame(status: status, pressure: pressure, serial: 0, state: &state)
+    }
+
+    private func gripPenState(serial: UInt32, proven: Bool) -> IntuosV2Decoder.State {
         var state = IntuosV2Decoder.State()
         state.lastToolCode = 0x0802
         state.currentToolCode = 0x0802
+        state.lastSerial = serial
         state.prevInProximity = true
+        if proven { state.packingGripPens.insert(serial) }
+        return state
+    }
+
+    private func gripPenFrame(
+        status: UInt8, pressure: Int, serial: UInt32, state: inout IntuosV2Decoder.State
+    ) -> TabletPoint? {
         var bytes = make0x10(status: status, toolCode: 0x0802)
         bytes[8] = UInt8(pressure & 0xFF); bytes[9] = UInt8(pressure >> 8)
         bytes[16] = 16
+        for i in 0..<4 { bytes[17 + i] = UInt8(truncatingIfNeeded: serial >> (i * 8)) }
         return decode(bytes, state: &state).compactMap { r -> TabletPoint? in
             if case .pen(let p) = r { return p } else { return nil }
         }.first
+    }
+
+    /// Two Grip Pens share tool code 0x0802 on a PTH-860. One packs its
+    /// buttons into pressure; the other sends native 13-bit pressure, which
+    /// crosses the button bits on a firm press. Raw values from captures of
+    /// each; the serials are made up.
+    private let packingPen: UInt32 = 0x1A2B_3C4D
+    private let nativePen: UInt32 = 0x5E6F_7081
+
+    func testNativeGripPenFirmPressIsPressureNotButtons() {
+        var state = gripPenState(serial: nativePen, proven: false)
+        // A firm tap and its lift, as the native pen reported them.
+        for raw in [2073, 792, 2517, 1272, 6155, 5926, 3285, 2285, 520] {
+            let pen = gripPenFrame(status: 0x61, pressure: raw, serial: nativePen, state: &state)
+            XCTAssertEqual(pen?.pressure, raw, "native pressure \(raw) passes through")
+            XCTAssertEqual(pen?.penButton1, false, "no lower button at \(raw)")
+            XCTAssertEqual(pen?.penButton2, false, "no upper button at \(raw)")
+        }
+        XCTAssertFalse(state.packingGripPens.contains(nativePen))
+    }
+
+    func testNativeGripPenLandingOnAButtonValueKeepsItsPressure() {
+        var state = gripPenState(serial: nativePen, proven: false)
+        _ = gripPenFrame(status: 0x61, pressure: 2040, serial: nativePen, state: &state)
+        let exact = gripPenFrame(status: 0x61, pressure: 2048, serial: nativePen, state: &state)
+        XCTAssertEqual(exact?.pressure, 2040, "one exact frame holds the last pressure")
+        XCTAssertEqual(exact?.penButton1, false)
+        let next = gripPenFrame(status: 0x61, pressure: 2056, serial: nativePen, state: &state)
+        XCTAssertEqual(next?.pressure, 2056)
+        XCTAssertFalse(state.packingGripPens.contains(nativePen))
+    }
+
+    func testPackingGripPenProvesItselfWithAHeldButton() {
+        var state = gripPenState(serial: packingPen, proven: false)
+        // Hovering with the lower button held: exactly 2048 with the tip bit.
+        for frame in 1..<IntuosV2Decoder.gripPenProofFrames {
+            let pen = gripPenFrame(status: 0x61, pressure: 2048, serial: packingPen, state: &state)
+            XCTAssertEqual(pen?.pressure, 0, "frame \(frame) before proof reports no pressure")
+            XCTAssertEqual(pen?.penButton1, false, "frame \(frame) before proof reports no button")
+        }
+        let proved = gripPenFrame(status: 0x61, pressure: 2048, serial: packingPen, state: &state)
+        XCTAssertEqual(proved?.penButton1, true, "the proving frame reads the button")
+        XCTAssertEqual(proved?.pressure, 0)
+        XCTAssertTrue(state.packingGripPens.contains(packingPen))
+
+        // After proof, a press with the button held keeps its own pressure.
+        let pressing = gripPenFrame(status: 0x61, pressure: 4012, serial: packingPen, state: &state)
+        XCTAssertEqual(pressing?.penButton1, true)
+        XCTAssertEqual(pressing?.pressure, (4012 - 2048) * 8191 / 2047)
+    }
+
+    func testGripPenProofRequiresOneValueInARow() {
+        var state = gripPenState(serial: packingPen, proven: false)
+        for raw in [2048, 2048, 4096, 4096, 1000, 2048, 2048] {
+            _ = gripPenFrame(status: 0x61, pressure: raw, serial: packingPen, state: &state)
+        }
+        XCTAssertFalse(state.packingGripPens.contains(packingPen), "no value ran three frames in a row")
+        let upper = gripPenFrame(status: 0x60, pressure: 4096, serial: packingPen, state: &state)
+        XCTAssertEqual(upper?.penButton2, false, "frames without the tip bit don't count")
+    }
+
+    func testGripPenProofIsPerPen() {
+        var state = gripPenState(serial: packingPen, proven: true)
+        state.lastSerial = nativePen
+        let native = gripPenFrame(status: 0x61, pressure: 4102, serial: nativePen, state: &state)
+        XCTAssertEqual(native?.pressure, 4102, "another Grip Pen isn't unpacked for the first one's proof")
+        XCTAssertEqual(native?.penButton2, false)
     }
 
     func testGripPenHoveringButtonsAreButtonsNotTip() {

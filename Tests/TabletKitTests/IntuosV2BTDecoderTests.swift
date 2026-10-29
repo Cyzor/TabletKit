@@ -159,8 +159,32 @@ final class IntuosV2BTDecoderTests: XCTestCase {
         return bytes
     }
 
-    func testGripPenHoveringButtonsOverBluetooth() {
+    /// A Grip Pen that has proved it packs. These containers carry serial 0.
+    private func provenGripPenState() -> IntuosV2Decoder.State {
         var state = IntuosV2Decoder.State()
+        state.packingGripPens.insert(0)
+        return state
+    }
+
+    func testUnprovenGripPenFirmPressIsPressureOverBluetooth() {
+        var state = IntuosV2Decoder.State()
+        let pen = gripPenPoint(gripPen361(pressure: 6050), state: &state)
+        XCTAssertEqual(pen?.pressure, 6050)
+        XCTAssertEqual(pen?.penButton2, false)
+    }
+
+    func testGripPenProvesItselfOverBluetooth() {
+        var state = IntuosV2Decoder.State()
+        var last: TabletPoint?
+        for _ in 0..<IntuosV2Decoder.gripPenProofFrames {
+            last = gripPenPoint(gripPen361(pressure: 4096), state: &state)
+        }
+        XCTAssertEqual(last?.penButton2, true)
+        XCTAssertEqual(last?.pressure, 0)
+    }
+
+    func testGripPenHoveringButtonsOverBluetooth() {
+        var state = provenGripPenState()
         let lower = gripPenPoint(gripPen361(pressure: 2048), state: &state)
         XCTAssertEqual(lower?.penButton1, true)
         XCTAssertEqual(lower?.penButton2, false)
@@ -173,7 +197,7 @@ final class IntuosV2BTDecoderTests: XCTestCase {
     }
 
     func testGripPenButtonWhileTouchingOverBluetooth() {
-        var state = IntuosV2Decoder.State()
+        var state = provenGripPenState()
         let pen = gripPenPoint(gripPen361(pressure: 6050), state: &state)
         XCTAssertEqual(pen?.penButton2, true)
         XCTAssertEqual(pen?.pressure, (6050 - 4096) * 8191 / 2047)

@@ -200,8 +200,9 @@ extension IntuosV2Decoder {
             if inRange { state.isEraser = (flags & 0x18) != 0 }
             let isEraser = state.isEraser
             let (x, y, rawPressure, rawTiltX, rawTiltY, hoverDistance) = decodeBTFrame(f, spec: spec)
-            let (pressure, barrel1, barrel2) = Self.unpackGripPen(
-                toolCode: state.currentToolCode, isEraser: isEraser, pressure: rawPressure,
+            let (pressure, barrel1, barrel2) = state.unpackGripPen(
+                toolCode: state.currentToolCode, isEraser: isEraser, tip: (flags & 0x01) != 0,
+                pressure: rawPressure,
                 button1: (flags & 0x02) != 0, button2: (flags & 0x04) != 0,
                 maxPressure: spec.maxPressure)
                 let tiltX = inRange ? rawTiltX : state.lastTiltX

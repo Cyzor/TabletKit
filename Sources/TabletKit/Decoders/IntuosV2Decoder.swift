@@ -102,20 +102,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
     // BT-side decoders (0x80 in its many shapes) and the shared per-frame
     // helper live in `IntuosV2Decoder+BT.swift`.
 
-    /// The Intuos4 Grip Pen's barrel buttons arrive inside pressure, over USB
-    /// and Bluetooth alike: bit 11 for the lower, bit 12 for the upper, with
-    /// the tip bit set even while hovering. Its own pressure is the low 11
-    /// bits. The eraser end, other tools, and Bluetooth reports that keep
-    /// the tip's tool code while erasing pass through unchanged.
-    static func unpackGripPen(
-        toolCode: UInt16, isEraser: Bool, pressure: Int, button1: Bool, button2: Bool,
-        maxPressure: Int
-    ) -> (pressure: Int, button1: Bool, button2: Bool) {
-        guard toolCode == 0x0802, !isEraser else { return (pressure, button1, button2) }
-        return ((pressure & 0x07FF) * maxPressure / 0x07FF,
-                button1 || (pressure & 0x0800) != 0,
-                button2 || (pressure & 0x1000) != 0)
-    }
+    /// Frames in a row at exactly 2048, 4096, or 6144 with the tip bit that
+    /// prove a Grip Pen packs its buttons into pressure.
+    static let gripPenProofFrames = 3
 
     // MARK: - Standard pen report (0x10)
 
@@ -251,9 +240,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
         // ── Pen path ───────────────────────────────────────────────────────────
         // Pressure: 13-bit value (d[8] + lower 5 bits of d[9]) per kernel spec.
-        let (pressure, button1, button2) = Self.unpackGripPen(
+        let (pressure, button1, button2) = state.unpackGripPen(
             toolCode: state.currentToolCode, isEraser: (status & 0x18) != 0,
-            pressure: report.le16(at: 8) & 0x1FFF,
+            tip: (status & 0x01) != 0, pressure: report.le16(at: 8) & 0x1FFF,
             button1: (status & 0x02) != 0, button2: (status & 0x04) != 0,
             maxPressure: spec.maxPressure)
         // The PTH-660 descriptor declares tilt as [-64, 63] degrees,
@@ -491,6 +480,15 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 extension IntuosV2Decoder {
     /// What this decoder remembers between reports.
     package struct State: DecoderState {
+        /// Grip Pen serials that have shown they pack their buttons into
+        /// pressure. See `unpackGripPen`.
+        package var packingGripPens: Set<UInt32> = []
+        /// The run of exact button values toward that proof, and its pen.
+        package var gripPenProofRun = 0
+        package var gripPenProofValue = 0
+        package var gripPenProofSerial: UInt32 = 0
+        /// Pressure last passed through for an unproven Grip Pen.
+        package var gripPenLastPressure = 0
         /// Last X, held for frames that carry no position.
         package var lastX: Int = 0
         /// Last Y, held for frames that carry no position.
@@ -557,5 +555,47 @@ extension IntuosV2Decoder {
                     penButton1: false, penButton2: false,
                     eraser: false, inProximity: false, hoverDistance: 0))
         }
+    }
+}
+
+extension IntuosV2Decoder.State {
+    /// Some Intuos4 Grip Pens pack their barrel buttons into pressure, over
+    /// USB and Bluetooth alike: bit 11 for the lower, bit 12 for the upper,
+    /// with the tip bit set even while hovering, and their own pressure in
+    /// the low 11 bits. Others with the same tool code send native 13-bit
+    /// pressure, which crosses those bits on a firm press. So a pen unpacks
+    /// only once it proves it packs: `gripPenProofFrames` frames in a row at
+    /// one exact button value, a button held with no pressure. Until then a
+    /// frame at an exact value keeps the last pressure and reports no button,
+    /// so neither pen clicks on it. The eraser end, other tools, and
+    /// Bluetooth reports that keep the tip's tool code while erasing pass
+    /// through unchanged.
+    mutating func unpackGripPen(
+        toolCode: UInt16, isEraser: Bool, tip: Bool, pressure: Int, button1: Bool, button2: Bool,
+        maxPressure: Int
+    ) -> (pressure: Int, button1: Bool, button2: Bool) {
+        guard toolCode == 0x0802, !isEraser else { return (pressure, button1, button2) }
+        if !packingGripPens.contains(lastSerial) {
+            let exact = tip && pressure != 0 && pressure & 0x07FF == 0
+            if !exact {
+                gripPenProofRun = 0
+                gripPenLastPressure = pressure
+                return (pressure, button1, button2)
+            }
+            if gripPenProofSerial == lastSerial && pressure == gripPenProofValue {
+                gripPenProofRun += 1
+            } else {
+                gripPenProofRun = 1
+                gripPenProofValue = pressure
+                gripPenProofSerial = lastSerial
+            }
+            guard gripPenProofRun >= IntuosV2Decoder.gripPenProofFrames else {
+                return (gripPenLastPressure, button1, button2)
+            }
+            packingGripPens.insert(lastSerial)
+        }
+        return ((pressure & 0x07FF) * maxPressure / 0x07FF,
+                button1 || (pressure & 0x0800) != 0,
+                button2 || (pressure & 0x1000) != 0)
     }
 }
