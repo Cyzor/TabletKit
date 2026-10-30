@@ -213,4 +213,25 @@ final class IntuosOLEDImageEncoderTests: XCTestCase {
         XCTAssertLessThanOrEqual(abs(topCenter - bottomCenter), 4,
                                  "each line should be centered, not left-aligned")
     }
+
+    /// A label with a separator splits only there, even where Unicode's
+    /// line-break rules would allow another break.
+    func testSplitUsesSeparatorsWhenPresent() {
+        XCTAssertEqual(IntuosOLEDImageEncoder.splitAtBreak("Toggle Display"), ["Toggle", "Display"])
+        XCTAssertEqual(IntuosOLEDImageEncoder.splitAtBreak("display != primary"), ["display !=", "primary"])
+        XCTAssertNil(IntuosOLEDImageEncoder.splitAtBreak("Rückgängigmachen"), "one word has no break")
+    }
+
+    /// Japanese has no spaces; it splits by the line-break rules, which never
+    /// start a line with a mark that can't begin one.
+    func testSplitBreaksJapaneseByLineBreakRules() {
+        XCTAssertEqual(IntuosOLEDImageEncoder.splitAtBreak("反時計回り。"), ["反時計", "回り。"])
+        for label in ["ズームイン", "元に戻す", "ブラシサイズ"] {
+            guard let lines = IntuosOLEDImageEncoder.splitAtBreak(label) else {
+                XCTFail("\(label) should split"); continue
+            }
+            XCTAssertEqual(lines.joined(), label)
+            XCTAssertFalse(lines[1].hasPrefix("ー") || lines[1].hasPrefix("。"), "\(label) split as \(lines)")
+        }
+    }
 }

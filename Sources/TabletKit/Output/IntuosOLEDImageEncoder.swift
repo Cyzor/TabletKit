@@ -80,7 +80,7 @@ public enum IntuosOLEDImageEncoder: Sendable {
         // A tie stays on one line. A word is cut in half only when it can't
         // fit on one line at any size.
         let single = fittedSize(for: [trimmed])
-        let split = splitAtSeparator(trimmed) ?? (single == nil ? splitInHalf(trimmed) : nil)
+        let split = splitAtBreak(trimmed) ?? (single == nil ? splitInHalf(trimmed) : nil)
         let both = split.flatMap { fittedSize(for: $0) }
         let lines: [String], size: CGFloat
         if let single, single >= (both ?? 0) {
@@ -158,12 +158,16 @@ public enum IntuosOLEDImageEncoder: Sendable {
     }
 
     /// Two lines split at the separator (space, `+`, `/`, …) that best evens
-    /// their widths, or nil when the label has none.
-    private static func splitAtSeparator(_ text: String) -> [String]? {
+    /// their widths. A label with none, as Japanese often has, splits where
+    /// the system's line-break rules allow. Nil when neither finds a place.
+    static func splitAtBreak(_ text: String) -> [String]? {
         let separators: Set<Character> = [" ", "+", "/", "|", "&", "-", "_", "·"]
         let chars = Array(text)
+        guard chars.count > 1 else { return nil }
+        var breaks = Set((1..<chars.count).filter { separators.contains(chars[$0 - 1]) })
+        if breaks.isEmpty { breaks = lineBreakOffsets(text) }
         var best: (lines: [String], width: CGFloat)?
-        for i in 1..<chars.count where separators.contains(chars[i - 1]) {
+        for i in breaks.sorted() where i > 0 && i < chars.count {
             let first = String(chars[0..<i]).trimmingCharacters(in: .whitespaces)
             let second = String(chars[i...]).trimmingCharacters(in: .whitespaces)
             guard !first.isEmpty, !second.isEmpty else { continue }
@@ -174,6 +178,23 @@ public enum IntuosOLEDImageEncoder: Sendable {
             }
         }
         return best?.lines
+    }
+
+    /// Character offsets where the system's line-break rules allow a break.
+    private static func lineBreakOffsets(_ text: String) -> Set<Int> {
+        let string = text as CFString
+        let tokenizer = CFStringTokenizerCreate(
+            nil, string, CFRange(location: 0, length: CFStringGetLength(string)),
+            kCFStringTokenizerUnitLineBreak, nil)
+        var offsets = Set<Int>()
+        while !CFStringTokenizerAdvanceToNextToken(tokenizer).isEmpty {
+            let token = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+            let end = text.utf16.index(text.utf16.startIndex, offsetBy: token.location + token.length)
+            if let end = end.samePosition(in: text) {
+                offsets.insert(text.distance(from: text.startIndex, to: end))
+            }
+        }
+        return offsets
     }
 
     private static func splitInHalf(_ text: String) -> [String]? {
