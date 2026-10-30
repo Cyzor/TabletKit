@@ -107,7 +107,7 @@ Problems with the MockTab app itself, like its settings window or installing it,
 - `Sources/TabletKit/Session/` finds tablets as they connect, opens them, and hands their reports to the host. It and `HID/` are the only code that uses IOKit.
 - `Sources/TabletKit/Output/` builds the reports sent to tablets, such as LED colors and button labels.
 - `Sources/TabletKit/Smoothing/` holds the cursor and pressure filters.
-- `registry.json` copies the registry for scripts and other platforms. After you edit the registry, run `python3 tools/export_registry_json.py` and commit the updated file.
+- `registry.json` copies the registry for scripts and other platforms. After you edit the registry, run `swift run registry-export` and commit the updated file. A test fails until you do.
 
 ### If CI Reports an API Break
 

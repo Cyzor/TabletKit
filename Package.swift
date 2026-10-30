@@ -60,6 +60,11 @@ let package = Package(
             dependencies: ["TabletKit"],
             path: "Samples/tablet-session"
         ),
+        .executableTarget(
+            name: "registry-export",
+            dependencies: ["TabletKit"],
+            path: "Samples/registry-export"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
