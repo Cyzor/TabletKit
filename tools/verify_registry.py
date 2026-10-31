@@ -154,7 +154,7 @@ def parse_registry(path: str) -> list:
 
 KERNEL_TYPE_TO_PARSER = {
     "PENPARTNER": "graphire", "GRAPHIRE": "graphire", "GRAPHIRE_BT": "graphire",
-    "G4": "graphire", "PTU": "graphire",
+    "G4": "graphire", "PTU": "dtu", "PL": "pl",
     "BAMBOO_PT": "bamboo", "BAMBOO_PEN": "bamboo", "BAMBOO_TOUCH": "bamboo",
     "INTUOS": "intuosV1", "INTUOSL": "intuosV1", "INTUOSS": "intuosV1",
     "INTUOSPL": "intuosV1", "INTUOSPM": "intuosV1", "INTUOSPS": "intuosV1",
@@ -167,7 +167,7 @@ KERNEL_TYPE_TO_PARSER = {
     "WACOM_24HD": "cintiqV1", "WACOM_24HDT": "cintiqV1",
     "WACOM_22HD": "cintiqV1", "WACOM_21UX2": "cintiqV1",
     "WACOM_BEE": "cintiqV1", "CINTIQ": "cintiqV1", "CINTIQ_COMPANION_2": "cintiqV1",
-    "DTUS": "graphire", "DTUSX": "graphire", "DTU": "graphire",
+    "DTUS": "dtus", "DTUSX": "dtus", "DTU": "dtu",
 }
 
 
@@ -191,7 +191,9 @@ OTD_TYPE_TO_PARSER = {
     "CintiqV1ReportParser": "cintiqV1",
     "IntuosV2ReportParser": "intuosV2",
     "WacomDriverIntuosV2ReportParser": "intuosV2",
-    "IntuosV3ReportParser": "intuosV2",
+    "IntuosV3ReportParser": "intuosV3",
+    "PLReportParser": "pl",
+    "PTUReportParser": "dtu",
     "BambooReportParser": "bamboo",
     "BambooPadReportParser": "bamboo",
     "GraphireReportParser": "graphire",

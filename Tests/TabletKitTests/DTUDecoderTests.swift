@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// DTU decoder fixtures (DTU-1631, DTU-2231).
+// DTU decoder fixtures (DTU-1631, DTU-2231, Cintiq Partner).
 //
 // No hardware capture is available; all reports are synthesized from the
 // byte-layout comments in DTUDecoder.swift and the input-wacom
@@ -180,6 +180,37 @@ final class DTUDecoderTests: XCTestCase {
         _ = decode(exit, state: &st)
         // Second exit frame should be suppressed.
         XCTAssertTrue(decode(exit, state: &st).isEmpty)
+    }
+
+    // MARK: - Cintiq Partner (PTU-600)
+
+    /// The kernel's `wacom_ptu_irq` layout: bit 2 selects the eraser, bit 0
+    /// is the pen's contact and bit 3 the eraser's, pressure is LE16 to 511.
+    func testCintiqPartnerReports() throws {
+        let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0003))
+        XCTAssertEqual(row.format, .dtu)
+        XCTAssertEqual(row.initSteps, [.featureReport([0x02, 0x02])])
+
+        var st = DTUDecoder.State()
+        func point(_ bytes: [UInt8]) -> TabletPoint? {
+            guard case .pen(let p) = decode(bytes, state: &st).first else { return nil }
+            return p
+        }
+        // Pen touching with the lower button: X 10240, Y 7680, pressure 300.
+        let pen = try XCTUnwrap(point([0x02, 0x23, 0x00, 0x28, 0x00, 0x1E, 0x2C, 0x01]))
+        XCTAssertEqual(pen.x, 10240)
+        XCTAssertEqual(pen.y, 7680)
+        XCTAssertEqual(pen.pressure, 300)
+        XCTAssertTrue(pen.penButton1)
+        XCTAssertFalse(pen.eraser)
+
+        let eraserHover = try XCTUnwrap(point([0x02, 0x24, 0x00, 0x28, 0x00, 0x1E, 0x00, 0x00]))
+        XCTAssertTrue(eraserHover.eraser)
+        XCTAssertEqual(eraserHover.pressure, 0)
+
+        let eraserDown = try XCTUnwrap(point([0x02, 0x2C, 0x00, 0x28, 0x00, 0x1E, 0xFF, 0x01]))
+        XCTAssertTrue(eraserDown.eraser)
+        XCTAssertEqual(eraserDown.pressure, 511)
     }
 
     // MARK: - Report ID not checked

@@ -6,8 +6,9 @@ import Foundation
 
 /// Decoder for the Wacom DTU HID report format.
 ///
-/// Used by the DTU-2231 (0x00CE) and DTU-1631 (0x00F0). Ported from
-/// input-wacom's `wacom_dtu_irq`; not yet validated on hardware.
+/// Used by the DTU-2231 (0x00CE), DTU-1631 (0x00F0), and Cintiq Partner
+/// (0x0003, the kernel's `wacom_ptu_irq`, which this reads the same way).
+/// Ported from input-wacom's `wacom_dtu_irq`; not yet validated on hardware.
 ///
 /// One 8-byte pen report (ID 0x02, unchecked, as in the kernel). No pad,
 /// tilt, rotation, hover distance, or serial. Unlike `DTUSDecoder`,

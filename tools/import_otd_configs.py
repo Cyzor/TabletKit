@@ -64,13 +64,13 @@ TYPE_TO_PARSER = {
     "BambooReportParser":              "bamboo",
     "BambooPadReportParser":           "bamboo",
     "IntuosV3ReportParser":            "intuosV3",  # PTK-470/670/870 (experimental)
+    "PLReportParser":                  "pl",
+    "PTUReportParser":                 "dtu",       # Cintiq Partner; DTUDecoder reads it
     # Parsers we deliberately do NOT map — MockTab has no compatible decoder
     # and an automatic fallback would produce silently-broken registry entries.
     # If you add a decoder here, also remove the corresponding `is None` warning
     # in extract_parser.
-    #   PLReportParser        — old Cintiq PL series (8-byte reports, bit-6
-    #                           in-range flag); incompatible with intuosV1.
-    #   PTUReportParser, SkipByteTabletReportParser, TabletReportParser,
+    #   SkipByteTabletReportParser, TabletReportParser,
     #   Wacom64bAuxReportParser — aux-only or otherwise out of scope.
 }
 

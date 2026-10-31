@@ -7,7 +7,7 @@ import Foundation
 /// Decoder for the Wacom Graphire / PenPartner / Volito / early consumer line.
 ///
 /// Ported from the kernel's `wacom_graphire_irq()`. Covers USB Graphire 2–4
-/// (0x0011–0x0017), PenPartner (0x0003), the original Graphire
+/// (0x0011–0x0017), PenPartner2 (0x0064), the original Graphire
 /// (0x0004/0x0010), and the Volito, PenStation, and Bamboo One CTF-430.
 /// `WACOM_MO` (Bamboo Fun CTE-450/650, MTE-450) shares the pen path and has
 /// its own pad and ring layout in `decodePad`; the pen path is confirmed on

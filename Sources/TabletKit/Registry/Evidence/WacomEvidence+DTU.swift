@@ -5,6 +5,10 @@
 extension WacomEvidence {
     /// Rows using the `.dtu` report format.
     static let dtu: Table = [
+        0x0003: [  // Cintiq Partner (PTU-600)
+            .penPosition: .init(.sourced, [.linuxKernel, .openTabletDriver]),
+            .pressure: .init(.sourced, [.linuxKernel, .openTabletDriver]),
+        ],
         0x003A: [  // DTI-520
             .tabletButtons: .init(.sourced, [.libwacom]),
         ],

@@ -58,8 +58,8 @@ public enum ReportFormat: String, Sendable {
     /// DTU — Wacom DTU pen-display family using the WACOM_REPORT_PENABLED
     /// (0x02) report format parsed by `wacom_dtu_irq`. Single pen report,
     /// 8 bytes: LE16 X/Y, 9-bit pressure, eraser inferred from tool-type
-    /// bits. No pad buttons, no tilt. Covers DTU-1631 (0x00F0) and
-    /// DTU-2231 (0x00CE). Not yet validated on hardware.
+    /// bits. No pad buttons, no tilt. Covers DTU-1631 (0x00F0), DTU-2231
+    /// (0x00CE), and Cintiq Partner (0x0003). Not yet validated on hardware.
     case dtu
 
     /// Bamboo — pen on Report ID 0x02, LE16 coordinates, with touch and pad
@@ -728,14 +728,6 @@ public enum WacomDeviceRegistry: Sendable {
         // graphire parser: 8-byte Report ID 0x02 once the [0x02, 0x02] init takes
         // the tablet out of mouse mode; ≤511 pressure levels.
         .init(
-            // The kernel names this PID the Cintiq Partner (PTU-600), not
-            // PenPartner (0x0000). No decoder handles the PTU family, so it's
-            // name-only (kernel dims: 20480×15360×511).
-            productID: 0x0003, name: "Cintiq Partner (PTU-600)",  // ⚠ name-only
-            format: .graphire, maxX: 0, maxY: 0, maxPressure: 0,
-            buttonCount: 0, hasTouchRing: false, hasEraser: false,
-            isPenDisplay: true, seizeUSB: false),
-        .init(
             // PENPARTNER report family (5-byte wacom_penpartner_irq) has no
             // decoder here; name-only (kernel dims: 5040×3780×255).
             productID: 0x0000, name: "PenPartner",  // ⚠ name-only
@@ -1369,8 +1361,10 @@ public enum WacomDeviceRegistry: Sendable {
             // bezelButtonCount gate.
             //
             // buttonCount 18: the kernel packs 18 numbered buttons into bytes
-            // 5-8 and the three OSD keys into byte 9, which the decoder doesn't
-            // read yet; its bit order needs a capture.
+            // 5-8 and three panel keys into byte 9, which the decoder doesn't
+            // read yet. Bit 0 is the info key and bit 1 the wrench (kernel and
+            // OTD). The three sit at the right end of the top bezel, and bit 2
+            // is likely the rightmost; that needs an owner to confirm.
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             format: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
             buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
@@ -2370,6 +2364,16 @@ public enum WacomDeviceRegistry: Sendable {
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 356, activeHeightMM: 203),
+        .init(
+            // The kernel's PTU type: the DTU report, except the eraser sets
+            // bit 2 and adds bit 3 on contact. The 0x0C eraser test reads
+            // that the same way, and the pressure fits 9 bits. Active area
+            // 204.8×153.6mm per OTD's PTU-600U.json.
+            productID: 0x0003, name: "Cintiq Partner (PTU-600)",  // ⚠ from kernel and OTD
+            format: .dtu, maxX: 20480, maxY: 15360, maxPressure: 511,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            isPenDisplay: true,
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 205, activeHeightMM: 154),
         .init(
             // Pen range and pressure: vendor model properties.
             // DTI-520: old fiber-optic interactive pen display (~2001), the

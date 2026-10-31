@@ -1,7 +1,6 @@
 # Decoder output digests, one line per row. Regenerate with
 # UPDATE_GOLDENS=1 swift test --filter DecoderGoldenTests, and say in the
 # commit which rows changed and why.
-0x0003 inputs=1040 pen=230 tool=31 pad=0 dial=0 touch=0 device=0 digest=0714e54331c4c8ec  # Cintiq Partner (PTU-600)
 0x0000 inputs=1052 pen=254 tool=24 pad=0 dial=0 touch=0 device=0 digest=2957155f65dcf170  # PenPartner
 0x0004 inputs=1043 pen=332 tool=34 pad=0 dial=0 touch=0 device=0 digest=bdd13c4f477d25ab  # Graphire
 0x0010 inputs=1047 pen=259 tool=28 pad=0 dial=0 touch=0 device=0 digest=f3de9f167740ada5  # Graphire
@@ -152,6 +151,7 @@
 0x0336 inputs=1048 pen=270 tool=0 pad=206 dial=0 touch=0 device=0 digest=34d3af14146ef052  # Wacom DTU-1141
 0x00CE inputs=1063 pen=618 tool=0 pad=0 dial=0 touch=0 device=0 digest=025adffc600707e3  # Wacom DTU-2231
 0x00F0 inputs=1069 pen=665 tool=0 pad=0 dial=0 touch=0 device=0 digest=bb2419de0889d181  # Wacom DTU-1631
+0x0003 inputs=1054 pen=631 tool=0 pad=0 dial=0 touch=0 device=0 digest=846d882709afd115  # Cintiq Partner (PTU-600)
 0x003A inputs=1065 pen=674 tool=0 pad=0 dial=0 touch=0 device=0 digest=3e7cdcdfd75a3103  # DTI-520
 0x0325 inputs=1050 pen=187 tool=19 pad=206 dial=0 touch=0 device=0 digest=293f463db9815db2  # Wacom Cintiq Companion 2 (DTH-W1310)
 0x0326 inputs=1062 pen=120 tool=4 pad=328 dial=0 touch=0 device=0 digest=2ec4a0447907c19c  # Cintiq Companion 2 touch sensor (pairs 0x0325)
