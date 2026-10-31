@@ -259,8 +259,9 @@ public struct LiveButtonState: Equatable, Sendable {
     public var expressKeys: [Bool] = Array(repeating: false, count: 16)
     /// Live state of a device's own onboard bezel buttons (e.g. the Cintiq
     /// DTK-2400's capacitive OSD buttons), kept separate from `expressKeys`
-    /// since some devices already use all 16 of those slots.
-    public var bezelButtons: [Bool] = Array(repeating: false, count: 3)
+    /// since some devices already use all 16 of those slots. Five slots: the
+    /// Cintiq 22HD's two strip toggles, then its three panel keys.
+    public var bezelButtons: [Bool] = Array(repeating: false, count: 5)
     /// True while a finger is actively touching the touch ring.
     public var touchRingActive: Bool = false
     /// True while the touch ring center button is physically pressed.
@@ -285,7 +286,7 @@ public struct LiveButtonState: Equatable, Sendable {
         button4Down: Bool = false,
         button5Down: Bool = false,
         expressKeys: [Bool] = Array(repeating: false, count: 16),
-        bezelButtons: [Bool] = Array(repeating: false, count: 3),
+        bezelButtons: [Bool] = Array(repeating: false, count: 5),
         touchRingActive: Bool = false,
         touchRingButtonDown: Bool = false,
         touchRing2Active: Bool = false,

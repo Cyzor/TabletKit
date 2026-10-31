@@ -533,3 +533,6 @@ API breakage: struct Wacom27QHDTDecoder has been removed
 API breakage: var TabletQuirks.toolAnnounceGraceFrames has been removed
 API breakage: struct ToolAnnouncementGrace has been removed
 API breakage: enumelement TabletInput.InitReason.toolAnnouncementDrought has been removed
+
+# Package-level pad layout for the Cintiq 22HD's panel keys.
+API breakage: enumelement CintiqPadLayout.panelKeys has been added as a new enum case

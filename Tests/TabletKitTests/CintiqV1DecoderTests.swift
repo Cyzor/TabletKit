@@ -468,6 +468,35 @@ final class CintiqV1DecoderTests: XCTestCase {
         XCTAssertEqual(aux2.buttons[17], false, "right center toggle should be off")
     }
 
+    // The 22HD's three panel keys follow the toggles, from byte 9's low
+    // bits (kernel `wacom_intuos_pad`). The 21UX2 has none, so its byte 9
+    // stays unread.
+    func test22HDPanelKeysFollowTheToggles() {
+        XCTAssertEqual(CintiqPadLayout(productID: 0x00FA), .panelKeys)
+        XCTAssertEqual(CintiqPadLayout(productID: 0x005B), .panelKeys)
+        var cintiq22hd = cintiq21ux2
+        cintiq22hd.cintiqPadLayout = .panelKeys
+        cintiq22hd.bezelButtonCount = 3
+
+        var bytes = [UInt8](repeating: 0, count: 10)
+        bytes[0] = 0x0C
+        bytes[5] = 0x01  // left center toggle
+        bytes[9] = 0b1111_1101  // info and third key; high bits ignored
+
+        var decoder = CintiqV1Decoder()
+        var state = CintiqV1Decoder.State()
+        guard case .aux(let aux)? = decode(bytes, decoder: &decoder, state: &state, spec: cintiq22hd).first else {
+            return XCTFail("Expected .aux")
+        }
+        XCTAssertEqual(aux.buttons.count, 21)
+        XCTAssertEqual(Array(aux.buttons[16...]), [true, false, true, false, true])
+
+        guard case .aux(let ux2)? = decode(bytes, decoder: &decoder, state: &state, spec: cintiq21ux2).first else {
+            return XCTFail("Expected .aux")
+        }
+        XCTAssertEqual(ux2.buttons.count, 18)
+    }
+
     // Each 21UX2 strip is a 13-zone mask, one bit per zone, as on the
     // Intuos3; the touched zone is the lowest set bit.
     func test21UX2StripsDecodeTouchedZone() {

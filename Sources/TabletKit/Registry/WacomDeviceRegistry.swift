@@ -1355,19 +1355,14 @@ public enum WacomDeviceRegistry: Sendable {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, touchCompanionPID: 0x00F6, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .verified, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
-            // No bezelButtonCount (0 = default): shares 21UX2's 18-button
-            // pad field (byte[6]/byte[8] express keys + byte[5]/byte[7]
-            // center toggles), correctly routed by CintiqV1Decoder's
-            // bezelButtonCount gate.
-            //
-            // buttonCount 18: the kernel packs 18 numbered buttons into bytes
-            // 5-8 and three panel keys into byte 9, which the decoder doesn't
-            // read yet. Bit 0 is the info key and bit 1 the wrench (kernel and
-            // OTD). The three sit at the right end of the top bezel, and bit 2
-            // is likely the rightmost; that needs an owner to confirm.
+            // Shares the 21UX2's 18-button pad field: byte[6]/byte[8] express
+            // keys and byte[5]/byte[7] center toggles. Byte 9 adds three panel
+            // keys at the right end of the top bezel: bit 0 the info key and
+            // bit 1 the wrench (kernel and OTD). Bit 2 is likely the rightmost;
+            // that needs an owner to confirm.
             productID: 0x00FA, name: "Cintiq 22HD (DTK-2200)",  // ⚠ from OTD (maxX corrected to kernel wacom_features_0xFA)
             format: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, bezelButtonCount: 3, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 483, activeHeightMM: 279),
         // 0x00FB is the DTU-1031 (kernel `wacom_features_0xFB`), not a 21UX.
@@ -2039,8 +2034,8 @@ public enum WacomDeviceRegistry: Sendable {
             // Center, on-screen keyboard, display settings, and touch on/off.
             // Five keys, four bits, consistent with firmware handling touch
             // on/off. They aren't express keys and Wacom offers no way to
-            // reassign them. `bezelButtonCount` fits by intent but caps at
-            // three, and only CintiqV1Decoder emits those buttons, so wiring
+            // reassign them. `bezelButtonCount` fits by intent, but only
+            // CintiqV1Decoder emits those buttons, so wiring
             // them is a feature, not a registry value. Without Wacom's driver
             // they do nothing, so binding them would conflict with nothing.
             productID: 0x0351, name: "Cintiq Pro 24 (DTH-2420, touch)",
@@ -2203,10 +2198,10 @@ public enum WacomDeviceRegistry: Sendable {
             // (wacom_sys.c). Touch wiring and range: vendor model properties.
             // Finger touch arrives on the separate 0x005E interface, decoded
             // by `Wacom24HDTDecoder`. No capture exists for either interface.
-            // buttonCount 18, as on its pen-only sibling 0x00FA above.
+            // Keys and panel keys as on its pen-only sibling 0x00FA above.
             productID: 0x005B, name: "Wacom Cintiq 22HD Touch (DTH-2200)",  // ⚠ from OTD (dims corrected to kernel wacom_features_0x5B)
             format: .cintiqV1, maxX: 95840, maxY: 54260, maxPressure: 2047,
-            buttonCount: 18, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 18, bezelButtonCount: 3, hasTouchRing: false, hasTouchStrips: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 4752, touchMaxY: 2673,  // 0x005E descriptor (hid-devices recording)
             isPenDisplay: true,

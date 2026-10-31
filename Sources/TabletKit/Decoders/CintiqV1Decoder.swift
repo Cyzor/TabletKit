@@ -154,7 +154,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
             // here, not from rotation frames.
             let curBtn1 = (status & 0x02) != 0
             let curBtn2 = (status & 0x04) != 0
-            let clearThreshold = spec.bezelButtonCount > 0 ? Self.buttonClearThreshold : 1
+            let clearThreshold = spec.hasDualRings ? Self.buttonClearThreshold : 1
             if curBtn1 {
                 btn1ClearCount = 0
                 lastButton1 = true
@@ -267,7 +267,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     // `wacom_intuos_pad()`. Mixing them up reads 21UX2 strip swipes as
     // 24HD OSD button presses.
     //
-    // DTK-2400 / Cintiq 24HD family (bezelButtonCount > 0), from a capture:
+    // DTK-2400 / Cintiq 24HD family (hasDualRings), from a capture:
     //   byte[1] — left  touch ring: bit7=active, [6:0]=position 0–71
     //   byte[2] — right touch ring: same encoding (dual-ring models only)
     //   byte[3] — capacitive OSD touch buttons, group A — bit4 = left button
@@ -281,8 +281,8 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   byte[8] — right side express keys, full 8-bit mask
     //   byte[9] — 0x00 (padding)
     //
-    // Cintiq 21UX2 / 22HD family (bezelButtonCount == 0), from the kernel
-    // and a public 21UX2 recording:
+    // Cintiq 21UX2 / 22HD family, from the kernel and a public 21UX2
+    // recording:
     //   byte[1]:byte[2] — left  touch strip, big-endian, low 13 bits, one bit
     //     per zone as on the Intuos3; 0 = no contact
     //   byte[3]:byte[4] — right touch strip, same encoding
@@ -290,6 +290,8 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   byte[6]       — left  side express keys, full 8-bit mask
     //   byte[7] bit0 — right center toggle
     //   byte[8]       — right side express keys, full 8-bit mask
+    //   byte[9] bits 0–2 — the 22HD's three panel keys (`.panelKeys`):
+    //     info, wrench, and a third, from the kernel
     //
     // buttons[] layout (AuxButtons), 24HD family:
     //   [0..7]   = byte[6] left side express keys
@@ -301,8 +303,9 @@ package struct CintiqV1Decoder: TabletReportDecoder {
     //   [8..15] = byte[8] right side express keys
     //   [16]    = byte[5] bit0, left  center toggle
     //   [17]    = byte[7] bit0, right center toggle
-    // The toggles switch strip modes. They ride the bezel slots, as
-    // the app's control map expects.
+    //   [18..20] = byte[9] bits 0–2, the 22HD's panel keys
+    // The toggles switch strip modes. They and the panel keys ride the
+    // bezel slots, as the app's control map expects.
     //
     // 21UX / 12WX / 20WSX (`.splitNibbles`), from the kernel and public 21UX
     // and 12WX recordings: strips in bytes 1–4 as above, and keys in
@@ -320,7 +323,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         guard report.count >= 7 else { return [] }
 
         switch spec.cintiqPadLayout {
-        case .standard: break
+        case .standard, .panelKeys: break
         case .byteSix:
             return [.aux(AuxButtons(buttons: (0..<8).map { (report[6] & (1 << $0)) != 0 }))]
         case .splitNibbles:
@@ -342,7 +345,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
 
         // Only the 24HD family has rings; elsewhere byte 1 is a strip.
         let leftRingRaw = report[1]
-        let leftRingActive = spec.bezelButtonCount > 0 && (leftRingRaw & 0x80) != 0
+        let leftRingActive = spec.hasDualRings && (leftRingRaw & 0x80) != 0
         let leftRingPos = leftRingActive ? (leftRingRaw & 0x7F) : UInt8(0x7F)
 
         var rightRingActive = false
@@ -361,7 +364,7 @@ package struct CintiqV1Decoder: TabletReportDecoder {
         let buttons: [Bool]
         var leftStrip: UInt8 = 0xFF
         var rightStrip: UInt8 = 0xFF
-        if spec.bezelButtonCount > 0 {
+        if spec.hasDualRings {
             // DTK-2400 / 24HD family: bytes 3-4 are capacitive OSD buttons.
             let capA = report.count >= 4 ? report[3] : 0
             let capB = report.count >= 5 ? report[4] : 0
@@ -384,7 +387,10 @@ package struct CintiqV1Decoder: TabletReportDecoder {
                 (byte5 & 0x01) != 0,  // left center toggle
                 (byte7 & 0x01) != 0,  // right center toggle
             ]
-            buttons = leftBits + rightBits + centerToggleBits
+            let byte9 = report.count >= 10 ? report[9] : 0
+            let panelKeyBits: [Bool] = spec.cintiqPadLayout == .panelKeys
+                ? (0..<3).map { (byte9 & (1 << $0)) != 0 } : []
+            buttons = leftBits + rightBits + centerToggleBits + panelKeyBits
         }
 
         return [
@@ -470,9 +476,11 @@ extension CintiqV1Decoder {
 /// Where a Cintiq's 0x0C pad report keeps its keys, after the kernel's pad
 /// types. See `CintiqV1Decoder`'s pad comment for each layout.
 package enum CintiqPadLayout: Sendable, Equatable {
-    /// The 24HD family's rings and OSD buttons, or the 21UX2 and 22HD's
-    /// strips and toggles, told apart by `bezelButtonCount`.
+    /// The 24HD family's rings and OSD buttons, or the 21UX2's strips and
+    /// toggles, told apart by `hasDualRings`.
     case standard
+    /// The 22HD: the 21UX2's strips and toggles, plus three panel keys.
+    case panelKeys
     /// The 21UX, 12WX, and 20WSX: keys split across bytes 5 and 6.
     case splitNibbles
     /// The DTK-2241 and DTH-2242: keys in byte 6 alone.
@@ -482,6 +490,7 @@ package enum CintiqPadLayout: Sendable, Equatable {
         switch productID {
         case 0x003F, 0x00C5, 0x00C6: self = .splitNibbles
         case 0x0057, 0x0059: self = .byteSix
+        case 0x00FA, 0x005B: self = .panelKeys
         default: self = .standard
         }
     }
