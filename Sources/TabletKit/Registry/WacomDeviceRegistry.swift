@@ -2157,11 +2157,11 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 294, activeHeightMM: 165),
 
         // ── Cintiq Companion / Companion 2 / Companion Hybrid — not added ──────
-        // Standalone Windows tablet-PCs (libwacom IntegratedIn=Display;System
-        // for 0x030A/0x0325, Display for the Hybrid at 0x0307): a Mac can't
-        // attach to one, like the excluded ISDV4 digitizers. That covers their
-        // `WACOM_24HDT` touch PIDs too, 0x0309 and 0x030C: reachability, not
-        // protocol kinship, decides.
+        // Companion and Companion 2 (0x030A, 0x0325) are Windows tablet-PCs
+        // (libwacom IntegratedIn=Display;System). The Hybrid (0x0307, touch
+        // 0x0309) also works as a Cintiq over its 3-in-1 cable, with the
+        // 13HD's pen ranges, but the kernel decodes its keys apart from the
+        // 13HD's, and nobody has tested one.
 
         // ── Wireless dongle ───────────────────────────────────────────────────
         // ACK-40401 RF dongle (PID 0x0084) presents the same HID interfaces as
