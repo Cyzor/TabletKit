@@ -1346,14 +1346,14 @@ public enum WacomDeviceRegistry: Sendable {
             // panel, and Wacom's booklets give both 518.4×324.0mm.
             //
             // Finger touch arrives on the separate 0x00F6 interface, decoded by
-            // `Wacom24HDTDecoder`. No capture exists for either interface.
-            productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ⚠ estimated
+            // `Wacom24HDTDecoder`. Testers confirm pen and touch.
+            productID: 0x00F8, name: "Cintiq 24HD Touch (DTH-2400)",  // ✓ confirmed live
             format: .cintiqV1, maxX: 104480, maxY: 65600, maxPressure: 2047,
             buttonCount: 8, bezelButtonCount: 3, hasTouchRing: true, hasDualRings: true, ringSlotCount: 3, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 5184, touchMaxY: 3240,  // 0x00F6 descriptor (linuxwacom)
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, touchCompanionPID: 0x00F6, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .crossReferenced, activeWidthMM: 519.0, activeHeightMM: 324.0),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], ledCompanionPID: 0x0056, touchCompanionPID: 0x00F6, touchCompanionInitSteps: [.featureReport([0x12, 0x02])], confidence: .verified, activeWidthMM: 519.0, activeHeightMM: 324.0),
         .init(
             // No bezelButtonCount (0 = default): shares 21UX2's 18-button
             // pad field (byte[6]/byte[8] express keys + byte[5]/byte[7]
@@ -2820,10 +2820,10 @@ public enum WacomDeviceRegistry: Sendable {
 
         // Touch interfaces of pen displays listed above.
         //
-        // No touch reports have been captured from these sensors. 0x00F6, 0x005E,
-        // 0x005D, and 0x0335 route to `Wacom24HDTDecoder` by product ID (see
-        // `DeviceDecoder.fixedLayoutTouch`), ported from the kernel and tested
-        // only on synthetic bytes. Keep them `.experimental`, and add no PID
+        // 0x00F6, 0x005E, 0x005D, and 0x0335 route to `Wacom24HDTDecoder` by
+        // product ID (see `DeviceDecoder.fixedLayoutTouch`), ported from the
+        // kernel. A tester's capture decodes 0x00F6; the others are tested
+        // only on synthetic bytes. Keep those `.experimental`, and add no PID
         // to that list without a capture. The rest decode from their own
         // descriptors. `touchMaxX`/`touchMaxY` stay 0: a sensor's coordinate
         // space needn't match its panel's pen space, as the CTH-690 showed.
@@ -2832,10 +2832,10 @@ public enum WacomDeviceRegistry: Sendable {
             // michaelmcguffin.com/code/cintiq/) found the same layout in real
             // traffic and reports maxima of 5184 x 3240. Not a replayable
             // capture, so touchMaxX/Y stay 0; a future capture can check it.
-            productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ⚠ name-only, decoder routed by PID, unverified
+            productID: 0x00F6, name: "Cintiq 24HD Touch sensor (pairs 0x00F8)",  // ✓ confirmed live; name-only, decoder routed by PID
             format: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false, tiltMaxDegrees: 64.0,
-            seizeUSB: false),
+            seizeUSB: false, confidence: .verified),
         .init(
             productID: 0x005E, name: "Cintiq 22HD Touch sensor (pairs 0x005B)",  // ⚠ name-only, decoder routed by PID, unverified
             format: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
