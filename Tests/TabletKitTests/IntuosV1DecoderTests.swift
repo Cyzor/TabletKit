@@ -389,17 +389,28 @@ final class IntuosV1DecoderTests: XCTestCase {
     /// Bytes from a PTH-850 capture with an Intuos4/5 Art Pen (2026-10-01).
     /// Rotation packets (status 0xAA/0xEA, type 0x05) alternate with pen
     /// packets; read as pen packets they pressed barrel 1 and set pressure
-    /// from the angle bytes.
-    func testArtPenRotationPacketSetsAngleWithoutPenOutput() {
+    /// from the angle bytes. Their position is real, so each is a point with
+    /// the last pen packet's pressure and buttons, and its own angle.
+    func testArtPenRotationPacketIsPointWithLastPressure() {
         var state = IntuosV1Decoder.State()
         let enter = decode([0x02, 0xC2, 0x80, 0x42, 0x48, 0x09, 0x08, 0x11, 0x00, 0x00], state: &state)
         guard case .toolEnter(let tool)? = enter.first else { return XCTFail("expected .toolEnter") }
         XCTAssertEqual(tool.toolCode, 0x1804)
 
-        _ = decode([0x02, 0xA0, 0x35, 0x27, 0x4F, 0x60, 0x00, 0x1F, 0xBC, 0xFE], state: &state)
+        // Before any pen packet, there's no pressure to borrow: no point.
+        let early = decode([0x02, 0xAA, 0x35, 0x25, 0x4F, 0x60, 0x67, 0xC0, 0x00, 0xFC], state: &state)
+        XCTAssertTrue(early.allSatisfy { if case .pen = $0 { return false }; return true },
+            "a rotation packet before any pen packet makes no point")
+
+        let first = decode([0x02, 0xA0, 0x35, 0x27, 0x4F, 0x60, 0x00, 0x1F, 0xBC, 0xFE], state: &state)
+        guard case .pen(let before)? = first.last else { return XCTFail("expected .pen") }
         let rot = decode([0x02, 0xAA, 0x35, 0x25, 0x4F, 0x60, 0x67, 0xC0, 0x00, 0xFC], state: &state)
-        XCTAssertTrue(rot.allSatisfy { if case .pen = $0 { return false }; return true },
-            "a rotation packet carries no position, pressure, or buttons")
+        guard case .pen(let r)? = rot.last else { return XCTFail("a rotation packet is a point") }
+        XCTAssertEqual(r.x, (0x35 << 9) | (0x25 << 1) | ((0xFC >> 1) & 1), "its own position")
+        XCTAssertEqual(r.pressure, before.pressure, "the last pen packet's pressure")
+        XCTAssertFalse(r.penButton1, "the angle bytes don't press a button")
+        XCTAssertEqual(r.rotation, 173.0, accuracy: 0.01, "raw 35 of -900...899")
+        XCTAssertEqual(r.hoverDistance, 0xFC >> 2)
 
         let pen = decode([0x02, 0xA0, 0x35, 0x2A, 0x4F, 0x60, 0x00, 0x1F, 0xBC, 0xFE], state: &state)
         guard case .pen(let p)? = pen.last else { return XCTFail("expected .pen") }

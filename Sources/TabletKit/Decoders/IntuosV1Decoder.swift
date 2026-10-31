@@ -121,6 +121,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                 // Don't let one tool's wheel position or angle follow the next tool in.
                 state.lastAirbrushWheel = nil
                 state.lastRotation = 0
+                state.lastPenPacket = nil
                 return [
                     .pen(
                         TabletPoint(
@@ -157,6 +158,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
                 // Don't let one tool's wheel position or angle follow the next tool in.
                 state.lastAirbrushWheel = nil
                 state.lastRotation = 0
+                state.lastPenPacket = nil
                 return [
                     .pen(
                         TabletPoint(
@@ -249,10 +251,29 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         // with pen packets. Bit 1 of its status is part of the type and bytes
         // 6–7 hold the angle, so reading it as a pen packet sent a barrel-1
         // press and bogus pressure on every other report. Confirmed on a
-        // PTH-850 with an Intuos4/5 Art Pen. The next pen packet carries the
-        // angle.
+        // PTH-850 with an Intuos4/5 Art Pen. Its position is as good as a pen
+        // packet's (within the sensor's noise of the two around it), so it's
+        // a point too, as the kernel reports it, with the last pen packet's
+        // pressure, tilt, and buttons: dropping it halved the Art Pen's rate.
+        // Not before a pen packet this time in range, whose pressure it uses.
         if subtype == 0x05 {
-            if !state.toolIsMouse { state.lastRotation = intuosRotationDegrees(report) }
+            guard !state.toolIsMouse else { return results }
+            state.lastRotation = intuosRotationDegrees(report)
+            guard let last = state.lastPenPacket else { return results }
+            results.append(
+                .pen(
+                    TabletPoint(
+                        x: x, y: y, maxX: spec.maxX, maxY: spec.maxY,
+                        pressure: last.pressure, maxPressure: spec.maxPressure,
+                        tiltX: last.tiltX, tiltY: last.tiltY,
+                        rotation: ToolCatalog.hasRotation(toolCode: state.currentToolCode)
+                            ? state.lastRotation : 0.0,
+                        penButton1: state.lastPenButtons.0,
+                        penButton2: state.lastPenButtons.1,
+                        eraser: state.isEraser,
+                        inProximity: true,
+                        hoverDistance: (Int(report[9]) >> 2),
+                        airbrushWheel: state.lastAirbrushWheel)))
             return results
         }
 
@@ -262,6 +283,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
             report, maxPressure: spec.maxPressure, statusBit: spec.maxPressure == 2047)
         let tilt = IntuosPenPacket.tilt(report)
         state.lastPenButtons = ((status & 0x02) != 0, (status & 0x04) != 0)
+        state.lastPenPacket = (pressure, tilt.x, tilt.y)
 
         results.append(
             .pen(
@@ -301,6 +323,8 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         state.currentToolCode = toolCode
         state.isEraser = (toolCode & 0x0008) != 0
         state.toolIsMouse = (toolCode & 0x000F) == 0x0006
+        // A new tool's rotation packets wait for its own pen packet.
+        state.lastPenPacket = nil
 
         var results: [DecodeResult] = [
             .toolEnter(
@@ -496,6 +520,9 @@ extension IntuosV1Decoder {
         package var lastPenButtons: (Bool, Bool) = (false, false)
         /// Last valid Art Pen rotation, in degrees.
         package var lastRotation: Double = 0
+        /// The last pen packet's pressure and tilt this time in range, which
+        /// an Art Pen rotation packet's point carries. Nil until one arrives.
+        package var lastPenPacket: (pressure: Int, tiltX: Double, tiltY: Double)?
         /// Whether real tilt has arrived since the pen entered.
         package var hasValidTiltFrame: Bool = false
         /// Last valid tilt, held through low-confidence frames.
