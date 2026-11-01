@@ -254,7 +254,7 @@ package struct IntuosV1Decoder: TabletReportDecoder {
         // PTH-850 with an Intuos4/5 Art Pen. Its position is as good as a pen
         // packet's (within the sensor's noise of the two around it), so it's
         // a point too, as the kernel reports it, with the last pen packet's
-        // pressure, tilt, and buttons: dropping it halved the Art Pen's rate.
+        // pressure, tilt, and buttons: skipping it halved the Art Pen's rate.
         // Not before a pen packet this time in range, whose pressure it uses.
         if subtype == 0x05 {
             guard !state.toolIsMouse else { return results }
