@@ -34,8 +34,8 @@ import Foundation
 /// which look the same in 0x11 traffic, but it's the stored enrollment list
 /// and says nothing about whether the link is live.
 ///
-/// Output report 0x20 (unpair) isn't implemented; it's destructive and
-/// nothing needs it.
+/// Feature report 0x20 unpairs: `[0x20, slot]` for one slot, `[0x20, 0xFF]`
+/// for all. Not implemented; it's destructive and nothing needs it.
 package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
 
     static let remoteReportID: UInt8 = 0x11
