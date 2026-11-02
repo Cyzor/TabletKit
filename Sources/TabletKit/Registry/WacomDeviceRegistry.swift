@@ -1962,10 +1962,10 @@ public enum WacomDeviceRegistry: Sendable {
             // arrives on the separate 0x03B3 product. 0x03B4 is its internal
             // USB hub and needs no row.
             //
-            // "Cintiq Pro 16" also names the 2016 DTH-1620, at the same 344.2 x
-            // 193.6 mm. The touch maxima tell them apart: 13768 x 7744 here,
-            // 13824 x 7776 on the DTH-1620 (0x0354), differing in aspect past
-            // rounding.
+            // "Cintiq Pro 16" also names the 2016 DTH-1620, with the same panel
+            // and a pen area its descriptor gives as 349.6 x 198.4 mm. The touch
+            // maxima tell them apart: 13768 x 7744 here, 13824 x 7776 on the
+            // DTH-1620 (0x0354), differing in aspect past rounding.
             //
             // 344.2 x 193.6 is the descriptor's Physical Maximum; libwacom's
             // 356 x 203 is the outer body. maxX/maxY keep this block's 200
@@ -2458,8 +2458,17 @@ public enum WacomDeviceRegistry: Sendable {
             // (linuxwacom/wacom-hid-descriptors): 13824 x 7776 on report 0x0C.
             touchMaxX: 13824, touchMaxY: 7776,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x0354, confidence: .experimental, activeWidthMM: 350, activeHeightMM: 198),
+            // Startup as on the DTH-167 (0x03B2): pen scan on, then DATAMODE.
+            // Both descriptors declare the reports: 0x0D and 0x02 on the pen
+            // interface, and Device Mode (usage 0x52) on 0x0E of the touch one.
+            seizeUSB: true,
+            initSteps: [
+                .featureReport([0x0D, 0x00]),
+                .featureReport([0x02, 0x02]),
+            ],
+            touchCompanionPID: 0x0354,
+            touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])],
+            confidence: .experimental, activeWidthMM: 350, activeHeightMM: 198),
         .init(
             // Touch interface of 0x0350, per vendor model properties; routed as its companion.
             // Pen range and pressure: vendor model properties.

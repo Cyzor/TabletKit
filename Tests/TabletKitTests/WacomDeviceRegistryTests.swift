@@ -459,20 +459,24 @@ final class WacomDeviceRegistryTests: XCTestCase {
                 + "— do not add speculative writes here")
     }
 
-    /// The DTH-167 pen interface declares 0x0D and 0x02 but not 0x0E.
-    /// Pinned so 0x0E stays off this interface and DATAMODE stays last.
+    /// Both Cintiq Pro 16 pen interfaces, the DTH-167 and the DTH-1620,
+    /// declare 0x0D and 0x02 but not 0x0E. Pinned so 0x0E stays off them and
+    /// DATAMODE stays last; their touch sensors take Device Mode on 0x0E.
     func testCintiqPro16SendsPenScanBeforeDataMode() {
-        guard let spec = WacomDeviceRegistry.spec(for: 0x03B2) else {
-            return XCTFail("0x03B2 missing from registry")
+        for pid in [0x03B2, 0x0350] {
+            guard let spec = WacomDeviceRegistry.spec(for: pid) else {
+                return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
+            }
+            XCTAssertEqual(
+                spec.initSteps,
+                [
+                    .featureReport([0x0D, 0x00]),
+                    .featureReport([0x02, 0x02]),
+                ],
+                "0x\(String(pid, radix: 16)) init changed; DATAMODE must stay last so it "
+                    + "lands even when the scan enable fails")
+            XCTAssertEqual(spec.touchCompanionInitSteps, [.featureReport([0x0E, 0x02, 0x00])])
         }
-        XCTAssertEqual(
-            spec.initSteps,
-            [
-                .featureReport([0x0D, 0x00]),
-                .featureReport([0x02, 0x02]),
-            ],
-            "0x03B2 init changed; DATAMODE must stay last so it lands even when "
-                + "the scan enable fails")
     }
 
     /// A claimed sensor must not also be a drivable tablet in its own right:

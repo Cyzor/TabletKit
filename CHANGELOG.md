@@ -28,6 +28,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   behind.
 - Closing a tablet no longer waits on its queued writes; stopping waits at
   most 250 ms so restores still land.
+- The 2017 Cintiq Pro 16 (DTH-1620) starts as the 2021 model does: pen
+  scan on before data mode, and multi-touch mode for its touch sensor.
+  Untested on hardware.
 
 ### Fixed
 
