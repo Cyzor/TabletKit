@@ -12,6 +12,22 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - `TabletSpec.touchStripCount`. The Intuos3 4×5 and 4×6 have one strip.
 - Preliminary Graphire 3 Wireless (CTE-630BT) support over Bluetooth,
   untested on hardware.
+- Cintiq Partner (PTU-600) support, untested on hardware.
+- The Cintiq 22HD's three top panel keys.
+
+### Changed
+
+- An Art Pen on Intuos4 and Intuos5-era tablets reports at the full rate:
+  each rotation packet now yields a point, not just an angle.
+- Intuos4 key labels without spaces, as in Japanese, wrap where macOS's
+  line-break rules allow.
+- The Cintiq 21UX2 and Cintiq 24HD Touch carry `.verified` confidence,
+  after tests on hardware.
+- `swift run registry-export` writes `registry.json` from the registry
+  itself, with sorted keys, and a test fails when the committed copy falls
+  behind.
+- Closing a tablet no longer waits on its queued writes; stopping waits at
+  most 250 ms so restores still land.
 
 ### Fixed
 
@@ -23,6 +39,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - The Bamboo Touch (CTT-460) reads its four ExpressKeys.
 - Intuos4 key displays paint once when the tablet turns, not first with
   the old labels.
+- The Cintiq 24HD Touch's pen keeps working once touch starts.
+- Intuos Pro (2025) over Bluetooth names the eraser end correctly.
+- A missed Bluetooth pen announcement no longer invents a new pen; the
+  current pen carries over until a real announcement arrives.
+- The 2020 Wacom One's active area matches its pen range.
 
 ## [0.6.0] — 2026-10-24
 
