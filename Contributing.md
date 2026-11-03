@@ -109,6 +109,16 @@ Problems with the MockTab app itself, like its settings window or installing it,
 - `Sources/TabletKit/Smoothing/` holds the cursor and pressure filters.
 - `registry.json` copies the registry for scripts and other platforms. After you edit the registry, run `swift run registry-export` and commit the updated file. A test fails until you do.
 
+### File Headers
+
+New files start with this header, adjusted for the language's comment style and the current year:
+
+```swift
+// TabletKit — HID decoder layer for drawing tablets
+// SPDX-FileCopyrightText: 2026 TabletKit contributors
+// SPDX-License-Identifier: MPL-2.0
+```
+
 ### If CI Reports an API Break
 
 Apps other than MockTab can use TabletKit, so a check runs on every change to catch edits that would stop their code from compiling. It compares TabletKit's public interface with the latest release.
