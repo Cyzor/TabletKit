@@ -14,6 +14,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   untested on hardware.
 - Cintiq Partner (PTU-600) support, untested on hardware.
 - The Cintiq 22HD's three top panel keys.
+- Finger touch on the Bamboo Pen & Touch 6×8 models (CTH-661, CTH-661SE),
+  with the range read from the touch interface's descriptor; untested on
+  hardware.
 
 ### Changed
 

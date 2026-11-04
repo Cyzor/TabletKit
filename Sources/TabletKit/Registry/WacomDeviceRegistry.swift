@@ -1270,9 +1270,11 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 147, activeHeightMM: 92),
         .init(
+            // Touch range from the descriptor, as on 0x00D3.
             productID: 0x00DB, name: "Bamboo Pen & Touch SE (CTH-661SE)",  // dims kernel + OTD (kernel 0xDB, Bamboo 2FG 6x8 SE); ⚠ name attribution still uncertain
             format: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
+            hasFingerTouch: true, maxTouchContacts: 2,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(
@@ -1586,19 +1588,23 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // The kernel lists this PID as `BAMBOO_PT` ("Wacom Bamboo 2FG 6x8"),
             // like 0x00D2 above; OTD's CTH-661.json groups it with 0x00D8 and
-            // 0x00DB. No touch: the 480×320 space belongs to the 4x5 chassis,
-            // and nothing has captured this size's touch.
+            // 0x00DB. Touch: `touch_max = 2`, decoded by `decodeBPTTouch`. The
+            // 480×320 space belongs to the 4x5 chassis and no source lists
+            // this size's, so the range comes from the touch interface's
+            // descriptor, as Linux reads it.
             productID: 0x00D3, name: "Wacom CTH-661",  // ⚠ from OTD
             format: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 2,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(
-            // As 0x00D3 above (kernel: "Wacom Bamboo Comic 2FG"), also
-            // without touch.
+            // As 0x00D3 above (kernel: "Wacom Bamboo Comic 2FG"), touch
+            // range included.
             productID: 0x00D8, name: "Wacom CTH-661",  // ⚠ from OTD
             format: .bamboo, maxX: 21648, maxY: 13700, maxPressure: 1023,
             buttonCount: 4, hasTouchRing: false, hasEraser: true,
+            hasFingerTouch: true, maxTouchContacts: 2,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 217, activeHeightMM: 137),
         .init(

@@ -124,6 +124,9 @@ package struct TabletInput {
             deriveFixedTouchDecoder(productID: interface.productID, descriptor: interface.reportDescriptor)
         } else {
             deriveTouchDecoders(from: interface.reportDescriptor)
+            // Bamboo touch arrives in a vendor layout on the pen's report
+            // ID, but the touch interface's descriptor names the finger range.
+            if spec.format == .bamboo { recordFingerRange(from: interface.reportDescriptor) }
         }
     }
 
@@ -369,6 +372,12 @@ package struct TabletInput {
         fixedTouchDecoders[entry.reportID] = entry.decoder
         // Vendor-format reports, but the descriptor still names the finger
         // range, where Linux reads it for these sensors.
+        recordFingerRange(from: descriptor)
+    }
+
+    /// Records the X and Y logical maximums of a finger collection in
+    /// `descriptor`, unless a range is already known.
+    private mutating func recordFingerRange(from descriptor: [UInt8]) {
         guard !descriptor.isEmpty, let layout = try? HIDReportDescriptorParser.parse(descriptor) else { return }
         let fingerFields = layout.reports.filter { $0.direction == .input }.flatMap(\.fields)
             .filter { $0.collectionPath.contains(0x000D_0022) && $0.logicalMax > 0 }

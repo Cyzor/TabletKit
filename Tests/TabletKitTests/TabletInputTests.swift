@@ -188,6 +188,33 @@ final class TabletInputTests: XCTestCase {
         XCTAssertTrue(input.penInRange)
     }
 
+    /// Bamboo touch arrives in a vendor layout on the pen's report ID, but
+    /// the touch interface's descriptor names the finger range. The 6x8
+    /// models take theirs from it, since no source lists one.
+    func testBambooTouchTakesItsRangeFromTheDescriptor() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x00D3))  // CTH-661
+        XCTAssertTrue(spec.hasFingerTouch)
+        XCTAssertEqual(spec.touchMaxX, 0)
+        var input = TabletInput(spec: spec, isBluetooth: false, isWireless: false)
+        // Vendor collection, report 0x02, finger collection: X to 1792, Y to 1120.
+        input.register(Sensor(
+            productID: 0x00D3,
+            descriptor: "0600ff0901a1018502050d0922a1000501093015002600077510950181020931266004" + "8102c0c0"))
+        let range = try XCTUnwrap(DescribedTouchRanges.range(forProductID: 0x00D3))
+        XCTAssertEqual(range.x, 1792)
+        XCTAssertEqual(range.y, 1120)
+        XCTAssertFalse(range.exact)
+
+        var frame = [UInt8](repeating: 0, count: 20)
+        frame[0] = 0x02
+        frame[3] = 0x87; frame[4] = 0x00  // finger 0 down, X 1792
+        frame[5] = 0x04; frame[6] = 0x60  // Y 1120
+        let touches = feed(&input, frame).events.compactMap { if case .touch(let t) = $0 { t } else { nil } }
+        let contact = try XCTUnwrap(touches.first?.contacts.first)
+        XCTAssertEqual(contact.x, 1792)
+        XCTAssertEqual(contact.y, 1120)
+    }
+
     private final class Sensor: HIDInterface {
         let productID: Int
         let reportDescriptor: [UInt8]
