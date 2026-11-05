@@ -4,7 +4,7 @@ Read the Intuos Pro gen 2 (PTH-460, PTH-660, PTH-860), the 2018 Intuos (CTL-4100
 
 ## Overview
 
-TabletKit reads this format as ``ReportFormat/intuosV2``. It started with the Intuos Pro gen 2 and spread to the Cintiq 16, 22, and 24, the Cintiq Pro, Wacom One pen displays, and MobileStudio Pro. Most layouts here were confirmed on a PTH-660 and PTH-860; where something comes only from the Linux driver, this article says so. An [annotated capture excerpt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/Intuos-Pro-Bluetooth-Touch-Clock.md) backs the Bluetooth touch clock.
+TabletKit reads this format as ``ReportFormat/intuosV2``. It started with the Intuos Pro gen 2 and spread to the Cintiq 16, 22, and 24, the Cintiq Pro, Wacom One pen displays, and MobileStudio Pro. Most layouts here were confirmed on a PTH-660 and PTH-860; where something comes only from the Linux driver, this article says so. Annotated capture excerpts back the Bluetooth [touch clock](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/Intuos-Pro-Bluetooth-Touch-Clock.md) and [keys](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTH-860-Bluetooth-Keys.md).
 
 Multi-byte values are little-endian, and byte offsets count the report ID as byte 0.
 
@@ -36,7 +36,8 @@ The KC-100 cordless mouse reports a tool code whose low four bits are `6`. Its b
 
 Report `0x11` carries the controls on the PTH-x60:
 
-- Byte 1 holds the keys, one bit each.
+- Byte 1 holds the keys, one bit each, from bit 0 at the top.
+- Byte 2 holds the same bits for keys being touched. A resting finger or a palm brushing the keys sets it, so read presses from byte 1. TabletKit reports only presses, in ``PadState/buttons``.
 - Byte 3 is nonzero while the touch ring's center button is pressed.
 - Byte 4 is the ring position, 0 to 71, or `0x7F` with no finger on it.
 
@@ -54,7 +55,9 @@ The 361-byte form adds:
 
 - Bytes 99–106: the pen serial, and bytes 107–108 its tool ID.
 - Bytes 109–280: four touch frames, each ending in a 16-bit device clock that ticks every 0.1 ms.
-- Byte 282: ExpressKeys, set for one report per press.
+- Byte 281: the touch ring's center button, `0x40` while held, over a constant `0x80`.
+- Byte 282: ExpressKeys, the same bits as USB byte 1, set while held.
+- Byte 283: keys being touched, the same bits as USB byte 2.
 - Byte 284: battery, with bit 7 for charging and bits 0–6 the percentage.
 - Byte 285: the touch ring, with bit 7 for contact and bits 0–6 the position.
 

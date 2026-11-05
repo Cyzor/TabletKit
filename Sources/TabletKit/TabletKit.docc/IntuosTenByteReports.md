@@ -68,6 +68,17 @@ Both ends of a pen share its serial and differ in bit 3 of the tool ID, the eras
 
 The tablet announces the pen only when it comes into range. If your app starts with a pen already in range, you won't learn which pen it is until it leaves and returns.
 
+## Read the ExpressKeys and Touch Ring
+
+Intuos5 and Intuos Pro gen 1 send their controls in report `0x03`, over USB and through the wireless receiver alike:
+
+- Byte 2 is the touch ring: bit 7 while a finger is on it, bits 0–6 the position, 0 to 71.
+- Byte 3 is the ring's center button.
+- Byte 4 holds the keys, one bit each, from bit 0 at the top. An [annotated capture excerpt](https://github.com/Cyzor/tablet-driver/blob/main/Notes/Evidence/PTH-850-Key-Order.md) backs the order.
+- Byte 5 holds the same bits for keys being touched. A press sets both bytes, since the finger pressing a key also touches it; a resting finger or a palm sets only byte 5.
+
+TabletKit reports presses in ``PadState/buttons`` and doesn't read the touch byte. The Linux driver describes the Intuos4's report `0x0C`: the ring in byte 1, the center button in bit 0 of byte 2, and the keys in byte 3.
+
 ## Switch It On
 
 Until the tablet receives feature report `[0x02, 0x02]`, it acts as a mouse. On the PTH-850, finger touch arrives on a second USB interface as a 64-byte container.
@@ -76,4 +87,5 @@ Until the tablet receives feature report `[0x02, 0x02]`, it acts as a mouse. On 
 
 - ``ReportFormat``
 - ``ToolIdentity``
+- ``PadState``
 - <doc:DecodingPenReports>
