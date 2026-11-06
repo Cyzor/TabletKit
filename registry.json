@@ -2422,8 +2422,8 @@
       "touchMaxY" : 0
     },
     {
-      "activeHeightMM" : 166,
-      "activeWidthMM" : 294,
+      "activeHeightMM" : 169.24,
+      "activeWidthMM" : 297.76,
       "buttonCount" : 0,
       "confidence" : "crossReferenced",
       "hasEraser" : true,
@@ -2434,7 +2434,7 @@
       "maxTouchContacts" : 10,
       "maxX" : 59552,
       "maxY" : 33848,
-      "name" : "Wacom DTH-1320",
+      "name" : "Wacom Cintiq Pro 13 (DTH-1320)",
       "outOfScope" : null,
       "parser" : "intuosV2",
       "productID" : "0x034F",

@@ -462,8 +462,9 @@ final class WacomDeviceRegistryTests: XCTestCase {
     /// Both Cintiq Pro 16 pen interfaces, the DTH-167 and the DTH-1620,
     /// declare 0x0D and 0x02 but not 0x0E. Pinned so 0x0E stays off them and
     /// DATAMODE stays last; their touch sensors take Device Mode on 0x0E.
-    func testCintiqPro16SendsPenScanBeforeDataMode() {
-        for pid in [0x03B2, 0x0350] {
+    /// The DTH-1320, the DTH-1620's 13" sibling, starts the same way.
+    func testCintiqPro13And16SendPenScanBeforeDataMode() {
+        for pid in [0x03B2, 0x0350, 0x034F] {
             guard let spec = WacomDeviceRegistry.spec(for: pid) else {
                 return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
             }

@@ -11,13 +11,23 @@ extension WacomEvidence {
         0x034E: [  // Wacom MobileStudio Pro 16 (DTH-W1620)
             .ring: .init(.sourced, [.libwacom]),
         ],
-        0x034F: [  // Wacom DTH-1320
+        0x034F: [  // Wacom Cintiq Pro 13 (DTH-1320)
             .penPosition: .init(.sourced, [.openTabletDriver]),
             .pressure: .init(.sourced, [.openTabletDriver]),
+        ],
+        0x0350: [  // Wacom Cintiq Pro 16 (DTH-1620)
+            .penPosition: .init(.sourced, [.descriptorCorpus]),
+            .pressure: .init(.sourced, [.descriptorCorpus]),
+            .tilt: .init(.sourced, [.descriptorCorpus]),
+            .eraser: .init(.sourced, [.descriptorCorpus]),
+            .touch: .init(.sourced, [.descriptorCorpus]),
         ],
         0x0352: [  // Cintiq Pro 32 (DTH-3220)
             .penPosition: .init(.sourced, [.openTabletDriver]),
             .pressure: .init(.sourced, [.openTabletDriver]),
+        ],
+        0x0354: [  // Cintiq Pro 16 Touch sensor (pairs 0x0350)
+            .touch: .init(.sourced, [.descriptorCorpus]),
         ],
         0x0357: [  // Intuos Pro M (PTH-660)
             .penPosition: .init(.hardware, [.maintainerHardware, .openTabletDriver]),

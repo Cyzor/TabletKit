@@ -1903,12 +1903,25 @@ public enum WacomDeviceRegistry: Sendable {
         // decoder exists (maxX > 0), false on name-only rows.
         .init(
             // Touch wiring and range: vendor model properties.
-            productID: 0x034F, name: "Wacom DTH-1320",  // ⚠ from OTD
+            // Cintiq Pro 13 (2017), the DTH-1620's (0x0350) smaller sibling:
+            // pen here, finger touch on 0x0353. No descriptor of this model is
+            // public, so it starts like the DTH-1620, whose descriptors declare
+            // both writes. The session skips a touch write the sensor doesn't
+            // declare. Active area is the maxima at 200 units/mm, as on the
+            // DTH-1620; the 13.3" panel is a few mm smaller.
+            productID: 0x034F, name: "Wacom Cintiq Pro 13 (DTH-1320)",  // ⚠ from OTD
             format: .intuosV2, maxX: 59552, maxY: 33848, maxPressure: 8191,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 11752, touchMaxY: 6608, isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], touchCompanionPID: 0x0353, confidence: .crossReferenced, activeWidthMM: 294, activeHeightMM: 166),
+            seizeUSB: true,
+            initSteps: [
+                .featureReport([0x0D, 0x00]),
+                .featureReport([0x02, 0x02]),
+            ],
+            touchCompanionPID: 0x0353,
+            touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])],
+            confidence: .crossReferenced, activeWidthMM: 297.76, activeHeightMM: 169.24),
         .init(
             // Active area 348.16×197.59mm per OTD's DTK-1660.json, whose
             // maxima match; Wacom's booklet rounds it to 344×194mm.
@@ -2402,17 +2415,9 @@ public enum WacomDeviceRegistry: Sendable {
         // with libwacom dimensions, unless a row says otherwise. Each is
         // `.experimental` until a capture replays cleanly.
         //
-        // 21 of the 27 modern pen-display rows match libwacom exactly. The
-        // three 13.3" units below (0x0325, 0x034D, 0x0398) don't, and ours are
-        // right:
-        //
-        //   ours      294.6 x 165.1 mm -> 13.30" diagonal, aspect 1.784
-        //   libwacom  305   x 178   mm -> 13.90" diagonal, aspect 1.713
-        //
-        // A 13.3" 16:9 active area computes to 294.4 x 165.6 mm (16:9 = 1.778),
-        // so libwacom's figures are rounded outer-case/marketing numbers, not
-        // the digitizer's extent — the same trap documented for Wacom's own
-        // printed specs. Do not "fix" these rows toward libwacom.
+        // libwacom's 305 x 178 mm for the 13.3" units below (0x0325, 0x034D,
+        // 0x0398) is the outer case, not the digitizer, and not 16:9. Don't
+        // "fix" these rows toward it.
         .init(
             // Touch wiring and range: vendor model properties.
             productID: 0x0325, name: "Wacom Cintiq Companion 2 (DTH-W1310)",  // ⚠ recognition-only (dims from kernel wacom_features_0x325)

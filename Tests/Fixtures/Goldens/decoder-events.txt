@@ -111,7 +111,7 @@
 0x0105 inputs=1051 pen=240 tool=66 pad=108 dial=73 touch=0 device=73 digest=70e47ef34644a91b  # Wacom One M (CTC-6110WL, Android)
 0x0304 inputs=1059 pen=72 tool=7 pad=268 dial=0 touch=0 device=124 digest=3ed5864fb6728032  # Wacom Cintiq 13HD (DTK-1300)
 0x00F9 inputs=1059 pen=129 tool=13 pad=373 dial=0 touch=0 device=0 digest=4f8d73e5e2f9b73b  # Cintiq 22HD secondary interface (pairs 0x00FA)
-0x034F inputs=1060 pen=503 tool=64 pad=251 dial=0 touch=0 device=183 digest=af15e0462a2bbb05  # Wacom DTH-1320
+0x034F inputs=1060 pen=503 tool=64 pad=251 dial=0 touch=0 device=183 digest=af15e0462a2bbb05  # Wacom Cintiq Pro 13 (DTH-1320)
 0x0390 inputs=1063 pen=263 tool=24 pad=316 dial=0 touch=0 device=21 digest=aea4356c093fb8f0  # Wacom Cintiq 16 (DTK-1660)
 0x03AE inputs=1055 pen=101 tool=22 pad=187 dial=0 touch=0 device=183 digest=74d25814646c3f7b  # Wacom Cintiq 16 (DTK-1660)
 0x03A6 inputs=1062 pen=201 tool=53 pad=237 dial=0 touch=0 device=52 digest=d2e4d29eb1d9b239  # Wacom DTC-133
