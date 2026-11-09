@@ -12,7 +12,7 @@ extension WacomEvidence {
             .ring: .init(.sourced, [.descriptorCorpus, .libwacom, .linuxKernel]),
         ],
         0x034E: [  // Wacom MobileStudio Pro 16 (DTH-W1620)
-            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Button count and ring range match libinput's MobileStudio Pro 16 test device; key bits assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x034F: [  // Wacom Cintiq Pro 13 (DTH-1320)
@@ -124,7 +124,7 @@ extension WacomEvidence {
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x0399: [  // Wacom MobileStudio Pro 16 (DTH-W1621)
-            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Button count and ring range match libinput's MobileStudio Pro 16 test device; key bits assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x03A6: [  // Wacom DTC-133
@@ -132,7 +132,7 @@ extension WacomEvidence {
             .pressure: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
         ],
         0x03AA: [  // Wacom MobileStudio Pro 16 (DTH-W1620, alt)
-            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Button count and ring range match libinput's MobileStudio Pro 16 test device; key bits assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x03AE: [  // Wacom Cintiq 16 (DTK-1660)
