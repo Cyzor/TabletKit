@@ -3392,7 +3392,7 @@
     {
       "activeHeightMM" : 169,
       "activeWidthMM" : 298,
-      "buttonCount" : 6,
+      "buttonCount" : 10,
       "confidence" : "experimental",
       "hasEraser" : true,
       "hasFingerTouch" : true,
@@ -3414,7 +3414,7 @@
     {
       "activeHeightMM" : 198,
       "activeWidthMM" : 350,
-      "buttonCount" : 8,
+      "buttonCount" : 12,
       "confidence" : "experimental",
       "hasEraser" : true,
       "hasFingerTouch" : true,
@@ -3502,7 +3502,7 @@
     {
       "activeHeightMM" : 169,
       "activeWidthMM" : 298,
-      "buttonCount" : 6,
+      "buttonCount" : 10,
       "confidence" : "experimental",
       "hasEraser" : true,
       "hasFingerTouch" : true,
@@ -3524,7 +3524,7 @@
     {
       "activeHeightMM" : 198,
       "activeWidthMM" : 350,
-      "buttonCount" : 8,
+      "buttonCount" : 12,
       "confidence" : "experimental",
       "hasEraser" : true,
       "hasFingerTouch" : true,
@@ -3546,7 +3546,7 @@
     {
       "activeHeightMM" : 198,
       "activeWidthMM" : 350,
-      "buttonCount" : 8,
+      "buttonCount" : 12,
       "confidence" : "experimental",
       "hasEraser" : true,
       "hasFingerTouch" : true,

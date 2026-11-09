@@ -6,9 +6,13 @@ extension WacomEvidence {
     /// Rows using the `.intuosV2` report format.
     static let intuosV2: Table = [
         0x034D: [  // Wacom MobileStudio Pro 13 (DTH-W1320)
-            .ring: .init(.sourced, [.libwacom]),
+            .penPosition: .init(.sourced, [.descriptorCorpus]),
+            .touch: .init(.sourced, [.descriptorCorpus]),
+            .tabletButtons: .init(.sourced, [.descriptorCorpus, .libwacom]),
+            .ring: .init(.sourced, [.descriptorCorpus, .libwacom, .linuxKernel]),
         ],
         0x034E: [  // Wacom MobileStudio Pro 16 (DTH-W1620)
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x034F: [  // Wacom Cintiq Pro 13 (DTH-1320)
@@ -116,9 +120,11 @@ extension WacomEvidence {
             .bluetooth: .init(.sourced, [.libwacom]),
         ],
         0x0398: [  // Wacom MobileStudio Pro 13 (DTH-W1321)
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x0399: [  // Wacom MobileStudio Pro 16 (DTH-W1621)
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x03A6: [  // Wacom DTC-133
@@ -126,6 +132,7 @@ extension WacomEvidence {
             .pressure: .init(.sourced, [.openTabletDriver, .descriptorCorpus]),
         ],
         0x03AA: [  // Wacom MobileStudio Pro 16 (DTH-W1620, alt)
+            .tabletButtons: .init(.sourced, [.libwacom], note: "Layout assumed from the MobileStudio Pro 13 (DTH-W1320)."),
             .ring: .init(.sourced, [.libwacom]),
         ],
         0x03AE: [  // Wacom Cintiq 16 (DTK-1660)

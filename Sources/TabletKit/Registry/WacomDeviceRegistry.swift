@@ -2442,21 +2442,24 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
-            productID: 0x034D, name: "Wacom MobileStudio Pro 13 (DTH-W1320)",  // ⚠ recognition-only; touch is a separate USB device (0x034A)
+            // Keys: 6 ExpressKeys, then the rocker's right, up, left, and down
+            // (IntuosV2PadLayout). Touch sensor Device Mode is feature 0x0E.
+            // Both from the 13's descriptors in linuxwacom/input-wacom#58.
+            productID: 0x034D, name: "Wacom MobileStudio Pro 13 (DTH-W1320)",  // ⚠ no capture; keys checked against the 13's descriptor; touch is a separate USB device (0x034A)
             format: .intuosV2, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 10, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10, touchMaxX: 11752, touchMaxY: 6608, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x034A, activeWidthMM: 298, activeHeightMM: 169),
+            touchCompanionPID: 0x034A, touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])], activeWidthMM: 298, activeHeightMM: 169),
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
-            productID: 0x034E, name: "Wacom MobileStudio Pro 16 (DTH-W1620)",  // ⚠ recognition-only; touch is a separate USB device (0x034B)
+            productID: 0x034E, name: "Wacom MobileStudio Pro 16 (DTH-W1620)",  // ⚠ no capture; key layout assumed from the 13's descriptor; touch is a separate USB device (0x034B)
             format: .intuosV2, maxX: 69920, maxY: 39680, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 12, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10, touchMaxX: 13824, touchMaxY: 7776, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x034B, activeWidthMM: 350, activeHeightMM: 198),
+            touchCompanionPID: 0x034B, touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])], activeWidthMM: 350, activeHeightMM: 198),
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
@@ -2509,30 +2512,30 @@ public enum WacomDeviceRegistry: Sendable {
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
-            productID: 0x0398, name: "Wacom MobileStudio Pro 13 (DTH-W1321)",  // ⚠ recognition-only; touch is a separate USB device (0x039A)
+            productID: 0x0398, name: "Wacom MobileStudio Pro 13 (DTH-W1321)",  // ⚠ no capture; key layout assumed from the 13's descriptor; touch is a separate USB device (0x039A)
             format: .intuosV2, maxX: 59552, maxY: 33848, maxPressure: 8191,
-            buttonCount: 6, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 10, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10, touchMaxX: 11752, touchMaxY: 6608, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x039A, activeWidthMM: 298, activeHeightMM: 169),
+            touchCompanionPID: 0x039A, touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])], activeWidthMM: 298, activeHeightMM: 169),
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
-            productID: 0x0399, name: "Wacom MobileStudio Pro 16 (DTH-W1621)",  // ⚠ recognition-only; touch is a separate USB device (0x039B)
+            productID: 0x0399, name: "Wacom MobileStudio Pro 16 (DTH-W1621)",  // ⚠ no capture; key layout assumed from the 13's descriptor; touch is a separate USB device (0x039B)
             format: .intuosV2, maxX: 69920, maxY: 39680, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 12, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10, touchMaxX: 13824, touchMaxY: 7776, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x039B, activeWidthMM: 350, activeHeightMM: 198),
+            touchCompanionPID: 0x039B, touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])], activeWidthMM: 350, activeHeightMM: 198),
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.
-            productID: 0x03AA, name: "Wacom MobileStudio Pro 16 (DTH-W1620, alt)",  // ⚠ recognition-only; touch is a separate USB device (0x03AC)
+            productID: 0x03AA, name: "Wacom MobileStudio Pro 16 (DTH-W1620, alt)",  // ⚠ no capture; key layout assumed from the 13's descriptor; touch is a separate USB device (0x03AC)
             format: .intuosV2, maxX: 69920, maxY: 39680, maxPressure: 8191,
-            buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
+            buttonCount: 12, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10, touchMaxX: 13824, touchMaxY: 7776, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
-            touchCompanionPID: 0x03AC, activeWidthMM: 350, activeHeightMM: 198),
+            touchCompanionPID: 0x03AC, touchCompanionInitSteps: [.featureReport([0x0E, 0x02, 0x00])], activeWidthMM: 350, activeHeightMM: 198),
         .init(
             // Touch wiring and range: vendor model properties.
             // `.intuosV2` and 8191 pressure per the linuxwacom descriptor

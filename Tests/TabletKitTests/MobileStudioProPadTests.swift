@@ -44,6 +44,15 @@ final class MobileStudioProPadTests: XCTestCase {
         }
     }
 
+    /// Keys plus the four rocker directions, and Device Mode on the touch sensor.
+    func testRegistryRows() throws {
+        for (pid, count) in [(0x034D, 10), (0x0398, 10), (0x034E, 12), (0x0399, 12), (0x03AA, 12)] {
+            let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: pid))
+            XCTAssertEqual(row.buttonCount, count, String(format: "0x%04X", pid))
+            XCTAssertEqual(row.touchCompanionInitSteps, [.featureReport([0x0E, 0x02, 0x00])])
+        }
+    }
+
     /// Keys 1–6 land on buttons 0–5 and the rocker (right, up, left, down)
     /// on 6–9, each alone; the center bit reaches only the ring button.
     func testEachControlBitReachesOnlyItsButton() throws {
