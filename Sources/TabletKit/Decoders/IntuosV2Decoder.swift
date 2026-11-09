@@ -59,6 +59,9 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         case 0x1E:
             return decodeOffsetPenReport(report: report, spec: spec, state: &state)
         case 0x11:
+            if case .mobileStudioPro(let keys) = spec.intuosV2PadLayout {
+                return decodeMobileStudioAuxReport(report: report, keys: keys)
+            }
             return decodeAuxReport(report: report)
         case 0x21:
             guard report.count >= 10 else { return [] }
@@ -444,6 +447,33 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         ]
     }
 
+    /// The MobileStudio Pro's 0x11 report, per the 13's descriptor:
+    /// [1] keys from bit 1 on
+    /// [3] bit 0 ring center; bits 1–4 rocker right, up, left, down
+    /// [4] ring position 0–35 in bits 0–6; bit 7 set while touched
+    ///
+    /// The rocker follows the keys in `buttons`, and the ring position doubles
+    /// onto the 0–71 scale the other models report.
+    private func decodeMobileStudioAuxReport(
+        report: HIDReport, keys: Int
+    ) -> [DecodeResult] {
+        guard report.count >= 5 else { return [] }
+        let keyBits = (UInt16(report[1]) | UInt16(report[2]) << 8) >> 1
+        let rocker = report[3]
+        let buttons = (0..<keys).map { keyBits & (1 << $0) != 0 }
+            + (1...4).map { rocker & (1 << $0) != 0 }
+        let position = report[4] & 0x7F
+        let touched = report[4] & 0x80 != 0 && position <= 35
+        return [
+            .aux(
+                AuxButtons(
+                    buttons: buttons,
+                    touchRingActive: touched,
+                    touchRingButtonDown: rocker & 0x01 != 0,
+                    touchRingPosition: touched ? position * 2 : 0x7F))
+        ]
+    }
+
     // MARK: - Finger touch report (0x21)
 
     /// 44-byte report: [0]=0x21 [1]=contact count (up to 5), then 5 × 8-byte fixed slots.
@@ -475,6 +505,25 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         return [.touch(contacts)]
     }
 
+}
+
+/// Where an IntuosV2 pad report (0x11) keeps its controls.
+package enum IntuosV2PadLayout: Sendable, Equatable {
+    /// Intuos Pro: keys in byte 1 from bit 0, center button in byte 3, ring
+    /// 0–71 in byte 4.
+    case intuosPro
+    /// MobileStudio Pro: keys from byte 1 bit 1, center and rocker in byte 3,
+    /// ring 0–35 in byte 4. For the 16, this assumes eight keys running on
+    /// into byte 2; only the 13 has a public descriptor.
+    case mobileStudioPro(keys: Int)
+
+    package init(productID: Int) {
+        switch productID {
+        case 0x034D, 0x0398: self = .mobileStudioPro(keys: 6)
+        case 0x034E, 0x0399, 0x03AA: self = .mobileStudioPro(keys: 8)
+        default: self = .intuosPro
+        }
+    }
 }
 
 extension IntuosV2Decoder {

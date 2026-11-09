@@ -35,6 +35,8 @@ public struct DigitizerSpec: Sendable {
     public var hasTouchStrips: Bool = false
     /// Where a Cintiq's pad report keeps its keys. Used by CintiqV1Decoder.
     package var cintiqPadLayout: CintiqPadLayout = .standard
+    /// Where an IntuosV2 pad report keeps its keys and ring. Used by IntuosV2Decoder.
+    package var intuosV2PadLayout: IntuosV2PadLayout = .intuosPro
     /// The Graphire Wireless's Bluetooth layout, on report 3. Used by GraphireDecoder.
     package var isGraphireBluetooth = false
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
