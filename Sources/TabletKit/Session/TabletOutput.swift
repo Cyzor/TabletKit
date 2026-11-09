@@ -540,7 +540,17 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             batteryPoll = nil
             pendingVendorWrites.removeAll()
             pendingVendorWritesDropped = false
+            darkenKeyDisplays()
         }
+    }
+
+    /// Turns an Intuos4's key displays off and leaves the ring LED on its
+    /// slot. Once the host stops, nothing dims the labels, and these OLEDs
+    /// burn in.
+    private func darkenKeyDisplays() {
+        guard spec.hasKeyOLEDs, !isBluetooth, let primary else { return }
+        let buf = Self.intuos4LEDReport(slot: UInt8(ledIndex & 0x03), keyDisplayLevel: 0)
+        write(.feature, buf, to: capable ?? primary, tag: "\(spec.name) Intuos4 key displays off", bestEffort: true)
     }
 
     /// Polls the puck's battery every 60 s; it never reports on its own.

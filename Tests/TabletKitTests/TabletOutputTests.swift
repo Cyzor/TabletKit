@@ -163,6 +163,26 @@ final class TabletOutputTests: XCTestCase {
         XCTAssertEqual(plainIface.writes, ["feature 20 04 0a 14 0a 00 00 00 00"], "no key displays: ignored")
     }
 
+    /// Stopping turns the key displays off and keeps the ring's slot.
+    func testIntuos4StopDarkensKeyDisplays() throws {
+        let (out, primary, queue) = try output(0x00B9)
+        out.setRingLED(index: 2)
+        out.setAuxKeyLabels(["Undo", "Redo"])
+        queue.drain()
+        let before = primary.writes.count
+        out.stop()
+        queue.drain()
+        XCTAssertEqual(Array(primary.writes.dropFirst(before)), ["feature 20 06 0a 14 00 00 00 00 00"])
+
+        let (plain, plainIface, q2) = try output(0x00B8)
+        plain.setRingLED(index: 0)
+        q2.drain()
+        let plainBefore = plainIface.writes.count
+        plain.stop()
+        q2.drain()
+        XCTAssertEqual(plainIface.writes.count, plainBefore, "no key displays: nothing sent")
+    }
+
     /// System sleep clears the key displays though their labels still match,
     /// so a restore sends the level and every label again.
     func testIntuos4KeyDisplaysRestoreAfterSleep() throws {
