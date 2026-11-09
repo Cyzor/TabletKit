@@ -41,6 +41,14 @@ Report `0x11` carries the controls on the PTH-x60:
 - Byte 3 is nonzero while the touch ring's center button is pressed.
 - Byte 4 is the ring position, 0 to 71, or `0x7F` with no finger on it.
 
+The MobileStudio Pro 13's descriptor lays out the same report differently:
+
+- Byte 1 holds the six keys from bit 1; bit 0 is unused.
+- Byte 3 bit 0 is the ring's center button. Bits 1 to 4 are the rocker around the ring: right, up, left, and down.
+- Byte 4 bits 0 to 6 are the ring position, 0 to 35. Bit 7 stays set while a finger rests on the ring.
+
+TabletKit reports the rocker after the keys in ``PadState/buttons`` and doubles the ring position to the 0 to 71 range. Without a MobileStudio Pro 16 descriptor, TabletKit assumes the same layout with eight keys.
+
 Finger touch arrives on report `0x21`. Byte 1 is the contact count, followed by five 8-byte slots: contact ID, a status byte (`0x01` down, `0x00` on lift), 16-bit X and Y, then width and height.
 
 ## Read Bluetooth Reports
