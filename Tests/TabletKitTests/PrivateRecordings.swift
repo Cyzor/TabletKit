@@ -13,6 +13,8 @@ enum PrivateRecordings {
 
     static var traces: [URL] { files("jsonl").filter { $0.lastPathComponent.hasPrefix("trace-") } }
     static var captures: [URL] { files("zip") }
+    /// Raw HID report descriptors, named `*.hid.bin`.
+    static var descriptors: [URL] { files("bin").filter { $0.lastPathComponent.hasSuffix(".hid.bin") } }
 
     private static func files(_ pathExtension: String) -> [URL] {
         guard let root else { return [] }
