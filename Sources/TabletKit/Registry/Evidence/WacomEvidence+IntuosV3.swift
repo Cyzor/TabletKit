@@ -17,6 +17,10 @@ extension WacomEvidence {
             .penPosition: .init(.sourced, [.openTabletDriver]),
             .pressure: .init(.sourced, [.openTabletDriver]),
         ],
+        0x0109: [  // Wacom CTK-4120
+            .penPosition: .init(.sourced, [.openTabletDriver]),
+            .pressure: .init(.sourced, [.openTabletDriver]),
+        ],
         0x03F0: [  // Wacom Movink 13 (DTH-135)
             .penPosition: .init(.sourced, [.openTabletDriver]),
             .pressure: .init(.sourced, [.openTabletDriver]),

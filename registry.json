@@ -1,5 +1,5 @@
 {
-  "deviceCount" : 197,
+  "deviceCount" : 198,
   "devices" : [
     {
       "activeHeightMM" : null,
@@ -2372,6 +2372,28 @@
       "outOfScope" : null,
       "parser" : "intuosV3",
       "productID" : "0x0105",
+      "productStringMatch" : null,
+      "seizeUSB" : false,
+      "touchMaxX" : 0,
+      "touchMaxY" : 0
+    },
+    {
+      "activeHeightMM" : 96,
+      "activeWidthMM" : 170,
+      "buttonCount" : 0,
+      "confidence" : "experimental",
+      "hasEraser" : true,
+      "hasFingerTouch" : false,
+      "hasTouchRing" : false,
+      "isPenDisplay" : false,
+      "maxPressure" : 8191,
+      "maxTouchContacts" : 0,
+      "maxX" : 34000,
+      "maxY" : 19200,
+      "name" : "Wacom CTK-4120",
+      "outOfScope" : null,
+      "parser" : "intuosV3",
+      "productID" : "0x0109",
       "productStringMatch" : null,
       "seizeUSB" : false,
       "touchMaxX" : 0,

@@ -1873,6 +1873,18 @@ public enum WacomDeviceRegistry: Sendable {
             format: .intuosV3, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .experimental, activeWidthMM: 216, activeHeightMM: 135),
+        .init(
+            // 2026 pen-only Intuos, launched in China and likely sold elsewhere
+            // as "Wacom Intuos Small". Ships with the Lite Pen (two side
+            // buttons); Pro Pen 3 also works. Range, pressure, and init come
+            // from OTD, which reads it like the CTC rows above. Wacom's spec
+            // sheet gives 170 x 96 mm at 5080 lpi, exactly OTD's maxima.
+            productID: 0x0109, name: "Wacom CTK-4120",  // ⚠ from OTD only
+            format: .intuosV3, maxX: 34000, maxY: 19200, maxPressure: 8191,
+            buttonCount: 0, hasTouchRing: false, hasEraser: true,
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 170, activeHeightMM: 96)
+            // Report 0x06 may be the real pen report, as on the CTC rows.
+            .withQuirks { $0.usbIdleReport = nil },
 
         // ── Cintiq pen-display additional models ──────────────────────────────
         .init(

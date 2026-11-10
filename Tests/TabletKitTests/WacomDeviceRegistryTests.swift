@@ -337,7 +337,7 @@ final class WacomDeviceRegistryTests: XCTestCase {
     /// promotes the tablet out of reduced HID-standard mode — without it the
     /// device streams only report 0x06, which has no second barrel switch.
     func testWacomOneCTCRowsCarryDataModeInit() {
-        for pid in [0x0100, 0x0101, 0x0102, 0x0104] {
+        for pid in [0x0100, 0x0101, 0x0102, 0x0104, 0x0109] {
             guard let spec = WacomDeviceRegistry.spec(for: pid) else {
                 return XCTFail("0x\(String(pid, radix: 16)) missing from registry")
             }

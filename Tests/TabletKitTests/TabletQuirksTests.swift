@@ -45,9 +45,10 @@ final class TabletQuirksTests: XCTestCase {
     }
 
     /// The One S and M send real pen data in report 0x06; only the three
-    /// USB rows the driver exempted before quirks existed are exempt.
+    /// USB rows the driver exempted before quirks existed are exempt, plus
+    /// the CTK-4120, which reads like them.
     func testWacomOneRowsHaveNoIdleReport() {
-        for pid in [0x0100, 0x0102, 0x0104] {
+        for pid in [0x0100, 0x0102, 0x0104, 0x0109] {
             XCTAssertNil(WacomDeviceRegistry.spec(for: pid)?.quirks.usbIdleReport, "0x\(String(pid, radix: 16))")
         }
         XCTAssertNotNil(WacomDeviceRegistry.spec(for: 0x0105)?.quirks.usbIdleReport)
