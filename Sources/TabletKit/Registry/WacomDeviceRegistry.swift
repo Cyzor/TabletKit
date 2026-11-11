@@ -1379,11 +1379,11 @@ public enum WacomDeviceRegistry: Sendable {
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced, activeWidthMM: 157, activeHeightMM: 98),
         .init(
-            productID: 0x002A, name: "Intuos5 M (PTK-650)",  // ⚠ from OTD
+            productID: 0x002A, name: "Intuos5 M (PTK-650)",  // ✓ confirmed by a reporter
             format: .intuosV1, maxX: 44704, maxY: 27940, maxPressure: 2047,
             buttonCount: 8, hasTouchRing: true, hasEraser: true, tiltMaxDegrees: 64.0,
             seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])],
-            confidence: .crossReferenced, activeWidthMM: 224, activeHeightMM: 140),
+            confidence: .verified, activeWidthMM: 224, activeHeightMM: 140),
 
         // ── Intuos Pro first-gen additional variant ───────────────────────────
         .init(

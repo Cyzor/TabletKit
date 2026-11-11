@@ -1391,7 +1391,7 @@
       "activeHeightMM" : 140,
       "activeWidthMM" : 224,
       "buttonCount" : 8,
-      "confidence" : "crossReferenced",
+      "confidence" : "verified",
       "hasEraser" : true,
       "hasFingerTouch" : false,
       "hasTouchRing" : true,
