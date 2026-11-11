@@ -17,6 +17,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - Finger touch on the Bamboo Pen & Touch 6×8 models (CTH-661, CTH-661SE),
   with the range read from the touch interface's descriptor; untested on
   hardware.
+- MobileStudio Pro keys, four-way rocker, ring, and touch mode, from the
+  MobileStudio Pro 13's descriptor. The rocker reports after the keys,
+  and the ring scales to 72 steps. Untested on hardware.
+- The small 2026 Intuos sold in China, pen only. Untested on hardware.
 
 ### Changed
 
@@ -37,6 +41,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - The 2017 Cintiq Pro 13 (DTH-1320) starts as the Cintiq Pro 16 does and
   takes the same touch mode write. It also gains its product name and the
   active area its coordinate range implies. Untested on hardware.
+- Stopping a session darkens Intuos4 key displays, which burn in. The
+  ring light keeps its mode.
+- The Intuos5 M (PTK-650) carries `.verified` confidence; an owner
+  confirmed it.
+- The log keeps ExpressKey Remote serials private.
 
 ### Fixed
 
