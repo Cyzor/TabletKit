@@ -215,7 +215,7 @@ package struct TabletInput {
         let name = spec.name
         guard spec.format == .expressKeyRemote else { return }
         for change in remoteLinks.observe(report) {
-            logger.info("\(name, privacy: .public): remote \(change.serial, privacy: .public) \(change.link == .online ? "online" : "unpaired", privacy: .public)")
+            logger.info("\(name, privacy: .public): remote \(change.serial, privacy: .private(mask: .hash)) \(change.link == .online ? "online" : "unpaired", privacy: .public)")
         }
     }
 
