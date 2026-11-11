@@ -34,6 +34,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - The 2017 Cintiq Pro 16 (DTH-1620) starts as the 2021 model does: pen
   scan on before data mode, and multi-touch mode for its touch sensor.
   Untested on hardware.
+- The 2017 Cintiq Pro 13 (DTH-1320) starts as the Cintiq Pro 16 does and
+  takes the same touch mode write. It also gains its product name and the
+  active area its coordinate range implies. Untested on hardware.
 
 ### Fixed
 
