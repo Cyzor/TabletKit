@@ -98,9 +98,15 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             return decodeIntuosHT3BTFrames(
                 report: report, spec: spec, state: &state)
         default:
+            // Includes 0x13, a status report the tablet sends about once a
+            // second, which nothing here needs.
             return []
         }
     }
+
+    /// Every ID the switch above handles, plus 0x13, ignored on purpose.
+    /// Keep the two in step.
+    static let reportIDs: Set<UInt8> = [0x01, 0x03, 0x10, 0x11, 0x13, 0x1E, 0x21, 0x80, 0x81]
 
     // BT-side decoders (0x80 in its many shapes) and the shared per-frame
     // helper live in `IntuosV2Decoder+BT.swift`.

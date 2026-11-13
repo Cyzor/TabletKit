@@ -134,6 +134,18 @@ extension ReportFormat {
         case .descriptor: return DescriptorPenDecoder()
         }
     }
+
+    /// Whether this format's decoder handles reports with this ID, including
+    /// ones it reads and deliberately ignores. A report that decodes to no
+    /// events is then either known with nothing to say, or unknown.
+    ///
+    /// `nil` for formats that don't list their IDs yet.
+    public func reads(reportID: UInt8) -> Bool? {
+        switch self {
+        case .intuosV2: IntuosV2Decoder.reportIDs.contains(reportID)
+        default: nil
+        }
+    }
 }
 
 // MARK: - Init step
