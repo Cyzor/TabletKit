@@ -2,7 +2,7 @@
 """audit_registry.py — diff WacomDeviceRegistry against kernel wacom_features.
 
 Reads:
-  • TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift — our table
+  • TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift — our table
   • <upstream>/input-wacom/<branch>/wacom_wac.c — kernel features (see registry_lib.UPSTREAM)
 
 For each PID present in both, compares name, maxX, maxY, maxPressure, and

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """verify_registry.py — Cross-reference WacomDeviceRegistry against canonical sources.
 
-Compares every entry in TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift
+Compares every entry in TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift
 against:
   • Linux input-wacom feature structs (kernel canonical)
   • OpenTabletDriver JSON configs (community canonical)
@@ -35,7 +35,7 @@ is just:
 Or point it elsewhere:
 
     python3 tools/verify_registry.py \\
-        --registry  TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift \\
+        --registry  TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift \\
         --kernel    /path/to/input-wacom/4.18/wacom_wac.c \\
         --otd       /path/to/OpenTabletDriver/Configurations \\
         --out       registry_audit.csv
@@ -325,7 +325,7 @@ def _diff_notes(reg, src, label):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--registry", default=str(rl.DEFAULT_REGISTRY),
-                   help="path to WacomDeviceRegistry.swift")
+                   help="path to WacomDeviceRegistry+Devices.swift")
     p.add_argument("--kernel", default=str(rl.DEFAULT_KERNEL),
                    help="path to input-wacom wacom_wac.c")
     p.add_argument("--otd", default=str(rl.DEFAULT_OTD),

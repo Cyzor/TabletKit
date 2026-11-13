@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """registry_lib.py — shared parsing for the registry maintenance scripts.
 
-Every script in tools/ that reads WacomDeviceRegistry.swift, the Linux kernel's
+Every script in tools/ that reads WacomDeviceRegistry+Devices.swift, the Linux kernel's
 wacom_wac.c, or an OpenTabletDriver configuration tree used to carry its own
 copy of the parser.  Four copies of the registry parser drifted apart, and the
 two regex-based ones silently skipped any entry with a comment line between
@@ -30,7 +30,7 @@ from typing import Optional
 ROOT = Path(__file__).resolve().parent.parent
 
 #: The registry.  Single source of truth for every script's default.
-DEFAULT_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "WacomDeviceRegistry.swift"
+DEFAULT_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "WacomDeviceRegistry+Devices.swift"
 
 #: Non-Wacom recognition-only registry.
 DEFAULT_VENDOR_REGISTRY = ROOT / "Sources" / "TabletKit" / "Registry" / "VendorDeviceRegistry.swift"
@@ -109,7 +109,7 @@ def iter_init_blocks(lines: list[str]):
 
 
 def parse_registry(path: Path | str = DEFAULT_REGISTRY) -> list[dict]:
-    """Parse WacomDeviceRegistry.swift into a list of entry dicts.
+    """Parse WacomDeviceRegistry+Devices.swift into a list of entry dicts.
 
     Returns a *list*, not a dict keyed by PID: the registry legitimately allows
     several entries to share a PID when they are disambiguated by

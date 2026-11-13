@@ -21,7 +21,7 @@ Known acceptable findings (do not "fix" without thought):
 
 Usage:
     python3 tools/audit_kernel_registry.py \
-        [path/to/wacom_wac.c] [path/to/WacomDeviceRegistry.swift]
+        [path/to/wacom_wac.c] [path/to/WacomDeviceRegistry+Devices.swift]
 
 Both default to the standard in-repo layout (see registry_lib).
 """

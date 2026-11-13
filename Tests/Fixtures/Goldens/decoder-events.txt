@@ -2,6 +2,7 @@
 # UPDATE_GOLDENS=1 swift test --filter DecoderGoldenTests, and say in the
 # commit which rows changed and why.
 0x0000 inputs=1052 pen=254 tool=24 pad=0 dial=0 touch=0 device=0 digest=2957155f65dcf170  # PenPartner
+0x0064 inputs=1063 pen=310 tool=26 pad=0 dial=0 touch=0 device=0 digest=23f860f324adb893  # PenPartner2
 0x0004 inputs=1043 pen=332 tool=34 pad=0 dial=0 touch=0 device=0 digest=bdd13c4f477d25ab  # Graphire
 0x0010 inputs=1047 pen=259 tool=28 pad=0 dial=0 touch=0 device=0 digest=f3de9f167740ada5  # Graphire
 0x0011 inputs=1046 pen=390 tool=22 pad=0 dial=0 touch=0 device=0 digest=03455280c48d8290  # Graphire 2 (4×5)
@@ -12,11 +13,16 @@
 0x0015 inputs=1040 pen=275 tool=38 pad=220 dial=0 touch=0 device=0 digest=fc7a26597c750e0e  # Graphire 4 (4×5)
 0x0016 inputs=1044 pen=265 tool=23 pad=274 dial=0 touch=0 device=0 digest=ef00ffac8802e559  # Graphire 4 (6×8)
 0x0017 inputs=1042 pen=253 tool=26 pad=369 dial=0 touch=0 device=0 digest=513b2a318b9ffec1  # Bamboo Fun small (CTE-450)
+0x0018 inputs=1055 pen=195 tool=36 pad=326 dial=0 touch=0 device=0 digest=b29eada0c4065662  # Bamboo Fun medium (CTE-650)
+0x0019 inputs=1044 pen=209 tool=32 pad=0 dial=0 touch=0 device=0 digest=8ad705ef11f62a78  # Bamboo1 Medium
 0x0060 inputs=1031 pen=233 tool=40 pad=0 dial=0 touch=0 device=0 digest=e222220501c1a6fd  # Volito
 0x0061 inputs=1045 pen=305 tool=35 pad=0 dial=0 touch=0 device=0 digest=3ed56b9206e90933  # PenStation2
 0x0062 inputs=1062 pen=385 tool=24 pad=0 dial=0 touch=0 device=0 digest=4dd897f3cd80636b  # Volito 2
+0x0063 inputs=1044 pen=283 tool=34 pad=0 dial=0 touch=0 device=0 digest=c98ed092f5a42082  # Volito 2 (2×3)
 0x0065 inputs=1044 pen=289 tool=35 pad=256 dial=0 touch=0 device=0 digest=90d0e0d11e8619c2  # Bamboo (MTE-450)
-0x003F inputs=1044 pen=173 tool=30 pad=246 dial=0 touch=0 device=0 digest=434a2225b1e7856f  # Cintiq 21UX (DTZ-2100)
+0x0069 inputs=1053 pen=303 tool=43 pad=0 dial=0 touch=0 device=0 digest=39c2cbc0323209ad  # Wacom CTF-430
+0x006A inputs=1043 pen=291 tool=24 pad=0 dial=0 touch=0 device=0 digest=030e5b6a08c883fb  # Wacom CTE-460
+0x006B inputs=1048 pen=286 tool=22 pad=0 dial=0 touch=0 device=0 digest=8a73b8057a4c5b32  # Wacom CTE-660
 0x0020 inputs=1057 pen=17 tool=13 pad=254 dial=0 touch=0 device=189 digest=1643ed6e09a5efaf  # Intuos 4×5
 0x0021 inputs=1053 pen=171 tool=78 pad=268 dial=0 touch=0 device=70 digest=e12a197f7bcc499d  # Intuos 6×8
 0x0022 inputs=1059 pen=17 tool=21 pad=227 dial=0 touch=0 device=224 digest=1b8c708bfc17b7da  # Intuos 9×12
@@ -27,6 +33,7 @@
 0x0043 inputs=1054 pen=63 tool=17 pad=196 dial=0 touch=0 device=236 digest=910979502c4eaf2c  # Intuos 2 (9×12)
 0x0044 inputs=1045 pen=8 tool=8 pad=253 dial=0 touch=0 device=134 digest=28fb5b3a241c4ce2  # Intuos 2 (12×12)
 0x0045 inputs=1053 pen=60 tool=38 pad=329 dial=0 touch=0 device=180 digest=3e8eeb417aac9992  # Intuos 2 (12×18)
+0x0047 inputs=1055 pen=5 tool=5 pad=215 dial=0 touch=0 device=205 digest=088c1f1cd12b71c0  # Intuos 2 (6×8, alt)
 0x00B0 inputs=1058 pen=100 tool=17 pad=129 dial=0 touch=0 device=219 digest=4956a7f7ccde660e  # Intuos3 4×5 (PTZ-430)
 0x00B1 inputs=1056 pen=177 tool=21 pad=213 dial=0 touch=0 device=101 digest=0de6d2d7e0d47a24  # Intuos3 6×8 (PTZ-630)
 0x00B2 inputs=1054 pen=37 tool=3 pad=143 dial=0 touch=0 device=307 digest=d20b7d5418135d05  # Intuos3 9×12 (PTZ-930)
@@ -43,64 +50,58 @@
 0x0026 inputs=1065 pen=67 tool=35 pad=276 dial=0 touch=0 device=171 digest=750526d1a94edcc0  # Intuos5 S (PTH-450)
 0x0027 inputs=1057 pen=192 tool=36 pad=189 dial=0 touch=0 device=85 digest=7ae367aa180b325c  # Intuos5 M (PTH-650)
 0x0028 inputs=1054 pen=87 tool=22 pad=226 dial=0 touch=0 device=152 digest=4e7765a33938df79  # Intuos5 L (PTH-850)
-0x0314 inputs=1050 pen=97 tool=60 pad=188 dial=0 touch=0 device=185 digest=4a2cea628f88f110  # Intuos Pro S (PTH-451)
-0x0317 inputs=1067 pen=108 tool=48 pad=166 dial=0 touch=0 device=214 digest=15551faed48c3f30  # Intuos Pro L (PTH-851)
-0x0352 inputs=1058 pen=121 tool=29 pad=208 dial=0 touch=0 device=60 digest=d8b37d8c08539a63  # Cintiq Pro 32 (DTH-3220)
-0x0357 inputs=1058 pen=326 tool=86 pad=169 dial=0 touch=0 device=51 digest=aa91e0dd5b849b17  # Intuos Pro M (PTH-660)
-0x0358 inputs=1063 pen=284 tool=62 pad=127 dial=0 touch=0 device=14 digest=26bce78d7920e832  # Intuos Pro L (PTH-860)
-0x00D0 inputs=1032 pen=150 tool=26 pad=205 dial=0 touch=205 device=0 digest=3557fdc82865e864  # Bamboo Touch (CTT-460)
-0x00D1 inputs=1047 pen=320 tool=23 pad=0 dial=0 touch=0 device=0 digest=0728d60383588e4a  # Bamboo Pen & Touch (CTH-460)
-0x00D4 inputs=1055 pen=242 tool=26 pad=0 dial=0 touch=207 device=0 digest=f69d140114694321  # Bamboo Pen (CTL-460)
-0x00D5 inputs=1045 pen=123 tool=13 pad=0 dial=0 touch=215 device=0 digest=7cf2866735a3ca88  # Bamboo Pen (CTL-660)
-0x00D6 inputs=1045 pen=239 tool=13 pad=362 dial=0 touch=362 device=0 digest=195e0426ce28b18e  # Bamboo Fun Pen & Touch (CTH-461)
-0x00D7 inputs=1041 pen=195 tool=21 pad=0 dial=0 touch=0 device=0 digest=ce46e9b22bc33b59  # Bamboo Pen & Touch (small)
-0x00DA inputs=1049 pen=334 tool=23 pad=141 dial=0 touch=141 device=0 digest=14f6634fc67e564e  # Bamboo Pen & Touch SE (CTH-461SE)
-0x00DB inputs=1047 pen=295 tool=24 pad=115 dial=0 touch=115 device=0 digest=381f7afa87011229  # Bamboo Pen & Touch SE (CTH-661SE)
-0x00D9 inputs=1034 pen=267 tool=33 pad=0 dial=0 touch=0 device=0 digest=499d3eefc2f6b45e  # Bamboo Touch (CTT-460A)
-0x00DC inputs=1033 pen=214 tool=25 pad=148 dial=0 touch=148 device=0 digest=24947857dd814e8a  # Bamboo Touch (CTT-470)
-0x00C6 inputs=1051 pen=116 tool=11 pad=321 dial=0 touch=0 device=0 digest=53f07e98eb87007c  # Cintiq 12WX
-0x00CC inputs=1045 pen=89 tool=4 pad=376 dial=0 touch=0 device=0 digest=ed22c2907671f4e4  # Cintiq 21UX2 (DTK-2100)
-0x00F4 inputs=1053 pen=97 tool=10 pad=266 dial=0 touch=0 device=0 digest=22bbd3b678163324  # Cintiq 24HD (DTK-2400)
-0x00F8 inputs=1047 pen=107 tool=21 pad=266 dial=0 touch=0 device=5 digest=85c974f6db41458e  # Cintiq 24HD Touch (DTH-2400)
-0x00FA inputs=1054 pen=138 tool=25 pad=281 dial=0 touch=0 device=0 digest=3d4e9c3139c703a3  # Cintiq 22HD (DTK-2200)
 0x0029 inputs=1065 pen=4 tool=6 pad=345 dial=0 touch=0 device=161 digest=2ec1dddf0f4dacf4  # Intuos5 S (PTK-450)
 0x002A inputs=1064 pen=60 tool=18 pad=193 dial=0 touch=0 device=185 digest=f4ec8c9922d180a2  # Intuos5 M (PTK-650)
+0x0314 inputs=1050 pen=97 tool=60 pad=188 dial=0 touch=0 device=185 digest=4a2cea628f88f110  # Intuos Pro S (PTH-451)
 0x0315 inputs=1047 pen=28 tool=12 pad=291 dial=0 touch=0 device=96 digest=cbbbb27c6ab937ce  # Intuos Pro M (PTH-651)
+0x0317 inputs=1067 pen=108 tool=48 pad=166 dial=0 touch=0 device=214 digest=15551faed48c3f30  # Intuos Pro L (PTH-851)
+0x0357 inputs=1058 pen=326 tool=86 pad=169 dial=0 touch=0 device=51 digest=aa91e0dd5b849b17  # Intuos Pro M (PTH-660)
+0x0358 inputs=1063 pen=284 tool=62 pad=127 dial=0 touch=0 device=14 digest=26bce78d7920e832  # Intuos Pro L (PTH-860)
 0x0360 inputs=1064 pen=253 tool=22 pad=250 dial=0 touch=0 device=32 digest=fa2f2718ee3f3c46  # Wacom PTH-660
 0x0361 inputs=1065 pen=106 tool=21 pad=414 dial=0 touch=0 device=91 digest=2258748b81f1371b  # Intuos Pro L (PTH-860) BT
 0x0392 inputs=1062 pen=192 tool=46 pad=219 dial=0 touch=1 device=23 digest=ceff1deadca209e3  # Intuos Pro S (PTH-460)
 0x03DC inputs=1050 pen=247 tool=36 pad=84 dial=0 touch=48 device=61 digest=5992f647d9064a23  # Intuos Pro S (PTH-460)
-0x006A inputs=1043 pen=291 tool=24 pad=0 dial=0 touch=0 device=0 digest=030e5b6a08c883fb  # Wacom CTE-460
-0x006B inputs=1048 pen=286 tool=22 pad=0 dial=0 touch=0 device=0 digest=8a73b8057a4c5b32  # Wacom CTE-660
-0x0018 inputs=1055 pen=195 tool=36 pad=326 dial=0 touch=0 device=0 digest=b29eada0c4065662  # Bamboo Fun medium (CTE-650)
-0x0069 inputs=1053 pen=303 tool=43 pad=0 dial=0 touch=0 device=0 digest=39c2cbc0323209ad  # Wacom CTF-430
-0x0319 inputs=1034 pen=248 tool=23 pad=0 dial=0 touch=0 device=0 digest=12859c69166206c5  # Wacom CTH-300
-0x0318 inputs=1056 pen=342 tool=20 pad=0 dial=0 touch=0 device=0 digest=0a486699cdfe3134  # Wacom CTH-301
+0x03F5 inputs=1054 pen=227 tool=26 pad=141 dial=272 touch=0 device=41 digest=2a8ea779f54a9a99  # Intuos Pro S gen 3 (PTK-470)
+0x03F7 inputs=1064 pen=92 tool=14 pad=177 dial=247 touch=0 device=40 digest=f7bebb18aed99fd4  # Intuos Pro M gen 3 (PTK-670)
+0x03F9 inputs=1067 pen=207 tool=17 pad=117 dial=223 touch=0 device=70 digest=b5144c63a453f68c  # Intuos Pro L gen 3 (PTK-870)
+0x00D0 inputs=1032 pen=150 tool=26 pad=205 dial=0 touch=205 device=0 digest=3557fdc82865e864  # Bamboo Touch (CTT-460)
+0x00D1 inputs=1047 pen=320 tool=23 pad=0 dial=0 touch=0 device=0 digest=0728d60383588e4a  # Bamboo Pen & Touch (CTH-460)
 0x00D2 inputs=1033 pen=96 tool=10 pad=332 dial=0 touch=332 device=0 digest=961aa7fd3c95cc9b  # Wacom CTH-461
-0x00DE inputs=1034 pen=119 tool=24 pad=245 dial=0 touch=245 device=0 digest=b3571fdfaf0e563e  # Wacom CTH-470
-0x0302 inputs=1031 pen=232 tool=22 pad=0 dial=0 touch=0 device=0 digest=0e8f4449d510042e  # Wacom CTH-480
-0x033C inputs=1045 pen=55 tool=9 pad=238 dial=0 touch=0 device=217 digest=76e71fc046e94594  # Wacom CTH-490
 0x00D3 inputs=1045 pen=255 tool=19 pad=0 dial=0 touch=0 device=0 digest=f969b7a25bec7227  # Wacom CTH-661
+0x00D4 inputs=1055 pen=242 tool=26 pad=0 dial=0 touch=207 device=0 digest=f69d140114694321  # Bamboo Pen (CTL-460)
+0x00D5 inputs=1045 pen=123 tool=13 pad=0 dial=0 touch=215 device=0 digest=7cf2866735a3ca88  # Bamboo Pen (CTL-660)
+0x00D6 inputs=1045 pen=239 tool=13 pad=362 dial=0 touch=362 device=0 digest=195e0426ce28b18e  # Bamboo Fun Pen & Touch (CTH-461)
+0x00D7 inputs=1041 pen=195 tool=21 pad=0 dial=0 touch=0 device=0 digest=ce46e9b22bc33b59  # Bamboo Pen & Touch (small)
 0x00D8 inputs=1045 pen=306 tool=20 pad=0 dial=0 touch=0 device=0 digest=55b77b58ed9065e0  # Wacom CTH-661
-0x00DF inputs=1044 pen=130 tool=20 pad=258 dial=0 touch=258 device=0 digest=613f88f2f475c761  # Wacom CTH-670
-0x0303 inputs=1040 pen=226 tool=20 pad=70 dial=0 touch=70 device=0 digest=b948c86b2b57ea32  # Wacom CTH-680
-0x033E inputs=1059 pen=7 tool=7 pad=378 dial=0 touch=0 device=149 digest=f6e91cfdaf1ae2d1  # Wacom CTH-690
+0x00D9 inputs=1034 pen=267 tool=33 pad=0 dial=0 touch=0 device=0 digest=499d3eefc2f6b45e  # Bamboo Touch (CTT-460A)
+0x00DA inputs=1049 pen=334 tool=23 pad=141 dial=0 touch=141 device=0 digest=14f6634fc67e564e  # Bamboo Pen & Touch SE (CTH-461SE)
+0x00DB inputs=1047 pen=295 tool=24 pad=115 dial=0 touch=115 device=0 digest=381f7afa87011229  # Bamboo Pen & Touch SE (CTH-661SE)
+0x00DC inputs=1033 pen=214 tool=25 pad=148 dial=0 touch=148 device=0 digest=24947857dd814e8a  # Bamboo Touch (CTT-470)
 0x00DD inputs=1033 pen=311 tool=13 pad=0 dial=0 touch=0 device=0 digest=22763a804a234962  # Wacom CTL-470
+0x00DE inputs=1034 pen=119 tool=24 pad=245 dial=0 touch=245 device=0 digest=b3571fdfaf0e563e  # Wacom CTH-470
+0x00DF inputs=1044 pen=130 tool=20 pad=258 dial=0 touch=258 device=0 digest=613f88f2f475c761  # Wacom CTH-670
 0x0300 inputs=1042 pen=257 tool=25 pad=0 dial=0 touch=129 device=0 digest=7479dda66d1b9bca  # Wacom CTL-471
-0x037A inputs=1041 pen=238 tool=12 pad=0 dial=0 touch=243 device=0 digest=31dabf7c155807a4  # Wacom CTL-472
-0x030E inputs=1037 pen=200 tool=22 pad=126 dial=0 touch=126 device=0 digest=60f0eaf8ab864645  # Wacom CTL-480
-0x033B inputs=1053 pen=201 tool=49 pad=152 dial=0 touch=0 device=105 digest=31f4243ab42e4661  # Wacom CTL-490
 0x0301 inputs=1048 pen=276 tool=8 pad=0 dial=0 touch=213 device=0 digest=929b3c639666880a  # Bamboo One M (CTL-671)
-0x037B inputs=1038 pen=213 tool=31 pad=0 dial=0 touch=71 device=0 digest=5175704cbf9c6444  # Wacom CTL-672
+0x0302 inputs=1031 pen=232 tool=22 pad=0 dial=0 touch=0 device=0 digest=0e8f4449d510042e  # Wacom CTH-480
+0x0303 inputs=1040 pen=226 tool=20 pad=70 dial=0 touch=70 device=0 digest=b948c86b2b57ea32  # Wacom CTH-680
+0x030E inputs=1037 pen=200 tool=22 pad=126 dial=0 touch=126 device=0 digest=60f0eaf8ab864645  # Wacom CTL-480
+0x0318 inputs=1056 pen=342 tool=20 pad=0 dial=0 touch=0 device=0 digest=0a486699cdfe3134  # Wacom CTH-301
+0x0319 inputs=1034 pen=248 tool=23 pad=0 dial=0 touch=0 device=0 digest=12859c69166206c5  # Wacom CTH-300
 0x0323 inputs=1042 pen=182 tool=18 pad=290 dial=0 touch=290 device=0 digest=0e4eed291421990f  # Wacom CTL-680
+0x037A inputs=1041 pen=238 tool=12 pad=0 dial=0 touch=243 device=0 digest=31dabf7c155807a4  # Wacom CTL-472
+0x037B inputs=1038 pen=213 tool=31 pad=0 dial=0 touch=71 device=0 digest=5175704cbf9c6444  # Wacom CTL-672
+0x033B inputs=1053 pen=201 tool=49 pad=152 dial=0 touch=0 device=105 digest=31f4243ab42e4661  # Wacom CTL-490
+0x033C inputs=1045 pen=55 tool=9 pad=238 dial=0 touch=0 device=217 digest=76e71fc046e94594  # Wacom CTH-490
 0x033D inputs=1054 pen=33 tool=4 pad=197 dial=0 touch=0 device=327 digest=91c0c5531cec41fb  # Wacom CTL-690
+0x033E inputs=1059 pen=7 tool=7 pad=378 dial=0 touch=0 device=149 digest=f6e91cfdaf1ae2d1  # Wacom CTH-690
 0x0374 inputs=1058 pen=162 tool=52 pad=214 dial=0 touch=0 device=38 digest=1fac4650e8beca97  # Wacom CTL-4100
+0x0375 inputs=1057 pen=535 tool=12 pad=419 dial=0 touch=0 device=213 digest=aa43df91f6583dd9  # Wacom CTL-6100
 0x0376 inputs=1056 pen=197 tool=66 pad=233 dial=0 touch=0 device=69 digest=a56acf64798d4f39  # Wacom CTL-4100WL
 0x0377 inputs=1063 pen=44 tool=7 pad=316 dial=0 touch=0 device=64 digest=83b9d3c5ffa6660f  # Wacom CTL-4100WL
+0x0378 inputs=1062 pen=431 tool=42 pad=270 dial=0 touch=0 device=120 digest=b9cbf01d384378e1  # Wacom CTL-6100WL
+0x0379 inputs=1053 pen=178 tool=33 pad=263 dial=0 touch=0 device=52 digest=b5eaa2a8c175d5e5  # Wacom Intuos BT M (CTL-6100WL)
 0x03C5 inputs=1065 pen=110 tool=26 pad=380 dial=0 touch=0 device=67 digest=afd0a6f14f96450c  # Wacom CTL-4100WL
 0x03C6 inputs=1054 pen=166 tool=57 pad=293 dial=0 touch=0 device=49 digest=4495ee7833092d1a  # Wacom CTL-4100WL
-0x0375 inputs=1057 pen=535 tool=12 pad=419 dial=0 touch=0 device=213 digest=aa43df91f6583dd9  # Wacom CTL-6100
-0x0378 inputs=1062 pen=431 tool=42 pad=270 dial=0 touch=0 device=120 digest=b9cbf01d384378e1  # Wacom CTL-6100WL
 0x03C7 inputs=1081 pen=199 tool=34 pad=338 dial=0 touch=0 device=11 digest=0328d556dd92e6e7  # Wacom CTL-6100WL
 0x03C8 inputs=1058 pen=179 tool=16 pad=329 dial=0 touch=0 device=10 digest=15a195f09a416e78  # Wacom CTL-6100WL
 0x0100 inputs=1055 pen=113 tool=21 pad=264 dial=379 touch=0 device=38 digest=b6ba936ac9895a4b  # Wacom One S (CTC-4110WL)
@@ -110,8 +111,24 @@
 0x0103 inputs=1068 pen=114 tool=22 pad=53 dial=103 touch=0 device=72 digest=f73865fe28eeec6b  # Wacom One M (CTC-6110WL, Bluetooth)
 0x0105 inputs=1051 pen=240 tool=66 pad=108 dial=73 touch=0 device=73 digest=70e47ef34644a91b  # Wacom One M (CTC-6110WL, Android)
 0x0109 inputs=1049 pen=78 tool=22 pad=321 dial=527 touch=0 device=37 digest=bc5176ead8dcd2c8  # Wacom CTK-4120
-0x0304 inputs=1059 pen=72 tool=7 pad=268 dial=0 touch=0 device=124 digest=3ed5864fb6728032  # Wacom Cintiq 13HD (DTK-1300)
+0x003F inputs=1044 pen=173 tool=30 pad=246 dial=0 touch=0 device=0 digest=434a2225b1e7856f  # Cintiq 21UX (DTZ-2100)
+0x00C5 inputs=1045 pen=193 tool=18 pad=255 dial=0 touch=0 device=0 digest=5138a678efb7a53d  # Cintiq 20WSX (DTZ-2000W)
+0x00C6 inputs=1051 pen=116 tool=11 pad=321 dial=0 touch=0 device=0 digest=53f07e98eb87007c  # Cintiq 12WX
+0x00CC inputs=1045 pen=89 tool=4 pad=376 dial=0 touch=0 device=0 digest=ed22c2907671f4e4  # Cintiq 21UX2 (DTK-2100)
+0x00F4 inputs=1053 pen=97 tool=10 pad=266 dial=0 touch=0 device=0 digest=22bbd3b678163324  # Cintiq 24HD (DTK-2400)
+0x00F8 inputs=1047 pen=107 tool=21 pad=266 dial=0 touch=0 device=5 digest=85c974f6db41458e  # Cintiq 24HD Touch (DTH-2400)
+0x00FA inputs=1054 pen=138 tool=25 pad=281 dial=0 touch=0 device=0 digest=3d4e9c3139c703a3  # Cintiq 22HD (DTK-2200)
 0x00F9 inputs=1059 pen=129 tool=13 pad=373 dial=0 touch=0 device=0 digest=4f8d73e5e2f9b73b  # Cintiq 22HD secondary interface (pairs 0x00FA)
+0x005B inputs=1049 pen=184 tool=23 pad=195 dial=0 touch=0 device=6 digest=699ab201eb8730a3  # Wacom Cintiq 22HD Touch (DTH-2200)
+0x0057 inputs=1064 pen=62 tool=8 pad=367 dial=0 touch=0 device=0 digest=8313982b29672047  # Cintiq 22 (DTK-2241)
+0x0059 inputs=1058 pen=82 tool=12 pad=304 dial=0 touch=0 device=0 digest=95e4eaf7cfe6b583  # Cintiq 22 Touch (DTH-2242)
+0x0304 inputs=1059 pen=72 tool=7 pad=268 dial=0 touch=0 device=124 digest=3ed5864fb6728032  # Wacom Cintiq 13HD (DTK-1300)
+0x0333 inputs=1063 pen=46 tool=19 pad=367 dial=0 touch=0 device=15 digest=5b6d1247f80d2e4c  # Cintiq 13HD Touch (DTH-1300)
+0x032A inputs=1059 pen=40 tool=9 pad=301 dial=0 touch=0 device=0 digest=48bc0f8889afee6f  # Cintiq 27QHD (DTK-2700)
+0x032B inputs=1055 pen=93 tool=15 pad=316 dial=0 touch=0 device=2 digest=374b20801b3da17b  # Cintiq 27QHD Touch (DTH-2700)
+0x0325 inputs=1050 pen=187 tool=19 pad=206 dial=0 touch=0 device=0 digest=293f463db9815db2  # Wacom Cintiq Companion 2 (DTH-W1310)
+0x0326 inputs=1062 pen=120 tool=4 pad=328 dial=0 touch=0 device=0 digest=2ec4a0447907c19c  # Cintiq Companion 2 touch sensor (pairs 0x0325)
+0x0352 inputs=1058 pen=121 tool=29 pad=208 dial=0 touch=0 device=60 digest=d8b37d8c08539a63  # Cintiq Pro 32 (DTH-3220)
 0x034F inputs=1062 pen=235 tool=47 pad=276 dial=0 touch=0 device=108 digest=03bb5c1cba3166b2  # Wacom Cintiq Pro 13 (DTH-1320)
 0x0390 inputs=1065 pen=136 tool=31 pad=242 dial=0 touch=0 device=22 digest=9a7977a2ded9808a  # Wacom Cintiq 16 (DTK-1660)
 0x03AE inputs=1057 pen=104 tool=33 pad=250 dial=0 touch=0 device=97 digest=71e76d31d8a40cbf  # Wacom Cintiq 16 (DTK-1660)
@@ -131,36 +148,17 @@
 0x03FF inputs=1054 pen=280 tool=33 pad=190 dial=0 touch=0 device=89 digest=512bd113c0772bac  # DTH-246E
 0x0359 inputs=1067 pen=168 tool=53 pad=195 dial=0 touch=0 device=57 digest=a2b6cd32093acad8  # DTU-1141B
 0x03BD inputs=1052 pen=202 tool=48 pad=313 dial=0 touch=0 device=126 digest=b72c49cb752f634e  # Wacom One (DTC-133)
-0x0084 inputs=1055 pen=2 tool=5 pad=294 dial=0 touch=0 device=136 digest=1135b77bf3803445  # ACK-40401 Wireless Dongle
-0x009D inputs=1063 pen=67 tool=4 pad=177 dial=0 touch=0 device=264 digest=367afcec4ffb0e31  # Wireless Receiver (Intuos4/5 WL)
-0x009A inputs=1066 pen=91 tool=57 pad=156 dial=0 touch=0 device=195 digest=fa5513c7cd084545  # Wacom ISDv4 9A (built-in digitizer)
 0x03CE inputs=1061 pen=121 tool=19 pad=346 dial=0 touch=0 device=86 digest=a5becc5cf4154ed8  # Wacom One Pen Display 12 (DTC-121)
-0x005B inputs=1049 pen=184 tool=23 pad=195 dial=0 touch=0 device=6 digest=699ab201eb8730a3  # Wacom Cintiq 22HD Touch (DTH-2200)
 0x03D0 inputs=1058 pen=147 tool=30 pad=220 dial=0 touch=0 device=86 digest=2aad410a19ee3ee5  # Wacom Cintiq Pro 22 (DTH-227)
-0x03F5 inputs=1054 pen=227 tool=26 pad=141 dial=272 touch=0 device=41 digest=2a8ea779f54a9a99  # Intuos Pro S gen 3 (PTK-470)
-0x03F7 inputs=1064 pen=92 tool=14 pad=177 dial=247 touch=0 device=40 digest=f7bebb18aed99fd4  # Intuos Pro M gen 3 (PTK-670)
-0x03F9 inputs=1067 pen=207 tool=17 pad=117 dial=223 touch=0 device=70 digest=b5144c63a453f68c  # Intuos Pro L gen 3 (PTK-870)
 0x03E6 inputs=1069 pen=275 tool=22 pad=303 dial=0 touch=0 device=97 digest=9bf7d40d60ab03fb  # Wacom Cintiq 16 gen 3 (DTK-168)
 0x040F inputs=1061 pen=413 tool=17 pad=341 dial=0 touch=0 device=188 digest=82c5042d2084aa19  # Wacom One 14 (DTC-141)
 0x03E7 inputs=1062 pen=90 tool=21 pad=289 dial=0 touch=0 device=63 digest=8d75a5a21c23f98f  # Wacom Cintiq 24 (DTK246)
 0x03FD inputs=1071 pen=339 tool=114 pad=231 dial=0 touch=0 device=58 digest=801224a171188ce4  # Wacom Cintiq 24 Touch (DTH246)
 0x0423 inputs=1071 pen=159 tool=37 pad=310 dial=0 touch=1 device=41 digest=3eb7f57ac1aa6abf  # Wacom One 14 Touch (DTH142)
 0x0428 inputs=1065 pen=240 tool=13 pad=246 dial=0 touch=74 device=78 digest=12fef3f999444f2f  # Wacom One 14 Touch (DTH142)
-0x0343 inputs=1050 pen=241 tool=0 pad=160 dial=0 touch=0 device=0 digest=0126347fc44f12fd  # Wacom DTK1651
-0x00FB inputs=1050 pen=141 tool=0 pad=213 dial=0 touch=0 device=0 digest=16126992aa293d6a  # Wacom DTU-1031
-0x032F inputs=1056 pen=216 tool=0 pad=194 dial=0 touch=0 device=0 digest=00200b8df5cf88e9  # Wacom DTU-1031X
-0x0336 inputs=1048 pen=270 tool=0 pad=206 dial=0 touch=0 device=0 digest=34d3af14146ef052  # Wacom DTU-1141
-0x00CE inputs=1063 pen=618 tool=0 pad=0 dial=0 touch=0 device=0 digest=025adffc600707e3  # Wacom DTU-2231
-0x00F0 inputs=1069 pen=665 tool=0 pad=0 dial=0 touch=0 device=0 digest=bb2419de0889d181  # Wacom DTU-1631
-0x0003 inputs=1054 pen=631 tool=0 pad=0 dial=0 touch=0 device=0 digest=846d882709afd115  # Cintiq Partner (PTU-600)
-0x003A inputs=1065 pen=674 tool=0 pad=0 dial=0 touch=0 device=0 digest=3e7cdcdfd75a3103  # DTI-520
-0x0325 inputs=1050 pen=187 tool=19 pad=206 dial=0 touch=0 device=0 digest=293f463db9815db2  # Wacom Cintiq Companion 2 (DTH-W1310)
-0x0326 inputs=1062 pen=120 tool=4 pad=328 dial=0 touch=0 device=0 digest=2ec4a0447907c19c  # Cintiq Companion 2 touch sensor (pairs 0x0325)
 0x034D inputs=1053 pen=208 tool=14 pad=86 dial=0 touch=42 device=20 digest=1661ceddba02095a  # Wacom MobileStudio Pro 13 (DTH-W1320)
 0x034E inputs=1061 pen=276 tool=14 pad=391 dial=0 touch=0 device=87 digest=31b7d7d806fd7c3c  # Wacom MobileStudio Pro 16 (DTH-W1620)
 0x0350 inputs=1059 pen=88 tool=21 pad=354 dial=0 touch=0 device=43 digest=86082fabc08fc46e  # Wacom Cintiq Pro 16 (DTH-1620)
-0x0354 inputs=1045 pen=383 tool=34 pad=215 dial=0 touch=0 device=71 digest=64007d19d7c15fb3  # Cintiq Pro 16 Touch sensor (pairs 0x0350)
-0x0379 inputs=1053 pen=178 tool=33 pad=263 dial=0 touch=0 device=52 digest=b5eaa2a8c175d5e5  # Wacom Intuos BT M (CTL-6100WL)
 0x0398 inputs=1054 pen=359 tool=45 pad=249 dial=0 touch=1 device=73 digest=44095c5b8501924d  # Wacom MobileStudio Pro 13 (DTH-W1321)
 0x0399 inputs=1066 pen=162 tool=27 pad=319 dial=0 touch=0 device=157 digest=353d212beee61c08  # Wacom MobileStudio Pro 16 (DTH-W1621)
 0x03AA inputs=1060 pen=216 tool=37 pad=254 dial=0 touch=0 device=160 digest=291f308fa338dd4f  # Wacom MobileStudio Pro 16 (DTH-W1620, alt)
@@ -168,16 +166,13 @@
 0x03CB inputs=1066 pen=135 tool=50 pad=257 dial=0 touch=0 device=66 digest=5c15ff05f09d2736  # Wacom One Pen Display 13 (DTH134)
 0x03EC inputs=1065 pen=206 tool=12 pad=246 dial=0 touch=0 device=84 digest=f6ab4ef7639cbe7a  # Wacom DTH134
 0x03ED inputs=1060 pen=272 tool=33 pad=203 dial=0 touch=0 device=7 digest=ae03ad176fc4c7e7  # Wacom DTC121
-0x0019 inputs=1044 pen=209 tool=32 pad=0 dial=0 touch=0 device=0 digest=8ad705ef11f62a78  # Bamboo1 Medium
-0x0047 inputs=1055 pen=5 tool=5 pad=215 dial=0 touch=0 device=205 digest=088c1f1cd12b71c0  # Intuos 2 (6×8, alt)
-0x0063 inputs=1044 pen=283 tool=34 pad=0 dial=0 touch=0 device=0 digest=c98ed092f5a42082  # Volito 2 (2×3)
-0x0064 inputs=1063 pen=310 tool=26 pad=0 dial=0 touch=0 device=0 digest=23f860f324adb893  # PenPartner2
-0x0057 inputs=1064 pen=62 tool=8 pad=367 dial=0 touch=0 device=0 digest=8313982b29672047  # Cintiq 22 (DTK-2241)
-0x0059 inputs=1058 pen=82 tool=12 pad=304 dial=0 touch=0 device=0 digest=95e4eaf7cfe6b583  # Cintiq 22 Touch (DTH-2242)
-0x00C5 inputs=1045 pen=193 tool=18 pad=255 dial=0 touch=0 device=0 digest=5138a678efb7a53d  # Cintiq 20WSX (DTZ-2000W)
-0x032A inputs=1059 pen=40 tool=9 pad=301 dial=0 touch=0 device=0 digest=48bc0f8889afee6f  # Cintiq 27QHD (DTK-2700)
-0x032B inputs=1055 pen=93 tool=15 pad=316 dial=0 touch=0 device=2 digest=374b20801b3da17b  # Cintiq 27QHD Touch (DTH-2700)
-0x0333 inputs=1063 pen=46 tool=19 pad=367 dial=0 touch=0 device=15 digest=5b6d1247f80d2e4c  # Cintiq 13HD Touch (DTH-1300)
+0x00F6 inputs=1063 pen=64 tool=16 pad=373 dial=0 touch=0 device=0 digest=1728439b838852f2  # Cintiq 24HD Touch sensor (pairs 0x00F8)
+0x005E inputs=1070 pen=97 tool=26 pad=311 dial=0 touch=0 device=13 digest=86c00aa4fee48c7e  # Cintiq 22HD Touch sensor (pairs 0x005B)
+0x032C inputs=1047 pen=101 tool=16 pad=383 dial=0 touch=0 device=0 digest=31462fc6a8301196  # Cintiq 27QHD Touch sensor (pairs 0x032B)
+0x03B3 inputs=1051 pen=141 tool=14 pad=293 dial=0 touch=0 device=9 digest=525899e5748f9421  # Cintiq Pro 16 Touch sensor (pairs 0x03B2)
+0x005D inputs=1070 pen=47 tool=9 pad=394 dial=0 touch=0 device=0 digest=bcea609827f44348  # Cintiq 22 Touch sensor (pairs 0x0059)
+0x0335 inputs=1061 pen=225 tool=32 pad=161 dial=0 touch=0 device=0 digest=88dee377911bd712  # Cintiq 13HD Touch sensor (pairs 0x0333)
+0x0354 inputs=1045 pen=383 tool=34 pad=215 dial=0 touch=0 device=71 digest=64007d19d7c15fb3  # Cintiq Pro 16 Touch sensor (pairs 0x0350)
 0x0030 inputs=1053 pen=252 tool=42 pad=0 dial=0 touch=0 device=0 digest=faf1d66b783acc1a  # PL400
 0x0031 inputs=1047 pen=299 tool=32 pad=0 dial=0 touch=0 device=0 digest=9b4210bdddf4dfce  # PL500
 0x0032 inputs=1053 pen=387 tool=24 pad=0 dial=0 touch=0 device=0 digest=81c3a0e26d191839  # PL600
@@ -191,12 +186,17 @@
 0x00C2 inputs=1047 pen=250 tool=28 pad=0 dial=0 touch=0 device=0 digest=ceef478c1c2161e3  # DTF-720a
 0x00C4 inputs=1038 pen=234 tool=30 pad=0 dial=0 touch=0 device=0 digest=5902290044365fe5  # DTF-521
 0x00C7 inputs=1043 pen=305 tool=41 pad=0 dial=0 touch=0 device=0 digest=ad520ffd2d7f9496  # DTU-1931
-0x00F6 inputs=1063 pen=64 tool=16 pad=373 dial=0 touch=0 device=0 digest=1728439b838852f2  # Cintiq 24HD Touch sensor (pairs 0x00F8)
-0x005E inputs=1070 pen=97 tool=26 pad=311 dial=0 touch=0 device=13 digest=86c00aa4fee48c7e  # Cintiq 22HD Touch sensor (pairs 0x005B)
-0x032C inputs=1047 pen=101 tool=16 pad=383 dial=0 touch=0 device=0 digest=31462fc6a8301196  # Cintiq 27QHD Touch sensor (pairs 0x032B)
-0x03B3 inputs=1051 pen=141 tool=14 pad=293 dial=0 touch=0 device=9 digest=525899e5748f9421  # Cintiq Pro 16 Touch sensor (pairs 0x03B2)
-0x005D inputs=1070 pen=47 tool=9 pad=394 dial=0 touch=0 device=0 digest=bcea609827f44348  # Cintiq 22 Touch sensor (pairs 0x0059)
-0x0335 inputs=1061 pen=225 tool=32 pad=161 dial=0 touch=0 device=0 digest=88dee377911bd712  # Cintiq 13HD Touch sensor (pairs 0x0333)
+0x0343 inputs=1050 pen=241 tool=0 pad=160 dial=0 touch=0 device=0 digest=0126347fc44f12fd  # Wacom DTK1651
+0x00FB inputs=1050 pen=141 tool=0 pad=213 dial=0 touch=0 device=0 digest=16126992aa293d6a  # Wacom DTU-1031
+0x032F inputs=1056 pen=216 tool=0 pad=194 dial=0 touch=0 device=0 digest=00200b8df5cf88e9  # Wacom DTU-1031X
+0x0336 inputs=1048 pen=270 tool=0 pad=206 dial=0 touch=0 device=0 digest=34d3af14146ef052  # Wacom DTU-1141
+0x00CE inputs=1063 pen=618 tool=0 pad=0 dial=0 touch=0 device=0 digest=025adffc600707e3  # Wacom DTU-2231
+0x00F0 inputs=1069 pen=665 tool=0 pad=0 dial=0 touch=0 device=0 digest=bb2419de0889d181  # Wacom DTU-1631
+0x0003 inputs=1054 pen=631 tool=0 pad=0 dial=0 touch=0 device=0 digest=846d882709afd115  # Cintiq Partner (PTU-600)
+0x003A inputs=1065 pen=674 tool=0 pad=0 dial=0 touch=0 device=0 digest=3e7cdcdfd75a3103  # DTI-520
+0x0084 inputs=1055 pen=2 tool=5 pad=294 dial=0 touch=0 device=136 digest=1135b77bf3803445  # ACK-40401 Wireless Dongle
+0x009D inputs=1063 pen=67 tool=4 pad=177 dial=0 touch=0 device=264 digest=367afcec4ffb0e31  # Wireless Receiver (Intuos4/5 WL)
+0x009A inputs=1066 pen=91 tool=57 pad=156 dial=0 touch=0 device=195 digest=fa5513c7cd084545  # Wacom ISDv4 9A (built-in digitizer)
 0x0331 inputs=1050 pen=0 tool=0 pad=109 dial=0 touch=0 device=351 digest=44660c514a70d8ee  # ExpressKey Remote (EKR-100)
 0x0094 inputs=1061 pen=29 tool=2 pad=353 dial=0 touch=0 device=99 digest=025331a2a9ed27ad  # Wacom Bootloader (DFU mode)
 xencelabs-0x520D inputs=1036 pen=219 tool=16 pad=83 dial=43 touch=0 device=0 digest=9a17ce763a596372  # Xencelabs Pen Display

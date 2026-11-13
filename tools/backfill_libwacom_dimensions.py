@@ -3,7 +3,7 @@
 
 Reads every Wacom-branded `.tablet` file from a local libwacom checkout, builds
 a {PID → (widthMM, heightMM, modelName)} map, then walks
-Sources/TabletKit/Registry/WacomDeviceRegistry.swift and inserts `activeWidthMM` /
+Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift and inserts `activeWidthMM` /
 `activeHeightMM` arguments into entries that don't already have them.
 
 libwacom Width/Height are **manufacturer-advertised drawing-area dimensions
@@ -160,7 +160,7 @@ def main() -> int:
     ap.add_argument("--libwacom-data", required=True, type=Path,
                     help="Path to libwacom data/ directory")
     ap.add_argument("--registry", type=Path, default=rl.DEFAULT_REGISTRY,
-                    help="Path to WacomDeviceRegistry.swift (default: this checkout's)")
+                    help="Path to WacomDeviceRegistry+Devices.swift (default: this checkout's)")
     ap.add_argument("--dry-run", action="store_true",
                     help="Print proposed changes without writing the file")
     args = ap.parse_args()

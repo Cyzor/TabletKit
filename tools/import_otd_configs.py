@@ -17,7 +17,7 @@ Usage:
 Options:
     --all     Include PIDs already present in WacomDeviceRegistry (default: skip them)
 
-Output goes to stdout.  Redirect to a file and paste into WacomDeviceRegistry.swift.
+Output goes to stdout.  Redirect to a file and paste into WacomDeviceRegistry+Devices.swift.
 """
 
 import argparse

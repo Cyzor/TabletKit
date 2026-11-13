@@ -4,7 +4,7 @@
 Walks the `linuxwacom/wacom-hid-descriptors` GitHub repository, extracts the
 USB VID/PID for each Wacom-branded device from its sysinfo dump filenames
 (which encode the IDs as `BUS:VID:PID.NNNN.hid.txt`), and cross-references
-against TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry.swift.
+against TabletKit/Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift.
 
 Produces a Markdown audit table: promotable entries,
 missing entries, and naming discrepancies.  Run via `gh` (no auth needed

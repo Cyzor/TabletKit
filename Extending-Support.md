@@ -94,7 +94,7 @@ python3 tools/triage_discovery.py summary.json
 
 Two places decide how a tablet behaves:
 
-- **`Sources/TabletKit/Registry/WacomDeviceRegistry.swift`** has one entry per Wacom model. An entry ties a product ID to its ranges, buttons, touch support, and decoder. Other brands live in `VendorDeviceRegistry.swift`.
+- **`Sources/TabletKit/Registry/WacomDeviceRegistry+Devices.swift`** has one entry per Wacom model, grouped by product family. An entry ties a product ID to its ranges, buttons, touch support, and decoder. Other brands live in `VendorDeviceRegistry.swift`.
 - **`Sources/TabletKit/Decoders/`** holds the code that reads reports. Each file covers one report format, like `IntuosV1Decoder.swift`. Most tablets share a decoder with several others.
 
 Search the registry for a model close to yours, ideally from the family you found in Step 1. An entry looks like this:

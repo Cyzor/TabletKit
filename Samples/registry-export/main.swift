@@ -2,7 +2,7 @@
 //
 // registry-export — writes registry.json from the Wacom registry
 //
-// Run after editing WacomDeviceRegistry.swift and commit the result. The
+// Run after editing WacomDeviceRegistry+Devices.swift and commit the result. The
 // registry tests fail while the committed file is out of date.
 //
 // Usage:

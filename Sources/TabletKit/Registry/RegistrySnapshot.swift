@@ -10,8 +10,8 @@ import Foundation
 package struct RegistrySnapshot: Codable, Equatable, Sendable {
     package var schemaVersion = 2
     package var vendorID = "0x056A"
-    package var note = "Generated from WacomDeviceRegistry.swift by `swift run registry-export`. "
-        + "Don't edit by hand. Field meanings match the doc comments on TabletSpec in that file."
+    package var note = "Generated from WacomDeviceRegistry+Devices.swift by `swift run registry-export`. "
+        + "Don't edit by hand. Field meanings match the doc comments in TabletSpec.swift."
     package var deviceCount: Int
     package var devices: [Device]
 
