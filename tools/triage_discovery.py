@@ -706,8 +706,12 @@ def secondary_interfaces_section(doc: dict, kind: str) -> list[str]:
         label = (f"usage page `{iface.get('usagePage', '?')}` "
                  f"usage `{iface.get('usage', '?')}`")
         count = iface.get("sampleCount", 0)
+        # From captureVersion 33 the primary's reports sit only at the top level.
+        reports = iface.get("reports")
+        if reports is None and iface.get("isPrimary"):
+            reports = doc.get("reports")
         lines.append(f"- {label} ({role}) — {count} events, "
-                     f"{len(iface.get('reports') or {})} report IDs")
+                     f"{len(reports or {})} report IDs")
     lines.append("")
 
     for iface in interfaces:

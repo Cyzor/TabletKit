@@ -98,6 +98,10 @@ for d in captures():
     # Whole-desk diagnostics list other devices too; keep this one's own.
     own = {pid, PAIRED.get(pid)} - {None}
     ifs = [i for i in d.get("interfaces") or [] if i.get("productID") in own]
+    # From captureVersion 33 the primary's descriptor sits only at the top level.
+    ifs = [dict(i, hidReportDescriptor=d.get("hidReportDescriptor"))
+           if i.get("isPrimary") and not i.get("hidReportDescriptor") else i
+           for i in ifs]
     if not ifs and d.get("hidReportDescriptor"):
         ifs = [{"hidReportDescriptor": d["hidReportDescriptor"], "productID": pid}]
     for i in ifs:
