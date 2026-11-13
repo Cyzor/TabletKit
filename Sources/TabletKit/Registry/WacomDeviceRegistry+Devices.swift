@@ -2184,9 +2184,10 @@ extension WacomDeviceRegistry {
         // 0x0316 is deliberately not a row. No kernel entry or recording
         // knows it; the PTH-651 enumerates as 0x0315.
 
-        // Cintiq Companion and Companion 2 (0x030A, 0x0325) are Windows
-        // tablet-PCs (libwacom IntegratedIn=Display;System). The Hybrid (0x0307,
-        // touch 0x0309) also works as a Cintiq over its 3-in-1 cable, with the
+        // The Cintiq Companion (0x030A) is a Windows tablet-PC (libwacom
+        // IntegratedIn=Display;System). The Companion 2 is one too, but its
+        // descriptor dump gave it a row (0x0325). The Hybrid (0x0307, touch
+        // 0x0309) also works as a Cintiq over its 3-in-1 cable, with the
         // 13HD's pen ranges, but the kernel decodes its keys apart from the
         // 13HD's, and nobody has tested one.
 
@@ -2204,11 +2205,10 @@ extension WacomDeviceRegistry {
         // BUS_USB). Out of scope like the ISDV4 entries. Do not re-add from a
         // PID-only sweep.
 
-        // Serial-port Bluetooth tablets: CTE-630BT (Graphire4 Bluetooth, PID
-        // 0x0081) and XD-0608-BT (Intuos2 Bluetooth, PID 0x0CA) use RFCOMM/SPP
-        // (serial port over Bluetooth) instead of the HID Profile. They do not
-        // enumerate as IOHIDDevices; instead they appear as /dev/cu.* serial
-        // ports. These require a completely different driver architecture
-        // (serial I/O, not IOHIDManager). Not implemented.
+        // The XD-0608-BT (Intuos2 Bluetooth, PID 0x0CA) uses RFCOMM/SPP
+        // (serial port over Bluetooth) instead of the HID profile. It doesn't
+        // enumerate as an IOHIDDevice but as a /dev/cu.* serial port, which
+        // would need a serial driver rather than IOHIDManager. The CTE-630BT
+        // (Graphire3 Wireless, 0x0081) speaks HID and has a row.
     ]
 }
