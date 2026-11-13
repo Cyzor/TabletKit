@@ -42,7 +42,17 @@ public struct DeviceDecoder: Sendable {
     }
 
     package mutating func decode(_ report: HIDReport) -> [DecodeResult] {
-        decoder.decode(report, spec: digitizer, family: family)
+        trimmingEdges(decoder.decode(report, spec: digitizer, family: family))
+    }
+
+    /// Decoders keep raw coordinates in their state; only what leaves here
+    /// is trimmed.
+    private func trimmingEdges(_ results: [DecodeResult]) -> [DecodeResult] {
+        guard let insets = digitizer.penEdgeInsets else { return results }
+        return results.map {
+            if case .pen(let point) = $0 { return .pen(insets.trim(point)) }
+            return $0
+        }
     }
 
     /// How long without a report means the pen has left, or `nil` if the
@@ -50,7 +60,7 @@ public struct DeviceDecoder: Sendable {
     public var silenceTimeout: TimeInterval? { decoder.silenceTimeout }
 
     package mutating func decodeSilence() -> [DecodeResult] {
-        decoder.decodeSilence(spec: digitizer, family: family)
+        trimmingEdges(decoder.decodeSilence(spec: digitizer, family: family))
     }
 
     /// Decodes one report into events. Adds a tool leave when the pen goes

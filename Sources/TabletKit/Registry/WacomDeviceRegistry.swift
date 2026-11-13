@@ -3075,6 +3075,7 @@ extension TabletSpec {
         if format == .cintiqV1 { spec.cintiqPadLayout = CintiqPadLayout(productID: productID) }
         if format == .intuosV2 { spec.intuosV2PadLayout = IntuosV2PadLayout(productID: productID) }
         spec.isGraphireBluetooth = format == .graphire && productID == 0x0081
+        spec.penEdgeInsets = PenEdgeInsets(productID: productID)
         return spec
     }
 

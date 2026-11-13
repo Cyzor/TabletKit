@@ -39,6 +39,10 @@ public struct DigitizerSpec: Sendable {
     package var intuosV2PadLayout: IntuosV2PadLayout = .intuosPro
     /// The Graphire Wireless's Bluetooth layout, on report 3. Used by GraphireDecoder.
     package var isGraphireBluetooth = false
+    /// How far the pen range runs past a pen display's screen on each side,
+    /// in device units. `DeviceDecoder` trims it, so 0 and the maximum land
+    /// on the screen's edges, as Wacom's driver and the kernel do.
+    package var penEdgeInsets: PenEdgeInsets?
     /// True if this device is a pen display (Cintiq-class) with a built-in screen.
     /// Used to gate pen-display-specific UI (e.g. parallax offset calibration).
     public var isPenDisplay: Bool = false

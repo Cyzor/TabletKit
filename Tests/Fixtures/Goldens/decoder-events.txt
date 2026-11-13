@@ -156,9 +156,9 @@
 0x003A inputs=1065 pen=674 tool=0 pad=0 dial=0 touch=0 device=0 digest=3e7cdcdfd75a3103  # DTI-520
 0x0325 inputs=1050 pen=187 tool=19 pad=206 dial=0 touch=0 device=0 digest=293f463db9815db2  # Wacom Cintiq Companion 2 (DTH-W1310)
 0x0326 inputs=1062 pen=120 tool=4 pad=328 dial=0 touch=0 device=0 digest=2ec4a0447907c19c  # Cintiq Companion 2 touch sensor (pairs 0x0325)
-0x034D inputs=1053 pen=208 tool=14 pad=86 dial=0 touch=42 device=20 digest=e4dbea46170fc6db  # Wacom MobileStudio Pro 13 (DTH-W1320)
+0x034D inputs=1053 pen=208 tool=14 pad=86 dial=0 touch=42 device=20 digest=1661ceddba02095a  # Wacom MobileStudio Pro 13 (DTH-W1320)
 0x034E inputs=1061 pen=276 tool=14 pad=391 dial=0 touch=0 device=87 digest=31b7d7d806fd7c3c  # Wacom MobileStudio Pro 16 (DTH-W1620)
-0x0350 inputs=1059 pen=88 tool=21 pad=354 dial=0 touch=0 device=43 digest=8a7f0605803fb35e  # Wacom Cintiq Pro 16 (DTH-1620)
+0x0350 inputs=1059 pen=88 tool=21 pad=354 dial=0 touch=0 device=43 digest=86082fabc08fc46e  # Wacom Cintiq Pro 16 (DTH-1620)
 0x0354 inputs=1045 pen=383 tool=34 pad=215 dial=0 touch=0 device=71 digest=64007d19d7c15fb3  # Cintiq Pro 16 Touch sensor (pairs 0x0350)
 0x0379 inputs=1053 pen=178 tool=33 pad=263 dial=0 touch=0 device=52 digest=b5eaa2a8c175d5e5  # Wacom Intuos BT M (CTL-6100WL)
 0x0398 inputs=1054 pen=359 tool=45 pad=249 dial=0 touch=1 device=73 digest=44095c5b8501924d  # Wacom MobileStudio Pro 13 (DTH-W1321)

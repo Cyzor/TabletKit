@@ -18,7 +18,8 @@ final class DeviceDecoderTests: XCTestCase {
     }
 
     /// The wrapper must decode exactly what the format's decoder does when the
-    /// caller carries the spec, state, and family itself.
+    /// caller carries the spec, state, and family itself, apart from trimming
+    /// pen display margins.
     func testMatchesTheRawDecoderForEveryRegistryRow() {
         var rng = SplitMix64(state: 7)
         for spec in WacomDeviceRegistry.knownDevices {
@@ -36,8 +37,12 @@ final class DeviceDecoderTests: XCTestCase {
             bytes[0] = ids[Int(rng.next() % UInt64(ids.count))]
             bytes = Array(bytes.prefix(Int(rng.next() % 64) + 1))
             let a = HIDReport.withReport(bytes) { wrapped.decode($0) }
-            let b = HIDReport.withReport(bytes) {
+            var b = HIDReport.withReport(bytes) {
                 raw.decode(report: $0, spec: spec.digitizerSpec, state: &state, deviceFamily: spec.family)
+            }
+            // The wrapper's one addition: a pen display's margins.
+            if let insets = spec.digitizerSpec.penEdgeInsets {
+                b = b.map { if case .pen(let p) = $0 { return .pen(insets.trim(p)) }; return $0 }
             }
             XCTAssertEqual(String(describing: a), String(describing: b), "\(spec.name)")
         }
