@@ -1,3 +1,5 @@
+// TabletKit — HID decoder layer for drawing tablets
+// SPDX-FileCopyrightText: 2026 TabletKit contributors
 // SPDX-License-Identifier: MPL-2.0
 //
 // The MobileStudio Pro's 0x11 pad report. Bit positions come from the
