@@ -1258,7 +1258,7 @@ extension WacomDeviceRegistry {
             // Second interface of the DTK-2200 at 0x00FA, not a separate
             // tablet. OTD carries both under one config, split by report
             // length: 10-byte pen there, 5-byte reports here, whose contents
-            // are unknown and dropped. Neither kernel nor libwacom lists it.
+            // are unknown and ignored. Neither kernel nor libwacom lists it.
             productID: 0x00F9, name: "Cintiq 22HD secondary interface (pairs 0x00FA)",  // ⚠ name-only, 5-byte reports undecoded
             format: .cintiqV1, maxX: 0, maxY: 0, maxPressure: 0,
             buttonCount: 0, hasTouchRing: false, hasEraser: false,
