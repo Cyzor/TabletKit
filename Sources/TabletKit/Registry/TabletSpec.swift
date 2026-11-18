@@ -318,7 +318,7 @@ public struct TabletSpec: Sendable {
     public let productStringMatch: String?
     /// How this tablet departs from the plain open-and-read path. Family
     /// defaults unless the entry overrides them.
-    public internal(set) var quirks: TabletQuirks
+    package internal(set) var quirks: TabletQuirks
 
     /// Creates an entry. Capabilities default to absent; `hasTilt` defaults
     /// from the parser and model when omitted.

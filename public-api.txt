@@ -165,9 +165,6 @@ init TabletControls.Kinds.init(rawValue:)
 init TabletControls.init(ringLED:labels:displayPanel:quickKeys:wirelessKit:)
 init TabletFeature.init(rawValue:)
 init TabletPoint.init(x:y:maxX:maxY:pressure:maxPressure:tiltX:tiltY:rotation:penButton1:penButton2:eraser:inProximity:hoverDistance:mouseMiddleButton:mouseWheelDelta:penButton3:penButton4:penButton5:airbrushWheel:)
-init TabletQuirks.IdleReportRule.init(reportID:liveReportIDs:timeout:)
-init TabletQuirks.ModeReadBack.init(report:resendAfter:)
-init TabletQuirks.init()
 init TabletSession.init(vendorIDs:anyPenDigitizer:delegate:)
 init TabletSpec.init(productID:name:format:maxX:maxY:maxPressure:buttonCount:bezelButtonCount:hasTouchRing:hasDualRings:hasMechanicalDial:hasKeyOLEDs:hasTouchStrips:ringSlotCount:hasEraser:hasTilt:tiltMaxDegrees:hasFingerTouch:maxTouchContacts:touchMaxX:touchMaxY:isPenDisplay:seizeUSB:initSteps:ledCompanionPID:touchCompanionPID:touchCompanionInitSteps:confidence:productStringMatch:activeWidthMM:activeHeightMM:)
 init ToolEvent.init(identity:phase:)
@@ -232,7 +229,6 @@ method TabletDevice.open()
 method TabletDevice.reawaken()
 method TabletInputSink.didDecode(_:from:on:at:)
 method TabletInputSink.didReceive(_:at:from:)
-method TabletQuirks.ModeReadBack.matches(_:)
 method TabletSession.reawakenAll()
 method TabletSession.retryOpen()
 method TabletSession.start()
@@ -251,8 +247,6 @@ method TabletSessionDelegate.session(_:transport:didReadSerial:)
 method TabletSessionDelegate.session(_:transportDidChangeState:)
 method TabletSessionDelegate.transport(_:didRun:)
 method TabletSpec.makeDecoder()
-method TabletSpec.with(quirks:)
-method TabletSpec.withQuirks(_:)
 method TabletTransport.reawaken()
 method ToolSpec.capabilities(forFamily:)
 method ToolSpec.isSupported(onFamily:)
@@ -469,19 +463,6 @@ property TabletPoint.tiltX
 property TabletPoint.tiltY
 property TabletPoint.x
 property TabletPoint.y
-property TabletQuirks.IdleReportRule.liveReportIDs
-property TabletQuirks.IdleReportRule.reportID
-property TabletQuirks.IdleReportRule.timeout
-property TabletQuirks.ModeReadBack.report
-property TabletQuirks.ModeReadBack.resendAfter
-property TabletQuirks.answersSerialQuery
-property TabletQuirks.initNeedsDeclaringInterface
-property TabletQuirks.initOverBluetooth
-property TabletQuirks.inputModeWriteOverUSB
-property TabletQuirks.reinitOnReenumeration
-property TabletQuirks.seizesTouchSensor
-property TabletQuirks.usbIdleReport
-property TabletQuirks.usbModeReadBack
 property TabletSession.delegate
 property TabletSession.experimentalTabletBrands
 property TabletSession.readsUnknownWacomAsGeneric
@@ -521,7 +502,6 @@ property TabletSpec.name
 property TabletSpec.offeredControls
 property TabletSpec.productID
 property TabletSpec.productStringMatch
-property TabletSpec.quirks
 property TabletSpec.ringSlotCount
 property TabletSpec.scope
 property TabletSpec.seizeUSB
@@ -657,9 +637,6 @@ struct TabletControls
 struct TabletControls.Kinds
 struct TabletFeature
 struct TabletPoint
-struct TabletQuirks
-struct TabletQuirks.IdleReportRule
-struct TabletQuirks.ModeReadBack
 struct TabletSpec
 struct ToolCapabilities
 struct ToolEvent
@@ -695,7 +672,6 @@ type.method ModifierMath.releaseEventFlags(systemFlags:remainingSyntheticFlags:)
 type.method ModifierMath.shouldUpdatePhysicalCache(sourceStateID:)
 type.method PrecisionTouchLayout.derive(from:)
 type.method TabletBrand.brands(vendorID:productID:firmwareName:)
-type.method TabletQuirks.defaults(for:)
 type.method ToolCatalog.capabilities(forToolCode:family:)
 type.method ToolCatalog.hasRotation(toolCode:)
 type.method ToolCatalog.isEraser(toolCode:)

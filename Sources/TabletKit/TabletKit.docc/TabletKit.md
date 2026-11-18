@@ -70,7 +70,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``ConfidenceTier``
 - ``ToolKind``
 - ``ToolCapabilities``
-- ``TabletQuirks``
 - ``DescribedTouchRanges``
 
 ### Support evidence
