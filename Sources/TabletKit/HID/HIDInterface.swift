@@ -160,11 +160,18 @@ public final class IOKitHIDInterface: HIDInterface, @unchecked Sendable {
         IOHIDDeviceClose(device, IOOptionBits(kIOHIDOptionsTypeNone))
     }
 
+    /// Converts the kernel's mach-tick report timestamps to nanoseconds.
+    private static let nanosecondsPerMachTick: Double = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return Double(info.numer) / Double(info.denom)
+    }()
+
     private static let reportCallback: IOHIDReportWithTimeStampCallback = {
         context, _, _, _, _, report, length, timestamp in
         guard let context else { return }
         let sink = Unmanaged<ReportSink>.fromOpaque(context).takeUnretainedValue()
-        let ns = timestamp == 0 ? 0 : UInt64(Double(timestamp) * LatencyProbe.timebaseFactor)
+        let ns = timestamp == 0 ? 0 : UInt64(Double(timestamp) * nanosecondsPerMachTick)
         sink.onReport(HIDReport(pointer: report, count: length), ns)
     }
 

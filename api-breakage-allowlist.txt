@@ -541,3 +541,6 @@ API breakage: enumelement CintiqPadLayout.panelKeys has been added as a new enum
 # LEDColor.xencelabsModeDefaults.
 API breakage: var XencelabsOutputProtocol.ledPalette has been removed
 API breakage: var XencelabsOutputProtocol.defaultSlotColors has been removed
+
+# 0.7.0: LatencyProbe moved to MockTab, which records and reads it.
+API breakage: class LatencyProbe has been removed

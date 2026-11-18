@@ -125,7 +125,7 @@ public enum ModifierMath: Sendable {
     /// report can be stamped while a `flagsChanged` waits behind it — leaving
     /// the cache describing the keyboard from before that change.
     ///
-    /// Both stamps are mach-absolute ns (`LatencyProbe.timebaseFactor`). Only a
+    /// Both stamps are mach-absolute ns. Only a
     /// cache written after the report vouches for it here; absent stamps
     /// (timer-fired posts) return `true` to preserve prior behavior.
     ///

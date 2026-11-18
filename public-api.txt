@@ -4,7 +4,6 @@
 class ConnectedTablet
 class HIDThread
 class IOKitHIDInterface
-class LatencyProbe
 class TabletSession
 class TabletTransport
 enum BrandHeuristic
@@ -214,10 +213,6 @@ method LabelControl.setAuxKeyLabels(_:)
 method LabelControl.setKeyDisplayBrightness(_:)
 method LabelControl.setKeyOLEDsRotated180(_:)
 method LabelControl.setRingModeLabel(_:)
-method LatencyProbe.noteDeviceConnected()
-method LatencyProbe.record(kernelTimestamp:)
-method LatencyProbe.recordPipelineComplete(kernelTimestamp:)
-method LatencyProbe.resetGapHistogram()
 method PanSmoother.process(raw:dt:)
 method PanSmoother.reset()
 method PositionDeadBand.apply(x:y:maxX:maxY:)
@@ -392,15 +387,6 @@ property IOKitHIDInterface.vendorID
 property LEDColor.b
 property LEDColor.g
 property LEDColor.r
-property LatencyProbe.averageMs
-property LatencyProbe.connectStallCount
-property LatencyProbe.connectWorstMs
-property LatencyProbe.gapHistogramMs
-property LatencyProbe.reportCount
-property LatencyProbe.stallCount
-property LatencyProbe.totalAverageMs
-property LatencyProbe.totalWorstMs
-property LatencyProbe.worstMs
 property LiveButtonState.bezelButtons
 property LiveButtonState.button1Down
 property LiveButtonState.button2Down
@@ -783,11 +769,6 @@ type.property FeatureEvidence.claimed
 type.property HIDThread.shared
 type.property LEDColor.xencelabsModeDefaults
 type.property LEDColor.xencelabsPalette
-type.property LatencyProbe.gapHistogramBucketsMs
-type.property LatencyProbe.settleWindowSeconds
-type.property LatencyProbe.shared
-type.property LatencyProbe.stallThresholdMs
-type.property LatencyProbe.timebaseFactor
 type.property ModifierMath.deviceBitsMask
 type.property ModifierMath.deviceLeftCommand
 type.property ModifierMath.deviceLeftControl

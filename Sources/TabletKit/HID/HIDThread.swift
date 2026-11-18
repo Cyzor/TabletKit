@@ -67,7 +67,7 @@ public final class HIDThread: @unchecked Sendable {
 
     /// Promote the calling thread to `THREAD_TIME_CONSTRAINT_POLICY` so HID
     /// report delivery keeps its scheduling priority under system load
-    /// (LatencyProbe showed 5–9 ms delivery stalls during I/O storms that
+    /// (MockTab's latency probe showed 5–9 ms delivery stalls during I/O storms that
     /// ordinary `.userInteractive` QoS didn't prevent). Parameters sized for
     /// a 133 Hz report stream: period ≈7.5 ms, computation ≈500 µs per
     /// report, constraint 2 ms, preemptible. On failure the thread simply

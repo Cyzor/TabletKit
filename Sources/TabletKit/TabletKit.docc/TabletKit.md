@@ -96,7 +96,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``hidReportDescriptorHex(_:)``
 - ``sendWacomInputModeInit(_:tag:)``
 - ``HIDThread``
-- ``LatencyProbe``
 - ``HIDReportDescriptorParser``
 - ``DigitizerUsage``
 - ``DigitizerInterfaceKind``
