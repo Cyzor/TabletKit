@@ -22,33 +22,33 @@ import Foundation
 /// Unlike `XencelabsOutputProtocol`, these are HID **feature** reports, not
 /// output reports — sent via `IOHIDDeviceSetReport` with
 /// `kIOHIDReportTypeFeature` (`hidSetReport`'s default type).
-public enum WacomOutputProtocol: Sendable {
+package enum WacomOutputProtocol: Sendable {
 
     /// Intuos4 OLED image transfer commands (`wacom_wac.h`).
-    public enum ImageCommand {
+    package enum ImageCommand {
         /// `WAC_CMD_ICON_START` — brackets a transfer (byte 1 = 1 to start,
         /// 0 to stop). Same command value for both start and stop frames;
         /// only the second byte differs.
-        public static let iconStart: UInt8 = 0x21
+        package static let iconStart: UInt8 = 0x21
         /// `WAC_CMD_ICON_XFER` — chunk-transfer command over USB.
-        public static let iconXferUSB: UInt8 = 0x23
+        package static let iconXferUSB: UInt8 = 0x23
         /// `WAC_CMD_ICON_BT_XFER` — chunk-transfer command over Bluetooth.
         /// Not currently used: `keyImagePayloadsUSB` only implements the USB
         /// image encoding (4-bit grayscale). Bluetooth uses a different
         /// encoding (1-bit monochrome plus a bit-scramble) not implemented
         /// here — see `keyImagePayloadsUSB`'s doc for detail.
-        public static let iconXferBT: UInt8 = 0x26
+        package static let iconXferBT: UInt8 = 0x26
     }
 
     /// The "begin an OLED image transfer" feature report: `21 01`.
     /// Must precede the chunk payloads from `keyImagePayloadsUSB`.
-    public static func imageStartPayload() -> [UInt8] {
+    package static func imageStartPayload() -> [UInt8] {
         [ImageCommand.iconStart, 0x01]
     }
 
     /// The "end an OLED image transfer" feature report: `21 00`.
     /// Must follow the chunk payloads from `keyImagePayloadsUSB`.
-    public static func imageStopPayload() -> [UInt8] {
+    package static func imageStopPayload() -> [UInt8] {
         [ImageCommand.iconStart, 0x00]
     }
 
@@ -72,7 +72,7 @@ public enum WacomOutputProtocol: Sendable {
     ///     format. Any other length returns an empty array rather than
     ///     sending malformed chunks.
     ///   - buttonID: 0–7, the target key index.
-    public static func keyImagePayloadsUSB(image: [UInt8], buttonID: Int) -> [[UInt8]] {
+    package static func keyImagePayloadsUSB(image: [UInt8], buttonID: Int) -> [[UInt8]] {
         let expectedLength = 1024
         guard image.count == expectedLength else { return [] }
         let chunkLength = expectedLength / 4  // 256 bytes/chunk, per wacom_led_putimage

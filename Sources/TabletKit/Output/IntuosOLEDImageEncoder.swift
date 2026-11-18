@@ -13,12 +13,12 @@ import CoreText
 /// Not hardware-verified. The layout follows the kernel's sysfs ABI doc; the
 /// column order and the left-handed rotation follow the public Intuos4 OLED
 /// tools.
-public enum IntuosOLEDImageEncoder: Sendable {
+package enum IntuosOLEDImageEncoder: Sendable {
 
     /// OLED width in pixels.
-    public static let width = 64
+    package static let width = 64
     /// OLED height in pixels.
-    public static let height = 32
+    package static let height = 32
 
     /// Packs a 64×32 8-bit grayscale image into the USB wire format.
     ///
@@ -32,7 +32,7 @@ public enum IntuosOLEDImageEncoder: Sendable {
     ///     Only the top 4 bits of each are used.
     ///   - rotated180: Whether to turn the image for upside-down use.
     /// - Returns: 1024 bytes, or `nil` if `grayscale` is the wrong size.
-    public static func interleaveRows(_ grayscale: [UInt8], rotated180: Bool) -> [UInt8]? {
+    package static func interleaveRows(_ grayscale: [UInt8], rotated180: Bool) -> [UInt8]? {
         guard grayscale.count == width * height else { return nil }
 
         var packed = [UInt8](repeating: 0, count: width * height / 2)
@@ -53,7 +53,7 @@ public enum IntuosOLEDImageEncoder: Sendable {
     }
 
     /// ``interleaveRows(_:rotated180:)`` for the right-handed layout.
-    public static func interleaveRows(_ grayscale: [UInt8]) -> [UInt8]? {
+    package static func interleaveRows(_ grayscale: [UInt8]) -> [UInt8]? {
         interleaveRows(grayscale, rotated180: false)
     }
 
@@ -71,7 +71,7 @@ public enum IntuosOLEDImageEncoder: Sendable {
     /// `interleaveRows`, centered and sized to fit. A label wraps onto two
     /// lines when that reads larger than one line; "Toggle Display" is about
     /// 130 px wide at 18 pt.
-    public static func renderTextLabel(_ text: String) -> [UInt8] {
+    package static func renderTextLabel(_ text: String) -> [UInt8] {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return [UInt8](repeating: 0, count: width * height)

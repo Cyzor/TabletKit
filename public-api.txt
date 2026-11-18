@@ -20,7 +20,6 @@ enum HIDReportDescriptorParserError
 enum HIDReportDirection
 enum HIDReportKind
 enum InitStep
-enum IntuosOLEDImageEncoder
 enum ModifierMath
 enum PrecisionTouchLayout.Usage
 enum ReportFormat
@@ -34,8 +33,6 @@ enum ToolKind
 enum UnclaimedKind
 enum VendorDeviceRegistry
 enum WacomDeviceRegistry
-enum WacomOutputProtocol
-enum WacomOutputProtocol.ImageCommand
 enum WirelessStatus
 enum XencelabsOutputProtocol
 enum XencelabsOutputProtocol.DisplayControl
@@ -158,15 +155,12 @@ init DeviceInstanceKey.init(productID:usbSerial:locationID:)
 init DeviceInstanceKey.init(stringValue:)
 init DigitizerSpec.DebugBitSource.init(byteIndex:bitIndex:)
 init DigitizerSpec.init(maxX:maxY:maxPressure:buttonCount:hasTilt:hasDualRings:bezelButtonCount:isPenDisplay:ringSlotCount:hasFingerTouch:maxTouchContacts:tiltMaxDegrees:debugButton2Source:)
-init DongleBatteryWatcher.init()
-init DonglePairingWatcher.init()
 init EvidenceSource.init(rawValue:)
 init FeatureEvidence.init(_:_:note:)
 init GenericPenDecoder.init(layout:)
 init HIDReport.init(pointer:count:)
 init HIDUsagePair.init(page:usage:)
 init IOKitHIDInterface.init(_:)
-init IdleReportWatcher.init(rule:)
 init LEDColor.init(r:g:b:)
 init LiveButtonState.init(tipDown:eraserDown:button1Down:button2Down:button3Down:button4Down:button5Down:expressKeys:bezelButtons:touchRingActive:touchRingButtonDown:touchRing2Active:touchRing2ButtonDown:touchStrip1Active:touchStrip2Active:)
 init PadState.init(buttons:pressedThisReport:rings:strips:hardwareMode:)
@@ -215,8 +209,6 @@ method DisplayPanelControl.setColorMode(_:)
 method DisplayPanelControl.setDisplayBrightness(_:)
 method DisplayPanelControl.setDisplayContrast(_:)
 method DisplayPanelControl.setDisplayGamma(_:)
-method DongleBatteryWatcher.observe(_:)
-method DonglePairingWatcher.observe(_:)
 method GenericPenDecoder.decode(report:)
 method HIDInterface.close()
 method HIDInterface.getReport(_:id:length:)
@@ -228,7 +220,6 @@ method IOKitHIDInterface.getReport(_:id:length:)
 method IOKitHIDInterface.open(seize:onReport:)
 method IOKitHIDInterface.readString(index:)
 method IOKitHIDInterface.setReport(_:bytes:)
-method IdleReportWatcher.observe(_:now:)
 method LabelControl.setAuxKeyLabels(_:)
 method LabelControl.setKeyDisplayBrightness(_:)
 method LabelControl.setKeyOLEDsRotated180(_:)
@@ -351,8 +342,6 @@ property DigitizerSpec.maxX
 property DigitizerSpec.maxY
 property DigitizerSpec.ringSlotCount
 property DigitizerSpec.tiltMaxDegrees
-property DongleBatteryWatcher.lastReading
-property DonglePairingWatcher.announcedProductID
 property EvidenceSource.description
 property EvidenceSource.rawValue
 property FeatureEvidence.level
@@ -410,7 +399,6 @@ property IOKitHIDInterface.usage
 property IOKitHIDInterface.usagePage
 property IOKitHIDInterface.usagePairs
 property IOKitHIDInterface.vendorID
-property IdleReportWatcher.rule
 property LEDColor.b
 property LEDColor.g
 property LEDColor.r
@@ -669,15 +657,12 @@ struct DeviceEvent.Kind
 struct DeviceInstanceKey
 struct DigitizerSpec
 struct DigitizerSpec.DebugBitSource
-struct DongleBatteryWatcher
-struct DonglePairingWatcher
 struct EvidenceSource
 struct FeatureEvidence
 struct GenericPenDecoder
 struct GenericPenLayout
 struct HIDReport
 struct HIDUsagePair
-struct IdleReportWatcher
 struct LEDColor
 struct LiveButtonState
 struct PadState
@@ -724,9 +709,6 @@ type.method GenericPenLayout.derive(from:)
 type.method HIDReport.withReport(_:_:)
 type.method HIDReportDescriptorParser.parse(_:)
 type.method HIDReportDescriptorParser.parse(hex:)
-type.method IntuosOLEDImageEncoder.interleaveRows(_:)
-type.method IntuosOLEDImageEncoder.interleaveRows(_:rotated180:)
-type.method IntuosOLEDImageEncoder.renderTextLabel(_:)
 type.method ModifierMath.currentEventFlags(systemFlags:tapPhysicalManaged:syntheticFlags:)
 type.method ModifierMath.excessSyntheticBits(groundTruth:expected:)
 type.method ModifierMath.leftDeviceBits(for:)
@@ -764,9 +746,6 @@ type.method WacomDeviceRegistry.deviceName(forProductID:)
 type.method WacomDeviceRegistry.hasLiveDecoder(for:)
 type.method WacomDeviceRegistry.spec(for:)
 type.method WacomDeviceRegistry.spec(forProductID:productString:)
-type.method WacomOutputProtocol.imageStartPayload()
-type.method WacomOutputProtocol.imageStopPayload()
-type.method WacomOutputProtocol.keyImagePayloadsUSB(image:buttonID:)
 type.method XencelabsOutputProtocol.colorModePayload(_:address:)
 type.method XencelabsOutputProtocol.dialColorPayload(r:g:b:address:)
 type.method XencelabsOutputProtocol.dialSensitivityPayload(_:address:)
@@ -814,7 +793,6 @@ type.property DigitizerUsage.vendorHoverDistance
 type.property DigitizerUsage.vendorX
 type.property DigitizerUsage.vendorY
 type.property DigitizerUsage.width
-type.property DongleBatteryWatcher.holdReports
 type.property EvidenceSource.descriptorCorpus
 type.property EvidenceSource.libwacom
 type.property EvidenceSource.linuxKernel
@@ -825,8 +803,6 @@ type.property EvidenceSource.publicRecording
 type.property EvidenceSource.testerHardware
 type.property FeatureEvidence.claimed
 type.property HIDThread.shared
-type.property IntuosOLEDImageEncoder.height
-type.property IntuosOLEDImageEncoder.width
 type.property LatencyProbe.gapHistogramBucketsMs
 type.property LatencyProbe.settleWindowSeconds
 type.property LatencyProbe.shared
@@ -883,8 +859,5 @@ type.property WacomDeviceRegistry.canonicalPIDMap
 type.property WacomDeviceRegistry.knownDevices
 type.property WacomDeviceRegistry.touchCompanionPIDs
 type.property WacomDeviceRegistry.vendorIDs
-type.property WacomOutputProtocol.ImageCommand.iconStart
-type.property WacomOutputProtocol.ImageCommand.iconXferBT
-type.property WacomOutputProtocol.ImageCommand.iconXferUSB
 type.property XencelabsOutputProtocol.defaultSlotColors
 type.property XencelabsOutputProtocol.ledPalette

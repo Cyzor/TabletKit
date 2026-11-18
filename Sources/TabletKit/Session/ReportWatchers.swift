@@ -11,15 +11,15 @@ import Foundation
 
 /// Notices a tablet stuck in its idle report after init, and asks for init
 /// again. See ``TabletQuirks/usbIdleReport``.
-public struct IdleReportWatcher: Sendable {
-    public let rule: TabletQuirks.IdleReportRule
+package struct IdleReportWatcher: Sendable {
+    package let rule: TabletQuirks.IdleReportRule
     private var idleSince: TimeInterval?
     private var lastAttempt = -TimeInterval.infinity
 
-    public init(rule: TabletQuirks.IdleReportRule) { self.rule = rule }
+    package init(rule: TabletQuirks.IdleReportRule) { self.rule = rule }
 
     /// True when init should be sent again. Repeats at most once per timeout.
-    public mutating func observe(_ report: HIDReport, now: TimeInterval) -> Bool {
+    package mutating func observe(_ report: HIDReport, now: TimeInterval) -> Bool {
         guard report.count > 0 else { return false }
         let id = report.reportID
         if id == rule.reportID {
@@ -39,13 +39,13 @@ public struct IdleReportWatcher: Sendable {
 /// Reads the paired tablet's product ID from a Wacom wireless receiver's
 /// status report (0x80). The receiver names it while the tablet sleeps too,
 /// so a tablet asleep at launch still finds its window.
-public struct DonglePairingWatcher: Sendable {
-    public private(set) var announcedProductID: Int?
+package struct DonglePairingWatcher: Sendable {
+    package private(set) var announcedProductID: Int?
 
-    public init() {}
+    package init() {}
 
     /// The paired product ID when it first appears or changes.
-    public mutating func observe(_ report: HIDReport) -> Int? {
+    package mutating func observe(_ report: HIDReport) -> Int? {
         guard report.count >= 8, report[0] == 0x80 else { return nil }
         let pid = Int(report[6]) << 8 | Int(report[7])  // big-endian
         guard pid > 0, pid != announcedProductID else { return nil }
@@ -64,19 +64,19 @@ public struct DonglePairingWatcher: Sendable {
 ///
 /// The level also rises as the battery rests after load. Without charging,
 /// capacity only falls, so once shown, a level on battery only falls.
-public struct DongleBatteryWatcher: Sendable {
+package struct DongleBatteryWatcher: Sendable {
     /// Reports a new level must hold, about two seconds at the receiver's
     /// half-second status rate.
-    public static let holdReports = 4
+    package static let holdReports = 4
 
-    public private(set) var lastReading: DeviceEvent.Battery?
+    package private(set) var lastReading: DeviceEvent.Battery?
     private var pending: DeviceEvent.Battery?
     private var pendingCount = 0
 
-    public init() {}
+    package init() {}
 
     /// The battery when it first appears or changes while a tablet is linked.
-    public mutating func observe(_ report: HIDReport) -> DeviceEvent.Battery? {
+    package mutating func observe(_ report: HIDReport) -> DeviceEvent.Battery? {
         guard report.count >= 6, report[0] == 0x80 else { return nil }
         guard report[1] & 0x01 != 0 else {
             // Announce again on relink, even at the same level.

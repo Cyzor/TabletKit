@@ -114,8 +114,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 ### Output protocols
 
 - ``XencelabsOutputProtocol``
-- ``WacomOutputProtocol``
-- ``IntuosOLEDImageEncoder``
 
 ### Sessions
 
@@ -131,9 +129,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``IOKitHIDInterface``
 - ``HIDReportKind``
 - ``HIDUsagePair``
-- ``IdleReportWatcher``
-- ``DongleBatteryWatcher``
-- ``DonglePairingWatcher``
 
 ### Live device control
 
