@@ -91,16 +91,16 @@ final class XencelabsOutputProtocolTests: XCTestCase {
     }
 
     func testDefaultSlotColorsMatchVendorModePalette() {
-        // Xencelabs Modus 1–4 factory colors: orange, red, yellow, green.
+        // Xencelabs Mode 1–4 factory colors: orange, red, yellow, green.
         let expected: [(UInt8, UInt8, UInt8)] = [
             (0xAA, 0x2B, 0x00), (0xA4, 0x07, 0x00),
             (0xAA, 0x64, 0x00), (0x1C, 0x7D, 0x06),
         ]
-        XCTAssertEqual(XencelabsOutputProtocol.defaultSlotColors.count, 4)
+        XCTAssertEqual(LEDColor.xencelabsModeDefaults.count, 4)
         for (i, e) in expected.enumerated() {
-            XCTAssertEqual(XencelabsOutputProtocol.defaultSlotColors[i].r, e.0)
-            XCTAssertEqual(XencelabsOutputProtocol.defaultSlotColors[i].g, e.1)
-            XCTAssertEqual(XencelabsOutputProtocol.defaultSlotColors[i].b, e.2)
+            XCTAssertEqual(LEDColor.xencelabsModeDefaults[i].r, e.0)
+            XCTAssertEqual(LEDColor.xencelabsModeDefaults[i].g, e.1)
+            XCTAssertEqual(LEDColor.xencelabsModeDefaults[i].b, e.2)
         }
     }
 

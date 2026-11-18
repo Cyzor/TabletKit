@@ -241,10 +241,9 @@ package final class TabletOutput: RingLEDControl, LabelControl, DisplayPanelCont
             let steps = lastOrientation >= 0 ? lastOrientation : 0
             sendVendor(XencelabsOutputProtocol.orientationPayload(rotationSteps: steps, address: address),
                        tag: "screen orientation \(steps)")
-            let palette = XencelabsOutputProtocol.defaultSlotColors
+            let palette = LEDColor.xencelabsModeDefaults
             let custom = dialSlotColors.indices.contains(index) ? dialSlotColors[index] : nil
-            let factory = palette[((index % palette.count) + palette.count) % palette.count]
-            let color = custom ?? LEDColor(r: factory.r, g: factory.g, b: factory.b)
+            let color = custom ?? palette[((index % palette.count) + palette.count) % palette.count]
             sendVendor(XencelabsOutputProtocol.dialColorPayload(r: color.r, g: color.g, b: color.b, address: address),
                        tag: "dial LED slot=\(index)")
             sendVendor(XencelabsOutputProtocol.dialSensitivityPayload(3, address: address),

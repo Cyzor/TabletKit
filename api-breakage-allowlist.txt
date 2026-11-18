@@ -536,3 +536,8 @@ API breakage: enumelement TabletInput.InitReason.toolAnnouncementDrought has bee
 
 # Package-level pad layout for the Cintiq 22HD's panel keys.
 API breakage: enumelement CintiqPadLayout.panelKeys has been added as a new enum case
+
+# 0.7.0: the Xencelabs factory colors moved to LEDColor.xencelabsPalette and
+# LEDColor.xencelabsModeDefaults.
+API breakage: var XencelabsOutputProtocol.ledPalette has been removed
+API breakage: var XencelabsOutputProtocol.defaultSlotColors has been removed

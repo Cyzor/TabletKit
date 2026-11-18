@@ -111,10 +111,6 @@ TabletKit is an independent community project. Wacom Co., Ltd. and other device 
 - ``PrecisionTouchFrame``
 - ``PrecisionTouchSlot``
 
-### Output protocols
-
-- ``XencelabsOutputProtocol``
-
 ### Sessions
 
 - ``TabletSession``

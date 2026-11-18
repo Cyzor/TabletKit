@@ -34,9 +34,6 @@ enum UnclaimedKind
 enum VendorDeviceRegistry
 enum WacomDeviceRegistry
 enum WirelessStatus
-enum XencelabsOutputProtocol
-enum XencelabsOutputProtocol.DisplayControl
-enum XencelabsOutputProtocol.TextField
 enum.case ConfidenceTier.crossReferenced
 enum.case ConfidenceTier.experimental
 enum.case ConfidenceTier.verified
@@ -126,13 +123,6 @@ enum.case WirelessStatus.active
 enum.case WirelessStatus.lost
 enum.case WirelessStatus.lowBattery
 enum.case WirelessStatus.unknown(_:)
-enum.case XencelabsOutputProtocol.DisplayControl.brightness
-enum.case XencelabsOutputProtocol.DisplayControl.colorMode
-enum.case XencelabsOutputProtocol.DisplayControl.contrast
-enum.case XencelabsOutputProtocol.DisplayControl.gamma
-enum.case XencelabsOutputProtocol.TextField.keyLabel
-enum.case XencelabsOutputProtocol.TextField.modeName
-enum.case XencelabsOutputProtocol.TextField.profileName
 func classifyDigitizerInterface(_:)
 func classifyDigitizerInterface(descriptor:)
 func decodeBLEPadReport(report:)
@@ -746,18 +736,6 @@ type.method WacomDeviceRegistry.deviceName(forProductID:)
 type.method WacomDeviceRegistry.hasLiveDecoder(for:)
 type.method WacomDeviceRegistry.spec(for:)
 type.method WacomDeviceRegistry.spec(forProductID:productString:)
-type.method XencelabsOutputProtocol.colorModePayload(_:address:)
-type.method XencelabsOutputProtocol.dialColorPayload(r:g:b:address:)
-type.method XencelabsOutputProtocol.dialSensitivityPayload(_:address:)
-type.method XencelabsOutputProtocol.displayBrightnessPayload(_:address:)
-type.method XencelabsOutputProtocol.displayCommitPayload(address:)
-type.method XencelabsOutputProtocol.displayContrastPayload(_:address:)
-type.method XencelabsOutputProtocol.displayGammaPayload(_:address:)
-type.method XencelabsOutputProtocol.keyLabelPayloads(_:address:)
-type.method XencelabsOutputProtocol.oledBrightnessPayload(_:address:)
-type.method XencelabsOutputProtocol.orientationPayload(rotationSteps:address:)
-type.method XencelabsOutputProtocol.sleepTimerPayload(minutes:address:)
-type.method XencelabsOutputProtocol.textPayloads(field:index:text:address:)
 type.property CursorSmoother.jitterHistogramBucketsPtPerSample
 type.property CursorSmoother.jitterWindow
 type.property DescriptorLayout.modeSwitchUsages
@@ -803,6 +781,8 @@ type.property EvidenceSource.publicRecording
 type.property EvidenceSource.testerHardware
 type.property FeatureEvidence.claimed
 type.property HIDThread.shared
+type.property LEDColor.xencelabsModeDefaults
+type.property LEDColor.xencelabsPalette
 type.property LatencyProbe.gapHistogramBucketsMs
 type.property LatencyProbe.settleWindowSeconds
 type.property LatencyProbe.shared
@@ -859,5 +839,3 @@ type.property WacomDeviceRegistry.canonicalPIDMap
 type.property WacomDeviceRegistry.knownDevices
 type.property WacomDeviceRegistry.touchCompanionPIDs
 type.property WacomDeviceRegistry.vendorIDs
-type.property XencelabsOutputProtocol.defaultSlotColors
-type.property XencelabsOutputProtocol.ledPalette

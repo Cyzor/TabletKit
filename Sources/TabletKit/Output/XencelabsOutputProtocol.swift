@@ -4,6 +4,34 @@
 
 import Foundation
 
+extension LEDColor {
+    /// Xencelabs' factory 8-color swatch palette for RGB backlights, in the
+    /// vendor UI's swatch order (white, magenta, blue, cyan, green, yellow,
+    /// orange, red). Values are LED-calibrated RGB at full brightness; "white"
+    /// is warm-compensated, not 0xFFFFFF.
+    public static let xencelabsPalette: [LEDColor] = [
+        LEDColor(r: 0xFF, g: 0x78, b: 0x5A),  // white
+        LEDColor(r: 0xFF, g: 0x00, b: 0x42),  // magenta
+        LEDColor(r: 0x00, g: 0x00, b: 0xFE),  // blue
+        LEDColor(r: 0x00, g: 0xFF, b: 0xC8),  // cyan
+        LEDColor(r: 0x3C, g: 0xFF, b: 0x00),  // green
+        LEDColor(r: 0xFF, g: 0x55, b: 0x00),  // yellow
+        LEDColor(r: 0xFD, g: 0x14, b: 0x00),  // orange
+        LEDColor(r: 0xF7, g: 0x00, b: 0x00),  // red
+    ]
+
+    /// Xencelabs' factory dial-mode palette at Medium brightness, indexed by
+    /// mode slot 0–3 (orange, red, yellow, green — the colors their software
+    /// assigns to Mode 1–4 by default). Values are LED-calibrated RGB, not
+    /// sRGB.
+    public static let xencelabsModeDefaults: [LEDColor] = [
+        LEDColor(r: 0xAA, g: 0x2B, b: 0x00),  // orange
+        LEDColor(r: 0xA4, g: 0x07, b: 0x00),  // red
+        LEDColor(r: 0xAA, g: 0x64, b: 0x00),  // yellow
+        LEDColor(r: 0x1C, g: 0x7D, b: 0x06),  // green
+    ]
+}
+
 /// Payload builders for the Xencelabs host→device control protocol — Quick
 /// Keys OLED text, LED color, dial sensitivity, and the pen displays' image
 /// controls (brightness, contrast, gamma, color mode).
@@ -22,10 +50,10 @@ import Foundation
 /// `TabletOutput` passes its dongle identity. Over direct USB the address is
 /// optional: it defaults to empty, and the firmware accepts the frames
 /// either way.
-public enum XencelabsOutputProtocol: Sendable {
+package enum XencelabsOutputProtocol: Sendable {
 
     /// OLED text field selectors (payload byte 2 of an 0xB1 write).
-    public enum TextField: UInt8 {
+    package enum TextField: UInt8 {
         /// Per-key label region; the key number (1–8) goes in the index field.
         case keyLabel = 0x00
         /// Profile-name line at the top of the OLED.
@@ -34,24 +62,13 @@ public enum XencelabsOutputProtocol: Sendable {
         case modeName = 0x06
     }
 
-    /// Xencelabs' factory dial-mode palette at Medium brightness, indexed by
-    /// mode slot 0–3 (orange, red, yellow, green — the colors their software
-    /// assigns to Modus 1–4 by default). Values are LED-calibrated RGB, not
-    /// sRGB.
-    public static let defaultSlotColors: [(r: UInt8, g: UInt8, b: UInt8)] = [
-        (0xAA, 0x2B, 0x00),  // orange
-        (0xA4, 0x07, 0x00),  // red
-        (0xAA, 0x64, 0x00),  // yellow
-        (0x1C, 0x7D, 0x06),  // green
-    ]
-
     /// Screen orientation write: `02 B1 <steps+1> 00 ... <addr>`.
     ///
     /// Rotates the Quick Keys OLED text in 90° steps (0 = upright,
     /// 1 = 90°, 2 = 180°, 3 = 270° — the wire byte is steps + 1). The
     /// saved orientation is sent again on reconnect, which is what earlier
     /// captures showed as a fixed `b1 01` ("upright") write.
-    public static func orientationPayload(
+    package static func orientationPayload(
         rotationSteps: Int, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB1, UInt8((rotationSteps & 0x03) + 1),
@@ -60,26 +77,11 @@ public enum XencelabsOutputProtocol: Sendable {
         return p
     }
 
-    /// Xencelabs' factory 8-color swatch palette for RGB backlights, in the
-    /// vendor UI's swatch order (white, magenta, blue, cyan, green, yellow,
-    /// orange, red). Values are LED-calibrated RGB at full brightness; "white"
-    /// is warm-compensated, not 0xFFFFFF.
-    public static let ledPalette: [(r: UInt8, g: UInt8, b: UInt8)] = [
-        (0xFF, 0x78, 0x5A),  // white
-        (0xFF, 0x00, 0x42),  // magenta
-        (0x00, 0x00, 0xFE),  // blue
-        (0x00, 0xFF, 0xC8),  // cyan
-        (0x3C, 0xFF, 0x00),  // green
-        (0xFF, 0x55, 0x00),  // yellow
-        (0xFD, 0x14, 0x00),  // orange
-        (0xF7, 0x00, 0x00),  // red
-    ]
-
     /// Dial LED color write: `02 B4 01 01 00 00 R G B 00 <addr>`.
     /// The host pre-scales brightness into the RGB values (red peaks at
     /// 0x52/0xA4/0xF7 for Dim/Medium/Bright). The pen display's bezel-button
     /// backlight answers to the same frame, so this builder serves both.
-    public static func dialColorPayload(
+    package static func dialColorPayload(
         r: UInt8, g: UInt8, b: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB4, 0x01, 0x01, 0x00, 0x00, r, g, b, 0x00]
@@ -95,7 +97,7 @@ public enum XencelabsOutputProtocol: Sendable {
     ///
     /// Subcommand 3 (brightness) is user-confirmed on hardware; the others share
     /// the identical frame shape and are decoded but not yet hardware-verified.
-    public enum DisplayControl: UInt8 {
+    package enum DisplayControl: UInt8 {
         /// Color-mode / picture-preset select. Value is the row index in the
         /// panel's device-specific mode list. The frame is
         /// `02 B5 01 01 01 00 <index> 00` (note `p3 = 01`, unlike the scalars).
@@ -124,7 +126,7 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Pen Display panel brightness write: `02 B5 01 03 00 00 <0–100> 00`.
     /// Subcommand 3.
-    public static func displayBrightnessPayload(
+    package static func displayBrightnessPayload(
         _ percent: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         displayControlPayload(.brightness, value: min(percent, 100), address: address)
@@ -132,7 +134,7 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Pen Display panel contrast write: `02 B5 01 04 00 00 <0–100> 00`.
     /// Same frame shape as brightness; decoded, not yet hardware-verified.
-    public static func displayContrastPayload(
+    package static func displayContrastPayload(
         _ percent: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         displayControlPayload(.contrast, value: min(percent, 100), address: address)
@@ -141,7 +143,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// Pen Display gamma write: `02 B5 01 02 00 00 <gamma×10> 00`.
     /// Pass gamma pre-scaled by 10 (e.g. 2.2 → 22). Decoded, not yet
     /// hardware-verified.
-    public static func displayGammaPayload(
+    package static func displayGammaPayload(
         _ gammaTimesTen: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         displayControlPayload(.gamma, value: gammaTimesTen, address: address)
@@ -161,7 +163,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// (`02 B5 00 F0 00 00 00 00`). Scalar writes take effect live without it
     /// (brightness is proven to), but if a mode change doesn't stick on
     /// hardware, send that commit after this frame.
-    public static func colorModePayload(
+    package static func colorModePayload(
         _ index: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB5, 0x01, 0x01, 0x01, 0x00, index, 0x00, 0x00, 0x00]
@@ -172,7 +174,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// Apply-batch commit frame: `02 B5 00 F0 00 00 00 00`. The vendor sends
     /// this after a preset switch; presumed to tell firmware to reset
     /// gamma/contrast/etc. to the newly-selected preset's own stored values.
-    public static func displayCommitPayload(address: [UInt8] = []) -> [UInt8] {
+    package static func displayCommitPayload(address: [UInt8] = []) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB5, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         p += paddedAddress(address)
         return p
@@ -183,7 +185,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// the value across a power cycle, so it's safe to persist. Byte 3 =
     /// `0x01` marks a set, against the `0x00` of the status poll in
     /// `TabletOutput.resyncAfterRelink()`.
-    public static func sleepTimerPayload(
+    package static func sleepTimerPayload(
         minutes: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB4, 0x08, 0x01, minutes, 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -197,7 +199,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// Distinct from the `0xB5` pen-display panel brightness family
     /// (`displayBrightnessPayload`) — this is the Quick Keys' own OLED, not a
     /// pen display's backlight.
-    public static func oledBrightnessPayload(
+    package static func oledBrightnessPayload(
         _ level: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB1, 0x0A, 0x01, min(level, 3), 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -207,7 +209,7 @@ public enum XencelabsOutputProtocol: Sendable {
 
     /// Dial sensitivity write: `02 B4 04 01 01 <n> ... <addr>`.
     /// Observed n = 1...5; the vendor default is 3.
-    public static func dialSensitivityPayload(
+    package static func dialSensitivityPayload(
         _ sensitivity: UInt8, address: [UInt8] = []
     ) -> [UInt8] {
         var p: [UInt8] = [0x02, 0xB4, 0x04, 0x01, 0x01, sensitivity,
@@ -223,7 +225,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// each frame's byte 5 is the chunk's length in *bytes* and byte 6 counts
     /// the chunks remaining after it (…2, 1, 0). An empty string produces a
     /// single zero-length frame, which clears the field.
-    public static func textPayloads(
+    package static func textPayloads(
         field: TextField, index: Int = 1, text: String, address: [UInt8] = []
     ) -> [[UInt8]] {
         let units = Array(text.utf16)
@@ -254,7 +256,7 @@ public enum XencelabsOutputProtocol: Sendable {
     /// Payload sequence to sync all eight key labels (labels[0] = key 1,
     /// the top-left key in landscape orientation). Missing entries clear
     /// their key's label; extras beyond 8 are ignored.
-    public static func keyLabelPayloads(
+    package static func keyLabelPayloads(
         _ labels: [String], address: [UInt8] = []
     ) -> [[UInt8]] {
         (0..<8).flatMap { i in
