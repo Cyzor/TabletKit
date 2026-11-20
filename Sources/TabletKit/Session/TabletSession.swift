@@ -75,8 +75,10 @@ public final class TabletSession {
         self.delegate = delegate
     }
 
-    /// Starts listening. Returns the result of opening HID access, which
-    /// fails without Input Monitoring permission.
+    /// Starts listening. Returns the result of opening HID access: an error
+    /// when the system refuses any interface, as it refuses those that
+    /// present as a mouse or keyboard without Input Monitoring. The rest
+    /// still open.
     @discardableResult
     public func start() -> IOReturn {
         backend.start(

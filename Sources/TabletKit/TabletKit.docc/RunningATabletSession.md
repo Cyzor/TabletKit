@@ -26,7 +26,7 @@ final class Driver: TabletSessionDelegate {
         let session = TabletSession(
             vendorIDs: Array(WacomDeviceRegistry.vendorIDs), anyPenDigitizer: false, delegate: self)
         if session.start() != kIOReturnSuccess {
-            print("Grant Input Monitoring, then call retryOpen().")
+            print("Some interfaces need Input Monitoring; call retryOpen() once it's granted.")
         }
         self.session = session
     }
@@ -35,7 +35,7 @@ final class Driver: TabletSessionDelegate {
 
 ``WacomDeviceRegistry/vendorIDs`` covers both of Wacom's vendor IDs. Set `anyPenDigitizer` to also take other makers' standard pen digitizers.
 
-`start()` fails until the app has Input Monitoring permission. Once the user grants it, call ``TabletSession/retryOpen()``.
+`start()` returns an error when the system refuses any interface; Input Monitoring guards those that present as a mouse or keyboard. Tablets still attach, and a transport that can't open faults with ``TabletFailure/permissionDenied``. Once the user grants Input Monitoring, call ``TabletSession/retryOpen()``.
 
 The main run loop has to run. An app's already does; a command-line tool calls `RunLoop.main.run()`, not `dispatchMain()`.
 

@@ -10,8 +10,8 @@ import IOKit.hid
 package protocol HIDBackend: AnyObject, Sendable {
     /// Starts reporting interfaces as they appear and go. Both callbacks run
     /// on the main actor, in the order the system reported them. Returns the
-    /// result of opening the system's HID access; it fails without Input
-    /// Monitoring permission.
+    /// result of opening the system's HID access, an error when the system
+    /// refuses any interface.
     @MainActor func start(
         attached: @escaping @MainActor (any HIDInterface) -> Void,
         detached: @escaping @MainActor (any HIDInterface) -> Void
