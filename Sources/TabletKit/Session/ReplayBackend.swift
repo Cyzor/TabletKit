@@ -29,7 +29,8 @@ package final class ReplayBackend: HIDBackend, @unchecked Sendable {
         self.detached = detached
         interfaces = recording.interfaces.map(ReplayInterface.init)
         next = 0
-        return kIOReturnSuccess
+        // Like the system's open: one refused interface fails the whole call.
+        return recording.interfaces.first { $0.openResult != kIOReturnSuccess }?.openResult ?? kIOReturnSuccess
     }
 
     @MainActor package func stop() {
@@ -126,6 +127,7 @@ package final class ReplayInterface: HIDInterface, @unchecked Sendable {
     package func noteInputMode() { lock.withLock { log.append("inputMode") } }
 
     package func open(seize: Bool, onReport: @escaping @Sendable (HIDReport, UInt64) -> Void) -> IOReturn {
+        guard recorded.openResult == kIOReturnSuccess else { return recorded.openResult }
         isOpen = true
         seized = seize
         self.onReport = onReport

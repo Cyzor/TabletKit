@@ -24,6 +24,9 @@ package struct ReplayRecording: Sendable {
         package var featureReplies: [UInt8: [Reply]] = [:]
         /// Answers to USB string descriptor reads, header included, by index.
         package var strings: [UInt8: [UInt8]] = [:]
+        /// What opening the interface returns. `kIOReturnNotPermitted` plays
+        /// one that macOS keeps closed without Input Monitoring.
+        package var openResult: IOReturn = kIOReturnSuccess
 
         package init() {}
     }

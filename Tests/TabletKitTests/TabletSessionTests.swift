@@ -93,6 +93,28 @@ final class TabletSessionTests: XCTestCase {
         XCTAssertEqual(backend.interfaces[1].writes.first, "inputMode")
     }
 
+    /// Without Input Monitoring, macOS keeps interfaces that present as a
+    /// mouse closed and opens the rest. Start reports the refusal, both
+    /// tablets attach, and only the refused one faults.
+    func testRefusedInterfaceFaultsWhileOthersOpen() throws {
+        var refused = iface(0x03F9, page: 0x01, serial: "S9")
+        refused.openResult = kIOReturnNotPermitted
+        let backend = ReplayBackend(ReplayRecording(
+            interfaces: [iface(0x0358, page: 0xFF00, serial: "S1"), refused], events: [.attach(0), .attach(1)]))
+        let delegate = RecordingDelegate()
+        let session = TabletSession(backend: backend, delegate: delegate)
+        XCTAssertEqual(session.start(), kIOReturnNotPermitted)
+        backend.play()
+
+        XCTAssertEqual(delegate.log, ["attach 0x358 to 0x358", "attach 0x3f9 to 0x3f9"])
+        let open = try XCTUnwrap(session.transport(for: backend.interfaces[0]))
+        let closed = try XCTUnwrap(session.transport(for: backend.interfaces[1]))
+        XCTAssertNotEqual(open.state, .faulted(.permissionDenied))
+        XCTAssertTrue(backend.interfaces[0].isOpen)
+        XCTAssertEqual(closed.state, .faulted(.permissionDenied))
+        XCTAssertFalse(backend.interfaces[1].isOpen)
+    }
+
     /// A host sets its controls as soon as it hears of a transport, before
     /// the session opens it. Those writes must still reach the tablet.
     func testControlWritesFromAttachReachTheTablet() throws {
