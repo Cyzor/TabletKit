@@ -244,6 +244,47 @@ final class GraphireDecoderTests: XCTestCase {
         XCTAssertFalse(aux.buttons[1])
     }
 
+    /// The bytes a CTE-440 sent rolling its wheel up (0x08) and down (0x38),
+    /// from a public OpenTabletDriver report (#5313), and the extremes of the
+    /// signed 3-bit step.
+    func testG4PadWheelSteps() {
+        for (byte7, expected) in [(UInt8(0x08), 1), (0x38, -1), (0x18, 3), (0x20, -4), (0x00, 0)] {
+            var st = GraphireDecoder.State()
+            let r = decode(makePen(status: 0x00, byte7: byte7), state: &st, spec: graphire4)
+            let steps = r.compactMap { result -> Int? in
+                if case .wheel(index: 0, let delta) = result { return delta }
+                return nil
+            }
+            XCTAssertEqual(steps, expected == 0 ? [] : [expected], "d[7]=0x\(String(byte7, radix: 16))")
+        }
+    }
+
+    /// The wheel shares d[7] with the buttons and the pen's pressure bits.
+    func testG4PadWheelLeavesButtonsAndPressure() {
+        var st = GraphireDecoder.State()
+        // Pen touching, pressure high bits 0b11, BTN_FORWARD, wheel up.
+        let r = decode(makePen(status: 0x81, byte6: 0xFF, byte7: 0x80 | 0x08 | 0x03), state: &st, spec: graphire4)
+        guard case .aux(let aux)? = r.first(where: { if case .aux = $0 { return true }; return false })
+        else { return XCTFail("expected .aux") }
+        XCTAssertEqual(aux.buttons, [false, true])
+        guard case .pen(let pt)? = r.first(where: { if case .pen = $0 { return true }; return false })
+        else { return XCTFail("expected .pen") }
+        XCTAssertEqual(pt.pressure, 511)
+        XCTAssertTrue(r.contains { if case .wheel(index: 0, delta: 1) = $0 { return true }; return false })
+    }
+
+    /// A four-button model's buttons share the wheel's bits; a short report
+    /// from one must not turn into wheel steps.
+    func testNoWheelFromFourButtonModels() {
+        let bambooFun = DigitizerSpec(
+            maxX: 14760, maxY: 9225, maxPressure: 511,
+            buttonCount: 4, hasTilt: false, hasDualRings: false,
+            isPenDisplay: false, ringSlotCount: 0)
+        var st = GraphireDecoder.State()
+        let r = decode(makePen(status: 0x00, byte7: 0x38), state: &st, spec: bambooFun)
+        XCTAssertFalse(r.contains { if case .wheel = $0 { return true }; return false })
+    }
+
     func testNoPadOnPenPartner() {
         var st = GraphireDecoder.State()
         // PenPartner has buttonCount=0 → no pad even when not in proximity

@@ -214,7 +214,16 @@ package struct GraphireDecoder: TabletReportDecoder {
             (padByte & 0x40) != 0,   // BTN_BACK
             (padByte & 0x80) != 0,   // BTN_FORWARD
         ]
-        return [.aux(AuxButtons(buttons: buttons))]
+        var results: [DecodeResult] = [.aux(AuxButtons(buttons: buttons))]
+        // The wheel between the buttons: a signed 3-bit step, the kernel's
+        // `((d[7] & 0x18) >> 3) - ((d[7] & 0x20) >> 3)`. A CTE-440 sends 0x08
+        // rolling up and 0x38 rolling down; one detent is one step. Only the
+        // two-button G4 has it: a short report from a four-button MO model
+        // lands here too, and its button bits would read as turns.
+        guard spec.buttonCount == 2 else { return results }
+        let step = Int((padByte & 0x18) >> 3) - Int((padByte & 0x20) >> 3)
+        if step != 0 { results.append(.wheel(index: 0, delta: step)) }
+        return results
     }
 
     /// The Graphire Wireless's battery, from `d[7]` bits 2–4, when it
