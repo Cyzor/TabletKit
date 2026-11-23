@@ -320,14 +320,15 @@ public enum ToolCatalog: Sendable {
             supportedFamilies: [.intuosProGen2]
         )
 
-        // Intuos Pen (Intuos P/PT 2), per libwacom: no tilt, no eraser. Was
-        // listed as "Pen 5K" with both, plus an invented 0x086A eraser.
+        // Intuos Pen, per libwacom: no tilt, no eraser. Was listed as
+        // "Pen 5K" with both, plus an invented 0x086A eraser. 4096 levels,
+        // as on every CTL-x100.
         catalog[0x0862] = ToolSpec(
             toolCode: 0x0862,
             name: "Intuos Pen",
             toolType: .stylus,
             buttonCount: 2,
-            maxPressure: 2047,
+            maxPressure: 4095,
             hasTilt: false,
             hasRotation: false,
             hasWheel: false,
