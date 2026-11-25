@@ -39,6 +39,23 @@ extension DecoderState {
 /// causes.
 package let proximityExitFrames = 3
 
+/// Settings for how decoders treat a pen at the edge of range.
+public enum EdgeOfRange {
+    /// USB IntuosV2 weak frames (status 0x40: sensed, not in range) that
+    /// follow the pen's position before it counts as having left. The tablet
+    /// sends these at the edge of range and while it switches between a
+    /// sideways pen's tip and eraser; their positions are mostly real, with
+    /// occasional large jumps, which `senseBandMaxStep` skips. While
+    /// following, exit frames (status 0x00) count as weak frames too, so the
+    /// pen leaves only on the limit or, in the app, on silence. 0 repeats the
+    /// last position for `proximityExitFrames` frames and exits on the first
+    /// exit frame, as before.
+    nonisolated(unsafe) public static var senseBandFollowFrames = 0
+    /// Largest step, in tablet counts per frame, a weak frame may move the
+    /// pen; a larger one keeps the previous position.
+    nonisolated(unsafe) public static var senseBandMaxStep = 1000
+}
+
 /// One slot of a wireless receiver's pairing table. `serial` is the remote's
 /// own 24-bit identifier, the same one its event frames carry.
 ///

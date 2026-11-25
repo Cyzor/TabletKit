@@ -133,7 +133,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         let highConfidence = (status & 0x20) != 0
         let isExitSignal = !prox && !highConfidence
 
-        if isExitSignal {
+        let follow = EdgeOfRange.senseBandFollowFrames
+        if isExitSignal && follow == 0 {
             // Genuine firmware exit signal — both proximity and confidence lost.
             // Don't threshold this; kernel fires it immediately.
             if state.prevInProximity {
@@ -146,33 +147,44 @@ package struct IntuosV2Decoder: TabletReportDecoder {
 
         // Boundary noise: prox=1 but highConfidence=0 (status = 0x40), from
         // the Art Pen's rotation sensor in motion. Repeat the last state so
-        // apps don't see a gap that snaps rotation to 0°.
+        // apps don't see a gap that snaps rotation to 0°. While following,
+        // an exit frame counts as one more: at the edge of range the tablet
+        // mixes them into a stream of weak frames, and a real exit ends in
+        // silence, which the app times.
         if !highConfidence {
+            let step = EdgeOfRange.senseBandMaxStep
             state.exitFrameCount += 1
-            if state.exitFrameCount >= proximityExitFrames && state.prevInProximity {
+            if state.exitFrameCount >= max(proximityExitFrames, follow) && state.prevInProximity {
                 state.lastSerial = 0  // force toolEnter on re-entry
                 state.lastToolCode = 0
                 return [state.leaveProximity(spec: spec, holdingOrientation: true)]
             }
 
-            // Below threshold, the pen is likely still down: repeat the last
-            // state, once a valid frame has arrived since tool-enter. Cached
-            // tilt keeps the azimuth from snapping to 0°, which wobbled
-            // strokes. Hover reads 0, since these frames don't measure it.
+            // Below threshold, the pen is likely still down: follow the weak
+            // frame's position, or repeat the last when following is off or
+            // the frame jumps. Cached tilt keeps the azimuth from snapping to
+            // 0°, which wobbled strokes. Hover reads 0, since these frames
+            // don't measure it.
             if state.prevInProximity && state.hasValidTiltFrame {
-                return [
-                    .pen(
-                        TabletPoint(
-                            x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
-                            pressure: 0, maxPressure: spec.maxPressure,
-                            tiltX: state.lastTiltX, tiltY: state.lastTiltY,
-                            rotation: state.lastRotation,
-                            penButton1: false, penButton2: false,
-                            // Held like tilt: a hard-coded false flipped the
-                            // eraser to the pen on every weak frame at the
-                            // edge of range.
-                            eraser: state.isEraser, inProximity: true, hoverDistance: 0))
-                ]
+                if follow > 0, report.count >= 8 {
+                    let x = report.le24(at: 2), y = report.le24(at: 5)
+                    if abs(x - state.lastX) <= step && abs(y - state.lastY) <= step {
+                        state.lastX = x
+                        state.lastY = y
+                    }
+                }
+                var point = TabletPoint(
+                    x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
+                    pressure: 0, maxPressure: spec.maxPressure,
+                    tiltX: state.lastTiltX, tiltY: state.lastTiltY,
+                    rotation: state.lastRotation,
+                    penButton1: false, penButton2: false,
+                    // Held like tilt: a hard-coded false flipped the
+                    // eraser to the pen on every weak frame at the
+                    // edge of range.
+                    eraser: state.isEraser, inProximity: true, hoverDistance: 0)
+                point.weakSignal = follow > 0
+                return [.pen(point)]
             }
             return []
         }
@@ -566,7 +578,8 @@ extension IntuosV2Decoder {
         package var lastBTPadRing: UInt8 = 0x7F
         /// Last ring-button byte from the Bluetooth `0x80` container.
         package var lastBTPadBtn: UInt8 = 0
-        /// Consecutive weak frames. The pen leaves at `proximityExitFrames`.
+        /// Consecutive weak frames. The pen leaves at `proximityExitFrames`,
+        /// or with following on at `EdgeOfRange.senseBandFollowFrames`.
         package var exitFrameCount: Int = 0
         /// Whether this family fully supports the tool in range.
         package var toolIsSupported: Bool = true

@@ -13,6 +13,7 @@ enum DescribedTouchRanges
 enum DeviceFamily
 enum DigitizerInterfaceKind
 enum DigitizerUsage
+enum EdgeOfRange
 enum EvidenceLevel
 enum HIDReportDescriptorParser
 enum HIDReportDescriptorParserError
@@ -461,6 +462,7 @@ property TabletPoint.pressure
 property TabletPoint.rotation
 property TabletPoint.tiltX
 property TabletPoint.tiltY
+property TabletPoint.weakSignal
 property TabletPoint.x
 property TabletPoint.y
 property TabletSession.delegate
@@ -733,6 +735,8 @@ type.property DigitizerUsage.vendorHoverDistance
 type.property DigitizerUsage.vendorX
 type.property DigitizerUsage.vendorY
 type.property DigitizerUsage.width
+type.property EdgeOfRange.senseBandFollowFrames
+type.property EdgeOfRange.senseBandMaxStep
 type.property EvidenceSource.descriptorCorpus
 type.property EvidenceSource.libwacom
 type.property EvidenceSource.linuxKernel

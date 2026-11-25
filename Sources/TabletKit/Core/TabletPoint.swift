@@ -80,6 +80,10 @@ public struct TabletPoint: Sendable {
     /// Absolute airbrush fingerwheel position, 0–1023; nil for tools without
     /// one. Separate from `mouseWheelDelta`, which is a relative ±1 step.
     public var airbrushWheel: Int? = nil
+    /// A weak frame at the edge of range: sensed, not in range, its position
+    /// followed under ``EdgeOfRange/senseBandFollowFrames``. A tablet that
+    /// stops reporting after one has left; it sends no exit of its own.
+    public var weakSignal: Bool = false
 
     /// Creates a value with the given fields; optional ones default to absent.
     public init(

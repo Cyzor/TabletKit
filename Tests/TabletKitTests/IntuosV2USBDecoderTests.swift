@@ -406,6 +406,53 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertFalse(state.prevInProximity, "Third consecutive boundary frame should exit proximity")
     }
 
+    /// With following on, weak frames move the pen, skip a large jump, and
+    /// hold proximity until the follow limit.
+    func testBoundaryNoiseFollowsPositionWhenEnabled() {
+        EdgeOfRange.senseBandFollowFrames = 5
+        defer { EdgeOfRange.senseBandFollowFrames = 0 }
+        var state = IntuosV2Decoder.State()
+        state.prevInProximity = true
+        state.hasValidTiltFrame = true
+        state.lastToolCode = 0x0842
+        state.lastX = 1000
+        state.lastY = 2000
+        func weak(_ x: Int, _ y: Int) -> [UInt8] {
+            var b = make0x10(status: 0x40, toolCode: 0)
+            b[2] = UInt8(x & 0xFF); b[3] = UInt8((x >> 8) & 0xFF); b[4] = UInt8(x >> 16)
+            b[5] = UInt8(y & 0xFF); b[6] = UInt8((y >> 8) & 0xFF); b[7] = UInt8(y >> 16)
+            return b
+        }
+        func penX(_ results: [DecodeResult]) -> Int? {
+            results.compactMap { if case .pen(let p) = $0 { return p.x } else { return nil } }.first
+        }
+        let first = decode(weak(1010, 2005), state: &state)
+        XCTAssertEqual(penX(first), 1010, "A weak frame moves the pen")
+        XCTAssertEqual(first.compactMap { if case .pen(let p) = $0 { return p.weakSignal } else { return nil } }.first,
+                       true, "A followed weak frame says so")
+        XCTAssertEqual(penX(decode(weak(9000, 2005), state: &state)), 1010, "A jump keeps the last position")
+        XCTAssertEqual(penX(decode(weak(1030, 2010), state: &state)), 1030)
+        _ = decode(weak(1040, 2010), state: &state)
+        XCTAssertTrue(state.prevInProximity, "Fourth weak frame stays in range under a limit of 5")
+        _ = decode(weak(1050, 2010), state: &state)
+        XCTAssertFalse(state.prevInProximity, "Fifth weak frame leaves")
+    }
+
+    /// While following, an exit frame amid weak frames doesn't end proximity.
+    func testExitFrameCountsAsWeakWhileFollowing() {
+        EdgeOfRange.senseBandFollowFrames = 5
+        defer { EdgeOfRange.senseBandFollowFrames = 0 }
+        var state = IntuosV2Decoder.State()
+        state.prevInProximity = true
+        state.hasValidTiltFrame = true
+        state.lastToolCode = 0x0842
+        _ = decode(make0x10(status: 0x00, toolCode: 0), state: &state)
+        XCTAssertTrue(state.prevInProximity, "An exit frame while following is one more weak frame")
+        EdgeOfRange.senseBandFollowFrames = 0
+        _ = decode(make0x10(status: 0x00, toolCode: 0), state: &state)
+        XCTAssertFalse(state.prevInProximity, "With following off, an exit frame exits at once")
+    }
+
     // MARK: - 0x10 mouse path
 
     /// Byte 16 is hover distance, as the descriptor declares and a KC-100
