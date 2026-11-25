@@ -166,6 +166,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             // 0°, which wobbled strokes. Hover reads 0, since these frames
             // don't measure it.
             if state.prevInProximity && state.hasValidTiltFrame {
+                var held = false
                 if follow > 0, report.count >= 8 {
                     // Near the last position, or agreeing with the weak frame
                     // before it: a stream that resumes elsewhere moves the
@@ -177,6 +178,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     if nearLast || agrees {
                         state.lastX = x
                         state.lastY = y
+                    } else {
+                        held = true
                     }
                     state.weakRawX = x
                     state.weakRawY = y
@@ -193,6 +196,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
                     // edge of range.
                     eraser: state.isEraser, inProximity: true, hoverDistance: 0)
                 point.weakSignal = follow > 0
+                point.weakSignalHeld = held
                 return [.pen(point)]
             }
             return []

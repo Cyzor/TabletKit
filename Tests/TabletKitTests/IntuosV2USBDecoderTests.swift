@@ -460,7 +460,11 @@ final class IntuosV2USBDecoderTests: XCTestCase {
             for result in results { if case .pen(let p) = result { return p.x } }
             return nil
         }
-        XCTAssertEqual(penX(decode(weak(9000, 9000), state: &state)), 1000, "A lone jump keeps the last position")
+        let jump = decode(weak(9000, 9000), state: &state)
+        XCTAssertEqual(penX(jump), 1000, "A lone jump keeps the last position")
+        XCTAssertEqual(jump.compactMap { (r: DecodeResult) -> Bool? in
+            if case .pen(let p) = r { return p.weakSignalHeld } else { return nil } }.first, true,
+            "A held weak frame says so")
         XCTAssertEqual(penX(decode(weak(9050, 9020), state: &state)), 9050, "A second agreeing frame moves the pen")
         XCTAssertEqual(penX(decode(weak(9100, 9040), state: &state)), 9100)
     }

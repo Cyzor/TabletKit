@@ -84,6 +84,9 @@ public struct TabletPoint: Sendable {
     /// followed under ``EdgeOfRange/senseBandFollowFrames``. A tablet that
     /// stops reporting after one has left; it sends no exit of its own.
     public var weakSignal: Bool = false
+    /// A weak frame whose position jumped too far to trust, so the point
+    /// repeats the last position instead.
+    public var weakSignalHeld: Bool = false
 
     /// Creates a value with the given fields; optional ones default to absent.
     public init(

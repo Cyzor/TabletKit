@@ -463,6 +463,7 @@ property TabletPoint.rotation
 property TabletPoint.tiltX
 property TabletPoint.tiltY
 property TabletPoint.weakSignal
+property TabletPoint.weakSignalHeld
 property TabletPoint.x
 property TabletPoint.y
 property TabletSession.delegate
