@@ -167,11 +167,20 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             // don't measure it.
             if state.prevInProximity && state.hasValidTiltFrame {
                 if follow > 0, report.count >= 8 {
+                    // Near the last position, or agreeing with the weak frame
+                    // before it: a stream that resumes elsewhere moves the
+                    // pen there, while a lone jump keeps the last position.
                     let x = report.le24(at: 2), y = report.le24(at: 5)
-                    if abs(x - state.lastX) <= step && abs(y - state.lastY) <= step {
+                    let nearLast = abs(x - state.lastX) <= step && abs(y - state.lastY) <= step
+                    let agrees = state.hasWeakRaw
+                        && abs(x - state.weakRawX) <= step && abs(y - state.weakRawY) <= step
+                    if nearLast || agrees {
                         state.lastX = x
                         state.lastY = y
                     }
+                    state.weakRawX = x
+                    state.weakRawY = y
+                    state.hasWeakRaw = true
                 }
                 var point = TabletPoint(
                     x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
@@ -190,6 +199,7 @@ package struct IntuosV2Decoder: TabletReportDecoder {
         }
 
         state.exitFrameCount = 0
+        state.hasWeakRaw = false
         state.prevInProximity = true
 
         var results: [DecodeResult] = []
@@ -581,6 +591,10 @@ extension IntuosV2Decoder {
         /// Consecutive weak frames. The pen leaves at `proximityExitFrames`,
         /// or with following on at `EdgeOfRange.senseBandFollowFrames`.
         package var exitFrameCount: Int = 0
+        /// The last weak frame's own position, while following.
+        package var weakRawX: Int = 0
+        package var weakRawY: Int = 0
+        package var hasWeakRaw: Bool = false
         /// Whether this family fully supports the tool in range.
         package var toolIsSupported: Bool = true
         /// Last valid Art Pen rotation, in degrees.

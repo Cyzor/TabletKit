@@ -439,6 +439,32 @@ final class IntuosV2USBDecoderTests: XCTestCase {
         XCTAssertFalse(state.prevInProximity, "Fifth weak frame leaves")
     }
 
+    /// A weak stream that resumes elsewhere moves the pen there once two
+    /// frames agree; a lone jump doesn't.
+    func testWeakStreamReanchorsWhenTwoFramesAgree() {
+        EdgeOfRange.senseBandFollowFrames = 1000
+        defer { EdgeOfRange.senseBandFollowFrames = 0 }
+        var state = IntuosV2Decoder.State()
+        state.prevInProximity = true
+        state.hasValidTiltFrame = true
+        state.lastToolCode = 0x0862
+        state.lastX = 1000
+        state.lastY = 1000
+        func weak(_ x: Int, _ y: Int) -> [UInt8] {
+            var b = make0x10(status: 0x40, toolCode: 0)
+            b[2] = UInt8(x & 0xFF); b[3] = UInt8((x >> 8) & 0xFF); b[4] = UInt8(x >> 16)
+            b[5] = UInt8(y & 0xFF); b[6] = UInt8((y >> 8) & 0xFF); b[7] = UInt8(y >> 16)
+            return b
+        }
+        func penX(_ results: [DecodeResult]) -> Int? {
+            for result in results { if case .pen(let p) = result { return p.x } }
+            return nil
+        }
+        XCTAssertEqual(penX(decode(weak(9000, 9000), state: &state)), 1000, "A lone jump keeps the last position")
+        XCTAssertEqual(penX(decode(weak(9050, 9020), state: &state)), 9050, "A second agreeing frame moves the pen")
+        XCTAssertEqual(penX(decode(weak(9100, 9040), state: &state)), 9100)
+    }
+
     /// While following, an exit frame amid weak frames doesn't end proximity.
     func testExitFrameCountsAsWeakWhileFollowing() {
         EdgeOfRange.senseBandFollowFrames = 5
