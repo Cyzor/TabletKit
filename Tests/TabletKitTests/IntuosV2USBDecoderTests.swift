@@ -423,13 +423,14 @@ final class IntuosV2USBDecoderTests: XCTestCase {
             b[5] = UInt8(y & 0xFF); b[6] = UInt8((y >> 8) & 0xFF); b[7] = UInt8(y >> 16)
             return b
         }
-        func penX(_ results: [DecodeResult]) -> Int? {
-            results.compactMap { if case .pen(let p) = $0 { return p.x } else { return nil } }.first
+        func pen(_ results: [DecodeResult]) -> TabletPoint? {
+            for result in results { if case .pen(let p) = result { return p } }
+            return nil
         }
+        func penX(_ results: [DecodeResult]) -> Int? { pen(results)?.x }
         let first = decode(weak(1010, 2005), state: &state)
         XCTAssertEqual(penX(first), 1010, "A weak frame moves the pen")
-        XCTAssertEqual(first.compactMap { if case .pen(let p) = $0 { return p.weakSignal } else { return nil } }.first,
-                       true, "A followed weak frame says so")
+        XCTAssertEqual(pen(first)?.weakSignal, true, "A followed weak frame says so")
         XCTAssertEqual(penX(decode(weak(9000, 2005), state: &state)), 1010, "A jump keeps the last position")
         XCTAssertEqual(penX(decode(weak(1030, 2010), state: &state)), 1030)
         _ = decode(weak(1040, 2010), state: &state)
