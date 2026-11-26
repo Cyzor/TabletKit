@@ -117,8 +117,14 @@ final class TabletInputTests: XCTestCase {
         let after = feed(&input, toolChange)
         XCTAssertTrue(after.events.contains { if case .tool(let t) = $0 { t.phase == .enter } else { false } })
 
+        // Pressing when the link drops.
+        _ = feed(&input, [0x02, 0xE0, 0x10, 0x00, 0x10, 0x00, 216, 241, 0, 0])
+        XCTAssertTrue(input.penInRange)
         let lost = feed(&input, [0x80, 0x00, 0, 0, 0, 0, 0, 0])
         XCTAssertTrue(lost.effects.isEmpty)
+        XCTAssertTrue(lost.events.contains { if case .tool(let t) = $0 { t.phase == .leave } else { false } },
+                      "a dropped link releases the pen in range")
+        XCTAssertTrue(lost.events.contains { if case .pen(let p) = $0 { !p.inProximity && p.pressure == 0 } else { false } })
         let gated = feed(&input, toolChange)
         XCTAssertFalse(gated.events.contains { if case .tool = $0 { true } else { false } }, "gated again once the link drops")
     }

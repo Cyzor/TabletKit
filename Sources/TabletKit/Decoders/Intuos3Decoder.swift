@@ -119,7 +119,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
 
         // In range but not reporting position (0x20 or 0x21): bytes 6–8 are
         // zero, so decoding them would peg tilt and hover. Mid-stroke, hold
-        // the position with the tip up, as the kernel does.
+        // the position and side buttons with the tip up, as the kernel does.
         if (status & 0xFE) == 0x20 {
             guard state.prevInProximity else { return [] }
             return [
@@ -128,7 +128,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
                         x: state.lastX, y: state.lastY, maxX: spec.maxX, maxY: spec.maxY,
                         pressure: 0, maxPressure: spec.maxPressure,
                         tiltX: 0, tiltY: 0, rotation: 0.0,
-                        penButton1: false, penButton2: false,
+                        penButton1: state.lastPenButtons.0, penButton2: state.lastPenButtons.1,
                         eraser: state.isEraser, inProximity: true,
                         hoverDistance: IntuosV1Decoder.maxHoverDistance))
             ]
@@ -137,6 +137,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
         if !inProximity {
             state.prevInProximity = false
             state.toolIsMouse = false
+            state.lastPenButtons = (false, false)
             return [
                 .pen(
                     TabletPoint(
@@ -182,6 +183,7 @@ package struct Intuos3Decoder: TabletReportDecoder {
             report, maxPressure: spec.maxPressure, statusBit: spec.maxPressure > 1023)
         let tilt = IntuosPenPacket.tilt(report)
 
+        state.lastPenButtons = ((status & 0x02) != 0, (status & 0x04) != 0)
         results.append(
             .pen(
                 TabletPoint(
@@ -190,8 +192,8 @@ package struct Intuos3Decoder: TabletReportDecoder {
                     tiltX: tilt.x,
                     tiltY: tilt.y,
                     rotation: 0.0,
-                    penButton1: (status & 0x02) != 0,
-                    penButton2: (status & 0x04) != 0,
+                    penButton1: state.lastPenButtons.0,
+                    penButton2: state.lastPenButtons.1,
                     eraser: state.isEraser,
                     inProximity: true,
                     hoverDistance: (Int(report[9]) >> 2))))
@@ -239,6 +241,8 @@ extension Intuos3Decoder {
         package var isEraser: Bool = false
         /// Whether the tool in range is a mouse.
         package var toolIsMouse: Bool = false
+        /// Side buttons, held through in-range-only frames.
+        package var lastPenButtons: (Bool, Bool) = (false, false)
 
         package init() {}
     }

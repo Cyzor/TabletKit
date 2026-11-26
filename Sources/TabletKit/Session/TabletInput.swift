@@ -284,6 +284,16 @@ package struct TabletInput {
                 }
                 events.append(.pad(pad))
             case .device(let device):
+                // A link change resets the decoder; release what the pen
+                // held first, or it stays pressed.
+                if device.kind == .wireless, let status = device.wireless, resetsDecoder(status), penInRange {
+                    let silence = handleSilence()
+                    if !silence.isEmpty {
+                        events += silence
+                    } else if let last = wirelessLastAcceptedPoint {
+                        events += decoder.eventsForRelease(from: last)
+                    }
+                }
                 note(device, into: &output)
                 events.append(event)
             case .dial, .touch:
@@ -315,6 +325,15 @@ package struct TabletInput {
         }
     }
 
+
+    /// Whether `handleWirelessStatus` resets the decoder for `status`.
+    private func resetsDecoder(_ status: WirelessStatus) -> Bool {
+        switch status {
+        case .active: !wirelessLinkConfirmed
+        case .lost: true
+        default: false
+        }
+    }
 
     private mutating func handleWirelessStatus(_ status: WirelessStatus, into output: inout Output) {
         let name = spec.name

@@ -233,6 +233,19 @@ final class GraphireDecoderTests: XCTestCase {
         XCTAssertTrue(aux.buttons[1])   // BTN_FORWARD (0x80)
     }
 
+    /// The pad reads while the mouse is on the tablet; its wheel is d[7]
+    /// bits 0–2, below the pad's.
+    func testG4PadWhileMouseInRange() {
+        var st = GraphireDecoder.State()
+        let r = decode(makePen(status: 0x80 | 0x40, byte7: 0xC0 | 0x01), state: &st, spec: graphire4)
+        guard case .aux(let aux)? = r.first(where: { if case .aux = $0 { return true }; return false })
+        else { return XCTFail("expected .aux") }
+        XCTAssertEqual(Array(aux.buttons.prefix(2)), [true, true])
+        guard case .pen(let pt)? = r.first(where: { if case .pen = $0 { return true }; return false })
+        else { return XCTFail("expected .pen") }
+        XCTAssertEqual(pt.mouseWheelDelta, -1)
+    }
+
     func testG4PadSingleButtonBack() {
         var st = GraphireDecoder.State()
         // Only bit 6 set

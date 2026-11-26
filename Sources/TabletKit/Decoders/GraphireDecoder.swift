@@ -134,6 +134,8 @@ package struct GraphireDecoder: TabletReportDecoder {
                         hoverDistance: 0,
                         mouseMiddleButton: (status & 0x04) != 0,
                         mouseWheelDelta: wheelDelta)))
+            // The mouse wheel is d[7] bits 0–2; the pad's start at bit 3.
+            appendPad(&results, report: report, spec: spec)
             return results
         }
 

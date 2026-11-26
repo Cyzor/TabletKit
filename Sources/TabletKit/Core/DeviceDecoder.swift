@@ -75,6 +75,16 @@ public struct DeviceDecoder: Sendable {
         events(from: decodeSilence())
     }
 
+    /// The pen leaving from `last`, tip and buttons up, for when its
+    /// reports stop for good, such as a wireless link going down.
+    package mutating func eventsForRelease(from last: TabletPoint) -> [TabletEvent] {
+        events(from: [.pen(TabletPoint(
+            x: last.x, y: last.y, maxX: last.maxX, maxY: last.maxY,
+            pressure: 0, maxPressure: last.maxPressure, tiltX: 0, tiltY: 0,
+            penButton1: false, penButton2: false, eraser: last.eraser,
+            inProximity: false, hoverDistance: 0))])
+    }
+
     private mutating func events(from results: [DecodeResult]) -> [TabletEvent] {
         var events: [TabletEvent] = []
         events.reserveCapacity(results.count + 1)

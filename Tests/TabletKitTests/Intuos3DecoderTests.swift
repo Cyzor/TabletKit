@@ -115,6 +115,15 @@ final class Intuos3DecoderTests: XCTestCase {
         XCTAssertEqual(held[0].hoverDistance, 63)
     }
 
+    /// A side button held into an in-range-only frame stays held.
+    func testInRangeOnlyHoldsSideButtons() {
+        var st = Intuos3Decoder.State()
+        _ = decode(makePen(status: 0xE0 | 0x02, xHigh: 0x10), state: &st)
+        let held = pens(decode(makePen(status: 0x20), state: &st))
+        XCTAssertEqual(held.map(\.penButton1), [true])
+        XCTAssertEqual(held.map(\.penButton2), [false])
+    }
+
     // MARK: - Proximity exit: no guard on prevInProximity
 
     func testProximityExitAlwaysEmitsFrameEvenWhenPrevInProximityFalse() {

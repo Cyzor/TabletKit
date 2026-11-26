@@ -9,17 +9,17 @@
 0x0012 inputs=1053 pen=236 tool=33 pad=0 dial=0 touch=0 device=0 digest=ff1bdb410c5cfc55  # Graphire 2 (5×7)
 0x0013 inputs=1052 pen=341 tool=18 pad=0 dial=0 touch=0 device=0 digest=4460605b3efaa755  # Graphire 3 (4×5)
 0x0014 inputs=1037 pen=286 tool=28 pad=0 dial=0 touch=0 device=0 digest=c59637a40d3b9463  # Graphire 3 (6×8)
-0x0081 inputs=1055 pen=162 tool=18 pad=275 dial=0 touch=0 device=40 digest=5e9b8170c899455c  # Graphire 3 Wireless (CTE-630BT)
-0x0015 inputs=1040 pen=275 tool=38 pad=220 dial=157 touch=0 device=0 digest=e391099c59e75a3b  # Graphire 4 (4×5)
-0x0016 inputs=1044 pen=265 tool=23 pad=274 dial=227 touch=0 device=0 digest=3e35cd6032ac0ceb  # Graphire 4 (6×8)
-0x0017 inputs=1042 pen=253 tool=26 pad=369 dial=0 touch=0 device=0 digest=513b2a318b9ffec1  # Bamboo Fun small (CTE-450)
-0x0018 inputs=1055 pen=195 tool=36 pad=326 dial=0 touch=0 device=0 digest=b29eada0c4065662  # Bamboo Fun medium (CTE-650)
+0x0081 inputs=1055 pen=162 tool=18 pad=295 dial=0 touch=0 device=40 digest=03600f7db5ee452a  # Graphire 3 Wireless (CTE-630BT)
+0x0015 inputs=1040 pen=275 tool=38 pad=413 dial=314 touch=0 device=0 digest=261340129c30f714  # Graphire 4 (4×5)
+0x0016 inputs=1044 pen=265 tool=23 pad=446 dial=369 touch=0 device=0 digest=37ba6d0d89729dfd  # Graphire 4 (6×8)
+0x0017 inputs=1042 pen=253 tool=26 pad=437 dial=0 touch=0 device=0 digest=64c1cf44d6f478f2  # Bamboo Fun small (CTE-450)
+0x0018 inputs=1055 pen=195 tool=36 pad=433 dial=0 touch=0 device=0 digest=f58db9cae8afdcec  # Bamboo Fun medium (CTE-650)
 0x0019 inputs=1044 pen=209 tool=32 pad=0 dial=0 touch=0 device=0 digest=8ad705ef11f62a78  # Bamboo1 Medium
 0x0060 inputs=1031 pen=233 tool=40 pad=0 dial=0 touch=0 device=0 digest=e222220501c1a6fd  # Volito
 0x0061 inputs=1045 pen=305 tool=35 pad=0 dial=0 touch=0 device=0 digest=3ed56b9206e90933  # PenStation2
 0x0062 inputs=1062 pen=385 tool=24 pad=0 dial=0 touch=0 device=0 digest=4dd897f3cd80636b  # Volito 2
 0x0063 inputs=1044 pen=283 tool=34 pad=0 dial=0 touch=0 device=0 digest=c98ed092f5a42082  # Volito 2 (2×3)
-0x0065 inputs=1044 pen=289 tool=35 pad=256 dial=0 touch=0 device=0 digest=90d0e0d11e8619c2  # Bamboo (MTE-450)
+0x0065 inputs=1044 pen=289 tool=35 pad=407 dial=0 touch=0 device=0 digest=86341d9f18afb6dc  # Bamboo (MTE-450)
 0x0069 inputs=1053 pen=303 tool=43 pad=0 dial=0 touch=0 device=0 digest=39c2cbc0323209ad  # Wacom CTF-430
 0x006A inputs=1043 pen=291 tool=24 pad=0 dial=0 touch=0 device=0 digest=030e5b6a08c883fb  # Wacom CTE-460
 0x006B inputs=1048 pen=286 tool=22 pad=0 dial=0 touch=0 device=0 digest=8a73b8057a4c5b32  # Wacom CTE-660

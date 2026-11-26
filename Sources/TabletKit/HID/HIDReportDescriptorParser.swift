@@ -172,7 +172,8 @@ public func extractField(_ field: DescriptorField, from payload: [UInt8]) -> Int
             return Int(bitPattern: UInt(truncatingIfNeeded: extended))
         }
     }
-    return Int(raw)
+    // A malformed 64-bit field with its top bit set would trap `Int(raw)`.
+    return Int(truncatingIfNeeded: raw)
 }
 
 // MARK: - Walker

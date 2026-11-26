@@ -318,4 +318,16 @@ final class HIDReportDescriptorParserTests: XCTestCase {
         XCTAssertEqual(layout.featureReportID(carryingUsage: 0x000D_0052), 0x83)
         XCTAssertEqual(layout.modeSwitchFeatureReportID(), 0x40)
     }
+
+    /// A malformed 64-bit field with its top bit set reads without trapping.
+    func testSixtyFourBitFieldWithTopBitSetDoesNotTrap() {
+        for logicalMin in [0, -1] {
+            let field = DescriptorField(
+                usagePage: 0x0D, usage: 0x30, bitOffset: 0, bitSize: 64,
+                logicalMin: logicalMin, logicalMax: 1, physicalMin: 0, physicalMax: 0,
+                unit: 0, unitExponent: 0, isConstant: false, isVariable: true,
+                isRelative: false, collectionPath: [])
+            XCTAssertEqual(extractField(field, from: [UInt8](repeating: 0xFF, count: 8)), -1)
+        }
+    }
 }
