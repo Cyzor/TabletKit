@@ -1055,20 +1055,26 @@ public enum ToolCatalog: Sendable {
     }
 
     /// Look up a tool specification by tool code, handling eraser bit.
-    /// If the tool code has the eraser bit set (0x0008), looks up the eraser variant.
+    /// An unlisted code with the eraser bit (0x0008) set takes its tip's
+    /// spec, for capabilities; what kind of tool it is comes from the bit
+    /// (see `isUnlistedEraser`).
     public static func spec(forToolCodeRaw toolCode: UInt16) -> ToolSpec? {
-        // First try exact match
         if let spec = allTools[toolCode] {
             return spec
         }
-        // Try with eraser bit masked off
         return allTools[toolCode & ~UInt16(0x0008)]
+    }
+
+    /// An eraser end the catalog doesn't list, whose tip it does: its name,
+    /// kind, and eraser flag mustn't be the tip's.
+    private static func isUnlistedEraser(_ toolCode: UInt16) -> Bool {
+        toolCode & 0x0008 != 0 && allTools[toolCode] == nil && (toolCode & 0x000F) != 0x0006
     }
 
     /// Returns the human-readable name for a tool code.
     /// Falls back to descriptive names based on tool code patterns for unknown codes.
     public static func name(forToolCode toolCode: UInt16) -> String {
-        if let spec = spec(forToolCodeRaw: toolCode) {
+        if !isUnlistedEraser(toolCode), let spec = spec(forToolCodeRaw: toolCode) {
             return spec.name
         }
         // Fallback heuristics for unknown codes - be more specific
@@ -1107,7 +1113,7 @@ public enum ToolCatalog: Sendable {
 
     /// Returns the tool type for a tool code.
     public static func toolType(forToolCode toolCode: UInt16) -> ToolKind {
-        if let spec = spec(forToolCodeRaw: toolCode) {
+        if !isUnlistedEraser(toolCode), let spec = spec(forToolCodeRaw: toolCode) {
             return spec.toolType
         }
         // Fallback heuristics
@@ -1122,7 +1128,7 @@ public enum ToolCatalog: Sendable {
 
     /// Returns true if the tool code represents a mouse/cursor.
     public static func isMouse(toolCode: UInt16) -> Bool {
-        if let spec = spec(forToolCodeRaw: toolCode) {
+        if !isUnlistedEraser(toolCode), let spec = spec(forToolCodeRaw: toolCode) {
             return spec.isMouse
         }
         return (toolCode & 0x000F) == 0x0006
@@ -1130,7 +1136,7 @@ public enum ToolCatalog: Sendable {
 
     /// Returns true if the tool code represents an eraser.
     public static func isEraser(toolCode: UInt16) -> Bool {
-        if let spec = spec(forToolCodeRaw: toolCode) {
+        if !isUnlistedEraser(toolCode), let spec = spec(forToolCodeRaw: toolCode) {
             return spec.isEraser
         }
         return (toolCode & 0x0008) != 0

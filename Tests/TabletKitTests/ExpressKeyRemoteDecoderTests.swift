@@ -140,6 +140,14 @@ final class ExpressKeyRemoteDecoderTests: XCTestCase {
         XCTAssertEqual(b?.touchRingPosition, 71)
     }
 
+    /// A touch at wire value 0 reads as the first position, not 255.
+    func testRingPositionAtWireZeroStaysInRange() {
+        var state = ExpressKeyRemoteDecoder.State()
+        let a = auxButtons(decode(makeRemote(ringByte: 0x80), state: &state))
+        XCTAssertEqual(a?.touchRingActive, true)
+        XCTAssertEqual(a?.touchRingPosition, 0)
+    }
+
     func testRingPositionIsIdleSentinelWhenNotTouched() {
         var state = ExpressKeyRemoteDecoder.State()
         let idle = auxButtons(decode(makeRemote(ringByte: 0x00), state: &state))

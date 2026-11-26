@@ -174,18 +174,18 @@
 0x0335 inputs=1061 pen=225 tool=32 pad=161 dial=0 touch=0 device=0 digest=88dee377911bd712  # Cintiq 13HD Touch sensor (pairs 0x0333)
 0x0354 inputs=1045 pen=383 tool=34 pad=215 dial=0 touch=0 device=71 digest=64007d19d7c15fb3  # Cintiq Pro 16 Touch sensor (pairs 0x0350)
 0x0030 inputs=1053 pen=252 tool=42 pad=0 dial=0 touch=0 device=0 digest=faf1d66b783acc1a  # PL400
-0x0031 inputs=1047 pen=299 tool=32 pad=0 dial=0 touch=0 device=0 digest=9b4210bdddf4dfce  # PL500
-0x0032 inputs=1053 pen=387 tool=24 pad=0 dial=0 touch=0 device=0 digest=81c3a0e26d191839  # PL600
-0x0033 inputs=1059 pen=247 tool=31 pad=0 dial=0 touch=0 device=0 digest=2d0a5021a2c4812f  # PL600SX
-0x0034 inputs=1063 pen=289 tool=35 pad=0 dial=0 touch=0 device=0 digest=c3fd5827525356f8  # PL550 (Cintiq 15X)
-0x0035 inputs=1054 pen=250 tool=25 pad=0 dial=0 touch=0 device=0 digest=89c0f5e428d4b749  # PL800 (Cintiq 18SX)
-0x0037 inputs=1042 pen=275 tool=27 pad=0 dial=0 touch=0 device=0 digest=53087387b65c60cc  # PL700
-0x0038 inputs=1041 pen=275 tool=30 pad=0 dial=0 touch=0 device=0 digest=73c1882ed7b73451  # PL510
-0x0039 inputs=1045 pen=344 tool=27 pad=0 dial=0 touch=0 device=0 digest=de65f8ff6baf3adf  # DTU-710
-0x00C0 inputs=1047 pen=211 tool=21 pad=0 dial=0 touch=0 device=0 digest=a1c80cc1f6c56fbe  # DTF-720
+0x0031 inputs=1047 pen=299 tool=35 pad=0 dial=0 touch=0 device=0 digest=e4c78213f21b773f  # PL500
+0x0032 inputs=1053 pen=387 tool=27 pad=0 dial=0 touch=0 device=0 digest=3d78bf22f1e4164d  # PL600
+0x0033 inputs=1059 pen=247 tool=35 pad=0 dial=0 touch=0 device=0 digest=d26e22060fc61c39  # PL600SX
+0x0034 inputs=1063 pen=289 tool=36 pad=0 dial=0 touch=0 device=0 digest=5c90eeb5927e7bd9  # PL550 (Cintiq 15X)
+0x0035 inputs=1054 pen=250 tool=29 pad=0 dial=0 touch=0 device=0 digest=562fdc855a8eba9d  # PL800 (Cintiq 18SX)
+0x0037 inputs=1042 pen=275 tool=31 pad=0 dial=0 touch=0 device=0 digest=cc45bf2a11cc048b  # PL700
+0x0038 inputs=1041 pen=275 tool=31 pad=0 dial=0 touch=0 device=0 digest=e0fdaa5f596e218d  # PL510
+0x0039 inputs=1045 pen=344 tool=31 pad=0 dial=0 touch=0 device=0 digest=24fadcb5b5d57dfc  # DTU-710
+0x00C0 inputs=1047 pen=211 tool=23 pad=0 dial=0 touch=0 device=0 digest=defffd5b1cae6e86  # DTF-720
 0x00C2 inputs=1047 pen=250 tool=28 pad=0 dial=0 touch=0 device=0 digest=ceef478c1c2161e3  # DTF-720a
-0x00C4 inputs=1038 pen=234 tool=30 pad=0 dial=0 touch=0 device=0 digest=5902290044365fe5  # DTF-521
-0x00C7 inputs=1043 pen=305 tool=41 pad=0 dial=0 touch=0 device=0 digest=ad520ffd2d7f9496  # DTU-1931
+0x00C4 inputs=1038 pen=234 tool=33 pad=0 dial=0 touch=0 device=0 digest=11da82af4f11c21f  # DTF-521
+0x00C7 inputs=1043 pen=305 tool=47 pad=0 dial=0 touch=0 device=0 digest=4b2b9f0b1a0d31c4  # DTU-1931
 0x0343 inputs=1050 pen=241 tool=0 pad=160 dial=0 touch=0 device=0 digest=0126347fc44f12fd  # Wacom DTK1651
 0x00FB inputs=1050 pen=141 tool=0 pad=213 dial=0 touch=0 device=0 digest=16126992aa293d6a  # Wacom DTU-1031
 0x032F inputs=1056 pen=216 tool=0 pad=194 dial=0 touch=0 device=0 digest=00200b8df5cf88e9  # Wacom DTU-1031X

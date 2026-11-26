@@ -100,8 +100,11 @@ package struct WacomPLDecoder: TabletReportDecoder {
                         isMouse: false)))
         } else if state.isEraser && !eraserBit {
             // Kernel self-correction: an eraser classification made at entry
-            // is revoked if the eraser bit later clears mid-session.
+            // is revoked if the eraser bit later clears mid-session. Name
+            // the pen, as the kernel switches tools, or the host keeps the
+            // eraser's settings until the pen leaves.
             state.isEraser = false
+            results.append(.toolEnter(ToolIdentity(serial: 0, toolCode: 0x0802, isEraser: false, isMouse: false)))
         }
 
         let x = Int(report[3]) | (Int(report[2]) << 7) | (Int(status1 & 0x03) << 14)

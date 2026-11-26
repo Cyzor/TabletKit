@@ -228,7 +228,8 @@ package enum XencelabsOutputProtocol: Sendable {
     package static func textPayloads(
         field: TextField, index: Int = 1, text: String, address: [UInt8] = []
     ) -> [[UInt8]] {
-        let units = Array(text.utf16)
+        // The remaining count is one byte: at most 256 chunks of 8 units.
+        let units = Array(text.utf16.prefix(256 * 8))
         // Chunk into groups of 8 UTF-16 code units (16 bytes of text area).
         var chunks: [[UInt16]] = stride(from: 0, to: max(units.count, 1), by: 8).map {
             Array(units[$0..<min($0 + 8, units.count)])

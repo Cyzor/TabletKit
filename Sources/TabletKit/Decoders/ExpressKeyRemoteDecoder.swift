@@ -78,7 +78,8 @@ package struct ExpressKeyRemoteDecoder: TabletReportDecoder {
 
         let ringByte = report[12]
         let ringActive = ringByte & 0x80 != 0
-        let ringPosition = ringActive ? (ringByte & 0x7F) &- 1 : 0x7F
+        // A touch at wire value 0 would wrap to 255; read it as the first position.
+        let ringPosition = ringActive ? max(ringByte & 0x7F, 1) - 1 : 0x7F
         let mode = Int((report[11] & 0xC0) >> 6)
 
         var aux = AuxButtons(

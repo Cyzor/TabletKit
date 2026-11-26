@@ -217,4 +217,13 @@ final class XencelabsOutputProtocolTests: XCTestCase {
             XencelabsOutputProtocol.displayContrastPayload(50, address: addr),
             hex("02 b5 01 04 00 00 32 00 00 00 aa 67 82 b9 35 f4"))
     }
+
+    /// Text past what the one-byte chunk count can number is cut, not a trap.
+    func testVeryLongTextIsCutToTheChunkLimit() {
+        let payloads = XencelabsOutputProtocol.textPayloads(
+            field: .modeName, text: String(repeating: "a", count: 3000))
+        XCTAssertEqual(payloads.count, 256)
+        XCTAssertEqual(payloads.first?[6], 255)
+        XCTAssertEqual(payloads.last?[6], 0)
+    }
 }

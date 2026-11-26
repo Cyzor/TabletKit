@@ -188,6 +188,18 @@ final class WacomPLDecoderTests: XCTestCase {
     /// The one behavior neither third-party research source described,
     /// found only by reading wacom_pl_irq() directly: an eraser
     /// classification made at entry is revoked if the bit later clears.
+    /// The correction names the pen, so the host leaves the eraser's settings.
+    func testEraserCorrectionNamesThePen() {
+        var state = WacomPLDecoder.State()
+        _ = decode(makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
+        let results = decode(makeReport(proximity: true, x: 5, y: 5), spec: pl400, state: &state)
+        let entered = results.compactMap { r -> ToolIdentity? in
+            if case .toolEnter(let t) = r { return t }; return nil
+        }
+        XCTAssertEqual(entered.map(\.toolCode), [0x0802])
+        XCTAssertEqual(entered.map(\.isEraser), [false])
+    }
+
     func testEraserClassificationSelfCorrectsWhenBitClearsMidSession() {
         var state = WacomPLDecoder.State()
         _ = decode(makeReport(proximity: true, eraserOrButton2: true), spec: pl400, state: &state)
