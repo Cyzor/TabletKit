@@ -1710,12 +1710,16 @@ extension WacomDeviceRegistry {
             isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 349, activeHeightMM: 219),
         .init(
-            // Pen range and pressure: vendor model properties.
+            // Pen range and pressure: vendor model properties. A capture shows
+            // the Wacom One S/M pen report 0x1F (status at byte 2), so it
+            // takes their family, and DATAMODE goes to the pen interface.
             productID: 0x040F, name: "Wacom One 14 (DTC-141)",  // ⚠ pen range from vendor model properties only
-            format: .intuosV2, maxX: 30931, maxY: 17399, maxPressure: 4095,
+            format: .intuosV3, maxX: 30931, maxY: 17399, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174)
+            // Report 0x06 is this family's real pen report, not an idle frame.
+            .withQuirks { $0.usbIdleReport = nil },
         // Rows below exist only in vendor model properties:
         // pen range, pressure, and touch range are Wacom's, the rest copies
         // the sibling row above that shares the panel.
@@ -1732,20 +1736,23 @@ extension WacomDeviceRegistry {
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 21076, touchMaxY: 11856, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 531, activeHeightMM: 300),
+        // DTH142: the DTC-141's family, assumed from the shared panel and pen.
         .init(
             productID: 0x0423, name: "Wacom One 14 Touch (DTH142)",
-            format: .intuosV2, maxX: 30931, maxY: 17399, maxPressure: 4095,
+            format: .intuosV3, maxX: 30931, maxY: 17399, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 12372, touchMaxY: 6960, isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174)
+            .withQuirks { $0.usbIdleReport = nil },
         .init(
             productID: 0x0428, name: "Wacom One 14 Touch (DTH142)",
-            format: .intuosV2, maxX: 30931, maxY: 17399, maxPressure: 4095,
+            format: .intuosV3, maxX: 30931, maxY: 17399, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 12372, touchMaxY: 6960, isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174),
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174)
+            .withQuirks { $0.usbIdleReport = nil },
         .init(
             // Touch wiring and range: vendor model properties.
             // Pen range and pressure: vendor model properties.

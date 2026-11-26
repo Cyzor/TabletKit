@@ -155,6 +155,29 @@ final class IntuosV3DecoderTests: XCTestCase {
         XCTAssertEqual(pt.tiltY, -1.0, accuracy: 0.001)
     }
 
+    /// DTC-141: an 18-byte 0x1F laid out as its descriptor declares — tip and
+    /// in range in byte 2, tilt as signed LE16 whole degrees — decodes as a
+    /// pen in range, with tilt over the row's 64°.
+    func test0x1FDTC141FrameFromDescriptorLayout() throws {
+        let row = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x040F))
+        XCTAssertEqual(row.format, .intuosV3)
+        var st = IntuosV3Decoder.State()
+        var b = [UInt8](repeating: 0, count: 18)
+        b[0] = 0x1F; b[1] = 0x01; b[2] = 0x41  // tip + in range
+        b[3] = 0x53; b[4] = 0x78  // X 30803
+        b[5] = 0x10; b[6] = 0x27  // Y 10000
+        b[7] = 0x00; b[8] = 0x08  // pressure 2048
+        b[9] = 0x20; b[10] = 0x00  // tilt X +32°
+        b[11] = 0xE0; b[12] = 0xFF  // tilt Y -32°
+        let p = try XCTUnwrap(pens(decode(b, state: &st, spec: row.digitizerSpec)).first)
+        XCTAssertTrue(p.inProximity)
+        XCTAssertEqual(p.x, 30803)
+        XCTAssertEqual(p.y, 10000)
+        XCTAssertEqual(p.pressure, 2048)
+        XCTAssertEqual(p.tiltX, 0.5, accuracy: 0.001)
+        XCTAssertEqual(p.tiltY, -0.5, accuracy: 0.001)
+    }
+
     func test0x1FPenButtons() {
         var st = IntuosV3Decoder.State()
         // bit1=penButton1, bit2=penButton2; both set alongside prox (bit6)

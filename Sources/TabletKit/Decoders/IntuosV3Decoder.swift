@@ -141,7 +141,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
     ///   [3..4]  X coordinate, LE u16
     ///   [5..6]  Y coordinate, LE u16
     ///   [7..8]  pressure, LE u16
-    ///   [9]     tilt X, signed byte
+    ///   [9]     tilt X, signed byte, over `spec.tiltMaxDegrees` if set, else 127
     ///   [10]    unused/padding
     ///   [11]    tilt Y, signed byte
     ///   [12]    unused/padding
@@ -179,8 +179,10 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         let x = report.le16(at: 3)
         let y = report.le16(at: 5)
         let pressure = report.le16(at: 7)
-        let tiltX = Double(Int8(bitPattern: report[9])) / 127.0
-        let tiltY = Double(Int8(bitPattern: report[11])) / 127.0
+        // Whole degrees where the descriptor says so (DTC-141).
+        let tiltDivisor = spec.tiltMaxDegrees ?? 127.0
+        let tiltX = Double(Int8(bitPattern: report[9])) / tiltDivisor
+        let tiltY = Double(Int8(bitPattern: report[11])) / tiltDivisor
         let hoverDistance = Int(report[13])
 
         state.prevInProximity = true
