@@ -191,9 +191,15 @@ package final class TabletConnection: @unchecked Sendable {
     /// Sends the init sequence again, as after sleep or when the tablet
     /// seems to have lost its mode. Not over Bluetooth, where InputMode
     /// would suppress pen data, except where the format needs DATAMODE.
+    /// Over USB, pen scanning goes back on first, as at connect.
     @MainActor
     package func reawaken() {
         guard !isBluetooth || spec.quirks.initOverBluetooth else { return }
+        if !isBluetooth {
+            for interface in interfaces where !interface.transport.lowercased().contains("bluetooth") {
+                switchPenScanOn(interface)
+            }
+        }
         runInit()
     }
 

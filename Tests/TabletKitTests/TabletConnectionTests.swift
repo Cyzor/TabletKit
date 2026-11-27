@@ -152,6 +152,19 @@ final class TabletConnectionTests: XCTestCase {
         XCTAssertFalse(ble.writes.contains("feature 0d 00"))
     }
 
+    /// Waking the tablet switches pen scanning on again before data mode,
+    /// on the interface that declares the switch.
+    func testReawakenSwitchesPenScanningOnFirst() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0375))
+        let primary = interface(productID: 0x0375, usagePage: 0xFF0D, descriptor: penScanSwitch + declaring(feature: 0x02))
+        let (connection, _) = connect(primary, spec: spec)
+        connection.output.drain()
+        let before = primary.writes.count
+        connection.reawaken()
+        connection.output.drain()
+        XCTAssertEqual(Array(primary.writes.dropFirst(before)), ["feature 0d 00", "feature 02 02"])
+    }
+
     /// Intuos4 over USB reads its mode back and resends until it takes.
     func testIntuos4ModeReadBack() throws {
         let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x00B8))
