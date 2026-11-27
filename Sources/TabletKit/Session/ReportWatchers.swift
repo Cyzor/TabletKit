@@ -41,22 +41,23 @@ package struct IdleReportWatcher: Sendable {
 /// (InRange). Such reports carry position only. A pen normally gets
 /// identified within a few reports; a CTL-6100 has kept this up for over a
 /// minute, tip and buttons dead, until the pen left range. Asks for a pen
-/// scan restart after `after` seconds of it, then every `retryAfter`, up to
-/// `attempts` times per stretch. See ``TabletQuirks/usbPenScanSwitch``.
+/// scan restart after `after` seconds of it, and once more `retryAfter`
+/// later if it persists: the same reports can come from a pen hovering a
+/// little high, which each restart pauses. See
+/// ``TabletQuirks/usbPenScanSwitch``.
 package struct SenseOnlyWatcher: Sendable {
     package static let after: TimeInterval = 1.0
     package static let retryAfter: TimeInterval = 3.0
-    package static let attempts = 3
+    package static let attempts = 2
     /// Reports further apart than this end a stretch: the pen has left.
     package static let maxGap: TimeInterval = 0.1
     /// A restart silences the tablet for a moment (a PTK-870 took 0.66 s to
     /// report a hovering pen after scanning came back on), so a gap this
-    /// soon after one doesn't start a fresh stretch with fresh attempts.
+    /// soon after one doesn't start a fresh stretch.
     package static let restartQuiet: TimeInterval = 2.0
 
     private var since: TimeInterval?
     private var last = -TimeInterval.infinity
-    private var nextAttempt = TimeInterval.infinity
     private var made = 0
     private var lastRestart = -TimeInterval.infinity
 
@@ -65,21 +66,23 @@ package struct SenseOnlyWatcher: Sendable {
     /// True when the pen scan should restart.
     package mutating func observe(_ report: HIDReport, now: TimeInterval) -> Bool {
         guard report.count >= 2, report[0] == 0x10 else { return false }
-        let senseOnly = report[1] & 0x60 == 0x40
-        defer { last = now }
-        guard senseOnly else {
+        // Only an identified pen ends a stretch. The exit frame a restart
+        // provokes (status 0x00) neither ends nor extends it.
+        if report[1] & 0x20 != 0 {
             since = nil
             return false
         }
+        guard report[1] & 0x40 != 0 else { return false }
+        defer { last = now }
         let afterRestart = now - lastRestart < Self.restartQuiet + Self.maxGap
         if since == nil || (now - last > Self.maxGap && !afterRestart) {
             since = now
-            nextAttempt = now + Self.after
             made = 0
         }
-        guard now >= nextAttempt, made < Self.attempts else { return false }
+        guard let since, made < Self.attempts,
+            now - (made == 0 ? since : lastRestart) >= (made == 0 ? Self.after : Self.retryAfter)
+        else { return false }
         made += 1
-        nextAttempt = now + Self.retryAfter
         lastRestart = now
         return true
     }

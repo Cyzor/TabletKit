@@ -44,6 +44,7 @@ final class ReportWatcherTests: XCTestCase {
     static let senseOnly: [UInt8] = [
         0x10, 0x40, 0x3A, 0x3C, 0x00, 0xDE, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x3F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]
+    static let exit: [UInt8] = [0x10, 0x00, 0x3A, 0x3C, 0x00, 0xDE, 0x0A] + [UInt8](repeating: 0, count: 20)
     static let identified: [UInt8] = [
         0x10, 0x60, 0xF7, 0x32, 0x00, 0xB4, 0x0F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x3E,
         0xA0, 0x2E, 0x9C, 0x1E, 0x62, 0x08, 0x10, 0x00, 0x62, 0x08,
@@ -66,16 +67,18 @@ final class ReportWatcherTests: XCTestCase {
         XCTAssertEqual(times[1] - times[0], SenseOnlyWatcher.retryAfter, accuracy: 0.01)
     }
 
-    /// A restart quiets the tablet; the frames after it keep the count, so
-    /// a pen left lying in range isn't restarted every second.
-    func testQuietAfterARestartKeepsTheAttemptCount() {
+    /// A restart quiets the tablet; the frames after it continue the same
+    /// stretch, so a pen left lying in range isn't restarted every second.
+    func testQuietAfterARestartContinuesTheStretch() {
         var w = SenseOnlyWatcher()
         var times: [Double] = []
         var t = 0.0
         while t < 15 {
             if HIDReport.withReport(Self.senseOnly, { w.observe($0, now: t) }) {
                 times.append(t)
-                t += 0.7  // the tablet goes quiet while scanning restarts
+                // Scanning off: one exit frame, then quiet until it resumes.
+                _ = HIDReport.withReport(Self.exit, { w.observe($0, now: t + 0.005) })
+                t += 0.7
             }
             t += 0.0075
         }
