@@ -13,8 +13,8 @@ import Foundation
 /// Report IDs:
 /// 0x1A  Bluetooth LE pen and pad; see `decodeBLEReport`
 /// 0x1E  extended pen report, 24-bit XY; see `decodeExtendedPenReport`
-/// 0x1F  pen report, 16-bit XY, from OpenTabletDriver's tables; never seen
-///       in a capture
+/// 0x1F  pen report, 16-bit XY; seen on the Wacom One 14 (DTC-141) and
+///       declared by the DTH142's descriptor
 /// 0x11  aux: 8 express keys, 2 cluster-center keys, 2 dials
 /// 0x1B  Bluetooth LE battery
 /// 0x06  Bluetooth LE standard digitizer report, sent without DATAMODE
@@ -80,7 +80,7 @@ package struct IntuosV3Decoder: TabletReportDecoder {
         guard report.count >= 2 else { return [] }
         switch report[0] {
         case 0x1F:
-            // OTD gates on data[1] == 0x01; other 0x1F payloads are unknown.
+            // [1] is a 0-1 field (usage 0x54); only 1 carries a pen.
             guard report.count >= 14, report[1] == 0x01 else { return [] }
             return decodePenReport(
                 report: report, spec: spec, state: &state,
@@ -134,18 +134,21 @@ package struct IntuosV3Decoder: TabletReportDecoder {
 
     // MARK: - 0x1F standard pen report (16-bit XY)
 
-    /// OTD IntuosV3Report.cs layout (14+ bytes):
-    ///   [0]     = 0x1F  report ID
-    ///   [1]     = 0x01  sub-type discriminator (other values are unknown)
-    ///   [2]     pen status: bit1=button1, bit2=button2, bit5=eraser, bit6=prox
-    ///   [3..4]  X coordinate, LE u16
-    ///   [5..6]  Y coordinate, LE u16
-    ///   [7..8]  pressure, LE u16
-    ///   [9]     tilt X, signed byte, over `spec.tiltMaxDegrees` if set, else 127
-    ///   [10]    unused/padding
-    ///   [11]    tilt Y, signed byte
-    ///   [12]    unused/padding
-    ///   [13]    hover distance
+    /// Layout per the DTH142's descriptor (18 bytes):
+    ///   [0]       = 0x1F  report ID
+    ///   [1]       = 0x01  pen present (0-1 field)
+    ///   [2]       pen status: bit0=tip, bit1=button1, bit2=button2,
+    ///             bit4=eraser, bit5=invert (read as the eraser end),
+    ///             bit6=in range, bit7=sense
+    ///   [3..4]    X coordinate, LE u16
+    ///   [5..6]    Y coordinate, LE u16
+    ///   [7..8]    pressure, LE u16
+    ///   [9..10]   tilt X, LE i16, whole degrees (declared -90...90); the low
+    ///             byte read as Int8 is the same value. Over
+    ///             `spec.tiltMaxDegrees` if set, else 127
+    ///   [11..12]  tilt Y, the same
+    ///   [13]      hover distance, 0-255
+    ///   [14..15]  scan time
     ///
     /// No serial or tool code is known for this report, so no `.toolEnter`
     /// goes out.

@@ -163,8 +163,8 @@ package struct IntuosV2Decoder: TabletReportDecoder {
             // Below threshold, the pen is likely still down: follow the weak
             // frame's position, or repeat the last when following is off or
             // the frame jumps. Cached tilt keeps the azimuth from snapping to
-            // 0°, which wobbled strokes. Hover reads 0, since these frames
-            // don't measure it.
+            // 0°, which wobbled strokes. Hover reads 0: these frames carry
+            // 63, the firmware's value for a pen beyond measuring height.
             if state.prevInProximity && state.hasValidTiltFrame {
                 var held = false
                 if follow > 0, report.count >= 8 {

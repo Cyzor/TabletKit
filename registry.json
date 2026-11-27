@@ -1296,8 +1296,8 @@
       "productID" : "0x0392",
       "productStringMatch" : null,
       "seizeUSB" : true,
-      "touchMaxX" : 6384,
-      "touchMaxY" : 3990
+      "touchMaxX" : 6400,
+      "touchMaxY" : 4000
     },
     {
       "activeHeightMM" : 99.75,
@@ -1318,8 +1318,8 @@
       "productID" : "0x03DC",
       "productStringMatch" : null,
       "seizeUSB" : true,
-      "touchMaxX" : 6384,
-      "touchMaxY" : 3990
+      "touchMaxX" : 6400,
+      "touchMaxY" : 4000
     },
     {
       "activeHeightMM" : 105,
@@ -3371,7 +3371,7 @@
       "activeHeightMM" : 174,
       "activeWidthMM" : 309,
       "buttonCount" : 0,
-      "confidence" : "experimental",
+      "confidence" : "crossReferenced",
       "hasEraser" : true,
       "hasFingerTouch" : true,
       "hasTouchRing" : false,
@@ -3393,7 +3393,7 @@
       "activeHeightMM" : 174,
       "activeWidthMM" : 309,
       "buttonCount" : 0,
-      "confidence" : "experimental",
+      "confidence" : "crossReferenced",
       "hasEraser" : true,
       "hasFingerTouch" : true,
       "hasTouchRing" : false,
@@ -3402,7 +3402,7 @@
       "maxTouchContacts" : 10,
       "maxX" : 30931,
       "maxY" : 17399,
-      "name" : "Wacom One 14 Touch (DTH142)",
+      "name" : "Wacom One 14 Touch (DTH142E)",
       "outOfScope" : null,
       "parser" : "intuosV3",
       "productID" : "0x0428",

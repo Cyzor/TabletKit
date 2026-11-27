@@ -619,13 +619,15 @@ extension WacomDeviceRegistry {
             // 6 express keys + touch ring (libwacom's 7th button is the ring
             // center). Touch fields mirror the PTH-660 pattern: kernel reports
             // touch_max=10 but the sibling 0x21 report carries 5 slots;
-            // touchMaxX/Y estimated as pen/5 like PTH-660 until captured.
+            // touchMaxX/Y 6400 x 4000 per OpenTabletDriver's PTH-460 config
+            // (its 6399 x 3999 counts the maximum one lower, as its PTH-660
+            // 8959 x 5919 does against that model's descriptor).
             productID: 0x0392, name: "Intuos Pro S (PTH-460)",  // cross-referenced: kernel + OTD + libwacom
             format: .intuosV2, maxX: 31920, maxY: 19950, maxPressure: 8191,
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             tiltMaxDegrees: 64.0,  // PTH-x60 family, descriptor-confirmed on PTH-660/860
             hasFingerTouch: true, maxTouchContacts: 5,
-            touchMaxX: 6384, touchMaxY: 3990,
+            touchMaxX: 6400, touchMaxY: 4000,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 159.6, activeHeightMM: 99.75),
@@ -637,7 +639,7 @@ extension WacomDeviceRegistry {
             buttonCount: 6, hasTouchRing: true, hasEraser: true,
             tiltMaxDegrees: 64.0,  // PTH-x60 family, descriptor-confirmed on PTH-660/860
             hasFingerTouch: true, maxTouchContacts: 5,
-            touchMaxX: 6384, touchMaxY: 3990,
+            touchMaxX: 6400, touchMaxY: 4000,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             confidence: .crossReferenced,
             activeWidthMM: 159.6, activeHeightMM: 99.75),
@@ -1367,13 +1369,10 @@ extension WacomDeviceRegistry {
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 15360, touchMaxY: 8640,
             isPenDisplay: true,
-            // Pen report 0x10 is declared here and has never once arrived, in
-            // any of seven captures, while report 0x11 (express keys) decodes
-            // fine and DATAMODE itself reports success. The cause is still
-            // unknown. The scan-enable startup sequence was *ruled out* here:
-            // this pen interface declares neither 0x14 nor 0x0E, which that
-            // sequence writes. The DTH-167 (0x03B2) does carry it — that row
-            // is not a precedent for this one.
+            // Pen report 0x10 confirmed in a reporter's capture: hover, both
+            // barrel buttons, the eraser, and two tool IDs. DATAMODE alone is
+            // enough; this interface declares neither 0x14 nor 0x0E, so the
+            // DTH-167's (0x03B2) scan-enable sequence doesn't apply.
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
             touchCompanionPID: 0x032C,
             // Standard HID digitizer Device Mode write: report 0x83 declares
@@ -1739,22 +1738,27 @@ extension WacomDeviceRegistry {
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 21076, touchMaxY: 11856, isPenDisplay: true,
             seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 531, activeHeightMM: 300),
-        // DTH142: the DTC-141's family, assumed from the shared panel and pen.
+        // DTH142 and DTH142E: descriptors in linuxwacom/wacom-hid-descriptors
+        // #659 and #660 declare pen report 0x1F and every range below
+        // (pen 309.31 x 173.99 mm, touch 309.3 x 174.0 mm); libwacom lists
+        // both PIDs. The E model adds only business-display reports.
         .init(
             productID: 0x0423, name: "Wacom One 14 Touch (DTH142)",
             format: .intuosV3, maxX: 30931, maxY: 17399, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 12372, touchMaxY: 6960, isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174)
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 309, activeHeightMM: 174)
             .withQuirks { $0.usbIdleReport = nil },
         .init(
-            productID: 0x0428, name: "Wacom One 14 Touch (DTH142)",
+            productID: 0x0428, name: "Wacom One 14 Touch (DTH142E)",
             format: .intuosV3, maxX: 30931, maxY: 17399, maxPressure: 4095,
             buttonCount: 0, hasTouchRing: false, hasEraser: true, tiltMaxDegrees: 64.0,
             hasFingerTouch: true, maxTouchContacts: 10,
             touchMaxX: 12372, touchMaxY: 6960, isPenDisplay: true,
-            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])], activeWidthMM: 309, activeHeightMM: 174)
+            seizeUSB: true, initSteps: [.featureReport([0x02, 0x02])],
+            confidence: .crossReferenced, activeWidthMM: 309, activeHeightMM: 174)
             .withQuirks { $0.usbIdleReport = nil },
         .init(
             // Touch wiring and range: vendor model properties.
