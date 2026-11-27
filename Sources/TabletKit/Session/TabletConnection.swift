@@ -80,6 +80,7 @@ package final class TabletConnection: @unchecked Sendable {
         // IntuosV2 USB: the InputMode switch turns on full tablet mode. Over
         // Bluetooth it would suppress pen data.
         if spec.quirks.inputModeWriteOverUSB && !isBluetooth { sendInputMode(on: primary) }
+        if !isBluetooth { switchPenScanOn(primary) }
         // Intuos Pro gen 3 over BLE starts on a minimal report and needs the
         // same DATAMODE write as USB.
         if isBluetooth && spec.quirks.initOverBluetooth { runInit() }
@@ -133,6 +134,7 @@ package final class TabletConnection: @unchecked Sendable {
         // interface can join a Bluetooth connection; gate on its own transport.
         let interfaceIsBluetooth = interface.transport.lowercased().contains("bluetooth")
         if spec.quirks.inputModeWriteOverUSB && !interfaceIsBluetooth { sendInputMode(on: interface) }
+        if !interfaceIsBluetooth { switchPenScanOn(interface) }
         if spec.quirks.initNeedsDeclaringInterface, !interfaceIsBluetooth, capableInterface == nil,
             declaresInitFeatureReports(interface)
         {
@@ -193,6 +195,43 @@ package final class TabletConnection: @unchecked Sendable {
     package func reawaken() {
         guard !isBluetooth || spec.quirks.initOverBluetooth else { return }
         runInit()
+    }
+
+    /// Wacom's vendor usage for the pen scan switch: 0 scans, 1 stops. A
+    /// tablet switched off stays off, through relaunches, until it's
+    /// switched on again (PTK-870), so every USB connect switches it on.
+    static let penScanUsage: UInt32 = 0xFF0D_100D
+
+    /// The feature report carrying the pen scan switch, if `interface`
+    /// declares one.
+    static func penScanSwitch(of interface: any HIDInterface) -> UInt8? {
+        guard !interface.reportDescriptor.isEmpty,
+            let layout = try? HIDReportDescriptorParser.parse(interface.reportDescriptor)
+        else { return nil }
+        return layout.featureReportID(carryingUsage: penScanUsage)
+    }
+
+    @MainActor
+    private func switchPenScanOn(_ interface: any HIDInterface) {
+        guard let id = Self.penScanSwitch(of: interface),
+            !spec.initSteps.contains(.featureReport([id, 0]))
+        else { return }
+        runInit(on: interface, steps: [.featureReport([id, 0])])
+    }
+
+    /// Turns pen scanning off and on, on the interface that declares the
+    /// switch. The second "on" covers a lost write: scanning left off would
+    /// silence the pen until the tablet is replugged.
+    @MainActor
+    package func restartPenScan() {
+        guard !isBluetooth, let id = spec.quirks.usbPenScanSwitch else { return }
+        let steps: [InitStep] = [
+            .featureReport([id, 1]), .delay(0.1), .featureReport([id, 0]), .delay(0.2), .featureReport([id, 0]),
+        ]
+        guard let interface = ([capableInterface].compactMap { $0 } + [primary] + interfaces)
+            .first(where: { declaresInitFeatureReports($0, for: steps) })
+        else { return }
+        runInit(on: interface, steps: steps)
     }
 
     /// Restores any touch sensor mode the connect sequence changed, then

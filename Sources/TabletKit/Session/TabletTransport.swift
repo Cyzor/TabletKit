@@ -239,7 +239,7 @@ public final class TabletTransport: Identifiable {
                 switch effect {
                 case .relinkPuck(let identity):
                     Self.relink(identity, input: input, output: output, backend: backend)
-                case .resendInit, .pairedTablet:
+                case .resendInit, .pairedTablet, .restartPenScan:
                     Self.onMain { carryOut(effect) }
                 }
             }
@@ -255,6 +255,9 @@ public final class TabletTransport: Identifiable {
             pairedProductID = productID
             output.setPairedProductID(productID)
             session?.transport(self, didPairWith: productID)
+        case .restartPenScan:
+            logger.info("\(self.spec.name, privacy: .public): pen sensed but not identified; restarting the pen scan")
+            connection.restartPenScan()
         case .relinkPuck:
             break
         }

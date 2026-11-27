@@ -13,6 +13,20 @@ final class TabletInputTests: XCTestCase {
         HIDReport.withReport(bytes) { input.handle($0, at: UInt64(seconds * 1_000_000_000) + 1) }
     }
 
+    func testUnidentifiedPenAsksForScanRestartOverUSBOnly() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0375))  // CTL-6100
+        XCTAssertEqual(spec.quirks.usbPenScanSwitch, 0x0D)
+        for isBluetooth in [false, true] {
+            var input = TabletInput(spec: spec, isBluetooth: isBluetooth, isWireless: false)
+            var effects: [TabletInput.Effect] = []
+            _ = feed(&input, ReportWatcherTests.identified)
+            for t in stride(from: 0.01, through: 1.2, by: 0.0075) {
+                effects += feed(&input, ReportWatcherTests.senseOnly, seconds: t).effects
+            }
+            XCTAssertEqual(effects, isBluetooth ? [] : [.restartPenScan])
+        }
+    }
+
     func testStuckIdleReportAsksForInitOverUSBOnly() throws {
         let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x03F9))  // PTK-870
         let rule = try XCTUnwrap(spec.quirks.usbIdleReport)

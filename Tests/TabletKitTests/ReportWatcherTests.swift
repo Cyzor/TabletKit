@@ -37,6 +37,63 @@ final class ReportWatcherTests: XCTestCase {
         XCTAssertTrue(idle(&w, 0x06, at: 5.5))
     }
 
+    // Issue #35, CTL-6100 over USB: a Sense-only frame (0x40, no tool, hover
+    // 63) and an identified one (0x60, Intuos Pen 0x0862; serial bytes are
+    // the capture's stand-ins). The reporter's tablet kept sending the first
+    // kind for up to 77 s, about 133 a second.
+    static let senseOnly: [UInt8] = [
+        0x10, 0x40, 0x3A, 0x3C, 0x00, 0xDE, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x3F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]
+    static let identified: [UInt8] = [
+        0x10, 0x60, 0xF7, 0x32, 0x00, 0xB4, 0x0F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x3E,
+        0xA0, 0x2E, 0x9C, 0x1E, 0x62, 0x08, 0x10, 0x00, 0x62, 0x08,
+    ]
+
+    /// Restart times over `seconds` of reports every 7.5 ms from `start`.
+    private func restarts(_ w: inout SenseOnlyWatcher, _ bytes: [UInt8], from start: Double, for seconds: Double) -> [Double] {
+        var times: [Double] = []
+        for t in stride(from: start, to: start + seconds, by: 0.0075) {
+            if HIDReport.withReport(bytes, { w.observe($0, now: t) }) { times.append(t) }
+        }
+        return times
+    }
+
+    func testSenseOnlyStretchAsksForRestartsThenGivesUp() {
+        var w = SenseOnlyWatcher()
+        let times = restarts(&w, Self.senseOnly, from: 0, for: 15)
+        XCTAssertEqual(times.count, SenseOnlyWatcher.attempts)
+        XCTAssertEqual(times[0], SenseOnlyWatcher.after, accuracy: 0.01)
+        XCTAssertEqual(times[1] - times[0], SenseOnlyWatcher.retryAfter, accuracy: 0.01)
+    }
+
+    /// A restart quiets the tablet; the frames after it keep the count, so
+    /// a pen left lying in range isn't restarted every second.
+    func testQuietAfterARestartKeepsTheAttemptCount() {
+        var w = SenseOnlyWatcher()
+        var times: [Double] = []
+        var t = 0.0
+        while t < 15 {
+            if HIDReport.withReport(Self.senseOnly, { w.observe($0, now: t) }) {
+                times.append(t)
+                t += 0.7  // the tablet goes quiet while scanning restarts
+            }
+            t += 0.0075
+        }
+        XCTAssertEqual(times.count, SenseOnlyWatcher.attempts)
+        XCTAssertEqual(times[1] - times[0], SenseOnlyWatcher.retryAfter, accuracy: 0.02)
+    }
+
+    func testIdentifiedPenOrSilenceStartsAFreshStretch() {
+        var w = SenseOnlyWatcher()
+        XCTAssertTrue(restarts(&w, Self.senseOnly, from: 0, for: 0.9).isEmpty)
+        // Identified: the next Sense-only frames start over.
+        XCTAssertTrue(restarts(&w, Self.identified, from: 0.9, for: 0.1).isEmpty)
+        XCTAssertTrue(restarts(&w, Self.senseOnly, from: 1.0, for: 0.9).isEmpty)
+        // A gap longer than the tablet's: the pen left and came back.
+        XCTAssertTrue(restarts(&w, Self.senseOnly, from: 2.2, for: 0.9).isEmpty)
+        XCTAssertEqual(restarts(&w, Self.senseOnly, from: 3.1, for: 0.5).count, 1)
+    }
+
     func testDonglePairingReportsEachNewProduct() {
         var w = DonglePairingWatcher()
         func status(_ pid: Int, linked: Bool = true) -> Int? {

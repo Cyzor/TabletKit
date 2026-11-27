@@ -1010,7 +1010,10 @@ extension WacomDeviceRegistry {
             productID: 0x0375, name: "Wacom CTL-6100",  // ⚠ from OTD
             format: .intuosV2, maxX: 21600, maxY: 13500, maxPressure: 4095,
             buttonCount: 4, hasTouchRing: false, hasEraser: false,
-            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135),
+            seizeUSB: false, initSteps: [.featureReport([0x02, 0x02])], confidence: .crossReferenced, activeWidthMM: 216, activeHeightMM: 135)
+            // Issue #35: its pen sometimes stays sensed but unidentified.
+            // The descriptor declares feature 0x0D as a one-bit switch.
+            .withQuirks { $0.usbPenScanSwitch = 0x0D },
         .init(
             // Active area as 0x0374 above.
             productID: 0x0376, name: "Wacom CTL-4100WL",  // ⚠ from OTD

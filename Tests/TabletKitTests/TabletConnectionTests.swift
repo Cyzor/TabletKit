@@ -16,6 +16,13 @@ final class TabletConnectionTests: XCTestCase {
          0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x01, 0xB1, 0x02, 0xC0]
     }
 
+    /// Wacom's pen scan switch as the CTL-6100, PTH-860, and PTK-870
+    /// declare it: feature 0x0D, vendor usage 0xFF0D:0x100D, 0 to 1.
+    private let penScanSwitch: [UInt8] = [
+        0x06, 0x0D, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x0D, 0x0A, 0x0D, 0x10,
+        0x15, 0x00, 0x25, 0x01, 0x75, 0x08, 0x95, 0x01, 0xB1, 0x02, 0xC0,
+    ]
+
     private func interface(
         productID: Int, usagePage: Int, transport: String = "USB", descriptor: [UInt8] = [],
         replies: [UInt8: [ReplayRecording.Reply]] = [:]
@@ -99,6 +106,50 @@ final class TabletConnectionTests: XCTestCase {
                 steps.steps.first(where: { if case .read("hardware serial", _, _, _, _) = $0 { true } else { false } })
         else { return XCTFail("serial read not reported") }
         XCTAssertEqual(Array(reply[4..<8]), [0, 0, 0, 0], "the reported reply hides the serial")
+    }
+
+    /// CTL-6100 over USB: a pen scan restart turns scanning off, then on
+    /// twice, on an interface that declares the switch, and does nothing on
+    /// one that doesn't.
+    func testPenScanRestartNeedsTheDeclaredSwitch() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0375))
+        let restart = ["feature 0d 01", "feature 0d 00", "feature 0d 00"]
+        for declares in [true, false] {
+            let primary = interface(
+                productID: 0x0375, usagePage: 0xFF0D, descriptor: declares ? penScanSwitch : declaring(feature: 0x02))
+            let (connection, _) = connect(primary, spec: spec)
+            connection.output.drain()
+            let before = primary.writes
+            XCTAssertEqual(Array(before.prefix(3)), declares
+                ? ["inputMode", "feature 0d 00", "feature 02 02"] : ["inputMode", "feature 02 02"],
+                "scanning on before data mode, where the switch is declared")
+            connection.restartPenScan()
+            let deadline = Date().addingTimeInterval(2)
+            while declares, Date() < deadline, primary.writes.count < before.count + restart.count {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            }
+            connection.output.drain()
+            XCTAssertEqual(Array(primary.writes.dropFirst(before.count)), declares ? restart : [])
+        }
+    }
+
+    /// A scan left off stays off through relaunches, so every USB interface
+    /// that declares the switch gets it turned on at connect, on any tablet.
+    /// Not over Bluetooth.
+    func testConnectSwitchesPenScanningOnWhereDeclared() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x03F9))  // PTK-870
+        let vendor = interface(productID: 0x03F9, usagePage: 0xFFD1, descriptor: declaring(feature: 0x40))
+        let (connection, _) = connect(vendor, spec: spec)
+        let pen = interface(productID: 0x03F9, usagePage: 0x01, descriptor: penScanSwitch + declaring(feature: 0x02))
+        connection.register(pen)
+        connection.output.drain()
+        XCTAssertFalse(vendor.writes.contains("feature 0d 00"))
+        XCTAssertEqual(pen.writes.first, "feature 0d 00")
+
+        let ble = interface(productID: 0x03FA, usagePage: 0x01, transport: "Bluetooth Low Energy", descriptor: penScanSwitch)
+        let (bleConnection, _) = connect(ble, spec: spec)
+        bleConnection.output.drain()
+        XCTAssertFalse(ble.writes.contains("feature 0d 00"))
     }
 
     /// Intuos4 over USB reads its mode back and resends until it takes.

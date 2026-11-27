@@ -35,6 +35,11 @@ package struct TabletQuirks: Sendable, Equatable {
     /// Pen reports its descriptor declares are read from the descriptor,
     /// ahead of the family decoder.
     package var readsDescriptorPens = false
+    /// Over USB, the feature report that turns pen scanning off (1) and on
+    /// (0). Turning it off and on again is a retry for a pen the tablet
+    /// senses but never identifies, which reports position without tip,
+    /// buttons, or pressure. See ``SenseOnlyWatcher``.
+    package var usbPenScanSwitch: UInt8?
 
     package init() {}
 

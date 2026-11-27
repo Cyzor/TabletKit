@@ -544,3 +544,6 @@ API breakage: var XencelabsOutputProtocol.defaultSlotColors has been removed
 
 # 0.7.0: LatencyProbe moved to MockTab, which records and reads it.
 API breakage: class LatencyProbe has been removed
+
+# 0.7.0: package Effect gains a pen scan restart for CTL-6100 pens left unidentified.
+API breakage: enumelement TabletInput.Effect.restartPenScan has been added as a new enum case

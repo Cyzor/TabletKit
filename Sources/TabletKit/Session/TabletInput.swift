@@ -40,6 +40,9 @@ package struct TabletInput {
         /// A relayed Quick Keys puck needs relinking, addressed to this
         /// identity. Report the write's result with ``relinkWriteFinished(_:)``.
         case relinkPuck(identity: [UInt8])
+        /// Turn pen scanning off and on: the tablet senses a pen it hasn't
+        /// identified. See ``SenseOnlyWatcher``.
+        case restartPenScan
     }
 
     package enum InitReason: Sendable, Equatable {
@@ -61,6 +64,7 @@ package struct TabletInput {
     private var touchDecoders: [UInt8: PrecisionTouchDecoder] = [:]
     private var fixedTouchDecoders: [UInt8: DeviceDecoder] = [:]
     private var idleWatcher: IdleReportWatcher?
+    private var senseOnlyWatcher: SenseOnlyWatcher?
     private var pairingWatcher = DonglePairingWatcher()
     private var batteryWatcher = DongleBatteryWatcher()
     /// The paired tablet the receiver's battery readings belong to. Lags
@@ -93,6 +97,7 @@ package struct TabletInput {
         self.isWireless = isWireless
         decoder = DeviceDecoder(format: spec.format, digitizer: spec.digitizerSpec, family: spec.family)
         idleWatcher = spec.quirks.usbIdleReport.map(IdleReportWatcher.init)
+        if !isBluetooth, spec.quirks.usbPenScanSwitch != nil { senseOnlyWatcher = SenseOnlyWatcher() }
     }
 
     /// The ranges reports are read against.
@@ -146,6 +151,9 @@ package struct TabletInput {
         let now = ns != 0 ? ns : DispatchTime.now().uptimeNanoseconds
         var output = Output()
         recoverFromUSBIdleReport(report, now: now, into: &output)
+        if senseOnlyWatcher?.observe(report, now: Double(now) / 1_000_000_000) == true {
+            output.effects.append(.restartPenScan)
+        }
         adoptDonglePairedTablet(report, into: &output)
         noteXencelabsRelay(report, into: &output)
         noteRemoteLinks(report)

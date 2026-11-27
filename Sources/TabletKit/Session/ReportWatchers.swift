@@ -36,6 +36,55 @@ package struct IdleReportWatcher: Sendable {
     }
 }
 
+/// Notices an IntuosV2 USB pen that the tablet keeps sensing without
+/// identifying it: report 0x10 with status 0x40 (Sense) and not 0x20
+/// (InRange). Such reports carry position only. A pen normally gets
+/// identified within a few reports; a CTL-6100 has kept this up for over a
+/// minute, tip and buttons dead, until the pen left range. Asks for a pen
+/// scan restart after `after` seconds of it, then every `retryAfter`, up to
+/// `attempts` times per stretch. See ``TabletQuirks/usbPenScanSwitch``.
+package struct SenseOnlyWatcher: Sendable {
+    package static let after: TimeInterval = 1.0
+    package static let retryAfter: TimeInterval = 3.0
+    package static let attempts = 3
+    /// Reports further apart than this end a stretch: the pen has left.
+    package static let maxGap: TimeInterval = 0.1
+    /// A restart silences the tablet for a moment (a PTK-870 took 0.66 s to
+    /// report a hovering pen after scanning came back on), so a gap this
+    /// soon after one doesn't start a fresh stretch with fresh attempts.
+    package static let restartQuiet: TimeInterval = 2.0
+
+    private var since: TimeInterval?
+    private var last = -TimeInterval.infinity
+    private var nextAttempt = TimeInterval.infinity
+    private var made = 0
+    private var lastRestart = -TimeInterval.infinity
+
+    package init() {}
+
+    /// True when the pen scan should restart.
+    package mutating func observe(_ report: HIDReport, now: TimeInterval) -> Bool {
+        guard report.count >= 2, report[0] == 0x10 else { return false }
+        let senseOnly = report[1] & 0x60 == 0x40
+        defer { last = now }
+        guard senseOnly else {
+            since = nil
+            return false
+        }
+        let afterRestart = now - lastRestart < Self.restartQuiet + Self.maxGap
+        if since == nil || (now - last > Self.maxGap && !afterRestart) {
+            since = now
+            nextAttempt = now + Self.after
+            made = 0
+        }
+        guard now >= nextAttempt, made < Self.attempts else { return false }
+        made += 1
+        nextAttempt = now + Self.retryAfter
+        lastRestart = now
+        return true
+    }
+}
+
 /// Reads the paired tablet's product ID from a Wacom wireless receiver's
 /// status report (0x80). The receiver names it while the tablet sleeps too,
 /// so a tablet asleep at launch still finds its window.
