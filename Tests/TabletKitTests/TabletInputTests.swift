@@ -20,10 +20,10 @@ final class TabletInputTests: XCTestCase {
             var input = TabletInput(spec: spec, isBluetooth: isBluetooth, isWireless: false)
             var effects: [TabletInput.Effect] = []
             _ = feed(&input, ReportWatcherTests.identified)
-            for t in stride(from: 0.01, through: 1.2, by: 0.0075) {
+            for t in stride(from: 0.01, through: 8, by: 0.0075) {
                 effects += feed(&input, ReportWatcherTests.senseOnly, seconds: t).effects
             }
-            XCTAssertEqual(effects, isBluetooth ? [] : [.restartPenScan])
+            XCTAssertEqual(effects, isBluetooth ? [] : [.restartPenScan, .restartPenScan, .restartTablet])
         }
     }
 

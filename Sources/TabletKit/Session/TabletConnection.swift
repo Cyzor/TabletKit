@@ -240,6 +240,29 @@ package final class TabletConnection: @unchecked Sendable {
         runInit(on: interface, steps: steps)
     }
 
+    /// Turns pen scanning off, then runs the whole connect sequence again:
+    /// InputMode where the tablet takes it, scanning on, and data mode. For
+    /// when restarting the scan alone hasn't helped.
+    @MainActor
+    package func restartTablet() {
+        guard !isBluetooth, let id = spec.quirks.usbPenScanSwitch else { return }
+        let off: [InitStep] = [.featureReport([id, 1])]
+        guard let interface = ([capableInterface].compactMap { $0 } + [primary] + interfaces)
+            .first(where: { declaresInitFeatureReports($0, for: off) })
+        else { return }
+        runInit(on: interface, steps: off)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [self] in
+            MainActor.assumeIsolated {
+                if spec.quirks.inputModeWriteOverUSB {
+                    for usb in interfaces where !usb.transport.lowercased().contains("bluetooth") {
+                        sendInputMode(on: usb)
+                    }
+                }
+                reawaken()
+            }
+        }
+    }
+
     /// Restores any touch sensor mode the connect sequence changed, then
     /// closes every interface. Both happen on the output queue, behind any
     /// writes still pending, so main doesn't wait on a slow link.

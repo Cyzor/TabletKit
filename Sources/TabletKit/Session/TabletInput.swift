@@ -43,6 +43,9 @@ package struct TabletInput {
         /// Turn pen scanning off and on: the tablet senses a pen it hasn't
         /// identified. See ``SenseOnlyWatcher``.
         case restartPenScan
+        /// Turn pen scanning off and run the connect sequence again: scan
+        /// restarts didn't get the pen identified.
+        case restartTablet
     }
 
     package enum InitReason: Sendable, Equatable {
@@ -151,8 +154,10 @@ package struct TabletInput {
         let now = ns != 0 ? ns : DispatchTime.now().uptimeNanoseconds
         var output = Output()
         recoverFromUSBIdleReport(report, now: now, into: &output)
-        if senseOnlyWatcher?.observe(report, now: Double(now) / 1_000_000_000) == true {
-            output.effects.append(.restartPenScan)
+        switch senseOnlyWatcher?.observe(report, now: Double(now) / 1_000_000_000) {
+        case .restartPenScan: output.effects.append(.restartPenScan)
+        case .restartTablet: output.effects.append(.restartTablet)
+        case nil: break
         }
         adoptDonglePairedTablet(report, into: &output)
         noteXencelabsRelay(report, into: &output)

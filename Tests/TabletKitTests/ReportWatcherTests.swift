@@ -54,7 +54,7 @@ final class ReportWatcherTests: XCTestCase {
     private func restarts(_ w: inout SenseOnlyWatcher, _ bytes: [UInt8], from start: Double, for seconds: Double) -> [Double] {
         var times: [Double] = []
         for t in stride(from: start, to: start + seconds, by: 0.0075) {
-            if HIDReport.withReport(bytes, { w.observe($0, now: t) }) { times.append(t) }
+            if HIDReport.withReport(bytes, { w.observe($0, now: t) }) != nil { times.append(t) }
         }
         return times
     }
@@ -65,6 +65,17 @@ final class ReportWatcherTests: XCTestCase {
         XCTAssertEqual(times.count, SenseOnlyWatcher.attempts)
         XCTAssertEqual(times[0], SenseOnlyWatcher.after, accuracy: 0.01)
         XCTAssertEqual(times[1] - times[0], SenseOnlyWatcher.retryAfter, accuracy: 0.01)
+        XCTAssertEqual(times[2] - times[1], SenseOnlyWatcher.retryAfter, accuracy: 0.01)
+    }
+
+    /// Two scan restarts, then the connect sequence.
+    func testSenseOnlyAttemptsEscalate() {
+        var w = SenseOnlyWatcher()
+        var attempts: [SenseOnlyWatcher.Attempt] = []
+        for t in stride(from: 0.0, to: 15, by: 0.0075) {
+            if let a = HIDReport.withReport(Self.senseOnly, { w.observe($0, now: t) }) { attempts.append(a) }
+        }
+        XCTAssertEqual(attempts, [.restartPenScan, .restartPenScan, .restartTablet])
     }
 
     /// A restart quiets the tablet; the frames after it continue the same
@@ -74,7 +85,7 @@ final class ReportWatcherTests: XCTestCase {
         var times: [Double] = []
         var t = 0.0
         while t < 15 {
-            if HIDReport.withReport(Self.senseOnly, { w.observe($0, now: t) }) {
+            if HIDReport.withReport(Self.senseOnly, { w.observe($0, now: t) }) != nil {
                 times.append(t)
                 // Scanning off: one exit frame, then quiet until it resumes.
                 _ = HIDReport.withReport(Self.exit, { w.observe($0, now: t + 0.005) })

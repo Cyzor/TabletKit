@@ -152,6 +152,24 @@ final class TabletConnectionTests: XCTestCase {
         XCTAssertFalse(ble.writes.contains("feature 0d 00"))
     }
 
+    /// The fallback turns scanning off, then runs the connect sequence:
+    /// scanning on, then data mode.
+    func testRestartTabletRunsTheConnectSequence() throws {
+        let spec = try XCTUnwrap(WacomDeviceRegistry.spec(for: 0x0375))
+        let primary = interface(productID: 0x0375, usagePage: 0xFF0D, descriptor: penScanSwitch + declaring(feature: 0x02))
+        let (connection, _) = connect(primary, spec: spec)
+        connection.output.drain()
+        let before = primary.writes.count
+        connection.restartTablet()
+        let expected = ["feature 0d 01", "inputMode", "feature 0d 00", "feature 02 02"]
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline, primary.writes.count < before + expected.count {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            connection.output.drain()
+        }
+        XCTAssertEqual(Array(primary.writes.dropFirst(before)), expected)
+    }
+
     /// Waking the tablet switches pen scanning on again before data mode,
     /// on the interface that declares the switch.
     func testReawakenSwitchesPenScanningOnFirst() throws {
